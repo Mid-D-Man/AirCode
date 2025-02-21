@@ -12,11 +12,9 @@
         <PackageReference Include="Blazorise.QRCode" Version="1.7.3" />
         <PackageReference Include="Blazorized.HtmlTextEditor" Version="2.1.0" />
         <PackageReference Include="HyperSerializer" Version="1.5.0" />
-        <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="8.0.8"/>
-        <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="8.0.8" PrivateAssets="all"/>
+        <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="8.0.8" />
+        <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="8.0.8" PrivateAssets="all" />
         <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-        <PackageReference Include="QrCode.Net" Version="0.4.0" />
-        <PackageReference Include="QRCoder" Version="1.4.1" />
         <PackageReference Include="QRCoder-ImageSharp" Version="0.10.0" />
         <PackageReference Include="QRCoder.Core" Version="1.0.3" />
         <PackageReference Include="Syncfusion.Blazor.BarcodeGenerator" Version="28.1.39" />
@@ -26,7 +24,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ServiceWorker Include="wwwroot\service-worker.js" PublishedContent="wwwroot\service-worker.published.js"/>
+        <ServiceWorker Include="wwwroot\service-worker.js" PublishedContent="wwwroot\service-worker.published.js" />
     </ItemGroup>
 
     <ItemGroup>
