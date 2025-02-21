@@ -1,0 +1,53 @@
+.create-session-page {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    background-color: var(--bg);
+    min-height: 100vh;
+}
+
+h1 {
+    font-size: 2rem;
+    margin-bottom: 20px;
+    color: var(--h2-color); /* Add color for heading */
+}
+
+.form-group {
+    margin-bottom: 15px;
+    width: 100%;
+    max-width: 400px;
+}
+
+label {
+    display: block;
+    margin-bottom: 5px;
+    color: var(--h2-color);
+}
+
+.form-control {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--secondary);
+    border-radius: 5px;
+}
+
+input[type="date"] {
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+}
+
+input[type="select"] {
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+}
+
+.primary-button {
+    margin-top: 20px;
+}
+
+.qr-code {
+    margin-top: 30px;
+}

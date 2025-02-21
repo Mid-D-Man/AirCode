@@ -1,0 +1,27 @@
+﻿<Properties StartupConfiguration="{E2C9B32E-CEEC-42E7-8424-3BF48925E9C3}|https">
+  <MonoDevelop.Ide.Workbench ActiveDocument="Aircode/Pages/Home.razor">
+    <Files>
+      <File FileName="Aircode/_Imports.razor" Line="10" Column="22" />
+      <File FileName="Aircode/Pages/Home.razor" Line="108" Column="3" />
+    </Files>
+    <Pads>
+      <Pad Id="ProjectPad">
+        <State name="__root__">
+          <Node name="Aircode" expanded="True">
+            <Node name="Aircode" expanded="True">
+              <Node name="Pages" expanded="True" />
+              <Node name="runtimeconfig.template.json" selected="True" />
+            </Node>
+          </Node>
+        </State>
+      </Pad>
+    </Pads>
+  </MonoDevelop.Ide.Workbench>
+  <MonoDevelop.Ide.ItemProperties.Aircode PreferredExecutionTarget="/Applications/Firefox.app" />
+  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
+  <MonoDevelop.Ide.DebuggingService.Breakpoints>
+    <BreakpointStore />
+  </MonoDevelop.Ide.DebuggingService.Breakpoints>
+  <MonoDevelop.Ide.DebuggingService.PinnedWatches />
+  <MultiItemStartupConfigurations />
+</Properties>

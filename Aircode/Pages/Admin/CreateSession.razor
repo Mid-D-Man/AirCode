@@ -1,0 +1,61 @@
+@page "/Admin/CreateSession"
+
+@using Aircode.Models
+@using Aircode.Layout.AdminLayout.Superior
+@using Microsoft.AspNetCore.Authorization
+@layout SuperiorAdminLayout
+@attribute [Authorize(Roles = "Admin")]
+@using Aircode.Components.SharedPrefabs
+@using Aircode.Utilities.DataStructures
+@inject IJSRuntime JS
+<div class="create-session-page">
+ <h1>Create Session</h1>
+ <EditForm Model="sessionModel" OnValidSubmit="StartSession">
+  <DataAnnotationsValidator />
+  <ValidationSummary />
+  <div class="form-group">
+   <label for="courseName">Course Name</label>
+   <InputText id="courseName" @bind-Value="sessionModel.CourseName" class="form-control" />
+  </div>
+  <div class="form-group">
+   <label for="courseId">Course ID</label>
+   <InputText id="courseId" @bind-Value="sessionModel.CourseId" class="form-control" />
+  </div>
+  <div class="form-group">
+   <label for="duration">Session Duration</label>
+   <InputSelect id="duration" @bind-Value="sessionModel.Duration" class="form-control">
+    <option value="10">10 minutes</option>
+    <option value="15">15 minutes</option>
+    <option value="30">30 minutes</option>
+    <option value="60">1 hour</option>
+    <option value="120">2 hours</option>
+    <option value="180">3 hours</option>
+    <option value="240">4 hours</option>
+    <option value="300">5 hours</option>
+    <option value="360">6 hours</option>
+   </InputSelect>
+  </div>
+  <PrimaryButton Text="Start Session" OnClick="StartSession" />
+ </EditForm>
+ @if (isSessionStarted)
+ {
+  <QRCodeCompo Text="@qrCodePayload" />
+ }
+</div>
+@code {
+ private SessionData sessionModel = new();
+ private bool isSessionStarted = false;
+ private string qrCodePayload = string.Empty;
+ private void StartSession()
+ {
+  sessionModel.StartTime = DateTime.UtcNow;
+  sessionModel.Date = DateTime.UtcNow;
+  isSessionStarted = true;
+  qrCodePayload = GenerateQrCodePayload();
+ }
+ private string GenerateQrCodePayload()
+ {
+  QRCodeData qD = new QRCodeData($"{sessionModel.CourseName}|{sessionModel.CourseId}|{sessionModel.StartTime}|{sessionModel.Date}|{sessionModel.Duration}", 256.55f, "https://www.example.com");
+  return qD.ToString();
+ }
+}

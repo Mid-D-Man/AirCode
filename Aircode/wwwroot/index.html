@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Aircode</title>
+    <base href="/AirCode/" />
+    <link rel="stylesheet" href="css/bootstrap/bootstrap.min.css" />
+    <link rel="stylesheet" href="css/app.css" />
+    
+    <link rel="icon" type="image/png" href="icons/favicon.png" />
+    <link href="Aircode.styles.css" rel="stylesheet" />
+    <link href="manifest.webmanifest" rel="manifest" />
+
+    <link rel="stylesheet" href="css/colors.css" />
+    <link rel="stylesheet" href="css/responsive.css" />
+    
+    <link rel="apple-touch-icon" sizes="512x512" href="icons/icon-512.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png" />
+
+    <!-- Add Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" integrity="sha384-DyZ88mC6Up2uqS18Zdrp4QGSm+V5f0HfkwpHV0wXgKcx1JtmRO19p8s4l6CR59Kck" crossorigin="anonymous">
+    
+    <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+    <script src="https://unpkg.com/@zxing/library@latest"></script>
+</head>
+
+<body>
+    <div id="app">
+        <svg class="loading-progress">
+            <circle r="40%" cx="50%" cy="50%" />
+            <circle r="40%" cx="50%" cy="50%" />
+        </svg>
+        <div class="loading-progress-text"></div>
+    </div>
+
+    <div id="blazor-error-ui">
+        An unhandled error has occurred.
+        <a href="" class="reload">Reload</a>
+        <a class="dismiss">🗙</a>
+    </div>
+    <script src="_framework/blazor.webassembly.js"></script>
+    <script>navigator.serviceWorker.register('service-worker.js');</script>
+    <script type="module">
+        import init, { generate_qr_code } from './wasm/qr_code_generator.js';
+
+        async function initWasm() {
+            await init();
+            window.generateQrCode = generate_qr_code;
+        }
+        initWasm();
+    </script>
+
+</body>
+
+</html>

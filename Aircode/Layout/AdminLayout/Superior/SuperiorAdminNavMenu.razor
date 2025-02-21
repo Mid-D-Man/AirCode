@@ -1,0 +1,71 @@
+@inherits LayoutComponentBase
+@using Aircode.Components.Admin.Shared
+@using Aircode.Utilities.DataStructures
+<div class="nav-menu @(IsExpanded ? "expanded" : "collapsed")">
+    <div class="nav-top">
+        <Burger OnToggle="ToggleNavMenu" />
+    </div>
+
+    <div class="nav-middle">
+        @foreach (var item in NavigationItems)
+        {
+            <NavLink href="@item.Path" class="nav-item">
+                <NavMenuButton
+                    IconPath="@item.IconPath"
+                    Label="@item.Label"
+                    IsExpanded="IsExpanded"
+                    OnClick="@(() => NavigationManager.NavigateTo(item.Path))"
+                />
+            </NavLink>
+        }
+    </div>
+
+    <div class="nav-bottom">
+        @foreach (var item in BottomItems)
+        {
+            <div class="nav-item">
+                <NavMenuButton
+                    IconPath="@item.IconPath"
+                    Label="@item.Label"
+                    IsExpanded="IsExpanded"
+                    OnClick="@item.Action"
+                />
+            </div>
+        }
+    </div>
+</div>
+
+
+@code {
+    private bool IsExpanded { get; set; } = true;
+
+    [Inject]
+    private NavigationManager NavigationManager { get; set; }
+
+    private void ToggleNavMenu(bool isChecked)
+    {
+        IsExpanded = isChecked;
+    }
+
+    private void HandleSettings() => NavigationManager.NavigateTo("/admin/settings");
+    private void HandleContact() => NavigationManager.NavigateTo("/admin/contact");
+    private void HandleLogout() => NavigationManager.NavigateTo("/auth");
+
+    private List<NavItem> NavigationItems => new()
+    {
+        new("/icons/dashboard-icon.png", "Dashboard", "/Admin/Dashboard"),
+        new("/icons/dashboard-icon.png", "CreateSession", "/Admin/CreateSession"),
+        new("/icons/users-icon.png", "User Management", "/TestPage"),
+        new("/icons/admin-icon.png", "Admin Management", "/admin/admins"),
+        new("/icons/sessions-icon.png", "Generate Sessions", "/admin/sessions"),
+        new("/icons/reports-icon.png", "Reports", "/admin/reports"),
+        new("/icons/stats-icon.png", "Statistics", "/admin/stats")
+    };
+
+    private List<NavItem> BottomItems => new()
+    {
+        new("/icons/settings-icon.png", "Settings", HandleSettings),
+        new("/icons/contact-icon.png", "Contact", HandleContact),
+        new("/icons/logout-icon.png", "Logout", HandleLogout)
+    };
+}

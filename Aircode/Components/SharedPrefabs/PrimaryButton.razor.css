@@ -1,0 +1,18 @@
+.primary-button {
+    background-color: var(--facebook-blue);
+    color: var(--button-text-color);
+    padding: 0.5rem 1rem;
+    border-radius: 0.25rem;
+    transition: background-color 0.3s ease;
+    border: none;
+    cursor: pointer;
+}
+
+.primary-button:hover {
+    background-color: var(--hover-facebook-blue);
+}
+
+.primary-button:focus {
+    outline: none;
+    box-shadow: 0 0 0 0.2rem rgba(66, 103, 178, 0.5);
+}

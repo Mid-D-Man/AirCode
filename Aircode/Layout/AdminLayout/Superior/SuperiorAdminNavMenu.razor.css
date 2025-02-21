@@ -1,0 +1,50 @@
+.nav-menu {
+    width: 30%;
+    background-color: var(--primary);
+    display: flex;
+    flex-direction: column;
+    border-top-right-radius: 15px;
+    border-bottom-right-radius: 15px;
+    color: var(--white);
+    transition: width 0.3s ease;
+    height: 100vh;
+    padding: 0;
+}
+
+.nav-menu.collapsed {
+    width: 80px;
+}
+
+.nav-top {
+    height: 20%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.nav-middle {
+    height: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+}
+
+.nav-bottom {
+    height: 30%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+}
+
+.nav-item {
+    width: fit-content;
+    text-decoration: none;
+    color: inherit;
+}

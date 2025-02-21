@@ -1,0 +1,10 @@
+@page "/"
+@inject NavigationManager NavigationManager
+
+//initial landing page
+@code {
+    protected override void OnInitialized()
+    {
+        NavigationManager.NavigateTo("/Auth");
+    }
+}

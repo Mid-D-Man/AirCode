@@ -1,0 +1,20 @@
+@using Aircode.Components.Admin.Dashboard
+@* Layout/Admin/StandardAdminLayout.razor *@
+<div class="admin-layout">
+    <AdminNavMenu AdminRole="@CurrentRole" />
+    
+    <div class="main-content">
+        <div class="top-section">
+            <QuickStats />
+        </div>
+        
+        <div class="bottom-section">
+            @Body
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public RenderFragment Body { get; set; }
+    [Parameter] public UserRole CurrentRole { get; set; }
+}

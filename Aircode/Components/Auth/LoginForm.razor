@@ -1,0 +1,58 @@
+@using Aircode.Components.SharedPrefabs
+@* Components/Auth/LoginForm.razor *@
+<div class="login-form-container">
+    <EditForm Model="@loginModel" OnValidSubmit="HandleSubmit">
+        <DataAnnotationsValidator />
+
+        <div class="form-group">
+            <label>Username/Email</label>
+            <InputText @bind-Value="loginModel.Username" class="form-control" />
+            <ValidationMessage For="@(() => loginModel.Username)" />
+        </div>
+
+        <div class="form-group">
+            <label>Password</label>
+            <InputText type="password" @bind-Value="loginModel.Password" class="form-control" />
+            <ValidationMessage For="@(() => loginModel.Password)" />
+        </div>
+
+        <div class="form-group">
+            <label class="checkbox-container">
+                <InputCheckbox @bind-Value="loginModel.IsAdmin" />
+                Login as Administrator
+            </label>
+        </div>
+
+        @if (loginModel.IsAdmin)
+        {
+            <div class="form-group">
+                <label>Admin ID</label>
+                <InputText @bind-Value="loginModel.AdminId" class="form-control" />
+                <ValidationMessage For="@(() => loginModel.AdminId)" />
+            </div>
+        }
+
+        <PrimaryButton Type="submit" Text="Login" />
+    </EditForm>
+</div>
+
+@code {
+    private LoginModel loginModel = new();
+
+    [Parameter]
+    public EventCallback<LoginModel> OnLogin { get; set; }
+
+    private async Task HandleSubmit()
+    {
+        // Test login logic
+        if (loginModel.Username == "admin" &&
+            loginModel.Password == "admin" &&
+            loginModel.IsAdmin &&
+            loginModel.AdminId == "admin")
+        {
+            await OnLogin.InvokeAsync(loginModel);
+        }
+    }
+
+  
+}

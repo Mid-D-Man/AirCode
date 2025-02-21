@@ -1,0 +1,41 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Publish .NET Project
+        run: dotnet publish Aircode/Aircode.csproj -c Release -o release --nologo
+
+      # Configure PWA files for GitHub Pages
+      - name: Update service worker
+        run: |
+          cd release/wwwroot
+          cp service-worker.published.js service-worker.js
+      
+      # IMPORTANT: Changes base path in the published files
+      - name: Change base tag
+        run: |
+          find release/wwwroot -name "*.html" | xargs sed -i 's/<base href="\/" \/>/<base href="\/AirCode\/" \/>/g'
+
+      # Make GitHub not use Jekyll (which would ignore files starting with underscore)
+      - name: Add .nojekyll file
+        run: touch release/wwwroot/.nojekyll
+
+      - name: Commit to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: release/wwwroot
+          branch: gh-pages

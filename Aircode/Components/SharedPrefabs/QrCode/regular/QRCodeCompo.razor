@@ -1,0 +1,22 @@
+@using Microsoft.AspNetCore.Components
+@inject IJSRuntime JS
+
+<div>
+    <button class="btn-generate" @onclick="GenerateQRCode">Generate QR Code</button>
+    <div class="qr-code-container">
+        <div id="qrCodeContainer"></div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Text { get; set; }
+    private async Task GenerateQRCode()
+    {
+        var size = 200;
+        var darkColor = "#000000";
+        var lightColor = "#FFFFFF";
+        var svg = await JS.InvokeAsync<string>("generateQrCode", Text, size, darkColor, lightColor);
+        var qrCodeContainer = await JS.InvokeAsync<IJSObjectReference>("import", "./js/qrCodeModule.js");
+        await qrCodeContainer.InvokeVoidAsync("setSvgContent", "qrCodeContainer", svg);
+    }
+}

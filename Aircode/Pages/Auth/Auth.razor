@@ -1,0 +1,76 @@
+@* Pages/Auth/AuthPage.razor *@
+@page "/Auth"
+@using Aircode.Components.Auth
+@using Aircode.Components.SharedPrefabs
+@layout AuthLayout
+
+<div class="auth-page">
+    <div class="auth-container">
+        <div class="auth-header">
+            <PrimaryButton 
+                Text="Login" 
+                OnClick="() => SetActiveView(AuthView.Login)"
+                Class="@(currentView == AuthView.Login ? "active" : "")" />
+            <PrimaryButton 
+                Text="Sign Up" 
+                OnClick="() => SetActiveView(AuthView.SignUp)"
+                Class="@(currentView == AuthView.SignUp ? "active" : "")" />
+        </div>
+
+        <div class="auth-content">
+            @if (currentView == AuthView.Login)
+            {
+                <LoginForm OnLogin="HandleLogin" />
+            }
+            else
+            {
+                <SignUpForm OnSignUp="HandleSignUp" />
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private enum AuthView
+    {
+        Login,
+        SignUp
+    }
+
+    private AuthView currentView = AuthView.Login;
+
+    [Inject]
+    private NavigationManager NavigationManager { get; set; } = default!;
+
+    [Inject]
+    private IUserStorageService UserStorage { get; set; } = default!;
+
+    private void SetActiveView(AuthView view)
+    {
+        currentView = view;
+    }
+
+    private async Task HandleLogin(LoginModel model)
+    {
+        if (model.Username == "admin" && 
+            model.Password == "admin" && 
+            model.IsAdmin && 
+            model.AdminId == "admin")
+        {
+            // Redirect to admin dashboard
+            NavigationManager.NavigateTo("/Admin/SuperiorDashboard");
+        }
+    }
+
+    private async Task HandleSignUp(SignUpModel model)
+    {
+        // Handle signup logic
+        await UserStorage.AddUser(new User
+        {
+            FirstName = model.FirstName,
+            MiddleName = model.MiddleName,
+            LastName = model.LastName,
+            // ... other properties
+        });
+    }
+}

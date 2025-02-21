@@ -1,0 +1,46 @@
+@inherits LayoutComponentBase
+@inject NavigationManager NavigationManager
+@inject IUserStorageService UserStorage
+@inject ILocalStorageService LocalStorage
+
+<div class="page">
+    <div class="sidebar">
+        <StudentNavMenu />
+    </div>
+
+    <main>
+        <div class="top-row px-4">
+            <div class="user-info">
+                @if (currentUser != null)
+                {
+                    <span>Welcome @currentUser.FirstName!</span>
+                    <button class="nav-link btn btn-link" @onclick="HandleLogOut">Log out</button>
+                }
+            </div>
+        </div>
+
+        <article class="content px-4">
+            @Body
+        </article>
+    </main>
+</div>
+
+@code {
+    private User? currentUser;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Get current user from local storage
+        var userJson = await LocalStorage.GetItemAsync<string>("currentUser");
+        if (!string.IsNullOrEmpty(userJson))
+        {
+            currentUser = JsonHelper.Deserialize<User>(userJson);
+        }
+    }
+
+    private async Task HandleLogOut()
+    {
+        await LocalStorage.RemoveItemAsync("currentUser");
+        NavigationManager.NavigateTo("/Auth");
+    }
+}

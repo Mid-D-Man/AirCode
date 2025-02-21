@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <ServiceWorkerAssetsManifest>service-worker-assets.js</ServiceWorkerAssetsManifest>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Blazored.LocalStorage" Version="4.5.0" />
+        <PackageReference Include="Blazorise.QRCode" Version="1.7.3" />
+        <PackageReference Include="Blazorized.HtmlTextEditor" Version="2.1.0" />
+        <PackageReference Include="HyperSerializer" Version="1.5.0" />
+        <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="8.0.8"/>
+        <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="8.0.8" PrivateAssets="all"/>
+        <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+        <PackageReference Include="QrCode.Net" Version="0.4.0" />
+        <PackageReference Include="QRCoder" Version="1.4.1" />
+        <PackageReference Include="QRCoder-ImageSharp" Version="0.10.0" />
+        <PackageReference Include="QRCoder.Core" Version="1.0.3" />
+        <PackageReference Include="Syncfusion.Blazor.BarcodeGenerator" Version="28.1.39" />
+        <PackageReference Include="System.Drawing.Common" Version="9.0.1" />
+        <PackageReference Include="ZXing.Net" Version="0.16.10" />
+        <PackageReference Include="ZXingBlazor" Version="1.1.5" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ServiceWorker Include="wwwroot\service-worker.js" PublishedContent="wwwroot\service-worker.published.js"/>
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="Components\SharedPrefabs\QrCode\mid\" />
+      <Folder Include="wwwroot\images\" />
+      <Folder Include="wwwroot\wasm\mid_air_code_lib\" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Content Include=".github\workflows\deploy.yaml" />
+    </ItemGroup>
+
+</Project>
