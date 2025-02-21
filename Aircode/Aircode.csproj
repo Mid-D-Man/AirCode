@@ -36,7 +36,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Content Include=".github\workflows\deploy.yaml" />
+      <Content Include=".github\workflows\deploy.yml" />
     </ItemGroup>
 
 </Project>
