@@ -38,7 +38,6 @@
 
 @code {
     private bool IsExpanded { get; set; } = true;
-
     [Inject]
     private NavigationManager NavigationManager { get; set; }
 
@@ -50,22 +49,21 @@
     private void HandleSettings() => NavigationManager.NavigateTo("/admin/settings");
     private void HandleContact() => NavigationManager.NavigateTo("/admin/contact");
     private void HandleLogout() => NavigationManager.NavigateTo("/auth");
-
     private List<NavItem> NavigationItems => new()
     {
-        new("/icons/dashboard-icon.png", "Dashboard", "/Admin/Dashboard"),
-        new("/icons/dashboard-icon.png", "CreateSession", "/Admin/CreateSession"),
-        new("/icons/users-icon.png", "User Management", "/TestPage"),
-        new("/icons/admin-icon.png", "Admin Management", "/admin/admins"),
-        new("/icons/sessions-icon.png", "Generate Sessions", "/admin/sessions"),
-        new("/icons/reports-icon.png", "Reports", "/admin/reports"),
-        new("/icons/stats-icon.png", "Statistics", "/admin/stats")
+        new("/svgs/Admin_Icon.svg", "Dashboard", "/Admin/Dashboard"),
+        new("/svgs/QRCode_Icon.svg", "CreateSession", "/Admin/CreateSession"),
+        new("/svgs/Users_Icon.svg", "User Management", "/TestPage"),
+        new("/svgs/Admin_Icon.svg", "Admin Management", "/admin/admins"),
+        new("/svgs/Admin_Icon.svg", "Generate Sessions", "/admin/sessions"),
+        new("/svgs/Report_Icon.svg", "Reports", "/admin/reports"),
+        new("/svgs/Stats_Icon.svg", "Statistics", "/admin/stats")
     };
 
     private List<NavItem> BottomItems => new()
     {
-        new("/icons/settings-icon.png", "Settings", HandleSettings),
-        new("/icons/contact-icon.png", "Contact", HandleContact),
-        new("/icons/logout-icon.png", "Logout", HandleLogout)
+        new("/svgs/Admin_Icon.svg", "Settings", HandleSettings),
+        new("/svgs/ContactUs_Icon.svg", "Contact", HandleContact),
+        new("/svgs/Logout_Icon.svg", "Logout", HandleLogout)
     };
 }

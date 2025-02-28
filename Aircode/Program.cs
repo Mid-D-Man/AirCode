@@ -11,7 +11,7 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 
-//localstoragem
+//localstorage
 builder.Services.AddBlazoredLocalStorage();
 
 // Register Syncfusion Blazor services
@@ -25,4 +25,3 @@ builder.Services.AddScoped<IUserStorageService, UserStorageService>();
 await builder.Build().RunAsync();
 
 //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
-

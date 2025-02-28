@@ -29,8 +29,9 @@
 
     <ItemGroup>
       <Folder Include="Components\SharedPrefabs\QrCode\mid\" />
-      <Folder Include="wwwroot\images\" />
+      <Folder Include="wwwroot\svgIcons\" />
       <Folder Include="wwwroot\wasm\mid_air_code_lib\" />
+      <Folder Include="wwwroot\wasm\qr_code_module\" />
     </ItemGroup>
 
     <ItemGroup>
