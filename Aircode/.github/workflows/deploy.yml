@@ -9,32 +9,34 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+      # Checkout the code
       - uses: actions/checkout@v3
 
-      - name: Setup .NET
+      # Setup .NET Core SDK
+      - name: Setup .NET Core
         uses: actions/setup-dotnet@v3
         with:
           dotnet-version: '8.0.x'
-
-      - name: Publish .NET Project
-        run: dotnet publish Aircode/Aircode.csproj -c Release -o release --nologo
-
-      # Configure PWA files for GitHub Pages
-      - name: Update service worker
-        run: |
-          cd release/wwwroot
-          cp service-worker.published.js service-worker.js
       
-      # IMPORTANT: Changes base path in the published files
+      # Publish the app
+      - name: Publish app
+        run: dotnet publish Aircode/Aircode.csproj -c Release -o release --nologo
+      
+      # Change base tag in index.html to match GitHub Pages repository path
       - name: Change base tag
         run: |
-          find release/wwwroot -name "*.html" | xargs sed -i 's/<base href="\/" \/>/<base href="\/AirCode\/" \/>/g'
-
-      # Make GitHub not use Jekyll (which would ignore files starting with underscore)
+          find release/wwwroot -name "index.html" -exec sed -i 's/<base href="\/" \/>/<base href="\/AirCode\/" \/>/g' {} \;
+      
+      # Add .nojekyll file to tell GitHub not to use Jekyll
       - name: Add .nojekyll file
         run: touch release/wwwroot/.nojekyll
-
-      - name: Commit to GitHub Pages
+      
+      # Create 404.html as a copy of index.html for SPA routing
+      - name: Create 404.html
+        run: cp release/wwwroot/index.html release/wwwroot/404.html
+      
+      # Deploy to GitHub Pages
+      - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           folder: release/wwwroot
