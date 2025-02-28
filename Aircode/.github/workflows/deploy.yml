@@ -1,9 +1,12 @@
-name: Deploy to GitHub Pages
+name: Deploy to GitHub Pages Ver Two
 
 on:
   push:
     branches: [ main ]
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   deploy:
@@ -22,8 +25,8 @@ jobs:
       - name: Publish app
         run: dotnet publish Aircode/Aircode.csproj -c Release -o release --nologo
       
-      # Change base tag in index.html to match GitHub Pages repository path
-      - name: Change base tag
+      # Adjust base path and fix file paths
+      - name: Change base tag and ensure proper paths
         run: |
           find release/wwwroot -name "index.html" -exec sed -i 's/<base href="\/" \/>/<base href="\/AirCode\/" \/>/g' {} \;
       
@@ -35,9 +38,18 @@ jobs:
       - name: Create 404.html
         run: cp release/wwwroot/index.html release/wwwroot/404.html
       
+      # Fix manifest paths
+      - name: Fix manifest
+        run: |
+          if [ -f release/wwwroot/manifest.webmanifest ]; then
+            sed -i 's/"start_url": "\/",/"start_url": ".\/",' release/wwwroot/manifest.webmanifest
+            sed -i 's/"scope": "\/",/"scope": ".\/",' release/wwwroot/manifest.webmanifest
+          fi
+      
       # Deploy to GitHub Pages
       - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           folder: release/wwwroot
           branch: gh-pages
+          clean: true
