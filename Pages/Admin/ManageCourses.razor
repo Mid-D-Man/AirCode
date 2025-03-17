@@ -1,0 +1,434 @@
+@page "/Admin/ManageCourses"
+@using AirCode.Layout.AdminLayout.Superior
+@using Microsoft.AspNetCore.Authorization
+@using AirCode.Components.SharedPrefabs
+
+@layout SuperiorAdminLayout
+@attribute [Authorize(Roles = "Admin")]
+
+@inject IJSRuntime JSRuntime
+
+<div class="courses-page">
+    <div class="page-header">
+        <h2>Course Management</h2>
+        <button class="add-course-btn" @onclick="() => ShowModal(null)">
+            <span class="icon">+</span> Add New Course
+        </button>
+    </div>
+    
+    <div class="search-filter">
+        <div class="search-box">
+            <input type="text" placeholder="Search courses..." @bind="searchTerm" @bind:event="oninput" />
+            <button class="search-btn">
+                <span class="search-icon">🔍</span>
+            </button>
+        </div>
+        
+        <div class="filters">
+            <select @bind="semesterFilter">
+                <option value="0">All Semesters</option>
+                <option value="1">Semester 1</option>
+                <option value="2">Semester 2</option>
+            </select>
+            
+            <select @bind="levelFilter">
+                <option value="">All Levels</option>
+                <option value="100">100 Level</option>
+                <option value="200">200 Level</option>
+                <option value="300">300 Level</option>
+                <option value="400">400 Level</option>
+            </select>
+        </div>
+    </div>
+    
+    <div class="courses-grid">
+        @if (filteredCourses.Count > 0)
+        {
+            @foreach (var course in filteredCourses)
+            {
+                <CourseCard Course="course" 
+                            OnEditCourse="HandleEditCourse" 
+                            OnDeleteCourse="HandleDeleteCourse" />
+            }
+        }
+        else
+        {
+            <div class="no-courses">
+                <p>No courses found. Click "Add New Course" to create one.</p>
+            </div>
+        }
+    </div>
+    
+    @if (showModal)
+    {
+        <div class="modal-backdrop" @onclick="CloseModal"></div>
+        <div class="course-modal">
+            <div class="modal-header">
+                <h3>@(editingCourse.Id == null ? "Add New Course" : "Edit Course")</h3>
+                <button class="close-btn" @onclick="CloseModal">×</button>
+            </div>
+            
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Course Name</label>
+                    <input type="text" @bind="editingCourse.Name" required />
+                </div>
+                
+                <div class="form-group">
+                    <label>Course ID</label>
+                    <input type="text" @bind="editingCourse.Id" 
+                           disabled="@(editingCourse.Id != null)" 
+                           placeholder="e.g., CSC301" required />
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Semester</label>
+                        <select @bind="editingCourse.Semester">
+                            <option value="1">Semester 1</option>
+                            <option value="2">Semester 2</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Level</label>
+                        <select @bind="editingCourse.Level">
+                            <option value="100">100 Level</option>
+                            <option value="200">200 Level</option>
+                            <option value="300">300 Level</option>
+                            <option value="400">400 Level</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="lecturers">
+                    <h4>Lecturers</h4>
+                    <button class="add-schedule-btn add-lecturer-btn" @onclick="AddLecturer">+ Add Lecturer</button>
+                    @foreach (var (lecturer, index) in editingCourse.Lecturers.Select((l, i) => (l, i)))
+                    {
+                        <div class="lecturer-form-item" style="margin-bottom: 1rem; background-color: var(--bg); padding: 1rem; border-radius: 4px; position: relative;">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Lecturer ID</label>
+                                    <input type="text" @bind="lecturer.Id" placeholder="e.g., PROF001" required />
+                                </div>
+                                <div class="form-group">
+                                    <label>Lecturer Name</label>
+                                    <input type="text" @bind="lecturer.Name" placeholder="e.g., Prof. John Doe" required />
+                                </div>
+                            </div>
+                            <button class="remove-btn" style="position: absolute; top: 0.5rem; right: 0.5rem;" @onclick="() => RemoveLecturer(index)">Remove</button>
+                        </div>
+                    }
+                </div>
+
+
+                <div class="schedules">
+                    <h4>Course Schedule</h4>
+                    <button class="add-schedule-btn" @onclick="AddScheduleItem">+ Add Schedule</button>
+                    
+                    @foreach (var (schedule, index) in editingCourse.Schedule.Select((s, i) => (s, i)))
+                    {
+                        <div class="schedule-form-item">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Day</label>
+                                    <select @bind="schedule.Day">
+                                        <option value="@DayOfWeek.Monday">Monday</option>
+                                        <option value="@DayOfWeek.Tuesday">Tuesday</option>
+                                        <option value="@DayOfWeek.Wednesday">Wednesday</option>
+                                        <option value="@DayOfWeek.Thursday">Thursday</option>
+                                        <option value="@DayOfWeek.Friday">Friday</option>
+                                        <option value="@DayOfWeek.Saturday">Saturday</option>
+                                        <option value="@DayOfWeek.Sunday">Sunday</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>Start Time</label>
+                                    <input type="time" value="@FormatTimeSpanForInput(schedule.StartTime)" @onchange="e => UpdateStartTime(e, index)" required />
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>End Time</label>
+                                    <input type="time" value="@FormatTimeSpanForInput(schedule.EndTime)" @onchange="e => UpdateEndTime(e, index)" required />
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Location</label>
+                                <input type="text" @bind="schedule.Location" placeholder="e.g., Room 201" required />
+                            </div>
+                            
+                            <button class="remove-btn" @onclick="() => RemoveScheduleItem(index)">Remove</button>
+                        </div>
+                    }
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button class="cancel-btn" @onclick="CloseModal">Cancel</button>
+                <button class="save-btn" @onclick="SaveCourse">Save Course</button>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private List<Course> courses = new List<Course>();
+    private List<Course> filteredCourses => ApplyFilters();
+    private string searchTerm = "";
+    private int semesterFilter = 0;
+    private string levelFilter = "";
+    
+    private bool showModal = false;
+    private Course editingCourse = new Course();
+   // private string lecturerInput = "";
+    
+    protected override async Task OnInitializedAsync()
+    {
+        // Load courses - in a real app, this would come from your service
+        await LoadCourses();
+    }
+    
+    private List<Course> ApplyFilters()
+    {
+        var filtered = courses;
+        
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            filtered = filtered.Where(c => 
+                c.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) || 
+                c.Id.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)).ToList();
+        }
+        
+        if (semesterFilter > 0)
+        {
+            filtered = filtered.Where(c => c.Semester == semesterFilter).ToList();
+        }
+        
+        if (!string.IsNullOrWhiteSpace(levelFilter))
+        {
+            filtered = filtered.Where(c => c.Level == levelFilter).ToList();
+        }
+        
+        return filtered;
+    }
+    
+   private async Task LoadCourses()
+{
+    try 
+    {
+        // In a real application, this would load from Firebase.
+        // For demonstration, we'll add some sample data.
+        courses = new List<Course>
+        {
+            new Course
+            {
+                Id = "CSC301",
+                Name = "Introduction to Cybersecurity",
+                Semester = 1,
+                Level = "300",
+                Lecturers = new List<Lecturer>
+                {
+                    new Lecturer { Id = "PROF001", Name = "Dr. John Smith" },
+                    new Lecturer { Id = "DR002", Name = "Prof. Jane Doe" }
+                },
+                Schedule = new List<CourseSchedule>
+                {
+                    new CourseSchedule
+                    {
+                        Day = DayOfWeek.Monday,
+                        StartTime = new TimeSpan(9, 0, 0),
+                        EndTime = new TimeSpan(11, 0, 0),
+                        Location = "Room 101"
+                    },
+                    new CourseSchedule
+                    {
+                        Day = DayOfWeek.Wednesday,
+                        StartTime = new TimeSpan(14, 0, 0),
+                        EndTime = new TimeSpan(16, 0, 0),
+                        Location = "Lab 3"
+                    }
+                }
+            },
+            new Course
+            {
+                Id = "CSC401",
+                Name = "Advanced Web Security",
+                Semester = 2,
+                Level = "400",
+                Lecturers = new List<Lecturer>
+                {
+                    new Lecturer { Id = "PROF003", Name = "Dr. Emily Davis" }
+                },
+                Schedule = new List<CourseSchedule>
+                {
+                    new CourseSchedule
+                    {
+                        Day = DayOfWeek.Tuesday,
+                        StartTime = new TimeSpan(10, 0, 0),
+                        EndTime = new TimeSpan(13, 0, 0),
+                        Location = "Room 205"
+                    }
+                }
+            }
+        };
+    }
+    catch (Exception ex)
+    {
+        await JSRuntime.InvokeVoidAsync("console.error", "Failed to load courses: " + ex.Message);
+    }
+}
+
+    
+    private void ShowModal(Course course)
+    {
+        if (course == null)
+        {
+            // New course
+            editingCourse = new Course
+            {
+                Semester = 1,
+                Level = "100",
+                Schedule = new List<CourseSchedule>(),
+                Lecturers = new List<Lecturer>()
+            };
+        }
+        else
+        {
+            // Edit existing course
+            editingCourse = new Course
+            {
+                Id = course.Id,
+                Name = course.Name,
+                Semester = course.Semester,
+                Level = course.Level,
+                Schedule = course.Schedule.Select(s => new CourseSchedule
+                {
+                    Day = s.Day,
+                    StartTime = s.StartTime,
+                    EndTime = s.EndTime,
+                    Location = s.Location
+                }).ToList(),
+                Lecturers = course.Lecturers.Select(l => new Lecturer
+                {
+                    Id = l.Id,
+                    Name = l.Name
+                }).ToList()
+            };
+        }
+    
+        showModal = true;
+    }
+
+    
+    private void CloseModal()
+    {
+        showModal = false;
+        editingCourse = new Course();
+    }
+    private void AddLecturer()
+    {
+        editingCourse.Lecturers.Add(new Lecturer { Id = string.Empty, Name = string.Empty });
+        StateHasChanged();
+    }
+
+    private void RemoveLecturer(int index)
+    {
+        editingCourse.Lecturers.RemoveAt(index);
+        StateHasChanged();
+    }
+
+    private void AddScheduleItem()
+    {
+        editingCourse.Schedule.Add(new CourseSchedule
+        {
+            Day = DayOfWeek.Monday,
+            StartTime = new TimeSpan(9, 0, 0),
+            EndTime = new TimeSpan(10, 0, 0),
+            Location = ""
+        });
+        StateHasChanged();
+    }
+    
+    private void RemoveScheduleItem(int index)
+    {
+        editingCourse.Schedule.RemoveAt(index);
+        StateHasChanged();
+    }
+    
+    private string FormatTimeSpanForInput(TimeSpan time)
+    {
+        return $"{time.Hours:D2}:{time.Minutes:D2}";
+    }
+    
+    
+    private void UpdateStartTime(ChangeEventArgs e, int index)
+    {
+        if (e.Value != null && TimeSpan.TryParse(e.Value.ToString(), out TimeSpan time))
+        {
+            editingCourse.Schedule[index].StartTime = time;
+        }
+    }
+    
+    private void UpdateEndTime(ChangeEventArgs e, int index)
+    {
+        if (e.Value != null && TimeSpan.TryParse(e.Value.ToString(), out TimeSpan time))
+        {
+            editingCourse.Schedule[index].EndTime = time;
+        }
+    }
+    
+    private async Task SaveCourse()
+    {
+        try
+        {
+            var existingIndex = courses.FindIndex(c => c.Id == editingCourse.Id);
+            if (existingIndex >= 0)
+            {
+                editingCourse.UpdatedAt = DateTime.Now;
+                courses[existingIndex] = editingCourse;
+            }
+            else
+            {
+                editingCourse.CreatedAt = DateTime.Now;
+                editingCourse.UpdatedAt = DateTime.Now;
+                courses.Add(editingCourse);
+            }
+        
+            // Save to Firebase here if needed...
+            await JSRuntime.InvokeVoidAsync("alert", "Course saved successfully!");
+            CloseModal();
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("console.error", "Failed to save course: " + ex.Message);
+            await JSRuntime.InvokeVoidAsync("alert", "Failed to save course: " + ex.Message);
+        }
+    }
+
+    
+    private Task SaveCoursesToFirebase()
+    {
+        // Implement Firebase saving logic here
+        return Task.CompletedTask;
+    }
+    
+    private async Task HandleEditCourse(Course course)
+    {
+        ShowModal(course);
+    }
+    
+    private async Task HandleDeleteCourse(Course course)
+    {
+        var confirm = await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you want to delete {course.Name}?");
+        if (confirm)
+        {
+            courses.RemoveAll(c => c.Id == course.Id);
+            // In a real app, delete from Firebase here
+            // await DeleteCourseFromFirebase(course.Id);
+            StateHasChanged();
+        }
+    }
+}

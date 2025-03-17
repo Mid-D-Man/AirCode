@@ -1,0 +1,169 @@
+@page "/client/scan-attendance"
+@layout AirQrCode.Layout.ClientLayout.ClientLayout
+@inject IJSRuntime JSRuntime
+@using ZXingBlazor.Components
+@using ZXingBlazor
+
+<div class="scan-attendance-page">
+    <div class="scan-header">
+        <h3>Scan QR Code</h3>
+        <p>Scan the attendance QR code to mark your presence</p>
+    </div>
+    
+    <div class="scan-container">
+        <div class="scan-frame">
+            <div class="scan-corner top-left"></div>
+            <div class="scan-corner top-right"></div>
+            <div class="scan-corner bottom-left"></div>
+            <div class="scan-corner bottom-right"></div>
+            
+            @if (IsScanning)
+            {
+                <div class="scan-line"></div>
+            }
+            else
+            {
+                <div class="scan-inactive">
+                    <div class="scan-message">Tap the scan button to start</div>
+                </div>
+            }
+        </div>
+        
+        <BarcodeReader @ref="barcodeReader"
+                      Width="300"
+                      Height="300"
+                      VideoWidth="300"
+                      VideoHeight="300"
+                      OnResult="HandleScanResult"
+                      Style="@scannerStyle" />
+    </div>
+    
+    <div class="scan-controls">
+        <button class="scan-button @(IsScanning ? "scanning" : "")" @onclick="ToggleScanner">
+            @if (IsScanning)
+            {
+                <span>Stop Scanning</span>
+            }
+            else
+            {
+                <span>Start Scanning</span>
+            }
+        </button>
+    </div>
+    
+    <div class="scan-history">
+        <h4>Recent Scans</h4>
+        @if (recentScans.Count > 0)
+        {
+            <div class="scan-list">
+                @foreach (var scan in recentScans)
+                {
+                    <div class="scan-item @(scan.IsSuccessful ? "success" : "error")">
+                        <div class="scan-info">
+                            <span class="scan-time">@scan.ScanTime.ToString("HH:mm:ss")</span>
+                            <span class="scan-data">@GetDisplayText(scan.Data)</span>
+                        </div>
+                        <span class="scan-status-icon">
+                            @if (scan.IsSuccessful)
+                            {
+                                <i class="oi oi-check"></i>
+                            }
+                            else
+                            {
+                                <i class="oi oi-x"></i>
+                            }
+                        </span>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="no-scans">No recent scans</div>
+        }
+    </div>
+</div>
+
+@code {
+    private BarcodeReader barcodeReader;
+    private bool IsScanning = false;
+    private string scannerStyle = "display: none;";
+    private List<ScanRecord> recentScans = new List<ScanRecord>();
+    
+    private async Task ToggleScanner()
+    {
+        IsScanning = !IsScanning;
+        
+        if (IsScanning)
+        {
+            scannerStyle = "display: block;";
+            await barcodeReader.Start();
+        }
+        else
+        {
+            scannerStyle = "display: none;";
+            await barcodeReader.Stop();
+        }
+    }
+    
+    private async Task HandleScanResult(BarcodeResult result)
+    {
+        // Add to recent scans
+        var isSuccessful = !string.IsNullOrEmpty(result.Text);
+        
+        recentScans.Insert(0, new ScanRecord 
+        { 
+            Data = result.Text, 
+            ScanTime = DateTime.Now,
+            IsSuccessful = isSuccessful
+        });
+        
+        // Keep only last 5 scans
+        if (recentScans.Count > 5)
+        {
+            recentScans.RemoveAt(recentScans.Count - 1);
+        }
+        
+        // Process the scan result
+        if (isSuccessful)
+        {
+            // Here you would typically:
+            // 1. Parse the QR code data
+            // 2. Validate it against your Firebase database
+            // 3. Record the attendance
+            // 4. Show appropriate feedback
+            
+            // For now, we'll just show an alert
+            await JSRuntime.InvokeVoidAsync("alert", "Attendance recorded successfully!");
+            
+            // You might want to stop scanning after a successful scan
+            await ToggleScanner();
+        }
+        else
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Invalid QR code. Please try again.");
+        }
+        
+        StateHasChanged();
+    }
+    
+    private string GetDisplayText(string data)
+    {
+        // In a real app, you might want to parse the QR data and display
+        // a more user-friendly representation
+        if (string.IsNullOrEmpty(data))
+            return "Invalid code";
+            
+        if (data.Length > 30)
+            return data.Substring(0, 27) + "...";
+            
+        return data;
+    }
+    
+    private class ScanRecord
+    {
+        public string Data { get; set; }
+        public DateTime ScanTime { get; set; }
+        public bool IsSuccessful { get; set; }
+    }
+}
