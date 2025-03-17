@@ -1,0 +1,23 @@
+@* Components/Admin/Shared/StatCard.razor *@
+<div class="stat-card">
+    <div class="stat-icon">
+        <i class="@Icon"></i>
+    </div>
+    <div class="stat-content">
+        <div class="stat-title">@Title</div>
+        <div class="stat-value">
+            @Value
+            @if (!string.IsNullOrEmpty(Trend))
+            {
+                <i class="fas fa-arrow-@Trend trend-@Trend"></i>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Title { get; set; } = "";
+    [Parameter] public string Value { get; set; } = "";
+    [Parameter] public string Icon { get; set; } = "";
+    [Parameter] public string Trend { get; set; } = ""; // "up" or "down"
+}

@@ -1,0 +1,77 @@
+/* QRCodeCompo.razor.css */
+
+.qr-code {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 20px 0;
+}
+
+.qr-code h3 {
+    color: #2c3e50;
+    margin-bottom: 15px;
+    font-weight: 600;
+}
+
+.qr-code-container {
+    background-color: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    display: inline-block;
+    margin: 10px 0;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.qr-code-container:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+/* Responsive sizing */
+@media (max-width: 768px) {
+    .qr-code-container {
+        padding: 15px;
+    }
+}
+
+@media (max-width: 480px) {
+    .qr-code-container {
+        padding: 10px;
+        max-width: 90vw;
+    }
+}
+
+.qr-code-info {
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    padding: 12px 20px;
+    margin-top: 15px;
+    text-align: center;
+    width: 100%;
+    max-width: 300px;
+    border-left: 4px solid #3498db;
+}
+
+.qr-code-info p {
+    margin: 5px 0;
+    color: #555;
+    font-size: 0.9rem;
+}
+
+.qr-code-info p:last-child {
+    font-weight: 600;
+    color: #e74c3c;
+}
+
+/* Animation for QR code validity countdown */
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+
+.qr-code-info.expiring p:last-child {
+    animation: pulse 2s infinite;
+}

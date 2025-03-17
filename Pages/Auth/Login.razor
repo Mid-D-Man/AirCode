@@ -1,0 +1,18 @@
+@page "/Login"
+@using AirCode.Components.Auth
+@layout AuthLayout
+
+<PageTitle>Login</PageTitle>
+
+<div class="login-container">
+    <LoginForm OnLoginSubmit="HandleLogin" />
+    
+</div>
+
+
+@code {
+    private async Task HandleLogin(LoginModel loginModel)
+    {
+        // Implement login logic
+    }
+}

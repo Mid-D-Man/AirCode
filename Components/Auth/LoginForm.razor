@@ -1,0 +1,76 @@
+@using AirCode.Components.SharedPrefabs
+@inject IJSRuntime JSRuntime
+
+<div class="login-form-container">
+    <EditForm Model="@loginModel" OnValidSubmit="HandleSubmit">
+        <DataAnnotationsValidator />
+
+        <div class="form-group">
+            <label>Username/Email</label>
+            <InputText @bind-Value="loginModel.Username" class="form-control" />
+            <ValidationMessage For="@(() => loginModel.Username)" />
+        </div>
+
+        <div class="form-group">
+            <label>Password</label>
+            <InputText type="password" @bind-Value="loginModel.Password" class="form-control" />
+            <ValidationMessage For="@(() => loginModel.Password)" />
+        </div>
+
+        <div class="form-group">
+            <label class="checkbox-container">
+                <input type="checkbox" checked="@loginModel.IsAdmin" @onchange="AdminCheckChanged" />
+                Login as Administrator
+            </label>
+        </div>
+
+        @if (showAdminId)
+        {
+            <div class="form-group admin-id-section">
+                <label>Admin ID</label>
+                <InputText @bind-Value="loginModel.AdminId" class="form-control" />
+                <ValidationMessage For="@(() => loginModel.AdminId)" />
+            </div>
+        }
+
+        <div class="form-submit">
+            <PrimaryButton Type="submit" Text="Login" />
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    private LoginModel loginModel = new();
+    private bool showAdminId = false;
+
+    [Parameter]
+    public EventCallback<LoginModel> OnLogin { get; set; }
+
+    private async Task AdminCheckChanged(ChangeEventArgs e)
+    {
+        if (e.Value is bool isChecked)
+        {
+            loginModel.IsAdmin = isChecked;
+            showAdminId = isChecked;
+            
+            // Debug message
+            await JSRuntime.InvokeVoidAsync("console.log", $"Admin checkbox changed to: {isChecked}, showAdminId: {showAdminId}");
+            
+            // Force UI refresh
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        // Ensure AdminId is required for admin login
+        if (loginModel.IsAdmin && string.IsNullOrWhiteSpace(loginModel.AdminId))
+        {
+            await JSRuntime.InvokeVoidAsync("console.log", "Admin ID is required but empty");
+            return;
+        }
+
+        await JSRuntime.InvokeVoidAsync("console.log", $"Form submitted - IsAdmin: {loginModel.IsAdmin}, AdminId: {loginModel.AdminId}");
+        await OnLogin.InvokeAsync(loginModel);
+    }
+}

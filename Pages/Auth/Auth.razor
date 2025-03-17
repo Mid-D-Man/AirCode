@@ -1,0 +1,103 @@
+@* Pages/Auth/AuthPage.razor *@
+@page "/Auth"
+@using AirCode.Components.Auth
+@using AirCode.Components.SharedPrefabs
+@layout AuthLayout
+
+<div class="auth-blobs">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+</div>
+
+<div class="auth-page">
+    <div class="auth-container">
+        <div class="auth-header">
+            <PrimaryButton 
+                Text="Login" 
+                OnClick="() => SetActiveView(AuthView.Login)"
+                Class="@(currentView == AuthView.Login ? "active" : "")" />
+            <PrimaryButton 
+                Text="Sign Up" 
+                OnClick="() => SetActiveView(AuthView.SignUp)"
+                Class="@(currentView == AuthView.SignUp ? "active" : "")" />
+        </div>
+
+        <div class="auth-content">
+            @if (currentView == AuthView.Login)
+            {
+                <LoginForm OnLogin="HandleLogin" />
+            }
+            else
+            {
+                <SignUpForm OnSignUp="HandleSignUp" />
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private enum AuthView
+    {
+        Login,
+        SignUp
+    }
+
+    private AuthView currentView = AuthView.Login;
+
+    [Inject]
+    private NavigationManager NavigationManager { get; set; } = default!;
+
+    [Inject]
+    private IUserStorageService UserStorage { get; set; } = default!;
+
+    private void SetActiveView(AuthView view)
+    {
+        currentView = view;
+    }
+
+    private async Task HandleLogin(LoginModel model)
+    {
+        // Debug info to console
+        Console.WriteLine($"Login attempt - Username: {model.Username}, IsAdmin: {model.IsAdmin}, AdminId: {model.AdminId}");
+    
+        // Client login
+        if (!string.IsNullOrWhiteSpace(model.Username) &&
+            model.Username.Trim().ToLower() == "client" &&
+            model.Password == "client")
+        {
+            Console.WriteLine("Client login successful - redirecting to portal");
+            NavigationManager.NavigateTo("/Client/Portal");
+            return;
+        }
+
+        // Admin login
+        if (!string.IsNullOrWhiteSpace(model.Username) &&
+            model.Username.Trim().ToLower() == "admin" &&
+            model.Password == "admin" &&
+            model.IsAdmin &&
+            model.AdminId == "admin")
+        {
+            Console.WriteLine("Admin login successful - redirecting to dashboard");
+            NavigationManager.NavigateTo("/Admin/SuperiorDashboard");
+            return;
+        }
+
+        // Failed login
+        Console.WriteLine("Login failed - credentials don't match any known user");
+        // You could add error display logic here
+    }
+
+
+    private async Task HandleSignUp(SignUpModel model)
+    {
+        // Handle signup logic
+        await UserStorage.AddUser(new User
+        {
+            FirstName = model.FirstName,
+            MiddleName = model.MiddleName,
+            LastName = model.LastName,
+            // ... other properties
+        });
+    }
+}

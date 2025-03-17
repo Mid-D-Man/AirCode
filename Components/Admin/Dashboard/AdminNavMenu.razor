@@ -1,0 +1,90 @@
+@* Components/Admin/Dashboard/AdminNavMenu.razor *@
+@inject NavigationManager NavigationManager
+
+<div class="admin-nav @(_isExpanded ? "expanded" : "collapsed")">
+    <div class="nav-top">
+        <button class="burger-btn" @onclick="ToggleNav">
+            <i class="@(_isExpanded ? "fas fa-times" : "fas fa-bars")"></i>
+        </button>
+    </div>
+
+    <div class="nav-middle">
+        @foreach (var item in GetNavigationItems())
+        {
+            <NavLink class="nav-item" href="@item.Path">
+                <i class="@item.Icon"></i>
+                @if (_isExpanded)
+                {
+                    <span class="nav-label">@item.Label</span>
+                }
+            </NavLink>
+        }
+    </div>
+
+    <div class="nav-bottom">
+        <button class="nav-btn" @onclick="HandleSettings">
+            <i class="fas fa-cog"></i>
+            @if (_isExpanded)
+            {
+                <span>Settings</span>
+            }
+        </button>
+        <button class="nav-btn" @onclick="HandleContact">
+            <i class="fas fa-envelope"></i>
+            @if (_isExpanded)
+            {
+                <span>Contact Us</span>
+            }
+        </button>
+        <button class="nav-btn logout" @onclick="HandleLogout">
+            <i class="fas fa-sign-out-alt"></i>
+            @if (_isExpanded)
+            {
+                <span>Logout</span>
+            }
+        </button>
+    </div>
+</div>
+
+@code {
+    private bool _isExpanded = true;
+    [Parameter] public UserRole AdminRole { get; set; }
+
+    private void ToggleNav() => _isExpanded = !_isExpanded;
+
+    private List<NavItem> GetNavigationItems()
+    {
+        var items = new List<NavItem>
+        {
+            new("fas fa-calendar-plus", "Create Sessions", "/admin/sessions"),
+            new("fas fa-book", "Manage Courses", "/admin/courses"),
+            new("fas fa-users", "User Management", "/admin/users"),
+            new("fas fa-chart-bar", "Reports", "/admin/reports"),
+        };
+
+        if (AdminRole == UserRole.SuperiorAdmin)
+        {
+            items.Insert(3, new("fas fa-user-shield", "Admin Management", "/admin/manage"));
+            items.Insert(4, new("fas fa-graduation-cap", "Semester Management", "/admin/semester"));
+        }
+
+        return items;
+    }
+
+    private void HandleSettings()
+    {
+        NavigationManager.NavigateTo("/admin/settings");
+    }
+
+    private void HandleContact()
+    {
+        NavigationManager.NavigateTo("/admin/contact");
+    }
+
+    private void HandleLogout()
+    {
+        NavigationManager.NavigateTo("/auth");
+    }
+
+    private record NavItem(string Icon, string Label, string Path);
+}

@@ -1,0 +1,35 @@
+/* Desktop */
+@media (min-width: 1280px) {
+    .nav-menu { width: 30%; }
+    .main-content { width: 70%; }
+    .main-content-top { height: 10%; }
+    .main-content-bottom { height: 90%; }
+    .nav-menu-top { height: 10%; }
+    .nav-menu-middle { height: 60%; }
+    .nav-menu-bottom { height: 30%; }
+}
+
+/* Tablet Landscape */
+@media (min-width: 1025px) and (max-width: 1279px) {
+    .nav-menu { width: 250px; }
+    .main-content { width: calc(100% - 250px); }
+}
+
+/* Tablet Portrait */
+@media (min-width: 768px) and (max-width: 1024px) {
+    .nav-menu { width: 200px; }
+    .main-content { width: calc(100% - 200px); }
+}
+
+/* Mobile Landscape */
+@media (min-width: 481px) and (max-width: 767px) {
+    .nav-menu { width: 50px; }
+    .main-content { width: calc(100% - 50px); }
+}
+
+/* Mobile Portrait */
+@media (max-width: 480px) {
+    .nav-menu { display: none; }
+    .burger-icon { display: block; }
+    .main-content { width: 100%; }
+}

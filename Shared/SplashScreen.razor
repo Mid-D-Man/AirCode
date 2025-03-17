@@ -1,0 +1,21 @@
+@* Shared/SplashScreen.razor *@
+
+<div class="splash-screen">
+    <div class="splash-content">
+        <img src="/icons/icon-512.png" alt="App Logo" class="splash-logo" />
+        <div class="splash-title">AirCode</div>
+        <LoadingSpinner />
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public Action OnLoadingComplete { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Simulate loading time
+        await Task.Delay(2000);
+        OnLoadingComplete?.Invoke();
+    }
+}

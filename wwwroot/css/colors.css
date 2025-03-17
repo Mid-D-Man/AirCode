@@ -1,0 +1,23 @@
+:root {
+    --facebook-blue: #4267B2;
+    --hover-facebook-blue: #3b5998;
+    --button-text-color: white;
+    --primary: #433e68;
+    --white: #FFFFFF;
+    --nav-background: #0d47a1;
+    --nav-hover: #1565c0;
+    --text-color: #FFFFFF; /* White text color */
+    --dark-text-color: #322828; /* Dark text color */
+    --secondary: #705CFF60;
+    --h1-color: #5B5D72;
+    --h2-color: #5B5D72;
+    --text: white;
+    --cube-side: 2.75rem;
+    --cube-side-half: calc(var(--cube-side) / 2);
+    --bg: #F6F8FC;
+    --icon-color : #FFFFFF;
+    --bg-light : #5B5D72;
+    --border-color : #FFFFFF;
+    --primary-color : #F39FFF;
+    --primary-rgb : #f6adad;
+}

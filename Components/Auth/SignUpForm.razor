@@ -1,0 +1,128 @@
+@using AirCode.Components.SharedPrefabs
+@* Components/Auth/SignUpForm.razor *@
+<div class="signup-form-container">
+    <div class="progress-bar-container">
+        <div class="progress-bar" style="width: @($"{((currentStep / 3.0) * 100)}%")"></div>
+    </div>
+
+    <div class="step-indicator">
+        Step @(currentStep) of 3
+    </div>
+
+    <EditForm Model="@signUpModel" OnValidSubmit="HandleSubmit">
+        <DataAnnotationsValidator />
+
+        @switch (currentStep)
+        {
+            case 1:
+                <div class="step-content">
+                    <div class="form-group">
+                        <label>First Name</label>
+                        <InputText @bind-Value="signUpModel.FirstName" class="form-control" />
+                    </div>
+                    <div class="form-group">
+                        <label>Middle Name</label>
+                        <InputText @bind-Value="signUpModel.MiddleName" class="form-control" />
+                    </div>
+                    <div class="form-group">
+                        <label>Last Name</label>
+                        <InputText @bind-Value="signUpModel.LastName" class="form-control" />
+                    </div>
+                </div>
+                break;
+
+            case 2:
+                <div class="step-content">
+                    <div class="form-group">
+                        <label>Date of Birth</label>
+                        <InputDate @bind-Value="signUpModel.DateOfBirth" class="form-control" />
+                    </div>
+                    <div class="form-group">
+                        <label>Gender</label>
+                        <InputSelect @bind-Value="signUpModel.Gender" class="form-control">
+                            <option value="">Select Gender</option>
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                        </InputSelect>
+                    </div>
+                    <div class="form-group">
+                        <label>Department</label>
+                        <InputText @bind-Value="signUpModel.Department" class="form-control" />
+                    </div>
+                </div>
+                break;
+
+            case 3:
+                <div class="step-content">
+                    <div class="form-group">
+                        <label>Email</label>
+                        <InputText @bind-Value="signUpModel.Email" class="form-control" />
+                    </div>
+                    <div class="form-group">
+                        <label>Matriculation Number</label>
+                        <InputText @bind-Value="signUpModel.MatriculationNumber" class="form-control" />
+                    </div>
+                    <div class="form-group">
+                        <label class="checkbox-container">
+                            <InputCheckbox @bind-Value="signUpModel.IsAdmin" />
+                            Sign up as Administrator
+                        </label>
+                    </div>
+                    @if (signUpModel.IsAdmin)
+                    {
+                        <div class="form-group">
+                            <label>Admin ID</label>
+                            <InputText @bind-Value="signUpModel.AdminId" class="form-control" />
+                        </div>
+                    }
+                </div>
+                break;
+        }
+
+        <div class="button-group">
+            @if (currentStep > 1)
+            {
+                <PrimaryButton
+                    Text="Previous"
+                    OnClick="PreviousStep"
+                    Class="secondary" />
+            }
+
+            @if (currentStep < 3)
+            {
+                <PrimaryButton
+                    Text="Next"
+                    OnClick="NextStep" />
+            }
+            else
+            {
+                <PrimaryButton
+                    Type="submit"
+                    Text="Complete Sign Up" />
+            }
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    private SignUpModel signUpModel = new();
+    private int currentStep = 1;
+
+    [Parameter]
+    public EventCallback<SignUpModel> OnSignUp { get; set; }
+
+    private void NextStep()
+    {
+        if (currentStep < 3) currentStep++;
+    }
+
+    private void PreviousStep()
+    {
+        if (currentStep > 1) currentStep--;
+    }
+
+    private async Task HandleSubmit()
+    {
+        await OnSignUp.InvokeAsync(signUpModel);
+    }
+}

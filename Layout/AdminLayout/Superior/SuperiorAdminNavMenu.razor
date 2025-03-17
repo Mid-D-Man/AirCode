@@ -1,0 +1,70 @@
+@inherits LayoutComponentBase
+@using AirCode.Components.Admin.Shared
+@using AirCode.Utilities.DataStructures
+@using Aircode.Components.Admin.Shared
+<div class="nav-menu @(IsExpanded ? "expanded" : "collapsed")">
+    <div class="nav-top">
+        <Burger OnToggle="ToggleNavMenu" />
+    </div>
+
+    <div class="nav-middle">
+        @foreach (var item in NavigationItems)
+        {
+            <NavLink href="@item.Path" class="nav-item">
+                <NavMenuButton
+                    IconPath="@item.IconPath"
+                    Label="@item.Label"
+                    IsExpanded="IsExpanded"
+                    OnClick="@(() => NavigationManager.NavigateTo(item.Path))"
+                />
+            </NavLink>
+        }
+    </div>
+
+    <div class="nav-bottom">
+        @foreach (var item in BottomItems)
+        {
+            <div class="nav-item">
+                <NavMenuButton
+                    IconPath="@item.IconPath"
+                    Label="@item.Label"
+                    IsExpanded="IsExpanded"
+                    OnClick="@item.Action"
+                />
+            </div>
+        }
+    </div>
+</div>
+
+
+@code {
+    private bool IsExpanded { get; set; } = true;
+    [Inject]
+    private NavigationManager NavigationManager { get; set; }
+
+    private void ToggleNavMenu(bool isChecked)
+    {
+        IsExpanded = isChecked;
+    }
+
+    private void HandleSettings() => NavigationManager.NavigateTo("/admin/settings");
+    private void HandleContact() => NavigationManager.NavigateTo("/admin/contact");
+    private void HandleLogout() => NavigationManager.NavigateTo("/auth");
+    private List<NavItem> NavigationItems => new()
+    {
+        new("/svgs/Admin_Icon.svg", "Dashboard", "/Admin/Dashboard"),
+        new("/svgs/QRCode_Icon.svg", "CreateSession", "/Admin/CreateSession"),
+        new("/svgs/Users_Icon.svg", "User Management", "/TestPage"),
+        new("/svgs/Admin_Icon.svg", "Admin Management", "/admin/admins"),
+        new("/svgs/Admin_Icon.svg", "Manage Courses", "/Admin/ManageCourses"),
+        new("/svgs/Report_Icon.svg", "Reports", "/admin/reports"),
+        new("/svgs/Stats_Icon.svg", "Statistics", "/admin/stats")
+    };
+
+    private List<NavItem> BottomItems => new()
+    {
+        new("/svgs/Admin_Icon.svg", "Settings", HandleSettings),
+        new("/svgs/ContactUs_Icon.svg", "Contact", HandleContact),
+        new("/svgs/Logout_Icon.svg", "Logout", HandleLogout)
+    };
+}

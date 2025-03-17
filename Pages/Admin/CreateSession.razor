@@ -1,0 +1,239 @@
+@page "/Admin/CreateSession"
+@using AirCode.Layout.AdminLayout.Superior
+@using Microsoft.AspNetCore.Authorization
+@layout SuperiorAdminLayout
+@attribute [Authorize(Roles = "Admin")]
+@using AirCode.Components.SharedPrefabs
+@using AirCode.Utilities.DataStructures
+@using AirCode.Components.SharedPrefabs.QrCode.regular
+@inject IJSRuntime JS
+
+<div class="create-session-page">
+    <h1>Create Session</h1>
+    
+    <div class="content-container @(isSessionStarted ? "session-active" : "")">
+        <div class="form-container">
+            <EditForm Model="sessionModel" OnValidSubmit="StartSession">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+                
+                <div class="form-group">
+                    <label for="courseName">Course Name</label>
+                    <InputText id="courseName" @bind-Value="sessionModel.CourseName" class="form-control" disabled="@isSessionStarted" />
+                </div>
+                
+                <div class="form-group">
+                    <label for="courseId">Course ID</label>
+                    <InputText id="courseId" @bind-Value="sessionModel.CourseId" class="form-control" disabled="@isSessionStarted" />
+                </div>
+                
+                <div class="form-group">
+                    <label for="duration">Session Duration</label>
+                    <InputSelect id="duration" @bind-Value="sessionModel.Duration" class="form-control" disabled="@isSessionStarted">
+                        <option value="10">10 minutes</option>
+                        <option value="15">15 minutes</option>
+                        <option value="30">30 minutes</option>
+                        <option value="60">1 hour</option>
+                        <option value="120">2 hours</option>
+                        <option value="180">3 hours</option>
+                        <option value="240">4 hours</option>
+                        <option value="300">5 hours</option>
+                        <option value="360">6 hours</option>
+                    </InputSelect>
+                </div>
+                
+                <div class="form-group">
+                    <label for="qrTheme">QR Code Theme</label>
+                    <InputSelect id="qrTheme" @bind-Value="selectedTheme" class="form-control" disabled="@isSessionStarted">
+                        <option value="Standard">Standard</option>
+                        <option value="Gradient">Gradient</option>
+                        <option value="Branded">With Logo</option>
+                        <option value="GradientWithLogo">Gradient with Logo</option>
+                    </InputSelect>
+                </div>
+                
+                <div class="button-container">
+                    <PrimaryButton Text="Start Session" OnClick="StartSession" />
+                </div>
+            </EditForm>
+        </div>
+        
+        @if (isSessionStarted)
+        {
+            <div class="active-session-container">
+                <div class="countdown-timer">
+                    Session ends in: @FormatTimeRemaining()
+                </div>
+                
+                <div class="qr-code-wrapper">
+                    <QRCodeCompo 
+                        Content="@qrCodePayload" 
+                        Duration="@sessionModel.Duration" 
+                        Theme="@ConvertStringToTheme(selectedTheme)" 
+                        Options="@GenerateQRCodeOptions()"
+                        OnGenerated="HandleQRCodeGenerated" />
+                </div>
+                
+                <div class="end-session-button">
+                    <PrimaryButton Text="End Session" OnClick="EndSession" />
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private SessionData sessionModel = new();
+    private bool isSessionStarted = false;
+    private string qrCodePayload = string.Empty;
+    private string selectedTheme = "Standard";
+    private DateTime sessionEndTime;
+    private System.Threading.Timer countdownTimer;
+    private QRCodeData generatedQRCode;
+    
+    protected override void OnInitialized()
+    {
+        // Set default values if needed
+        sessionModel.Duration = 30; // Default to 30 minutes
+    }
+    
+    private void StartSession()
+    {
+        sessionModel.StartTime = DateTime.UtcNow;
+        sessionModel.Date = DateTime.UtcNow.Date;
+        isSessionStarted = true;
+        qrCodePayload = GenerateQrCodePayload();
+        
+        // Calculate end time for countdown
+        sessionEndTime = DateTime.UtcNow.AddMinutes(sessionModel.Duration);
+        
+        // Start the countdown timer
+        countdownTimer = new System.Threading.Timer(
+            _ => InvokeAsync(StateHasChanged),
+            null,
+            TimeSpan.Zero,
+            TimeSpan.FromSeconds(1)
+        );
+    }
+    
+    private void EndSession()
+    {
+        isSessionStarted = false;
+        countdownTimer?.Dispose();
+        countdownTimer = null;
+        
+        // Here you would typically save the session data to your database
+        // SaveSessionData();
+    }
+    
+    private string GenerateQrCodePayload()
+    {
+        // Generate a unique session ID
+        var sessionId = Guid.NewGuid().ToString("N");
+        
+        // Create a more structured payload with proper delimiter
+        return $"{sessionId}|{sessionModel.CourseId}|{sessionModel.CourseName}|{sessionModel.StartTime:yyyy-MM-ddTHH:mm:ssZ}|{sessionModel.Duration}";
+    }
+    
+    private QRCodeTheme ConvertStringToTheme(string theme)
+    {
+        return theme switch
+        {
+            "Gradient" => QRCodeTheme.Gradient,
+            "Branded" => QRCodeTheme.Branded,
+            "GradientWithLogo" => QRCodeTheme.GradientWithLogo,
+            _ => QRCodeTheme.Standard
+        };
+    }
+    
+    private QRCodeBaseOptions GenerateQRCodeOptions()
+    {
+        // Base options
+        QRCodeBaseOptions options = new QRCodeBaseOptions
+        {
+            Content = qrCodePayload,
+            Size = 300,
+            DarkColor = "#000000",
+            LightColor = "#FFFFFF",
+            ErrorLevel = ErrorCorrectionLevel.M,
+            Margin = 4
+        };
+        
+        // Apply theme-specific options
+        return selectedTheme switch
+        {
+            "Gradient" => new QRCodeGradientOptions
+            {
+                Content = qrCodePayload,
+                Size = 300,
+                DarkColor = "#000000",
+                LightColor = "#FFFFFF",
+                ErrorLevel = ErrorCorrectionLevel.M,
+                Margin = 4,
+                GradientColor1 = "#3498db",
+                GradientColor2 = "#9b59b6",
+                Direction = GradientDirection.Diagonal
+            },
+            "Branded" => new QRCodeBrandedOptions
+            {
+                Content = qrCodePayload,
+                Size = 300,
+                DarkColor = "#000000",
+                LightColor = "#FFFFFF",
+                ErrorLevel = ErrorCorrectionLevel.H, // Higher error correction for logo
+                Margin = 4,
+                LogoUrl = "/icons/icon-192.png",
+                LogoSizeRatio = 0.2f,
+                AddLogoBorder = true,
+                LogoBorderColor = "#FFFFFF",
+                LogoBorderWidth = 2,
+                LogoBorderRadius = 5
+            },
+            "GradientWithLogo" => new QRCodeGradientBrandedOptions
+            {
+                Content = qrCodePayload,
+                Size = 300,
+                DarkColor = "#000000",
+                LightColor = "#FFFFFF",
+                ErrorLevel = ErrorCorrectionLevel.H, // Higher error correction for logo
+                Margin = 4,
+                GradientColor1 = "#3498db",
+                GradientColor2 = "#9b59b6",
+                Direction = GradientDirection.Radial,
+                LogoUrl = "/icons/icon-192.png",
+                LogoSizeRatio = 0.2f,
+                AddLogoBorder = true,
+                LogoBorderColor = "#FFFFFF",
+                LogoBorderWidth = 2,
+                LogoBorderRadius = 5
+            },
+            _ => options
+        };
+    }
+    
+    private string FormatTimeRemaining()
+    {
+        if (!isSessionStarted) return "--:--:--";
+        
+        TimeSpan remaining = sessionEndTime - DateTime.UtcNow;
+        if (remaining.TotalSeconds <= 0)
+        {
+            EndSession();
+            return "00:00:00";
+        }
+        
+        return $"{remaining.Hours:00}:{remaining.Minutes:00}:{remaining.Seconds:00}";
+    }
+    
+    private Task HandleQRCodeGenerated(QRCodeData qrCode)
+    {
+        generatedQRCode = qrCode;
+        // You could do additional processing here
+        return Task.CompletedTask;
+    }
+    
+    public void Dispose()
+    {
+        countdownTimer?.Dispose();
+    }
+}

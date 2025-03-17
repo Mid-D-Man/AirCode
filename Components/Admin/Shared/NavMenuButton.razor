@@ -1,0 +1,26 @@
+@* Components/Admin/Shared/NavMenuButton.razor *@
+@namespace Aircode.Components.Admin.Shared
+<div class="nav-button" @onclick="@OnClick">
+    <div class="icon">
+        <img src="@IconPath" alt="@Label" />
+    </div>
+    @if (IsExpanded)
+    {
+        <span class="text">@Label</span>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public string IconPath { get; set; } = "";
+
+    [Parameter]
+    public string Label { get; set; } = "";
+
+    [Parameter]
+    public bool IsExpanded { get; set; }
+
+    [Parameter]
+    public EventCallback OnClick { get; set; }
+}
+
