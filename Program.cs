@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using AirCode;
 using AirCode.Services;
-
+using ZXingBlazor;
 using AirCode.Services.Storage; // Add this namespace import
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
@@ -23,4 +23,3 @@ builder.Services.AddScoped<IUserStorageService, UserStorageService>();
 
 await builder.Build().RunAsync();
 
-//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
