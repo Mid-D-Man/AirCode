@@ -1,6 +1,324 @@
-@page "/ManageSession"
-<h3>ManageSession</h3>
+@page "/Admin/ManageSession"
+@using AirCode.Layout.AdminLayout.Superior
+@using Microsoft.AspNetCore.Authorization
+@layout SuperiorAdminLayout
+@attribute [Authorize(Roles = "Admin")]
+@inject IJSRuntime JSRuntime
+
+<div class="manage-session-page">
+    <h2 class="page-title">Manage Academic Sessions</h2>
+    
+    <div class="session-info-card">
+        <div class="card-header">
+            <h3>Current Session</h3>
+        </div>
+        <div class="card-content">
+            @if (currentSession != null)
+            {
+                <div class="session-details">
+                    <div class="session-title">@currentSession.Name</div>
+                    <div class="session-dates">
+                        <span>Start: @currentSession.StartDate.ToShortDateString()</span>
+                        <span>End: @currentSession.EndDate.ToShortDateString()</span>
+                    </div>
+                    <div class="session-status active">
+                        <span class="status-indicator"></span>
+                        Active
+                    </div>
+                    
+                    @if (IsSessionEnding())
+                    {
+                        <div class="countdown-container">
+                            <div class="countdown-label">Session ends in:</div>
+                            <div class="countdown">
+                                <div class="countdown-item">
+                                    <span class="countdown-value">@daysLeft</span>
+                                    <span class="countdown-unit">Days</span>
+                                </div>
+                                <div class="countdown-item">
+                                    <span class="countdown-value">@hoursLeft</span>
+                                    <span class="countdown-unit">Hours</span>
+                                </div>
+                                <div class="countdown-item">
+                                    <span class="countdown-value">@minutesLeft</span>
+                                    <span class="countdown-unit">Mins</span>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    
+                    <button class="end-session-btn" @onclick="EndCurrentSession">End Session</button>
+                </div>
+            }
+            else
+            {
+                <div class="no-active-session">
+                    <p>No active session</p>
+                    <button class="init-session-btn" @onclick="() => showInitSessionModal = true">Initialize Session</button>
+                </div>
+            }
+        </div>
+    </div>
+    
+    <div class="session-history-container">
+        <div class="card-header">
+            <h3>Session History</h3>
+        </div>
+        <div class="session-history">
+            @if (sessionHistory.Count > 0)
+            {
+                <table class="session-table">
+                    <thead>
+                        <tr>
+                            <th>Session Name</th>
+                            <th>Start Date</th>
+                            <th>End Date</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var session in sessionHistory)
+                        {
+                            <tr>
+                                <td>@session.Name</td>
+                                <td>@session.StartDate.ToShortDateString()</td>
+                                <td>@session.EndDate.ToShortDateString()</td>
+                                <td>
+                                    <span class="status-badge @(session.IsActive ? "active" : "inactive")">
+                                        @(session.IsActive ? "Active" : "Completed")
+                                    </span>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            else
+            {
+                <div class="no-history">
+                    <p>No session history available</p>
+                </div>
+            }
+        </div>
+    </div>
+    
+    @if (showInitSessionModal)
+    {
+        <div class="modal-backdrop" @onclick="() => showInitSessionModal = false"></div>
+        <div class="modal-container">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Initialize New Session</h3>
+                    <button class="close-btn" @onclick="() => showInitSessionModal = false">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="sessionName">Session Name</label>
+                        <input type="text" id="sessionName" class="form-control" @bind="newSession.Name" placeholder="e.g. 2024/2025 Academic Year" />
+                    </div>
+                    <div class="form-group">
+                        <label for="startDate">Start Date</label>
+                        <input type="date" id="startDate" class="form-control" @bind="newSession.StartDate" />
+                    </div>
+                    <div class="form-group">
+                        <label for="endDate">End Date</label>
+                        <input type="date" id="endDate" class="form-control" @bind="newSession.EndDate" />
+                    </div>
+                    
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="error-message">@errorMessage</div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button class="cancel-btn" @onclick="() => showInitSessionModal = false">Cancel</button>
+                    <button class="submit-btn" @onclick="InitializeSession">Initialize</button>
+                </div>
+            </div>
+        </div>
+    }
+    
+    @if (showConfirmModal)
+    {
+        <div class="modal-backdrop" @onclick="() => showConfirmModal = false"></div>
+        <div class="modal-container">
+            <div class="modal-content confirm-modal">
+                <div class="modal-header">
+                    <h3>Confirm Action</h3>
+                    <button class="close-btn" @onclick="() => showConfirmModal = false">×</button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to end the current session?</p>
+                    <p>This action cannot be undone.</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="cancel-btn" @onclick="() => showConfirmModal = false">Cancel</button>
+                    <button class="danger-btn" @onclick="ConfirmEndSession">End Session</button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
 
 @code {
+    private AcademicSession? currentSession;
+    private List<AcademicSession> sessionHistory = new List<AcademicSession>();
+    private AcademicSession newSession = new();
+    private bool showInitSessionModal = false;
+    private bool showConfirmModal = false;
+    private string errorMessage = "";
     
+    // Countdown variables
+    private int daysLeft;
+    private int hoursLeft;
+    private int minutesLeft;
+    
+    protected override void OnInitialized()
+    {
+        // Mock data for demo purposes
+        LoadSessions();
+        CalculateCountdown();
+    }
+    
+    private void LoadSessions()
+    {
+        // In a real application, this would load from a database or service
+        sessionHistory = new List<AcademicSession>
+        {
+            new AcademicSession
+            {
+                Id = 1,
+                Name = "2023/2024 Academic Year",
+                StartDate = new DateTime(2023, 9, 1),
+                EndDate = new DateTime(2024, 7, 31),
+                IsActive = false
+            }
+        };
+        
+        // Check if there's an active session
+        currentSession = sessionHistory.FirstOrDefault(s => s.IsActive);
+        
+        // For demo purposes, if no active session, create one
+        if (currentSession == null && sessionHistory.Count > 0)
+        {
+            currentSession = new AcademicSession
+            {
+                Id = 2,
+                Name = "2024/2025 Academic Year",
+                StartDate = new DateTime(2024, 9, 1),
+                EndDate = new DateTime(2025, 7, 31),
+                IsActive = true
+            };
+            sessionHistory.Insert(0, currentSession);
+        }
+    }
+    
+    private bool IsSessionEnding()
+    {
+        if (currentSession == null) return false;
+        
+        // Consider the session as ending if it has less than 30 days remaining
+        var daysRemaining = (currentSession.EndDate - DateTime.Now).TotalDays;
+        return daysRemaining <= 30 && daysRemaining > 0;
+    }
+    
+    private void CalculateCountdown()
+    {
+        if (currentSession == null) return;
+        
+        var timeRemaining = currentSession.EndDate - DateTime.Now;
+        
+        if (timeRemaining.TotalSeconds > 0)
+        {
+            daysLeft = timeRemaining.Days;
+            hoursLeft = timeRemaining.Hours;
+            minutesLeft = timeRemaining.Minutes;
+        }
+    }
+    
+    private void EndCurrentSession()
+    {
+        showConfirmModal = true;
+    }
+    
+    private void ConfirmEndSession()
+    {
+        if (currentSession != null)
+        {
+            currentSession.IsActive = false;
+            currentSession.EndDate = DateTime.Now;
+            currentSession = null;
+        }
+        
+        showConfirmModal = false;
+    }
+    
+    private void InitializeSession()
+    {
+        errorMessage = "";
+        
+        // Validation
+        if (string.IsNullOrWhiteSpace(newSession.Name))
+        {
+            errorMessage = "Session name is required";
+            return;
+        }
+        
+        if (newSession.StartDate == default)
+        {
+            errorMessage = "Start date is required";
+            return;
+        }
+        
+        if (newSession.EndDate == default)
+        {
+            errorMessage = "End date is required";
+            return;
+        }
+        
+        if (newSession.EndDate <= newSession.StartDate)
+        {
+            errorMessage = "End date must be after start date";
+            return;
+        }
+        
+        // Check if we already have 2 sessions in history (limit to 2 sessions as required)
+        if (sessionHistory.Count >= 2)
+        {
+            errorMessage = "Cannot create more than 2 sessions. Please archive an old session.";
+            return;
+        }
+        
+        // Create new session
+        var session = new AcademicSession
+        {
+            Id = sessionHistory.Count > 0 ? sessionHistory.Max(s => s.Id) + 1 : 1,
+            Name = newSession.Name,
+            StartDate = newSession.StartDate,
+            EndDate = newSession.EndDate,
+            IsActive = true
+        };
+        
+        // Set as current session
+        currentSession = session;
+        
+        // Add to history
+        sessionHistory.Insert(0, session);
+        
+        // Reset form
+        newSession = new AcademicSession();
+        showInitSessionModal = false;
+        
+        // Calculate countdown if applicable
+        CalculateCountdown();
+    }
+    
+    private class AcademicSession
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = "";
+        public DateTime StartDate { get; set; }
+        public DateTime EndDate { get; set; }
+        public bool IsActive { get; set; }
+    }
 }

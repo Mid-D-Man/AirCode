@@ -1,0 +1,398 @@
+@page "/Admin/ManageAdmins"
+@using AirCode.Layout.AdminLayout.Superior
+@using Microsoft.AspNetCore.Authorization
+@layout SuperiorAdminLayout
+@attribute [Authorize(Roles = "Admin")]
+@using AirCode.Components.Admin.Shared
+@using AirCode.Models
+@using System.Text
+@using System.Security.Cryptography
+@inject IJSRuntime JSRuntime
+
+<div class="manage-admins-page">
+    <div class="page-header">
+        <h2>Manage Administrators</h2>
+        <p>Create and manage admin accounts for lecturers and course representatives</p>
+    </div>
+
+    <div class="admin-controls">
+        <div class="filter-controls">
+            <div class="filter-group">
+                <label>Filter by role:</label>
+                <select @bind="selectedRoleFilter" class="filter-select">
+                    <option value="All">All Roles</option>
+                    <option value="Lecturer">Lecturer</option>
+                    <option value="CourseRep">Course Representative</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label>Search:</label>
+                <input type="text" @bind="searchTerm" @bind:event="oninput" placeholder="Search by name or email" class="search-input" />
+            </div>
+        </div>
+
+        <button class="create-admin-btn" @onclick="OpenCreateAdminModal">
+            <i class="oi oi-plus"></i> Create New Admin
+        </button>
+    </div>
+
+    <div class="admin-list">
+        @if (filteredAdmins.Count > 0)
+        {
+            @foreach (var admin in filteredAdmins)
+            {
+                <AdminCard>
+                    <div class="admin-card-content">
+                        <div class="admin-info">
+                            <div class="admin-name">@admin.Name</div>
+                            <div class="admin-role @admin.Role.ToString().ToLower()">@GetRoleDisplayName(admin.Role)</div>
+                            <div class="admin-email">@admin.Email</div>
+                            <div class="admin-created">Created: @admin.CreatedAt.ToShortDateString()</div>
+                        </div>
+                        <div class="admin-actions">
+                            <div class="admin-id-info">
+                                <div class="admin-id-label">Admin ID:</div>
+                                <div class="admin-id-value">@admin.AdminId</div>
+                                <div class="admin-id-usage">
+                                    <span class="usage-count">@admin.ActiveUsers/@GetMaxUsersForRole(admin.Role)</span> active users
+                                </div>
+                            </div>
+                            <div class="action-buttons">
+                                <button class="copy-id-btn" @onclick="() => CopyAdminId(admin.AdminId)">
+                                    <i class="oi oi-clipboard"></i> Copy ID
+                                </button>
+                                <button class="regenerate-id-btn" @onclick="() => ConfirmRegenerateId(admin)">
+                                    <i class="oi oi-loop-circular"></i> Regenerate
+                                </button>
+                                <button class="delete-admin-btn" @onclick="() => ConfirmDeleteAdmin(admin)">
+                                    <i class="oi oi-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </AdminCard>
+            }
+        }
+        else
+        {
+            <div class="no-admins">
+                <i class="oi oi-person"></i>
+                <p>No administrators found</p>
+            </div>
+        }
+    </div>
+
+    @if (showCreateModal)
+    {
+        <div class="modal-overlay">
+            <div class="modal-container">
+                <div class="modal-header">
+                    <h3>Create New Administrator</h3>
+                    <button class="close-button" @onclick="CloseCreateAdminModal">
+                        <i class="oi oi-x"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Name</label>
+                        <input type="text" @bind="newAdmin.Name" placeholder="Full name" />
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" @bind="newAdmin.Email" placeholder="Email address" />
+                    </div>
+                    <div class="form-group">
+                        <label>Role</label>
+                        <select @bind="newAdmin.Role">
+                            <option value="@UserRole.LecturerAdmin">Lecturer</option>
+                            <option value="@UserRole.CourseRepAdmin">Course Representative</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="cancel-button" @onclick="CloseCreateAdminModal">Cancel</button>
+                    <button class="create-button" @onclick="CreateAdmin">Create Admin</button>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (showConfirmModal)
+    {
+        <div class="modal-overlay">
+            <div class="modal-container confirm-modal">
+                <div class="modal-header">
+                    <h3>@confirmModalTitle</h3>
+                    <button class="close-button" @onclick="CloseConfirmModal">
+                        <i class="oi oi-x"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p>@confirmModalMessage</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="cancel-button" @onclick="CloseConfirmModal">Cancel</button>
+                    <button class="@confirmButtonClass" @onclick="ConfirmAction">@confirmButtonText</button>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (showToast)
+    {
+        <div class="toast-notification @toastType">
+            <div class="toast-message">@toastMessage</div>
+            <button class="toast-close" @onclick="CloseToast">
+                <i class="oi oi-x"></i>
+            </button>
+        </div>
+    }
+</div>
+
+@code {
+    private List<AdminUser> admins = new List<AdminUser>();
+    private List<AdminUser> filteredAdmins => FilterAdmins();
+    private string selectedRoleFilter = "All";
+    private string searchTerm = "";
+
+    // Modal control
+    private bool showCreateModal = false;
+    private AdminUser newAdmin = new AdminUser();
+
+    // Confirm dialog
+    private bool showConfirmModal = false;
+    private string confirmModalTitle = "";
+    private string confirmModalMessage = "";
+    private string confirmButtonText = "";
+    private string confirmButtonClass = "";
+    private Action confirmAction;
+    private AdminUser selectedAdmin;
+
+    // Toast notification
+    private bool showToast = false;
+    private string toastMessage = "";
+    private string toastType = "success";
+
+    protected override void OnInitialized()
+    {
+        // In a real app, you would fetch this data from a service
+        LoadMockData();
+    }
+
+    private void LoadMockData()
+    {
+        admins = new List<AdminUser>
+        {
+            new AdminUser
+            {
+                Id = 1,
+                Name = "Dr. Jane Smith",
+                Email = "jane.smith@aircode.edu",
+                Role = UserRole.LecturerAdmin,
+                AdminId = GenerateAdminId(),
+                CreatedAt = DateTime.Now.AddMonths(-3),
+                ActiveUsers = 2
+            },
+            new AdminUser
+            {
+                Id = 2,
+                Name = "Prof. Michael Johnson",
+                Email = "michael.johnson@aircode.edu",
+                Role = UserRole.LecturerAdmin,
+                AdminId = GenerateAdminId(),
+                CreatedAt = DateTime.Now.AddMonths(-2),
+                ActiveUsers = 1
+            },
+            new AdminUser
+            {
+                Id = 3,
+                Name = "Sarah Williams",
+                Email = "sarah.williams@aircode.edu",
+                Role = UserRole.CourseRepAdmin,
+                AdminId = GenerateAdminId(),
+                CreatedAt = DateTime.Now.AddMonths(-1),
+                ActiveUsers = 2
+            }
+        };
+    }
+
+    private List<AdminUser> FilterAdmins()
+    {
+        var filtered = admins.AsEnumerable();
+
+        // Filter by role
+        if (selectedRoleFilter != "All")
+        {
+            UserRole role = Enum.Parse<UserRole>(selectedRoleFilter);
+            filtered = filtered.Where(a => a.Role == role);
+        }
+
+        // Filter by search term
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            string search = searchTerm.ToLower();
+            filtered = filtered.Where(a =>
+                a.Name.ToLower().Contains(search) ||
+                a.Email.ToLower().Contains(search));
+        }
+
+        return filtered.ToList();
+    }
+
+    private string GetRoleDisplayName(UserRole role)
+    {
+        return role switch
+        {
+            UserRole.LecturerAdmin => "Lecturer",
+            UserRole.CourseRepAdmin => "Course Representative",
+            _ => role.ToString()
+        };
+    }
+
+    private int GetMaxUsersForRole(UserRole role)
+    {
+        return role switch
+        {
+            UserRole.LecturerAdmin => 3,
+            UserRole.CourseRepAdmin => 2,
+            _ => 1
+        };
+    }
+
+    private string GenerateAdminId()
+    {
+        using (var rng = RandomNumberGenerator.Create())
+        {
+            var bytes = new byte[12]; // Creates a 16-character Base64 string
+            rng.GetBytes(bytes);
+            return Convert.ToBase64String(bytes);
+        }
+    }
+
+    private async Task CopyAdminId(string adminId)
+    {
+        await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", adminId);
+        ShowToast("Admin ID copied to clipboard", "success");
+    }
+
+    private void OpenCreateAdminModal()
+    {
+        newAdmin = new AdminUser();
+        newAdmin.Role = UserRole.LecturerAdmin; // Default
+        showCreateModal = true;
+    }
+
+    private void CloseCreateAdminModal()
+    {
+        showCreateModal = false;
+    }
+
+    private void CreateAdmin()
+    {
+        if (string.IsNullOrWhiteSpace(newAdmin.Name) || string.IsNullOrWhiteSpace(newAdmin.Email))
+        {
+            ShowToast("Please fill in all required fields", "error");
+            return;
+        }
+
+        // Generate admin ID and set other properties
+        newAdmin.Id = admins.Count > 0 ? admins.Max(a => a.Id) + 1 : 1;
+        newAdmin.AdminId = GenerateAdminId();
+        newAdmin.CreatedAt = DateTime.Now;
+        newAdmin.ActiveUsers = 0;
+
+        admins.Add(newAdmin);
+        CloseCreateAdminModal();
+        ShowToast("Administrator created successfully", "success");
+    }
+
+    private void ConfirmRegenerateId(AdminUser admin)
+    {
+        selectedAdmin = admin;
+        confirmModalTitle = "Regenerate Admin ID";
+        confirmModalMessage = $"Are you sure you want to regenerate the admin ID for {admin.Name}? This will invalidate the previous ID and may disrupt active users.";
+        confirmButtonText = "Regenerate";
+        confirmButtonClass = "regenerate-button";
+        confirmAction = RegenerateAdminId;
+        showConfirmModal = true;
+    }
+
+    private void RegenerateAdminId()
+    {
+        if (selectedAdmin != null)
+        {
+            string oldId = selectedAdmin.AdminId;
+            selectedAdmin.AdminId = GenerateAdminId();
+            selectedAdmin.ActiveUsers = 0; // Reset active users as they'll need to sign in with new ID
+
+            CloseConfirmModal();
+            ShowToast("Admin ID regenerated successfully", "success");
+        }
+    }
+
+    private void ConfirmDeleteAdmin(AdminUser admin)
+    {
+        selectedAdmin = admin;
+        confirmModalTitle = "Delete Administrator";
+        confirmModalMessage = $"Are you sure you want to delete {admin.Name}? This action cannot be undone and will remove all associated data.";
+        confirmButtonText = "Delete";
+        confirmButtonClass = "delete-button";
+        confirmAction = DeleteAdmin;
+        showConfirmModal = true;
+    }
+
+    private void DeleteAdmin()
+    {
+        if (selectedAdmin != null)
+        {
+            admins.Remove(selectedAdmin);
+            CloseConfirmModal();
+            ShowToast("Administrator deleted successfully", "success");
+        }
+    }
+
+    private void CloseConfirmModal()
+    {
+        showConfirmModal = false;
+    }
+
+    private void ConfirmAction()
+    {
+        confirmAction?.Invoke();
+    }
+
+    private void ShowToast(string message, string type)
+    {
+        toastMessage = message;
+        toastType = type;
+        showToast = true;
+        StateHasChanged();
+
+        // Auto-close toast after 3 seconds
+        _ = Task.Run(async () => {
+            await Task.Delay(3000);
+            await InvokeAsync(() => {
+                showToast = false;
+                StateHasChanged();
+            });
+        });
+    }
+
+    private void CloseToast()
+    {
+        showToast = false;
+    }
+
+    // Admin User model
+    public class AdminUser
+    {
+        public int Id { get; set; }
+        public string Name { get; set; }
+        public string Email { get; set; }
+        public UserRole Role { get; set; }
+        public string AdminId { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public int ActiveUsers { get; set; }
+    }
+}

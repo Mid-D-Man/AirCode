@@ -1,0 +1,452 @@
+
+.manage-admins-page {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 1rem;
+}
+
+.page-header {
+    margin-bottom: 1.5rem;
+}
+
+.page-header h2 {
+    color: var(--h1-color);
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.page-header p {
+    color: var(--h2-color);
+    font-size: 0.9rem;
+}
+
+.admin-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.filter-controls {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.filter-group label {
+    font-size: 0.8rem;
+    color: var(--h2-color);
+}
+
+.filter-select, .search-input {
+    padding: 0.5rem;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    background-color: var(--white);
+    font-size: 0.9rem;
+    min-width: 150px;
+}
+
+.search-input {
+    min-width: 200px;
+}
+
+.create-admin-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background-color: var(--primary-color);
+    color: var(--button-text-color);
+    border: none;
+    border-radius: 4px;
+    padding: 0.6rem 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.create-admin-btn:hover {
+    background-color: var(--primary-rgb);
+    transform: translateY(-2px);
+}
+
+.admin-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.admin-card-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    width: 100%;
+}
+
+.admin-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.admin-name {
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: var(--dark-text-color);
+}
+
+.admin-role {
+    display: inline-block;
+    padding: 0.2rem 0.5rem;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    margin-bottom: 0.3rem;
+}
+
+.admin-role.lecturer {
+    background-color: #e3f2fd;
+    color: #1565c0;
+}
+
+.admin-role.courserep {
+    background-color: #f1f8e9;
+    color: #2e7d32;
+}
+
+.admin-email {
+    color: var(--h2-color);
+    font-size: 0.9rem;
+}
+
+.admin-created {
+    color: var(--h2-color);
+    font-size: 0.8rem;
+}
+
+.admin-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.8rem;
+}
+
+.admin-id-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.admin-id-label {
+    font-size: 0.8rem;
+    color: var(--h2-color);
+}
+
+.admin-id-value {
+    font-family: monospace;
+    background-color: rgba(0, 0, 0, 0.05);
+    padding: 0.3rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.admin-id-usage {
+    font-size: 0.8rem;
+    color: var(--h2-color);
+}
+
+.usage-count {
+    font-weight: 600;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.copy-id-btn, .regenerate-id-btn, .delete-admin-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    border: none;
+    border-radius: 4px;
+    padding: 0.4rem 0.6rem;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.copy-id-btn {
+    background-color: #e8eaf6;
+    color: #3949ab;
+}
+
+.copy-id-btn:hover {
+    background-color: #c5cae9;
+}
+
+.regenerate-id-btn {
+    background-color: #fff8e1;
+    color: #ff8f00;
+}
+
+.regenerate-id-btn:hover {
+    background-color: #ffecb3;
+}
+
+.delete-admin-btn {
+    background-color: #ffebee;
+    color: #c62828;
+    padding: 0.4rem 0.4rem;
+}
+
+.delete-admin-btn:hover {
+    background-color: #ffcdd2;
+}
+
+.no-admins {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem;
+    background-color: var(--white);
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.no-admins i {
+    font-size: 3rem;
+    color: #e0e0e0;
+    margin-bottom: 1rem;
+}
+
+.no-admins p {
+    color: var(--h2-color);
+    font-size: 1rem;
+}
+
+/* Modal Styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-container {
+    background-color: var(--white);
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    width: 90%;
+    max-width: 500px;
+    display: flex;
+    flex-direction: column;
+    animation: modalFadeIn 0.3s ease-out;
+}
+
+.confirm-modal {
+    max-width: 400px;
+}
+
+@keyframes modalFadeIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: var(--dark-text-color);
+    font-size: 1.2rem;
+}
+
+.close-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--h2-color);
+    font-size: 1.2rem;
+}
+
+.modal-body {
+    padding: 1rem;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.3rem;
+    color: var(--h2-color);
+    font-size: 0.9rem;
+}
+
+.form-group input, .form-group select {
+    width: 100%;
+    padding: 0.7rem;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    padding: 1rem;
+    border-top: 1px solid #e0e0e0;
+}
+
+.cancel-button, .create-button, .regenerate-button, .delete-button {
+    padding: 0.6rem 1.2rem;
+    border: none;
+    border-radius: 4px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.cancel-button {
+    background-color: #f5f5f5;
+    color: var(--dark-text-color);
+}
+
+.cancel-button:hover {
+    background-color: #e0e0e0;
+}
+
+.create-button {
+    background-color: var(--primary-color);
+    color: var(--button-text-color);
+}
+
+.create-button:hover {
+    background-color: var(--primary-rgb);
+}
+
+.regenerate-button {
+    background-color: #ff9800;
+    color: white;
+}
+
+.regenerate-button:hover {
+    background-color: #f57c00;
+}
+
+.delete-button {
+    background-color: #f44336;
+    color: white;
+}
+
+.delete-button:hover {
+    background-color: #d32f2f;
+}
+
+/* Toast Notification */
+.toast-notification {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-width: 300px;
+    padding: 0.8rem 1rem;
+    border-radius: 4px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    animation: toastFadeIn 0.3s ease-out;
+    z-index: 1100;
+}
+
+@keyframes toastFadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.toast-notification.success {
+    background-color: #e8f5e9;
+    border-left: 4px solid #4caf50;
+    color: #1b5e20;
+}
+
+.toast-notification.error {
+    background-color: #ffebee;
+    border-left: 4px solid #f44336;
+    color: #b71c1c;
+}
+
+.toast-message {
+    font-size: 0.9rem;
+}
+
+.toast-close {
+    background: none;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .admin-card-content {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .admin-actions {
+        align-items: flex-start;
+        width: 100%;
+    }
+
+    .admin-id-info {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .filter-controls {
+        width: 100%;
+    }
+
+    .admin-controls {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .create-admin-btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .action-buttons {
+        width: 100%;
+        justify-content: flex-start;
+    }
+}

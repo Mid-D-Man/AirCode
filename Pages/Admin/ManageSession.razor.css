@@ -1,0 +1,329 @@
+/* Pages/Admin/ManageSession.razor.css */
+
+.manage-session-page {
+    padding: 1.5rem;
+    height: 100%;
+    overflow-y: auto;
+}
+
+.page-title {
+    color: var(--h1-color);
+    margin-bottom: 1.5rem;
+    font-size: 1.75rem;
+}
+
+.session-info-card, .session-history-container {
+    background-color: var(--white);
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    margin-bottom: 2rem;
+}
+
+.card-header {
+    background-color: var(--primary);
+    padding: 1rem 1.5rem;
+    color: var(--text-color);
+}
+
+.card-header h3 {
+    margin: 0;
+    font-size: 1.2rem;
+}
+
+.card-content {
+    padding: 1.5rem;
+}
+
+.session-details {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.session-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--h1-color);
+}
+
+.session-dates {
+    display: flex;
+    gap: 2rem;
+    color: var(--h2-color);
+}
+
+.session-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 500;
+}
+
+.session-status.active {
+    color: #4CAF50;
+}
+
+.status-indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: #4CAF50;
+}
+
+.countdown-container {
+    background-color: var(--bg);
+    padding: 1rem;
+    border-radius: 8px;
+    margin-top: 0.5rem;
+}
+
+.countdown-label {
+    color: var(--h2-color);
+    margin-bottom: 0.5rem;
+}
+
+.countdown {
+    display: flex;
+    gap: 1rem;
+}
+
+.countdown-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: var(--primary);
+    color: var(--text-color);
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    min-width: 60px;
+}
+
+.countdown-value {
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.countdown-unit {
+    font-size: 0.7rem;
+    opacity: 0.8;
+}
+
+.end-session-btn, .init-session-btn {
+    background-color: var(--primary-color);
+    color: var(--button-text-color);
+    border: none;
+    border-radius: 6px;
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    align-self: flex-start;
+    margin-top: 1rem;
+}
+
+.end-session-btn:hover, .init-session-btn:hover {
+    background-color: var(--primary-rgb);
+    transform: translateY(-2px);
+}
+
+.no-active-session {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    padding: 2rem;
+}
+
+.no-active-session p {
+    color: var(--h2-color);
+    font-size: 1.1rem;
+}
+
+.session-history {
+    padding: 1rem;
+}
+
+.session-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.session-table th, .session-table td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.session-table th {
+    color: var(--h2-color);
+    font-weight: 600;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.status-badge.active {
+    background-color: rgba(76, 175, 80, 0.1);
+    color: #4CAF50;
+}
+
+.status-badge.inactive {
+    background-color: rgba(158, 158, 158, 0.1);
+    color: #757575;
+}
+
+.no-history {
+    padding: 2rem;
+    text-align: center;
+    color: var(--h2-color);
+}
+
+/* Modal styles */
+.modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+}
+
+.modal-container {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1000;
+    width: 90%;
+    max-width: 500px;
+}
+
+.modal-content {
+    background-color: var(--white);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.modal-header {
+    background-color: var(--primary);
+    padding: 1rem 1.5rem;
+    color: var(--text-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 1.2rem;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    color: var(--text-color);
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+}
+
+.modal-body {
+    padding: 1.5rem;
+}
+
+.form-group {
+    margin-bottom: 1.25rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: var(--h2-color);
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+.error-message {
+    color: #F44336;
+    margin-top: 1rem;
+    padding: 0.5rem;
+    background-color: rgba(244, 67, 54, 0.1);
+    border-radius: 4px;
+}
+
+.modal-footer {
+    padding: 1rem 1.5rem;
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    border-top: 1px solid #eee;
+}
+
+.cancel-btn {
+    background-color: #eee;
+    color: var(--dark-text-color);
+    border: none;
+    border-radius: 6px;
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.submit-btn {
+    background-color: var(--primary-color);
+    color: var(--button-text-color);
+    border: none;
+    border-radius: 6px;
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.danger-btn {
+    background-color: #F44336;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.submit-btn:hover, .danger-btn:hover {
+    opacity: 0.9;
+}
+
+.confirm-modal .modal-body {
+    text-align: center;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .session-dates {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .countdown {
+        flex-wrap: wrap;
+    }
+}
