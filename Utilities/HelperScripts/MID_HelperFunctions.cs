@@ -1,7 +1,12 @@
 using System;
+using System.Collections;
 using System.Text.RegularExpressions;
 using System.Diagnostics;
+using System.Reflection;
+using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Serialization;
+using Newtonsoft.Json;
 
 namespace AirCode.Utilities.HelperScripts
 {
@@ -175,5 +180,161 @@ namespace AirCode.Utilities.HelperScripts
             return new string(Enumerable.Repeat(chars, length)
                 .Select(s => s[random.Next(s.Length)]).ToArray());
         }
+
+        #region  Debug Utilities/StructMember Values
+
+        public static string GetStructOrClassMemberValues<T>(T structOrClassInstance) where T : notnull
+    {
+        if (structOrClassInstance == null)
+        {
+            return "null";
+        }
+
+        StringBuilder result = new StringBuilder();
+        Type type = structOrClassInstance.GetType();
+
+        // Start the recursive process with depth 0
+        GetStructOrClassMemberValuesRecursive(structOrClassInstance, result, 0);
+
+        return result.ToString();
+    }
+
+    private static void GetStructOrClassMemberValuesRecursive(object structOrClassInstance, StringBuilder result, int depth)
+    {
+        if (structOrClassInstance == null)
+        {
+            result.AppendLine("null");
+            return;
+        }
+
+        Type type = structOrClassInstance.GetType();
+        string indentation = GetIndentation(depth);
+        string arrowIndentation = GetArrowIndentation(depth);
+
+        BindingFlags bindingFlags = type.IsClass
+            ? BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly
+            : BindingFlags.Public | BindingFlags.Instance;
+
+        // Get all fields
+        FieldInfo[] fields = type.GetFields(bindingFlags);
+        foreach (var field in fields)
+        {
+            AppendMemberValue(result, field.Name, field.GetValue(structOrClassInstance), depth);
+        }
+
+        // Get all properties
+        PropertyInfo[] properties = type.GetProperties(bindingFlags);
+        foreach (var property in properties)
+        {
+            if (property.CanRead)
+            {
+                try
+                {
+                    AppendMemberValue(result, property.Name, property.GetValue(structOrClassInstance), depth);
+                }
+                catch (Exception ex)
+                {
+                    result.AppendLine($"{indentation}{arrowIndentation} {property.Name} :: [Error accessing property: {ex.Message}]");
+                }
+            }
+        }
+    }
+
+    private static void AppendMemberValue(StringBuilder result, string name, object value, int depth)
+    {
+        string indentation = GetIndentation(depth);
+        string arrowIndentation = GetArrowIndentation(depth);
+
+        if (value == null)
+        {
+            result.AppendLine($"{indentation}{arrowIndentation} {name} :: null");
+        }
+        else if (value is string || value.GetType().IsPrimitive)
+        {
+            result.AppendLine($"{indentation}{arrowIndentation} {name} :: {value}");
+        }
+        else if (value is IEnumerable enumerable && !(value is string))
+        {
+            result.AppendLine($"{indentation}{arrowIndentation} {name} :: [");
+            int itemIndex = 0;
+            foreach (var item in enumerable)
+            {
+                result.AppendLine($"{indentation}    {arrowIndentation} [{itemIndex}]:");
+                if (item == null)
+                {
+                    result.AppendLine($"{indentation}    {arrowIndentation} null");
+                }
+                else if (item is string || item.GetType().IsPrimitive)
+                {
+                    result.AppendLine($"{indentation}    {arrowIndentation} {item}");
+                }
+                else
+                {
+                    GetStructOrClassMemberValuesRecursive(item, result, depth + 2);
+                }
+                itemIndex++;
+            }
+            result.AppendLine($"{indentation}{arrowIndentation} ]");
+        }
+        else
+        {
+            result.AppendLine($"{indentation}{arrowIndentation} {name} :: {{");
+            GetStructOrClassMemberValuesRecursive(value, result, depth + 1);
+            result.AppendLine($"{indentation}{arrowIndentation} }}");
+        }
+    }
+
+    private static string GetIndentation(int depth)
+    {
+        return new string(' ', depth * 4);
+    }
+
+    private static string GetArrowIndentation(int depth)
+    {
+        if (depth == 0) return "";
+        if (depth == 1) return "->";
+        if (depth == 2) return "-->";
+        if (depth == 3) return "--->";
+
+        // For deeper nesting, use the number of levels
+        return new string('-', depth) + ">";
+    }
+
+    // Convert any class or struct to a JSON string with pretty formatting
+    public static string ToJson<T>(T obj, bool prettyPrint = true) where T : notnull
+    {
+        try
+        {
+            return JsonConvert.SerializeObject(obj, prettyPrint ? Formatting.Indented : Formatting.None);
+        }
+        catch (Exception ex)
+        {
+            // Replace Unity-specific debug method with standard logging
+            DebugMessage($"Failed to serialize object to JSON: {ex.Message}",DebugClass.Exception);
+            return "{}";
+        }
+    }
+
+    // Convert any class or struct to XML string
+    public static string ToXml<T>(T obj) where T : notnull
+    {
+        try
+        {
+            XmlSerializer serializer = new XmlSerializer(typeof(T));
+            using (StringWriter writer = new StringWriter())
+            {
+                serializer.Serialize(writer, obj);
+                return writer.ToString();
+            }
+        }
+        catch (Exception ex)
+        {
+            // Replace Unity-specific debug method with standard logging
+            DebugMessage($"Failed to serialize object to XML: {ex.Message}",DebugClass.Exception);
+            return "<error>Failed to serialize</error>";
+        }
+    }
+
+        #endregion
     }
 }

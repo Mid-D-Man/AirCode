@@ -1,0 +1,159 @@
+.client-settings-page {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    padding: 1rem;
+    overflow-y: auto;
+}
+
+.settings-header {
+    text-align: center;
+    margin-bottom: 1.5rem;
+}
+
+.settings-header h3 {
+    color: var(--h1-color);
+    margin-bottom: 0.5rem;
+    font-size: 1.5rem;
+}
+
+.settings-header p {
+    color: var(--h2-color);
+    font-size: 0.9rem;
+}
+
+.settings-sections {
+    background-color: var(--white);
+    border-radius: 10px;
+    padding: 1rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.settings-section {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    padding: 1rem 0;
+}
+
+.settings-section:last-child {
+    border-bottom: none;
+}
+
+.setting-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.setting-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.setting-title {
+    font-size: 1rem;
+    color: var(--dark-text-color);
+    font-weight: 500;
+}
+
+.setting-description {
+    font-size: 0.8rem;
+    color: var(--h2-color);
+    margin-top: 0.25rem;
+}
+
+.setting-control {
+    display: flex;
+    align-items: center;
+}
+
+/* Toggle Switch Styles */
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 24px;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+}
+
+input:checked + .slider {
+    background-color: var(--primary-color);
+}
+
+input:focus + .slider {
+    box-shadow: 0 0 1px var(--primary-color);
+}
+
+input:checked + .slider:before {
+    transform: translateX(26px);
+}
+
+.slider.round {
+    border-radius: 24px;
+}
+
+.slider.round:before {
+    border-radius: 50%;
+}
+
+.notification-select {
+    padding: 0.5rem;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    background-color: var(--bg);
+    color: var(--dark-text-color);
+}
+
+.advanced-settings {
+    margin-top: 1.5rem;
+    text-align: center;
+}
+
+.advanced-settings h4 {
+    color: var(--h2-color);
+    margin-bottom: 1rem;
+}
+
+.reset-settings-btn {
+    background-color: var(--primary-color);
+    color: var(--button-text-color);
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 25px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.reset-settings-btn:hover {
+    background-color: var(--primary-rgb);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15);
+}

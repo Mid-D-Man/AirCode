@@ -17,20 +17,3 @@ public class UserCollection
     public User? FindUser(string matricNumber) =>
         Users.FirstOrDefault(u => u.MatriculationNumber == matricNumber);
 }
-
-// Utilities/DataStructures/AttendanceRecord.cs
-public class AttendanceRecord
-{
-    public string MatriculationNumber { get; set; }
-    public string CourseCode { get; set; }
-    public DateTime TimeStamp { get; set; }
-    public string Location { get; set; }
-    public AttendanceType Type { get; set; }
-}
-
-public enum AttendanceType
-{
-    Present,
-    Late,
-    Absent
-}

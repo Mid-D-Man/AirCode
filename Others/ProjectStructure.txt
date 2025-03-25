@@ -1,171 +1,164 @@
-AirCode.csproj
-Properties
-Properties/launchSettings.json
-wwwroot
-wwwroot/css
-wwwroot/css/bootstrap
-wwwroot/css/bootstrap/bootstrap.min.css
-wwwroot/css/bootstrap/bootstrap.min.css.map
-wwwroot/css/open-iconic
-wwwroot/css/open-iconic/font
-wwwroot/css/open-iconic/FONT-LICENSE
-wwwroot/css/open-iconic/ICON-LICENSE
-wwwroot/css/open-iconic/README.md
-wwwroot/css/app.css
-wwwroot/css/colors.css
-wwwroot/css/responsive.css
-wwwroot/icons
-wwwroot/icons/favicon.png
-wwwroot/icons/icon-192.png
-wwwroot/icons/icon-512.png
-wwwroot/js
-wwwroot/js/qrCodeModule.js
-wwwroot/sample-data
-wwwroot/sample-data/weather.json
-wwwroot/svgs
-wwwroot/svgs/Admin_Icon.svg
-wwwroot/svgs/ContactUs_Icon.svg
-wwwroot/svgs/Cources_Icon.svg
-wwwroot/svgs/Logout_Icon.svg
-wwwroot/svgs/QRCode_Icon.svg
-wwwroot/svgs/Report_Icon.svg
-wwwroot/svgs/Stats_Icon.svg
-wwwroot/svgs/Users_Icon.svg
-wwwroot/wasm
-wwwroot/wasm/package.json
-wwwroot/wasm/qr_code_generator.js
-wwwroot/wasm/qr_code_generator.d.ts
-wwwroot/wasm/qr_code_generator_bg.wasm
-wwwroot/wasm/qr_code_generator_bg.wasm.d.ts
-wwwroot/index.html
-wwwroot/manifest.json
-wwwroot/service-worker.js
-Components
-Components/Admin
-Components/Admin/Dashboard
-Components/Admin/Dashboard/AdminNavMenu.razor
-Components/Admin/Dashboard/AdminNavMenu.razor.css
-Components/Admin/Dashboard/QuickStats.razor
-Components/Admin/Dashboard/QuickStats.razor.css
-Components/Admin/Dashboard/StandardAdminContent.razor
-Components/Admin/Dashboard/StandardAdminContent.razor.css
-Components/Admin/Dashboard/SuperiorAdminContent.razor
-Components/Admin/Dashboard/SuperiorAdminContent.razor.css
-Components/Admin/Shared
-Components/Admin/Shared/AdminCard.razor
-Components/Admin/Shared/AdminCard.razor.css
-Components/Admin/Shared/Burger.razor
-Components/Admin/Shared/Burger.razor.css
-Components/Admin/Shared/DashboardButtonIcon.razor
-Components/Admin/Shared/DashboardButtonIcon.razor.css
-Components/Admin/Shared/NavMenuButton.razor
-Components/Admin/Shared/NavMenuButton.razor.css
-Components/Admin/Shared/StatCard.razor
-Components/Admin/Shared/StatCard.razor.css
-Components/Auth
-Components/Auth/LoginForm.razor
-Components/Auth/LoginForm.razor.css
-Components/Auth/SignUpForm.razor
-Components/Auth/SignUpForm.razor.css
-Components/Loading
-Components/Loading/LoadingScreen.razor
-Components/Loading/LoadingScreen.razor.css
-Components/SharedPrefabs
-Components/SharedPrefabs/QrCode
-Components/SharedPrefabs/QrCode/regular
-Components/SharedPrefabs/QrCode/regular/QRCodeCompo.razor
-Components/SharedPrefabs/QrCode/regular/QRCodeCompo.razor.css
-Components/SharedPrefabs/CircularNavigationButton.razor
-Components/SharedPrefabs/CircularNavigationButton.razor.css
-Components/SharedPrefabs/CourseCard.razor
-Components/SharedPrefabs/CourseCard.razor.css
-Components/SharedPrefabs/DynamicBlob.razor
-Components/SharedPrefabs/FormField.razor
-Components/SharedPrefabs/FormField.razor.css
-Components/SharedPrefabs/PrimaryButton.razor
-Components/SharedPrefabs/PrimaryButton.razor.css
-Components/SharedPrefabs/QRScanCompo.razor
-Components/SharedPrefabs/QRScanCompo.razor.css
-Layout
-Layout/AdminLayout
-Layout/AdminLayout/Standard
-Layout/AdminLayout/Standard/StandardAdminLayout.razor
-Layout/AdminLayout/Standard/StandardAdminLayout.razor.css
-Layout/AdminLayout/Superior
-Layout/AdminLayout/Superior/SuperiorAdminLayout.razor
-Layout/AdminLayout/Superior/SuperiorAdminLayout.razor.css
-Layout/AdminLayout/Superior/SuperiorAdminNavMenu.razor
-Layout/AdminLayout/Superior/SuperiorAdminNavMenu.razor.css
-Layout/ClientLayout
-Layout/ClientLayout/ClientLayout.razor
-Layout/ClientLayout/ClientLayout.razor.css
-Layout/ClientLayout/ClientNavMenu.razor
-Layout/ClientLayout/ClientNavMenu.razor.css
-Layout/AuthLayout.razor
-Layout/AuthLayout.razor.css
-Layout/NavMenu.razor
-Layout/NavMenu.razor.css
-Models
-Models/Course.cs
-Models/LoginModel.cs
-Models/SessionData.cs
-Models/SignUpModel.cs
-Models/User.cs
-Models/UserRole.cs
-Others
-Others/ProjectStructure.txt
-Pages
-Pages/Admin
-Pages/Admin/CreateSession.razor
-Pages/Admin/CreateSession.razor.css
-Pages/Admin/Dashboard.razor
-Pages/Admin/Dashboard.razor.css
-Pages/Admin/ManageCourses.razor
-Pages/Admin/ManageCourses.razor.css
-Pages/Admin/ManageSession.razor
-Pages/Admin/ManageSession.razor.css
-Pages/Admin/Reports.razor
-Pages/Admin/Reports.razor.css
-Pages/Admin/SuperiorDashboard.razor
-Pages/Admin/SuperiorDashboard.razor.css
-Pages/Auth
-Pages/Auth/Auth.razor
-Pages/Auth/Login.razor
-Pages/Auth/SignUp.razor
-Pages/Client
-Pages/Client/ScanPage.razor
-Pages/Client/ScanPage.razor.css
-Pages/Index.razor
-Pages/Index.razor.css
-Pages/TestPage.razor
-Pages/TestPage.razor.css
-public
-public/index.html
-Services
-Services/Auth
-Services/Auth/IUserStorageService.cs
-Services/Auth/UserStorageService.cs
-Services/Scanner
-Services/Storage
-Services/Storage/BlazorLocalStorageService.cs
-Services/Storage/ILocalStorageService.cs
-Services/IScannerService.cs
-Shared
-Shared/SplashScreen.razor
-Shared/SplashScreen.razor.css
-Styles
-Styles/colors.css
-Utilities
-Utilities/DataStructures
-Utilities/DataStructures/NavItem.cs
-Utilities/DataStructures/QRCodeData.cs
-Utilities/DataStructures/UserCollection.cs
-Utilities/HelperScripts
-Utilities/HelperScripts/JsonHelper.cs
-Utilities/HelperScripts/MID_HelperFunctions.cs
-Utilities/HelperScripts/Utilities.cs
-.gitignore
-_Imports.razor
-App.razor
-global.json
-Program.cs
+AirCode.csproj  Components      Others          Properties      Utilities       global.json     wwwroot
+AirCode.sln     Layout          Pages           Services        _Imports.razor  obj
+App.razor       Models          Program.cs      Shared          bin             public
+
+./Components:
+Admin           Auth            Loading         SharedPrefabs
+
+./Components/Admin:
+Dashboard       Shared
+
+./Components/Admin/Dashboard:
+QuickStats.razor                StandardAdminContent.razor      SuperiorAdminContent.razor
+QuickStats.razor.css            StandardAdminContent.razor.css  SuperiorAdminContent.razor.css
+
+./Components/Admin/Shared:
+AdminCard.razor                 Burger.razor.css                NavMenuButton.razor             StatCard.razor.css
+AdminCard.razor.css             DashboardButtonIcon.razor       NavMenuButton.razor.css
+Burger.razor                    DashboardButtonIcon.razor.css   StatCard.razor
+
+./Components/Auth:
+LoginForm.razor         LoginForm.razor.css     SignUpForm.razor        SignUpForm.razor.css
+
+./Components/Loading:
+LoadingScreen.razor     LoadingScreen.razor.css
+
+./Components/SharedPrefabs:
+Buttons Cards   Fields  Others  QrCode  Scanner
+
+./Components/SharedPrefabs/Buttons:
+CircularNavigationButton.razor          PrimaryButton.razor
+CircularNavigationButton.razor.css      PrimaryButton.razor.css
+
+./Components/SharedPrefabs/Cards:
+CourseCard.razor        CourseCard.razor.css
+
+./Components/SharedPrefabs/Fields:
+FormField.razor         FormField.razor.css
+
+./Components/SharedPrefabs/Others:
+DynamicBlob.razor
+
+./Components/SharedPrefabs/QrCode:
+QRCodeCompo.razor       QRCodeCompo.razor.css   mid
+
+./Components/SharedPrefabs/QrCode/mid:
+
+./Components/SharedPrefabs/Scanner:
+MidQrScanner.razor      MidQrScanner.razor.css  ZXingScanner.razor      ZXingScanner.razor.css
+
+./Layout:
+AdminLayout             Auth                    ClientLayout            NavMenu.razor           NavMenu.razor.css
+
+./Layout/AdminLayout:
+Standard        Superior
+
+./Layout/AdminLayout/Standard:
+StandardAdminLayout.razor       StandardAdminLayout.razor.css
+
+./Layout/AdminLayout/Superior:
+SuperiorAdminLayout.razor       SuperiorAdminLayout.razor.css   SuperiorAdminNavMenu.razor      SuperiorAdminNavMenu.razor.css
+
+./Layout/Auth:
+AuthLayout.razor        AuthLayout.razor.css
+
+./Layout/ClientLayout:
+ClientLayout.razor      ClientLayout.razor.css  ClientNavMenu.razor     ClientNavMenu.razor.css
+
+./Models:
+Course.cs       LoginModel.cs   SessionData.cs  SignUpModel.cs  User.cs         UserRole.cs
+
+./Others:
+ProjectStructure.txt
+
+./Pages:
+Admin           Auth            Client          TestPages
+
+./Pages/Admin:
+CreateSession.razor             Dashboard.razor.css             ManageSession.razor             Reports.razor.css
+CreateSession.razor.css         ManageCourses.razor             ManageSession.razor.css         SuperiorDashboard.razor
+Dashboard.razor                 ManageCourses.razor.css         Reports.razor                   SuperiorDashboard.razor.css
+
+./Pages/Auth:
+Auth.razor      Auth.razor.css
+
+./Pages/Client:
+ClientProfile.razor             ClientSettings.razor            ClientStats.razor               ScanPage.razor
+ClientProfile.razor.css         ClientSettings.razor.css        ClientStats.razor.css           ScanPage.razor.css
+
+./Pages/TestPages:
+Index.razor             Index.razor.css         ShaderPage1.razor       TestPage.razor          TestPage.razor.css
+
+./Properties:
+launchSettings.json
+
+./Services:
+Auth                    IScannerService.cs      Scanner                 Storage
+
+./Services/Auth:
+IUserStorageService.cs  UserStorageService.cs
+
+./Services/Scanner:
+
+./Services/Storage:
+BlazorLocalStorageService.cs    ILocalStorageService.cs
+
+./Shared:
+SplashScreen.razor      SplashScreen.razor.css
+
+./Utilities:
+DataStructures  HelperScripts
+
+./Utilities/DataStructures:
+GeneralData.cs          NavItem.cs              QRCodeData.cs           UserCollection.cs
+
+./Utilities/HelperScripts:
+JsonHelper.cs           MID_HelperFunctions.cs  Utilities.cs
+
+
+./public:
+index.html
+
+./wwwroot:
+css                             js                              service-worker.js               wasm
+icons                           manifest.json                   service-worker.published.js
+index.html                      sample-data                     svgs
+
+./wwwroot/css:
+app.css         bootstrap       colors.css      open-iconic     responsive.css
+
+./wwwroot/css/bootstrap:
+bootstrap.min.css       bootstrap.min.css.map
+
+./wwwroot/css/open-iconic:
+FONT-LICENSE    ICON-LICENSE    README.md       font
+
+./wwwroot/css/open-iconic/font:
+css     fonts
+
+./wwwroot/css/open-iconic/font/css:
+open-iconic-bootstrap.min.css
+
+./wwwroot/css/open-iconic/font/fonts:
+open-iconic.eot         open-iconic.otf         open-iconic.svg         open-iconic.ttf         open-iconic.woff
+
+./wwwroot/icons:
+favicon.png     icon-192.png    icon-512.png
+
+./wwwroot/js:
+midQrScannerModule.js   qrCodeModule.js         shaderRenderer1.js      zxingScanner.js
+
+./wwwroot/sample-data:
+weather.json
+
+./wwwroot/svgs:
+Admin_Icon.svg          Cources_Icon.svg        QRCode_Icon.svg         Stats_Icon.svg
+ContactUs_Icon.svg      Logout_Icon.svg         Report_Icon.svg         Users_Icon.svg
+
+./wwwroot/wasm:
+mid_air_code_lib                qr_code_generator.d.ts          qr_code_generator_bg.wasm       qr_code_module
+package.json                    qr_code_generator.js            qr_code_generator_bg.wasm.d.ts
+
+./wwwroot/wasm/mid_air_code_lib:
+
+./wwwroot/wasm/qr_code_module:

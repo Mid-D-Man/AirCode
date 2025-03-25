@@ -1,9 +1,10 @@
 @* Pages/Auth/AuthPage.razor *@
 @page "/Auth"
 @using AirCode.Components.Auth
-@using AirCode.Components.SharedPrefabs
-@layout AuthLayout
-
+@using AirCode.Components.SharedPrefabs.Buttons
+@using AirCode.Layout.Auth
+@layout AuthLayout 
+//this is both login and signup page
 <div class="auth-blobs">
     <div class="blob blob-1"></div>
     <div class="blob blob-2"></div>
@@ -22,7 +23,7 @@
                 OnClick="() => SetActiveView(AuthView.SignUp)"
                 Class="@(currentView == AuthView.SignUp ? "active" : "")" />
         </div>
-
+//uses the forms to decide login or signup based on button
         <div class="auth-content">
             @if (currentView == AuthView.Login)
             {

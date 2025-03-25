@@ -1,4 +1,5 @@
-@using AirCode.Components.SharedPrefabs
+@using AirCode.Components.SharedPrefabs.Buttons
+@using AirCode.Components.SharedPrefabs.Fields
 @inject IJSRuntime JSRuntime
 
 <div class="login-form-container">
@@ -22,6 +23,7 @@
                 <input type="checkbox" checked="@loginModel.IsAdmin" @onchange="AdminCheckChanged" />
                 Login as Administrator
             </label>
+            <FormField Label="stuff" IsRequired="true" ErrorMessage="chiki"/>
         </div>
 
         @if (showAdminId)
