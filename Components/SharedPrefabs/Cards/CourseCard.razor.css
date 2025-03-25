@@ -1,0 +1,421 @@
+.course-card {
+    background-color: var(--white);
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    position: relative;
+    overflow: hidden;
+    min-height: 200px; /* Add minimum height */
+    display: flex;
+    flex-direction: column;
+    border: 1px solid rgba(91, 93, 114, 0.2); /* Add border for visibility */
+}
+
+.course-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.course-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 5px;
+    height: 100%;
+    background-color: var(--primary);
+}
+
+.course-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid rgba(91, 93, 114, 0.2);
+    padding-bottom: 0.5rem;
+}
+
+.course-name {
+    font-size: 1.25rem;
+    color: var(--h1-color);
+    margin: 0;
+    font-weight: 600;
+}
+
+.course-id {
+    background-color: var(--secondary);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    color: var(--primary);
+    font-weight: 500;
+}
+
+.course-details {
+    margin-bottom: 1rem;
+}
+
+.detail-item {
+    display: flex;
+    margin-bottom: 0.5rem;
+}
+
+.label {
+    font-weight: 500;
+    color: var(--h2-color);
+    width: 100px;
+}
+
+.value {
+    color: var(--dark-text-color);
+}
+
+.schedule h4 {
+    font-size: 1rem;
+    color: var(--h2-color);
+    margin-bottom: 0.5rem;
+    margin-top: 1rem;
+}
+
+.schedule-items {
+    max-height: 150px;
+    overflow-y: auto;
+}
+.schedule-item {
+    display: grid;
+    /* Allow the first column to expand from 70px up to 150px */
+    grid-template-columns: minmax(70px, 150px) 2fr 1fr;
+    gap: 10px;
+    padding: 0.5rem;
+    background-color: var(--bg);
+    border-radius: 4px;
+    margin-bottom: 0.25rem;
+}
+
+/* Ensure the day text wraps if it’s too long */
+.day {
+    font-weight: 500;
+    color: var(--primary);
+    white-space: normal; /* Remove nowrap */
+    word-wrap: break-word; /* Enable wrapping */
+}
+
+
+.time, .location {
+    color: var(--dark-text-color);
+}
+
+.course-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: auto; /* Push to bottom */
+    padding-top: 1rem;
+    border-top: 1px solid rgba(91, 93, 114, 0.2);
+}
+
+.edit-btn, .delete-btn {
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    border: none;
+}
+
+.edit-btn {
+    background-color: var(--nav-background);
+    color: var(--white);
+}
+
+.edit-btn:hover {
+    background-color: var(--nav-hover);
+}
+
+.delete-btn {
+    background-color: #f44336;
+    color: var(--white);
+}
+
+.delete-btn:hover {
+    background-color: #d32f2f;
+}
+
+/* Add CSS for the courses page */
+.courses-page {
+    padding: 1.5rem;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.page-header h2 {
+    color: var(--h1-color);
+    margin: 0;
+}
+
+.add-course-btn {
+    background-color: var(--primary);
+    color: var(--white);
+    border: none;
+    border-radius: 4px;
+    padding: 0.75rem 1.25rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.add-course-btn:hover {
+    background-color: var(--hover-facebook-blue);
+}
+
+.add-course-btn .icon {
+    font-size: 1.25rem;
+}
+
+.search-filter {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.search-box {
+    position: relative;
+    flex: 1;
+    min-width: 250px;
+}
+
+.search-box input {
+    width: 100%;
+    padding: 0.75rem;
+    padding-right: 2.5rem;
+    border-radius: 4px;
+    border: 1px solid rgba(91, 93, 114, 0.2);
+    font-size: 0.9rem;
+}
+
+.search-btn {
+    position: absolute;
+    right: 0;
+    top: 0;
+    height: 100%;
+    width: 2.5rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+}
+
+.filters {
+    display: flex;
+    gap: 1rem;
+}
+
+.filters select {
+    padding: 0.75rem;
+    border-radius: 4px;
+    border: 1px solid rgba(91, 93, 114, 0.2);
+    font-size: 0.9rem;
+    min-width: 150px;
+}
+
+.courses-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.no-courses {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 2rem;
+    background-color: var(--bg);
+    border-radius: 8px;
+    color: var(--h2-color);
+}
+
+/* Modal styles */
+.modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 99;
+}
+
+.course-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: var(--white);
+    border-radius: 8px;
+    padding: 1.5rem;
+    z-index: 100;
+    width: 90%;
+    max-width: 700px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid rgba(91, 93, 114, 0.2);
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: var(--h1-color);
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--h2-color);
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: var(--h2-color);
+}
+
+.form-group input,
+.form-group select {
+    width: 100%;
+    padding: 0.75rem;
+    border-radius: 4px;
+    border: 1px solid rgba(91, 93, 114, 0.2);
+    font-size: 0.9rem;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.schedules {
+    margin-top: 1.5rem;
+}
+
+.schedules h4 {
+    margin-bottom: 0.75rem;
+    color: var(--h2-color);
+}
+
+.add-schedule-btn {
+    background-color: var(--primary);
+    color: var(--white);
+    border: none;
+    border-radius: 4px;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    cursor: pointer;
+    margin-bottom: 1rem;
+}
+
+.schedule-form-item {
+    background-color: var(--bg);
+    padding: 1rem;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+    position: relative;
+}
+
+.remove-btn {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background-color: #f44336;
+    color: var(--white);
+    border: none;
+    border-radius: 4px;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(91, 93, 114, 0.2);
+}
+
+.cancel-btn {
+    background-color: var(--bg);
+    color: var(--h2-color);
+    border: 1px solid rgba(91, 93, 114, 0.2);
+    border-radius: 4px;
+    padding: 0.75rem 1.25rem;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.save-btn {
+    background-color: var(--primary);
+    color: var(--white);
+    border: none;
+    border-radius: 4px;
+    padding: 0.75rem 1.25rem;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+    .courses-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .schedule-item {
+        grid-template-columns: 1fr;
+        gap: 5px;
+    }
+
+    .course-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .course-id {
+        margin-top: 0.5rem;
+    }
+
+    .detail-item {
+        flex-direction: column;
+    }
+
+    .label {
+        width: auto;
+        margin-bottom: 0.25rem;
+    }
+}

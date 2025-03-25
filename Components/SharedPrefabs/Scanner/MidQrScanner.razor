@@ -1,0 +1,62 @@
+// Components/Scanner/QrScanner.razor
+@inject IScannerService ScannerService
+@implements IAsyncDisposable
+
+<div class="scanner">
+    <div class="scanner__viewport">
+        <video id="scanner-video" autoplay playsinline></video>
+        <div class="scanner__overlay">
+            <div class="scanner__target"></div>
+        </div>
+    </div>
+    <div class="scanner__controls">
+        @if (!_isScanning)
+        {
+            <button class="scanner__button" @onclick="StartScanningAsync">
+                Start Scan
+            </button>
+        }
+        else
+        {
+            <button class="scanner__button scanner__button--stop" @onclick="StopScanningAsync">
+                Stop Scan
+            </button>
+        }
+    </div>
+</div>
+
+@code {
+    private bool _isScanning;
+
+    [Parameter] public EventCallback<string> OnCodeScanned { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await ScannerService.InitializeCameraAsync();
+    }
+
+    private async Task StartScanningAsync()
+    {
+        _isScanning = true;
+        while (_isScanning)
+        {
+            var result = await ScannerService.ScanQrCodeAsync();
+            if (!string.IsNullOrEmpty(result))
+            {
+                await OnCodeScanned.InvokeAsync(result);
+            }
+            await Task.Delay(500);
+        }
+    }
+
+    private async Task StopScanningAsync()
+    {
+        _isScanning = false;
+        await ScannerService.StopScanningAsync();
+    }
+
+    async ValueTask IAsyncDisposable.DisposeAsync()
+    {
+        await StopScanningAsync();
+    }
+}

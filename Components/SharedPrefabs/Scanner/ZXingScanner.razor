@@ -1,0 +1,43 @@
+@inject IJSRuntime JSRuntime
+
+<div class="video-container">
+    <video id="zxing-video" autoplay playsinline></video>
+    <!-- Optionally, add an overlay for the scan frame -->
+    <div class="scan-overlay"></div>
+</div>
+
+@code {
+    private IJSObjectReference? scannerModule;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Import the JS module (assumed to be at wwwroot/js/zxingScanner.js)
+            scannerModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
+                "import", "./js/zxingScanner.js");
+
+            // Start the scanner by passing a .NET reference for callbacks
+            await scannerModule.InvokeVoidAsync("startZXingScanner",
+                DotNetObjectReference.Create(this));
+        }
+    }
+
+    [JSInvokable("OnQRCodeDecoded")]
+    public void OnQRCodeDecoded(string result)
+    {
+        // Handle the decoded QR code here
+        Console.WriteLine($"QR Code decoded: {result}");
+        // You could raise an event or set a bound property here.
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (scannerModule != null)
+        {
+            await scannerModule.InvokeVoidAsync("stopZXingScanner");
+            await scannerModule.DisposeAsync();
+        }
+    }
+}
+
