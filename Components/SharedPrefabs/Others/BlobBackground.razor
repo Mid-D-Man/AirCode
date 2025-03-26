@@ -13,7 +13,14 @@
 
     private string GetRandomColor()
     {
-        string[] colors = { "#ff0000", "#3c00ff", "#1eff00", "#ff6b00", "#ff00ea", "#00ffff" };
+        string[] colors = { 
+            "rgba(255, 0, 0, 0.3)", 
+            "rgba(60, 0, 255, 0.3)", 
+            "rgba(30, 255, 0, 0.3)", 
+            "rgba(255, 107, 0, 0.3)", 
+            "rgba(255, 0, 234, 0.3)", 
+            "rgba(0, 255, 255, 0.3)" 
+        };
         return colors[random.Next(colors.Length)];
     }
 }
