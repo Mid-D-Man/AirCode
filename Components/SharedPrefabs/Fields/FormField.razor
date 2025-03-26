@@ -1,4 +1,5 @@
-@* Components/SharedPrefabs/FormField.razor *@
+
+@* Components/SharedPrefabs/Fields/FormField.razor *@
 <div class="input-field">
     <label class="@(IsRequired ? "required" : "")">
         @Label
@@ -9,36 +10,43 @@
         placeholder="@Placeholder"
         value="@Value"
         @oninput="OnInputHandler"
-        @onblur="OnBlurHandler" />
+        @onblur="OnBlurHandler"
+        @onfocus="OnFocusHandler" />
 
     @if (IsInvalid && !string.IsNullOrEmpty(ErrorMessage))
     {
-        <div class="error-message">@ErrorMessage</div>
+    <div class="error-message">@ErrorMessage</div>
     }
 </div>
 
 @code {
-    [Parameter] public string Label { get; set; } = "";
-    [Parameter] public string Placeholder { get; set; } = "";
-    [Parameter] public string Type { get; set; } = "text";
-    [Parameter] public string Value { get; set; } = "";
-    [Parameter] public bool IsRequired { get; set; }
-    [Parameter] public bool IsInvalid { get; set; }
-    [Parameter] public string ErrorMessage { get; set; } = "";
-    [Parameter] public EventCallback<string> ValueChanged { get; set; }
-    [Parameter] public EventCallback<FocusEventArgs> OnBlur { get; set; }
-    [Parameter] public RenderFragment ChildContent { get; set; }
+[Parameter] public string Label { get; set; } = "";
+[Parameter] public string Placeholder { get; set; } = "";
+[Parameter] public string Type { get; set; } = "text";
+[Parameter] public string Value { get; set; } = "";
+[Parameter] public bool IsRequired { get; set; }
+[Parameter] public bool IsInvalid { get; set; }
+[Parameter] public string ErrorMessage { get; set; } = "";
+[Parameter] public EventCallback<string> ValueChanged { get; set; }
+[Parameter] public EventCallback<FocusEventArgs> OnBlur { get; set; }
+[Parameter] public EventCallback<FocusEventArgs> OnFocus { get; set; }
+[Parameter] public RenderFragment ChildContent { get; set; }
 
-    private async Task OnInputHandler(ChangeEventArgs e)
-    {
-        if (e.Value is string value)
-        {
-            await ValueChanged.InvokeAsync(value);
-        }
-    }
+private async Task OnInputHandler(ChangeEventArgs e)
+{
+if (e.Value is string value)
+{
+await ValueChanged.InvokeAsync(value);
+}
+}
 
-    private async Task OnBlurHandler(FocusEventArgs args)
-    {
-        await OnBlur.InvokeAsync(args);
-    }
+private async Task OnBlurHandler(FocusEventArgs args)
+{
+await OnBlur.InvokeAsync(args);
+}
+
+private async Task OnFocusHandler(FocusEventArgs args)
+{
+await OnFocus.InvokeAsync(args);
+}
 }

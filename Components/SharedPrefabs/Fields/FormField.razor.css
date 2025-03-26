@@ -23,13 +23,18 @@ label.required::after {
     border: 1px solid #d1d5db;
     border-radius: 0.375rem;
     font-size: 0.875rem;
-    transition: all 0.2s;
+    transition: all 0.2s ease;
 }
 
 .form-input:focus {
     outline: none;
     border-color: #3b82f6;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    transform: scale(1.01);
+}
+
+.form-input:hover {
+    border-color: #a1a1aa;
 }
 
 .form-input.invalid {

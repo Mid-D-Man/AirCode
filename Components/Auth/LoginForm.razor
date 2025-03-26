@@ -7,31 +7,37 @@
         <DataAnnotationsValidator />
 
         <div class="form-group">
-            <label>Username/Email</label>
-            <InputText @bind-Value="loginModel.Username" class="form-control" />
-            <ValidationMessage For="@(() => loginModel.Username)" />
+            <FormField
+                Label="Username/Email"
+                @bind-Value="loginModel.Username"
+                Placeholder="Enter your username or email"
+                IsRequired="true" />
         </div>
 
         <div class="form-group">
-            <label>Password</label>
-            <InputText type="password" @bind-Value="loginModel.Password" class="form-control" />
-            <ValidationMessage For="@(() => loginModel.Password)" />
+            <FormField
+                Label="Password"
+                Type="password"
+                @bind-Value="loginModel.Password"
+                Placeholder="Enter your password"
+                IsRequired="true" />
         </div>
 
-        <div class="form-group">
+        <div class="form-group admin-checkbox">
             <label class="checkbox-container">
                 <input type="checkbox" checked="@loginModel.IsAdmin" @onchange="AdminCheckChanged" />
                 Login as Administrator
             </label>
-            <FormField Label="stuff" IsRequired="true" ErrorMessage="chiki"/>
         </div>
 
         @if (showAdminId)
         {
             <div class="form-group admin-id-section">
-                <label>Admin ID</label>
-                <InputText @bind-Value="loginModel.AdminId" class="form-control" />
-                <ValidationMessage For="@(() => loginModel.AdminId)" />
+                <FormField
+                    Label="Admin ID"
+                    @bind-Value="loginModel.AdminId"
+                    Placeholder="Enter Admin ID"
+                    IsRequired="true" />
             </div>
         }
 
