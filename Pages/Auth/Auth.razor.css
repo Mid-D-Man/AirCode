@@ -1,20 +1,22 @@
 /* AuthPage.razor.css */
-/* Pages/Auth/AuthPage.razor.css */
+
 .auth-page {
     min-height: 100vh;
     display: flex;
     justify-content: center;
     align-items: center;
-    background-color: #f3f4f6;
+    background-color: transparent; /* Changed from #f3f4f6 to transparent */
 }
 
 .auth-container {
     width: 100%;
     max-width: 480px;
-    background: #ffffff;
+    background: white;
     border-radius: 10px 80px 10px 80px; /* Applied the unique border-radius */
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     padding: 2rem;
+    position: relative; /* Added to ensure proper z-index stacking */
+    z-index: 10; /* Ensure the container is above the blobs */
 }
 
 .auth-header {
