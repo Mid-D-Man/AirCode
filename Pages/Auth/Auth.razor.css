@@ -11,8 +11,8 @@
 .auth-container {
     width: 100%;
     max-width: 480px;
-    background: white;
-    border-radius: 0.5rem;
+    background: #ffffff;
+    border-radius: 10px 80px 10px 80px; /* Applied the unique border-radius */
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     padding: 2rem;
 }
@@ -47,57 +47,4 @@
 /* Ensure proper spacing for admin login fields */
 .admin-login-group {
     margin-bottom: 1.5rem;
-}/* Blobs container (placed behind the content) */
-.auth-blobs {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: -1;
-    overflow: hidden;
-}
-
-/* Base blob style */
-.blob {
-    position: absolute;
-    border-radius: 50%;
-    animation: moveBlob 25s infinite ease-in-out;
-}
-
-/* Specific blob sizes, positions and colors */
-.blob-1 {
-    width: 250px;
-    height: 250px;
-    top: -50px;
-    left: -50px;
-    background: rgba(112, 92, 255, 0.3); /* Using --secondary with opacity */
-}
-
-.blob-2 {
-    width: 300px;
-    height: 300px;
-    bottom: -100px;
-    right: -100px;
-    background: rgba(243, 159, 255, 0.25); /* Using --primary-color with opacity */
-    animation-delay: 5s;
-}
-
-.blob-3 {
-    width: 200px;
-    height: 200px;
-    top: 50%;
-    left: -100px;
-    background: rgba(13, 71, 161, 0.2); /* Using --nav-background with opacity */
-    animation-delay: 10s;
-}
-
-/* Blob movement animation */
-@keyframes moveBlob {
-    0%, 100% {
-        transform: translate(0, 0) scale(1);
-    }
-    50% {
-        transform: translate(20px, 20px) scale(1.1);
-    }
 }
