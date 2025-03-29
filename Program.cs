@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using AirCode;
 using AirCode.Services;
+using AirCode.Services.Auth;
 using AirCode.Services.Courses;
 using AirCode.Services.Permissions;
 using ZXingBlazor;

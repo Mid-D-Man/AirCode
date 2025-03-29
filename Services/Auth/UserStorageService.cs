@@ -1,8 +1,9 @@
 using AirCode.Models;
+using AirCode.Services.Auth;
 using AirCode.Services.Storage;
 using AirCode.Utilities;
 using AirCode.Utilities.HelperScripts;
-namespace AirCode.Services;
+namespace AirCode.Services.Auth;
 
 public class UserStorageService : IUserStorageService
 {

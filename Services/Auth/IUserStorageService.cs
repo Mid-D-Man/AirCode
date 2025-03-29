@@ -1,6 +1,6 @@
 using AirCode.Models;
 
-namespace AirCode.Services;
+namespace AirCode.Services.Auth;
 
 
     public interface IUserStorageService
