@@ -1,0 +1,83 @@
+[
+  {
+    "CourseId": "course1",
+    "Name": "Introduction to Computer Science",
+    "DepartmentId": "dept1",
+    "Level": 0,
+    "Semester": 0,
+    "Schedule": {
+      "TimeSlots": [
+        {
+          "Day": 1,
+          "StartTime": "09:00:00",
+          "EndTime": "11:00:00",
+          "Location": "Room 101"
+        },
+        {
+          "Day": 3,
+          "StartTime": "14:00:00",
+          "EndTime": "16:00:00",
+          "Location": "Room 101"
+        }
+      ]
+    },
+    "LecturerIds": ["lecturer1", "lecturer2"],
+    "SecurityToken": "token123",
+    "LastModified": "2025-03-01T10:00:00",
+    "ModifiedBy": "system"
+  },
+  {
+    "CourseId": "course2",
+    "Name": "Data Structures and Algorithms",
+    "DepartmentId": "dept1",
+    "Level": 1,
+    "Semester": 0,
+    "Schedule": {
+      "TimeSlots": [
+        {
+          "Day": 2,
+          "StartTime": "10:00:00",
+          "EndTime": "12:00:00",
+          "Location": "Room 202"
+        },
+        {
+          "Day": 4,
+          "StartTime": "13:00:00",
+          "EndTime": "15:00:00",
+          "Location": "Room 202"
+        }
+      ]
+    },
+    "LecturerIds": ["lecturer1"],
+    "SecurityToken": "token456",
+    "LastModified": "2025-03-05T14:30:00",
+    "ModifiedBy": "system"
+  },
+  {
+    "CourseId": "course3",
+    "Name": "Database Management Systems",
+    "DepartmentId": "dept1",
+    "Level": 2,
+    "Semester": 1,
+    "Schedule": {
+      "TimeSlots": [
+        {
+          "Day": 1,
+          "StartTime": "13:00:00",
+          "EndTime": "15:00:00",
+          "Location": "Room 303"
+        },
+        {
+          "Day": 5,
+          "StartTime": "09:00:00",
+          "EndTime": "11:00:00",
+          "Location": "Lab 2"
+        }
+      ]
+    },
+    "LecturerIds": ["lecturer3"],
+    "SecurityToken": "token789",
+    "LastModified": "2025-03-10T09:15:00",
+    "ModifiedBy": "system"
+  }
+]

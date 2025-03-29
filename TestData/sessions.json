@@ -1,0 +1,32 @@
+[
+  {
+    "SessionId": "session1",
+    "YearStart": 2024,
+    "YearEnd": 2025,
+    "Semesters": [
+      {
+        "SemesterId": "semester1",
+        "Type": 0,
+        "SessionId": "session1",
+        "StartDate": "2024-09-01T00:00:00",
+        "EndDate": "2024-12-15T00:00:00",
+        "SecurityToken": "token123",
+        "LastModified": "2024-08-15T10:00:00",
+        "ModifiedBy": "system"
+      },
+      {
+        "SemesterId": "semester2",
+        "Type": 1,
+        "SessionId": "session1",
+        "StartDate": "2025-01-15T00:00:00",
+        "EndDate": "2025-05-30T00:00:00",
+        "SecurityToken": "token456",
+        "LastModified": "2024-12-20T14:30:00",
+        "ModifiedBy": "system"
+      }
+    ],
+    "SecurityToken": "token789",
+    "LastModified": "2024-08-01T09:15:00",
+    "ModifiedBy": "system"
+  }
+]

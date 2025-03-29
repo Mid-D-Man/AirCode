@@ -1,0 +1,82 @@
+[
+  {
+    "AttendanceEventId": "event1",
+    "CourseCode": "course1",
+    "Date": "2025-03-15T09:00:00",
+    "Records": [
+      {
+        "StudentId": "student1",
+        "CourseCode": "course1",
+        "Timestamp": "2025-03-15T09:05:00",
+        "Location": "Room 101",
+        "Type": 0,
+        "VerificationMethod": 0,
+        "IsManuallyVerified": false,
+        "SecurityToken": "token123",
+        "LastModified": "2025-03-15T09:05:00",
+        "ModifiedBy": "system"
+      },
+      {
+        "StudentId": "student2",
+        "CourseCode": "course1",
+        "Timestamp": "2025-03-15T09:15:00",
+        "Location": "Room 101",
+        "Type": 1,
+        "VerificationMethod": 0,
+        "IsManuallyVerified": false,
+        "SecurityToken": "token456",
+        "LastModified": "2025-03-15T09:15:00",
+        "ModifiedBy": "system"
+      }
+    ],
+    "SessionMode": 0,
+    "VerificationMethod": 0,
+    "Location": "Room 101",
+    "IsOfflineSync": false,
+    "InitiatedBy": "lecturer1",
+    "IsVerified": true,
+    "SecurityToken": "token789",
+    "LastModified": "2025-03-15T09:00:00",
+    "ModifiedBy": "lecturer1"
+  },
+  {
+    "AttendanceEventId": "event2",
+    "CourseCode": "course2",
+    "Date": "2025-03-16T10:00:00",
+    "Records": [
+      {
+        "StudentId": "student1",
+        "CourseCode": "course2",
+        "Timestamp": "2025-03-16T10:03:00",
+        "Location": "Room 202",
+        "Type": 0,
+        "VerificationMethod": 0,
+        "IsManuallyVerified": false,
+        "SecurityToken": "token101",
+        "LastModified": "2025-03-16T10:03:00",
+        "ModifiedBy": "system"
+      },
+      {
+        "StudentId": "student3",
+        "CourseCode": "course2",
+        "Timestamp": "2025-03-16T10:05:00",
+        "Location": "Room 202",
+        "Type": 0,
+        "VerificationMethod": 0,
+        "IsManuallyVerified": false,
+        "SecurityToken": "token202",
+        "LastModified": "2025-03-16T10:05:00",
+        "ModifiedBy": "system"
+      }
+    ],
+    "SessionMode": 0,
+    "VerificationMethod": 0,
+    "Location": "Room 202",
+    "IsOfflineSync": false,
+    "InitiatedBy": "lecturer1",
+    "IsVerified": true,
+    "SecurityToken": "token303",
+    "LastModified": "2025-03-16T10:00:00",
+    "ModifiedBy": "lecturer1"
+  }
+]

@@ -1,0 +1,29 @@
+[
+  {
+    "LecturerId": "lecturer1",
+    "Name": "Dr. Michael Wilson",
+    "DepartmentId": "dept1",
+    "CourseIds": ["course1", "course2"],
+    "SecurityToken": "token123",
+    "LastModified": "2025-03-01T10:00:00",
+    "ModifiedBy": "system"
+  },
+  {
+    "LecturerId": "lecturer2",
+    "Name": "Prof. Jennifer Davis",
+    "DepartmentId": "dept1",
+    "CourseIds": ["course1"],
+    "SecurityToken": "token456",
+    "LastModified": "2025-03-05T14:30:00",
+    "ModifiedBy": "system"
+  },
+  {
+    "LecturerId": "lecturer3",
+    "Name": "Dr. Robert Taylor",
+    "DepartmentId": "dept1",
+    "CourseIds": ["course3"],
+    "SecurityToken": "token789",
+    "LastModified": "2025-03-10T09:15:00",
+    "ModifiedBy": "system"
+  }
+]

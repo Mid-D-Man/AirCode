@@ -1,0 +1,68 @@
+[
+  {
+    "StudentId": "student1",
+    "Name": "Sarah Johnson",
+    "Level": 2,
+    "DepartmentId": "dept1",
+    "RepStatus": 0,
+    "Enrollments": [
+      {
+        "CourseId": "course1",
+        "Status": 0,
+        "SessionId": "session1",
+        "Semester": 0
+      },
+      {
+        "CourseId": "course2",
+        "Status": 0,
+        "SessionId": "session1",
+        "Semester": 0
+      }
+    ],
+    "SecurityToken": "token123",
+    "LastModified": "2025-03-01T10:00:00",
+    "ModifiedBy": "system"
+  },
+  {
+    "StudentId": "student2",
+    "Name": "Emily Brown",
+    "Level": 1,
+    "DepartmentId": "dept1",
+    "RepStatus": 2,
+    "Enrollments": [
+      {
+        "CourseId": "course1",
+        "Status": 0,
+        "SessionId": "session1",
+        "Semester": 0
+      }
+    ],
+    "SecurityToken": "token456",
+    "LastModified": "2025-03-05T14:30:00",
+    "ModifiedBy": "system"
+  },
+  {
+    "StudentId": "student3",
+    "Name": "James Wilson",
+    "Level": 2,
+    "DepartmentId": "dept1",
+    "RepStatus": 0,
+    "Enrollments": [
+      {
+        "CourseId": "course2",
+        "Status": 0,
+        "SessionId": "session1",
+        "Semester": 0
+      },
+      {
+        "CourseId": "course3",
+        "Status": 0,
+        "SessionId": "session1",
+        "Semester": 1
+      }
+    ],
+    "SecurityToken": "token789",
+    "LastModified": "2025-03-10T09:15:00",
+    "ModifiedBy": "system"
+  }
+]

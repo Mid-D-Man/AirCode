@@ -1,0 +1,37 @@
+[
+  {
+    "CourseId": "course1",
+    "TotalSessions": 12,
+    "StudentAttendancePercentages": {
+      "student1": 95.5,
+      "student2": 83.2
+    },
+    "AverageAttendanceRate": 89.35,
+    "SecurityToken": "token123",
+    "LastModified": "2025-03-20T10:00:00",
+    "ModifiedBy": "system"
+  },
+  {
+    "CourseId": "course2",
+    "TotalSessions": 10,
+    "StudentAttendancePercentages": {
+      "student1": 90.0,
+      "student3": 85.0
+    },
+    "AverageAttendanceRate": 87.5,
+    "SecurityToken": "token456",
+    "LastModified": "2025-03-21T14:30:00",
+    "ModifiedBy": "system"
+  },
+  {
+    "CourseId": "course3",
+    "TotalSessions": 8,
+    "StudentAttendancePercentages": {
+      "student3": 75.0
+    },
+    "AverageAttendanceRate": 75.0,
+    "SecurityToken": "token789",
+    "LastModified": "2025-03-22T09:15:00",
+    "ModifiedBy": "system"
+  }
+]
