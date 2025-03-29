@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using AirCode;
 using AirCode.Services;
+using AirCode.Services.Courses;
+using AirCode.Services.Permissions;
 using ZXingBlazor;
 using AirCode.Services.Storage; // Add this namespace import
 
@@ -20,6 +22,10 @@ builder.Services.AddScoped<IScannerService, ScannerService>();
 //auth registry
 builder.Services.AddAuthorizationCore();
 builder.Services.AddScoped<IUserStorageService, UserStorageService>();
+
+// Add services
+builder.Services.AddScoped<IPermissionService, PermissionService>();
+builder.Services.AddScoped<ICourseService, CourseService>();
 
 await builder.Build().RunAsync();
 

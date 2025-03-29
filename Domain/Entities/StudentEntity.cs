@@ -6,26 +6,57 @@ using AirCode.Domain.Interfaces;
 
 namespace AirCode.Domain.Entities
 {
-    
-    public record Student : ISecureEntity
+    // Changed from record to class for mutability
+    public class Student : ISecureEntity
     {
         [Required]
-        public string StudentId { get; init; }
+        public string StudentId { get; init; }//immutable because one black man cannot change matriculation number
         [Required]
-        public string Name { get; init; }
-        public LevelType Level { get; init; }
-        public string DepartmentId { get; init; }
-        public ClassRepStatus RepStatus { get; init; }
+        public string Name { get; set; } // Mutable
+        public LevelType Level { get; set; } // Mutable
+        public string DepartmentId { get; set; } // Mutable
+        public ClassRepStatus RepStatus { get; set; } // Mutable
         
-        // Comprehensive course enrollment tracking
-        public List<CourseEnrollment> Enrollments { get; init; }
+        // Changed to a getter-only property with a new list
+        // that can be modified but reference can't be changed
+        public List<CourseEnrollment> Enrollments { get; } = new List<CourseEnrollment>();
         
-        // Security attributes
+        // Security attributes - still immutable
         public string SecurityToken { get; init; }
         public DateTime LastModified { get; init; }
         public string ModifiedBy { get; init; }
+        
+        // Methods to manage enrollments
+        public void AddEnrollment(CourseEnrollment enrollment)
+        {
+            Enrollments.Add(enrollment);
+        }
+        
+        public void RemoveEnrollment(string courseId)
+        {
+            var enrollment = Enrollments.Find(e => e.CourseId == courseId);
+            if (enrollment != null)
+                Enrollments.Remove(enrollment);
+        }
+        
+        public void UpdateEnrollmentStatus(string courseId, CourseEnrollmentStatus status)
+        {
+            var index = Enrollments.FindIndex(e => e.CourseId == courseId);
+            if (index >= 0)
+            {
+                var existing = Enrollments[index];
+                Enrollments[index] = new CourseEnrollment
+                {
+                    CourseId = existing.CourseId,
+                    SessionId = existing.SessionId,
+                    Semester = existing.Semester,
+                    Status = status
+                };
+            }
+        }
     }
 
+    // Keep this as record since individual enrollments shouldn't change
     public record CourseEnrollment
     {
         public string CourseId { get; init; }

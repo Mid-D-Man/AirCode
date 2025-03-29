@@ -5,7 +5,8 @@ using AirCode.Domain.Enums;
 
 namespace AirCode.Models.Core
 {
-    public class Course
+    // Renamed from Course to CourseDto
+    public class CourseDto
     {
         [JsonProperty("id")]
         public string Id { get; set; }
@@ -23,10 +24,10 @@ namespace AirCode.Models.Core
         public SemesterType Semester { get; set; }
         
         [JsonProperty("schedule")]
-        public List<CourseSchedule> Schedule { get; set; } = new List<CourseSchedule>();
+        public List<CourseScheduleDto> Schedule { get; set; } = new List<CourseScheduleDto>();
         
         [JsonProperty("lecturers")]
-        public List<SimpleLecturer> Lecturers { get; set; } = new List<SimpleLecturer>();
+        public List<SimpleLecturerDto> Lecturers { get; set; } = new List<SimpleLecturerDto>();
         
         [JsonProperty("createdAt")]
         public DateTime CreatedAt { get; set; } = DateTime.Now;
@@ -35,7 +36,8 @@ namespace AirCode.Models.Core
         public DateTime UpdatedAt { get; set; } = DateTime.Now;
     }
 
-    public class CourseSchedule
+    // Renamed to CourseScheduleDto
+    public class CourseScheduleDto
     {
         [JsonProperty("day")]
         public DayOfWeek Day { get; set; }
@@ -50,7 +52,8 @@ namespace AirCode.Models.Core
         public string Location { get; set; }
     }
     
-    public class SimpleLecturer
+    // Renamed to SimpleLecturerDto
+    public class SimpleLecturerDto
     {
         [JsonProperty("id")]
         public string Id { get; set; }

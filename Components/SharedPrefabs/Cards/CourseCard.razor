@@ -4,18 +4,18 @@
 
 <div class="course-card">
     <div class="course-header">
-        <h3 class="course-name">@Course.Name</h3>
-        <span class="course-id">@Course.Id</span>
+        <h3 class="course-name">@CourseDto.Name</h3>
+        <span class="course-id">@CourseDto.Id</span>
     </div>
 
     <div class="course-details">
         <div class="detail-item">
             <span class="label">Level:</span>
-            <span class="value">@Course.Level</span>
+            <span class="value">@CourseDto.Level</span>
         </div>
         <div class="detail-item">
             <span class="label">Semester:</span>
-            <span class="value">@Course.Semester</span>
+            <span class="value">@CourseDto.Semester</span>
         </div>
         <div class="detail-item">
             <span class="label">Lecturers:</span>
@@ -26,7 +26,7 @@
     <div class="schedule">
         <h4>Schedule</h4>
         <div class="schedule-items">
-            @foreach (var schedule in Course.Schedule)
+            @foreach (var schedule in CourseDto.Schedule)
             {
                 <div class="schedule-item">
                     <span class="day">@schedule.Day</span>
@@ -45,27 +45,27 @@
 
 @code {
     [Parameter]
-    public Course Course { get; set; }
+    public CourseDto CourseDto { get; set; }
 
     [Parameter]
-    public EventCallback<Course> OnEditCourse { get; set; }
+    public EventCallback<CourseDto> OnEditCourse { get; set; }
 
     [Parameter]
-    public EventCallback<Course> OnDeleteCourse { get; set; }
+    public EventCallback<CourseDto> OnDeleteCourse { get; set; }
 
     private async Task OnEdit()
     {
-        await OnEditCourse.InvokeAsync(Course);
+        await OnEditCourse.InvokeAsync(CourseDto);
     }
 
     private async Task OnDelete()
     {
-        await OnDeleteCourse.InvokeAsync(Course);
+        await OnDeleteCourse.InvokeAsync(CourseDto);
     }
 
     private string GetLecturerNames()
     {
-        return string.Join(", ", Course.Lecturers.Select(l => $"{l.Id} - {l.Name}"));
+        return string.Join(", ", CourseDto.Lecturers.Select(l => $"{l.Id} - {l.Name}"));
     }
 
 

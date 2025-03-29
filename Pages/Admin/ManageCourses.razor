@@ -4,7 +4,7 @@
 @using AirCode.Components.SharedPrefabs
 @using AirCode.Domain.Entities
 @using AirCode.Models.Core
-@using Course = AirCode.Models.Core.Course
+@using Course = AirCode.Models.Core.CourseDto
 
 @layout SuperiorAdminLayout
 @attribute [Authorize(Roles = "Admin")]
@@ -67,27 +67,27 @@
         <div class="modal-backdrop" @onclick="CloseModal"></div>
         <div class="course-modal">
             <div class="modal-header">
-                <h3>@(editingCourse.Id == null ? "Add New Course" : "Edit Course")</h3>
+                <h3>@(_editingCourseDto.Id == null ? "Add New Course" : "Edit Course")</h3>
                 <button class="close-btn" @onclick="CloseModal">×</button>
             </div>
             
             <div class="modal-body">
                 <div class="form-group">
                     <label>Course Name</label>
-                    <input type="text" @bind="editingCourse.Name" required />
+                    <input type="text" @bind="_editingCourseDto.Name" required />
                 </div>
                 
                 <div class="form-group">
                     <label>Course ID</label>
-                    <input type="text" @bind="editingCourse.Id" 
-                           disabled="@(editingCourse.Id != null)" 
+                    <input type="text" @bind="_editingCourseDto.Id" 
+                           disabled="@(_editingCourseDto.Id != null)" 
                            placeholder="e.g., CSC301" required />
                 </div>
                 
                 <div class="form-row">
                     <div class="form-group">
                         <label>Semester</label>
-                        <select @bind="editingCourse.Semester">
+                        <select @bind="_editingCourseDto.Semester">
                             <option value="1">Semester 1</option>
                             <option value="2">Semester 2</option>
                         </select>
@@ -95,7 +95,7 @@
                     
                     <div class="form-group">
                         <label>Level</label>
-                        <select @bind="editingCourse.Level">
+                        <select @bind="_editingCourseDto.Level">
                             <option value="100">100 Level</option>
                             <option value="200">200 Level</option>
                             <option value="300">300 Level</option>
@@ -107,7 +107,7 @@
                 <div class="lecturers">
                     <h4>Lecturers</h4>
                     <button class="add-schedule-btn add-lecturer-btn" @onclick="AddLecturer">+ Add Lecturer</button>
-                    @foreach (var (lecturer, index) in editingCourse.Lecturers.Select((l, i) => (l, i)))
+                    @foreach (var (lecturer, index) in _editingCourseDto.Lecturers.Select((l, i) => (l, i)))
                     {
                         <div class="lecturer-form-item" style="margin-bottom: 1rem; background-color: var(--bg); padding: 1rem; border-radius: 4px; position: relative;">
                             <div class="form-row">
@@ -130,7 +130,7 @@
                     <h4>Course Schedule</h4>
                     <button class="add-schedule-btn" @onclick="AddScheduleItem">+ Add Schedule</button>
                     
-                    @foreach (var (schedule, index) in editingCourse.Schedule.Select((s, i) => (s, i)))
+                    @foreach (var (schedule, index) in _editingCourseDto.Schedule.Select((s, i) => (s, i)))
                     {
                         <div class="schedule-form-item">
                             <div class="form-row">
@@ -185,7 +185,7 @@
     private string levelFilter = "";
     
     private bool showModal = false;
-    private Course editingCourse = new Course();
+    private Course _editingCourseDto = new Course();
    // private string lecturerInput = "";
     
     protected override async Task OnInitializedAsync()
@@ -285,12 +285,12 @@
 }
 
     
-    private void ShowModal(Course course)
+    private void ShowModal(Course courseDto)
     {
-        if (course == null)
+        if (courseDto == null)
         {
             // New course
-            editingCourse = new Course
+            _editingCourseDto = new Course
             {
                 Semester = 1,
                 Level = "100",
@@ -301,20 +301,20 @@
         else
         {
             // Edit existing course
-            editingCourse = new Course
+            _editingCourseDto = new Course
             {
-                Id = course.Id,
-                Name = course.Name,
-                Semester = course.Semester,
-                Level = course.Level,
-                Schedule = course.Schedule.Select(s => new CourseSchedule
+                Id = courseDto.Id,
+                Name = courseDto.Name,
+                Semester = courseDto.Semester,
+                Level = courseDto.Level,
+                Schedule = courseDto.Schedule.Select(s => new CourseSchedule
                 {
                     Day = s.Day,
                     StartTime = s.StartTime,
                     EndTime = s.EndTime,
                     Location = s.Location
                 }).ToList(),
-                Lecturers = course.Lecturers.Select(l => new Lecturer
+                Lecturers = courseDto.Lecturers.Select(l => new Lecturer
                 {
                     Id = l.Id,
                     Name = l.Name
@@ -329,23 +329,23 @@
     private void CloseModal()
     {
         showModal = false;
-        editingCourse = new Course();
+        _editingCourseDto = new Course();
     }
     private void AddLecturer()
     {
-        editingCourse.Lecturers.Add(new Lecturer { Id = string.Empty, Name = string.Empty });
+        _editingCourseDto.Lecturers.Add(new Lecturer { Id = string.Empty, Name = string.Empty });
         StateHasChanged();
     }
 
     private void RemoveLecturer(int index)
     {
-        editingCourse.Lecturers.RemoveAt(index);
+        _editingCourseDto.Lecturers.RemoveAt(index);
         StateHasChanged();
     }
 
     private void AddScheduleItem()
     {
-        editingCourse.Schedule.Add(new CourseSchedule
+        _editingCourseDto.Schedule.Add(new CourseSchedule
         {
             Day = DayOfWeek.Monday,
             StartTime = new TimeSpan(9, 0, 0),
@@ -357,7 +357,7 @@
     
     private void RemoveScheduleItem(int index)
     {
-        editingCourse.Schedule.RemoveAt(index);
+        _editingCourseDto.Schedule.RemoveAt(index);
         StateHasChanged();
     }
     
@@ -371,7 +371,7 @@
     {
         if (e.Value != null && TimeSpan.TryParse(e.Value.ToString(), out TimeSpan time))
         {
-            editingCourse.Schedule[index].StartTime = time;
+            _editingCourseDto.Schedule[index].StartTime = time;
         }
     }
     
@@ -379,7 +379,7 @@
     {
         if (e.Value != null && TimeSpan.TryParse(e.Value.ToString(), out TimeSpan time))
         {
-            editingCourse.Schedule[index].EndTime = time;
+            _editingCourseDto.Schedule[index].EndTime = time;
         }
     }
     
@@ -387,17 +387,17 @@
     {
         try
         {
-            var existingIndex = courses.FindIndex(c => c.Id == editingCourse.Id);
+            var existingIndex = courses.FindIndex(c => c.Id == _editingCourseDto.Id);
             if (existingIndex >= 0)
             {
-                editingCourse.UpdatedAt = DateTime.Now;
-                courses[existingIndex] = editingCourse;
+                _editingCourseDto.UpdatedAt = DateTime.Now;
+                courses[existingIndex] = _editingCourseDto;
             }
             else
             {
-                editingCourse.CreatedAt = DateTime.Now;
-                editingCourse.UpdatedAt = DateTime.Now;
-                courses.Add(editingCourse);
+                _editingCourseDto.CreatedAt = DateTime.Now;
+                _editingCourseDto.UpdatedAt = DateTime.Now;
+                courses.Add(_editingCourseDto);
             }
         
             // Save to Firebase here if needed...
@@ -418,17 +418,17 @@
         return Task.CompletedTask;
     }
     
-    private async Task HandleEditCourse(Course course)
+    private async Task HandleEditCourse(Course courseDto)
     {
-        ShowModal(course);
+        ShowModal(courseDto);
     }
     
-    private async Task HandleDeleteCourse(Course course)
+    private async Task HandleDeleteCourse(Course courseDto)
     {
-        var confirm = await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you want to delete {course.Name}?");
+        var confirm = await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you want to delete {courseDto.Name}?");
         if (confirm)
         {
-            courses.RemoveAll(c => c.Id == course.Id);
+            courses.RemoveAll(c => c.Id == courseDto.Id);
             // In a real app, delete from Firebase here
             // await DeleteCourseFromFirebase(course.Id);
             StateHasChanged();

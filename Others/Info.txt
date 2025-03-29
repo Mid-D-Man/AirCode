@@ -1,0 +1,4 @@
+duplicate Course definitions - one in Domain/Entities and another in Models/Core. This is a common pattern in Clean Architecture but needs proper implementation:
+
+Domain Entities: Should represent your business entities and rules - the core domain objects of your system.
+Models: Should be DTOs (Data Transfer Objects) used for specific contexts like API responses or UI.
