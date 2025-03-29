@@ -2,6 +2,9 @@
 @using AirCode.Layout.AdminLayout.Superior
 @using Microsoft.AspNetCore.Authorization
 @using AirCode.Components.SharedPrefabs
+@using AirCode.Domain.Entities
+@using AirCode.Models.Core
+@using Course = AirCode.Models.Core.Course
 
 @layout SuperiorAdminLayout
 @attribute [Authorize(Roles = "Admin")]
@@ -231,8 +234,8 @@
                 Level = "300",
                 Lecturers = new List<Lecturer>
                 {
-                    new Lecturer { Id = "PROF001", Name = "Dr. John Smith" },
-                    new Lecturer { Id = "DR002", Name = "Prof. Jane Doe" }
+                    new Lecturer { LecturerId = "PROF001", Name = "Dr. John Smith" },
+                    new Lecturer { LecturerId = "DR002", Name = "Prof. Jane Doe" }
                 },
                 Schedule = new List<CourseSchedule>
                 {

@@ -1,9 +1,9 @@
-// AirQrCode/Models/Course.cs
 using System;
 using System.Collections.Generic;
 using Newtonsoft.Json;
+using AirCode.Domain.Enums;
 
-namespace AirCode.Models
+namespace AirCode.Models.Core
 {
     public class Course
     {
@@ -13,18 +13,20 @@ namespace AirCode.Models
         [JsonProperty("name")]
         public string Name { get; set; }
         
-        [JsonProperty("semester")]
-        public int Semester { get; set; }
+        [JsonProperty("department")]
+        public string Department { get; set; }
         
         [JsonProperty("level")]
-        public string Level { get; set; }
+        public LevelType Level { get; set; }
+        
+        [JsonProperty("semester")]
+        public SemesterType Semester { get; set; }
         
         [JsonProperty("schedule")]
         public List<CourseSchedule> Schedule { get; set; } = new List<CourseSchedule>();
         
         [JsonProperty("lecturers")]
-        public List<Lecturer> Lecturers { get; set; } = new List<Lecturer>();
-
+        public List<SimpleLecturer> Lecturers { get; set; } = new List<SimpleLecturer>();
         
         [JsonProperty("createdAt")]
         public DateTime CreatedAt { get; set; } = DateTime.Now;
@@ -47,13 +49,16 @@ namespace AirCode.Models
         [JsonProperty("location")]
         public string Location { get; set; }
     }
-    public class Lecturer
+    
+    public class SimpleLecturer
     {
         [JsonProperty("id")]
         public string Id { get; set; }
     
         [JsonProperty("name")]
         public string Name { get; set; }
+        
+        [JsonProperty("status")]
+        public LecturerStatus Status { get; set; }
     }
-
 }
