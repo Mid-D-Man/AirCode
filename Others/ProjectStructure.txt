@@ -1,6 +1,6 @@
-AirCode.csproj  Components      Others          Properties      Utilities       global.json     wwwroot
-AirCode.sln     Layout          Pages           Services        _Imports.razor  obj
-App.razor       Models          Program.cs      Shared          bin             public
+AirCode.csproj  Components      Models          Program.cs      Shared          _Imports.razor  obj
+AirCode.sln     Domain          Others          Properties      TestData        bin             public
+App.razor       Layout          Pages           Services        Utilities       global.json     wwwroot
 
 ./Components:
 Admin           Auth            Loading         SharedPrefabs
@@ -27,8 +27,8 @@ LoadingScreen.razor     LoadingScreen.razor.css
 Buttons Cards   Fields  Others  QrCode  Scanner
 
 ./Components/SharedPrefabs/Buttons:
-CircularNavigationButton.razor          PrimaryButton.razor
-CircularNavigationButton.razor.css      PrimaryButton.razor.css
+CircularNavigationButton.razor          PrimaryButton.razor                     ThemeToggle.razor
+CircularNavigationButton.razor.css      PrimaryButton.razor.css                 ThemeToggle.razor.css
 
 ./Components/SharedPrefabs/Cards:
 CourseCard.razor        CourseCard.razor.css
@@ -37,7 +37,7 @@ CourseCard.razor        CourseCard.razor.css
 FormField.razor         FormField.razor.css
 
 ./Components/SharedPrefabs/Others:
-DynamicBlob.razor
+BlobBackground.razor            BlobBackground.razor.css        DynamicBlob.razor
 
 ./Components/SharedPrefabs/QrCode:
 QRCodeCompo.razor       QRCodeCompo.razor.css   mid
@@ -46,6 +46,22 @@ QRCodeCompo.razor       QRCodeCompo.razor.css   mid
 
 ./Components/SharedPrefabs/Scanner:
 MidQrScanner.razor      MidQrScanner.razor.css  ZXingScanner.razor      ZXingScanner.razor.css
+
+./Domain:
+Entities        Enums           Interfaces      ValueObjects
+
+./Domain/Entities:
+AttendanceEntity.cs     DepartmentEntity.cs     ReportEntity.cs         StudentEntity.cs
+CourseEntity.cs         LecturerEntity.cs       SessionEntity.cs        UserEntity.cs
+
+./Domain/Enums:
+AttendanceEnums.cs      AttendanceEventModes.cs CourseEnums.cs          UserEnums.cs
+
+./Domain/Interfaces:
+ISecurityEntity.cs
+
+./Domain/ValueObjects:
+AttendanceEventDetails.cs       AttendanceRecord.cs             CourseSchedule.cs
 
 ./Layout:
 AdminLayout             Auth                    ClientLayout            NavMenu.razor           NavMenu.razor.css
@@ -66,10 +82,16 @@ AuthLayout.razor        AuthLayout.razor.css
 ClientLayout.razor      ClientLayout.razor.css  ClientNavMenu.razor     ClientNavMenu.razor.css
 
 ./Models:
-Course.cs       LoginModel.cs   SessionData.cs  SignUpModel.cs  User.cs         UserRole.cs
+Auth    Core
+
+./Models/Auth:
+LoginModel.cs   SignUpModel.cs
+
+./Models/Core:
+CourseDto.cs    SessionData.cs  User.cs
 
 ./Others:
-ProjectStructure.txt
+Info.txt                ProjectStructure.txt
 
 ./Pages:
 Admin           Auth            Client          TestPages
@@ -93,12 +115,19 @@ Index.razor             Index.razor.css         ShaderPage1.razor       TestPage
 launchSettings.json
 
 ./Services:
-Auth                    IScannerService.cs      Scanner                 Storage
+Auth            Courses         Permissions     Scanner         Storage
 
 ./Services/Auth:
 IUserStorageService.cs  UserStorageService.cs
 
+./Services/Courses:
+CourseService.cs        ICourseService.cs
+
+./Services/Permissions:
+IPermissionService.cs   PermissionService.cs
+
 ./Services/Scanner:
+IScannerService.cs
 
 ./Services/Storage:
 BlazorLocalStorageService.cs    ILocalStorageService.cs
@@ -106,32 +135,19 @@ BlazorLocalStorageService.cs    ILocalStorageService.cs
 ./Shared:
 SplashScreen.razor      SplashScreen.razor.css
 
+./TestData:
+users.json
+
 ./Utilities:
 DataStructures  HelperScripts
 
 ./Utilities/DataStructures:
-GeneralData.cs          NavItem.cs              QRCodeData.cs           UserCollection.cs
+NavItem.cs              QRCodeData.cs           UserCollection.cs
 
 ./Utilities/HelperScripts:
 JsonHelper.cs           MID_HelperFunctions.cs  Utilities.cs
 
 
-./public:
-index.html
-
-./wwwroot:
-css                             js                              service-worker.js               wasm
-icons                           manifest.json                   service-worker.published.js
-index.html                      sample-data                     svgs
-
-./wwwroot/css:
-app.css         bootstrap       colors.css      open-iconic     responsive.css
-
-./wwwroot/css/bootstrap:
-bootstrap.min.css       bootstrap.min.css.map
-
-./wwwroot/css/open-iconic:
-FONT-LICENSE    ICON-LICENSE    README.md       font
 
 ./wwwroot/css/open-iconic/font:
 css     fonts
@@ -146,7 +162,7 @@ open-iconic.eot         open-iconic.otf         open-iconic.svg         open-ico
 favicon.png     icon-192.png    icon-512.png
 
 ./wwwroot/js:
-midQrScannerModule.js   qrCodeModule.js         shaderRenderer1.js      zxingScanner.js
+midQrScannerModule.js   qrCodeModule.js         shaderRenderer1.js      themeSwitcher.js        zxingScanner.js
 
 ./wwwroot/sample-data:
 weather.json
