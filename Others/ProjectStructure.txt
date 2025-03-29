@@ -135,8 +135,14 @@ BlazorLocalStorageService.cs    ILocalStorageService.cs
 ./Shared:
 SplashScreen.razor      SplashScreen.razor.css
 
-./TestData:
-users.json
+./TestData:attendance-events.json
+           attendance-reports.json
+           courses.json
+           departments.json
+           lecturers.json
+           sessions.json
+           students.json
+           users.json
 
 ./Utilities:
 DataStructures  HelperScripts
