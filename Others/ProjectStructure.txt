@@ -1,3 +1,5 @@
+
+midman@MID-D-MAN AirCode % ls -R  
 AirCode.csproj  Components      Models          Program.cs      Shared          _Imports.razor  obj
 AirCode.sln     Domain          Others          Properties      TestData        bin             public
 App.razor       Layout          Pages           Services        Utilities       global.json     wwwroot
@@ -115,7 +117,7 @@ Index.razor             Index.razor.css         ShaderPage1.razor       TestPage
 launchSettings.json
 
 ./Services:
-Auth            Courses         Permissions     Scanner         Storage
+Auth            Courses         Permissions     Scanner         Search          Storage
 
 ./Services/Auth:
 IUserStorageService.cs  UserStorageService.cs
@@ -129,20 +131,18 @@ IPermissionService.cs   PermissionService.cs
 ./Services/Scanner:
 IScannerService.cs
 
+./Services/Search:
+ISearchContextService.cs        SearchContextService.cs
+
 ./Services/Storage:
 BlazorLocalStorageService.cs    ILocalStorageService.cs
 
 ./Shared:
 SplashScreen.razor      SplashScreen.razor.css
 
-./TestData:attendance-events.json
-           attendance-reports.json
-           courses.json
-           departments.json
-           lecturers.json
-           sessions.json
-           students.json
-           users.json
+./TestData:
+attendance-events.json  courses.json            lecturers.json          students.json
+attendance-reports.json departments.json        sessions.json           users.json
 
 ./Utilities:
 DataStructures  HelperScripts
