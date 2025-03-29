@@ -14,10 +14,15 @@ window.themeSwitcher = {
 
     initTheme: function () {
         const savedTheme = localStorage.getItem('theme');
-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
-        if (savedTheme === 'dark' || (savedTheme === null && prefersDark)) {
+        // Only apply dark mode if explicitly set to 'dark'
+        if (savedTheme === 'dark') {
             document.querySelector('body').classList.add('dark-mode');
+        } else {
+            // Ensure light mode is applied (remove dark-mode if present)
+            document.querySelector('body').classList.remove('dark-mode');
+            // Optionally save the preference
+            if (!savedTheme) localStorage.setItem('theme', 'light');
         }
     }
 };

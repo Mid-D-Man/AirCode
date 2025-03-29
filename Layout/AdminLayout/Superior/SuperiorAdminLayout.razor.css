@@ -24,42 +24,13 @@
     justify-content: space-between;
     align-items: center;
     padding: 0 2rem;
-    background-color: #f5f5f5;
-    border-bottom: 1px solid #e0e0e0;
+    background-color: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border);
     margin: 1rem 1rem 0 0; /* Add margin to match nav menu curve */
     border-radius: 15px;
 }
 
-.search-bar {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    background: white;
-    padding: 0.5rem;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-}
-
-.search-bar input {
-    width: 300px;
-    padding: 0.5rem;
-    border: none;
-    outline: none;
-    font-size: 1rem;
-}
-
-.search-btn {
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 0.5rem;
-    color: #666;
-    transition: color 0.2s ease;
-}
-
-.search-btn:hover {
-    color: #333;
-}
+/* Remove the old search-bar styles as we're using DynamicSearch */
 
 .quick-stats {
     display: flex;
@@ -75,12 +46,12 @@
 .stat-value {
     font-size: 1.5rem;
     font-weight: bold;
-    color: #333;
+    color: var(--text-primary);
 }
 
 .stat-label {
     font-size: 0.875rem;
-    color: #666;
+    color: var(--text-secondary);
     margin-top: 0.25rem;
 }
 
@@ -88,7 +59,7 @@
     flex: 1;
     padding: 2rem;
     overflow-y: auto;
-    background-color: #f5f5f5;
+    background-color: var(--bg-tertiary);
     margin: 1rem 1rem 1rem 0; /* Add margin to match nav menu curve */
     border-radius: 15px;
 }
@@ -99,14 +70,14 @@
 }
 
 .content-bottom::-webkit-scrollbar-track {
-    background: #f1f1f1;
+    background: var(--bg-tertiary);
 }
 
 .content-bottom::-webkit-scrollbar-thumb {
-    background: #c1c1c1;
+    background: var(--text-tertiary);
     border-radius: 4px;
 }
 
 .content-bottom::-webkit-scrollbar-thumb:hover {
-    background: #a8a8a8;
+    background: var(--text-secondary);
 }

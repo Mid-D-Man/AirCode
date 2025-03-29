@@ -1,16 +1,16 @@
 @* Layout/Admin/SuperiorAdminLayout.razor *@
 @inherits LayoutComponentBase
+@using AirCode.Components.SharedPrefabs.Search
+@using AirCode.Components.SharedPrefabs.Buttons
 
 <div class="superior-admin-layout">
     <SuperiorAdminNavMenu />
     <div class="main-content">
         <div class="content-top">
-            <div class="search-bar">
-                <input type="text" placeholder="Search..." />
-                <button class="search-btn">
-                    <i class="fas fa-search"></i>
-                </button>
-            </div>
+            <DynamicSearch Context="Admin" Placeholder="Search admin..." />
+            <!-- Add the theme toggle here -->
+            <ThemeToggle />
+
             <div class="quick-stats">
                 <div class="stat-item">
                     <span class="stat-value">150</span>
@@ -28,5 +28,5 @@
     </div>
 </div>
 @code {
-   //navigation handled by superioradminnavmenu
+//navigation handled by superioradminnavmenu
 }

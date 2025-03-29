@@ -14,6 +14,7 @@
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     overflow: hidden;
     transition: all 0.3s ease;
+    border: 1px solid var(--border);
 }
 
 .search-input-container input {
@@ -41,7 +42,17 @@
     transition: color 0.2s ease;
 }
 
+.search-btn i {
+    /* Ensure the icon is visible */
+    color: var(--text-secondary);
+    font-size: 1rem;
+}
+
 .search-btn:hover {
+    color: var(--primary);
+}
+
+.search-btn:hover i {
     color: var(--primary);
 }
 
