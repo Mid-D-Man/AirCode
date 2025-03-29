@@ -1,5 +1,5 @@
 
-midman@MID-D-MAN AirCode % ls -R  
+
 AirCode.csproj  Components      Models          Program.cs      Shared          _Imports.razor  obj
 AirCode.sln     Domain          Others          Properties      TestData        bin             public
 App.razor       Layout          Pages           Services        Utilities       global.json     wwwroot
@@ -26,7 +26,7 @@ LoginForm.razor         LoginForm.razor.css     SignUpForm.razor        SignUpFo
 LoadingScreen.razor     LoadingScreen.razor.css
 
 ./Components/SharedPrefabs:
-Buttons Cards   Fields  Others  QrCode  Scanner
+Buttons Cards   Fields  Others  QrCode  Scanner Search
 
 ./Components/SharedPrefabs/Buttons:
 CircularNavigationButton.razor          PrimaryButton.razor                     ThemeToggle.razor
@@ -48,6 +48,9 @@ QRCodeCompo.razor       QRCodeCompo.razor.css   mid
 
 ./Components/SharedPrefabs/Scanner:
 MidQrScanner.razor      MidQrScanner.razor.css  ZXingScanner.razor      ZXingScanner.razor.css
+
+./Components/SharedPrefabs/Search:
+DynamicSearch.razor     DynamicSearch.razor.css
 
 ./Domain:
 Entities        Enums           Interfaces      ValueObjects
@@ -153,6 +156,11 @@ NavItem.cs              QRCodeData.cs           UserCollection.cs
 ./Utilities/HelperScripts:
 JsonHelper.cs           MID_HelperFunctions.cs  Utilities.cs
 
+./bin:
+Debug   Release
+
+./bin/Debug:
+net7.0
 
 
 ./wwwroot/css/open-iconic/font:
