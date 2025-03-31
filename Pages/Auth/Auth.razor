@@ -66,15 +66,16 @@
     {
         // Delay for 1 second before checking connectivity
         await Task.Delay(1000);
-        
-        isOnline = await JSRuntime.InvokeAsync<bool>("navigator.onLine");
+    
+        // Change this line
+        isOnline = await JSRuntime.InvokeAsync<bool>("connectivityChecker.isOnline");
         hasCheckedConnectivity = true;
-        
+    
         if (!isOnline)
         {
             await ShowOfflinePopup();
         }
-        
+    
         // Start periodic connectivity check
         await JSRuntime.InvokeVoidAsync("connectivityChecker.init", DotNetObjectReference.Create(this));
     }

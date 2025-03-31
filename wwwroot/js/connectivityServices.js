@@ -59,7 +59,10 @@ window.connectivityChecker = {
         this.dotNetReference = null;
     }
 };
-
+// Add this function to your JS file
+window.checkOnlineStatus = function() {
+    return navigator.onLine;
+};
 // Offline manager for showing prompts and managing offline state
 window.offlineManager = {
     showOfflinePrompt: function () {
