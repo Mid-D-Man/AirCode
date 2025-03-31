@@ -5,18 +5,18 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    background-color: transparent; /* Changed from #f3f4f6 to transparent */
+    background-color: transparent;
 }
 
 .auth-container {
     width: 100%;
     max-width: 480px;
-    background: white;
-    border-radius: 10px 80px 10px 80px; /* Applied the unique border-radius */
+    background: var(--bg-secondary);
+    border-radius: 10px 80px 10px 80px;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     padding: 2rem;
-    position: relative; /* Added to ensure proper z-index stacking */
-    z-index: 10; /* Ensure the container is above the blobs */
+    position: relative;
+    z-index: 10;
 }
 
 .auth-header {
@@ -38,15 +38,41 @@
 }
 
 ::deep(.primary-button.active) {
-    background-color: #3b82f6;
-    color: white;
+    background-color: var(--primary-600);
+    color: var(--button-text);
 }
 
 ::deep(.primary-button:not(.active)) {
-    background-color: #e5e7eb;
-    color: #4b5563;
+    background-color: var(--light-bg-tertiary);
+    color: var(--light-text-secondary);
 }
-/* Ensure proper spacing for admin login fields */
+
+/* Admin login fields */
 .admin-login-group {
     margin-bottom: 1.5rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+    .auth-container {
+        max-width: 100%;
+        padding: 1.5rem;
+        margin: 0 var(--container-padding);
+        border-radius: 10px 40px 10px 40px;
+    }
+
+    ::deep(.primary-button) {
+        padding: 0.5rem 1.5rem;
+    }
+}
+
+@media (max-width: 360px) {
+    .auth-header {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    ::deep(.primary-button) {
+        width: 100%;
+    }
 }
