@@ -10,6 +10,9 @@
 
 <div class="auth-page">
     <div class="auth-container">
+        <div class="theme-toggle-wrapper">
+            <ThemeToggle />
+        </div>
         <div class="auth-header">
             <PrimaryButton 
                 Text="Login" 
@@ -41,12 +44,96 @@
     }
 
     private AuthView currentView = AuthView.Login;
+    private bool isOnline = true;
+    private bool hasCheckedConnectivity = false;
 
     [Inject]
     private NavigationManager NavigationManager { get; set; } = default!;
 
     [Inject]
     private IUserStorageService UserStorage { get; set; } = default!;
+
+    [Inject] 
+    private IJSRuntime JSRuntime { get; set; } = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        await CheckConnectivity();
+    }
+
+    private async Task CheckConnectivity()
+    {
+        // Delay for 1 second before checking connectivity
+        await Task.Delay(1000);
+        
+        isOnline = await JSRuntime.InvokeAsync<bool>("navigator.onLine");
+        hasCheckedConnectivity = true;
+        
+        if (!isOnline)
+        {
+            await ShowOfflinePopup();
+        }
+        
+        // Start periodic connectivity check
+        await JSRuntime.InvokeVoidAsync("connectivityChecker.init", DotNetObjectReference.Create(this));
+    }
+
+    [JSInvokable]
+    public async Task OnConnectivityChanged(bool online)
+    {
+        if (isOnline != online)
+        {
+            isOnline = online;
+            if (!online)
+            {
+                await ShowOfflinePopup();
+            }
+            else
+            {
+                await ShowOnlinePopup();
+            }
+        }
+    }
+
+    private async Task ShowOfflinePopup()
+    {
+        bool continueOffline = await JSRuntime.InvokeAsync<bool>("offlineManager.showOfflinePrompt");
+        
+        if (continueOffline)
+        {
+            // Check for locally stored credentials
+            var hasLocalCredentials = await JSRuntime.InvokeAsync<bool>("offlineManager.hasStoredCredentials");
+            
+            if (hasLocalCredentials)
+            {
+                // Handle offline login with stored credentials
+                // This will be implemented later
+            }
+            else
+            {
+                // Show message that offline usage requires previous login
+                await JSRuntime.InvokeVoidAsync("offlineManager.showNoCredentialsMessage");
+            }
+        }
+        else
+        {
+            // Retry connectivity check
+            await CheckConnectivity();
+        }
+    }
+
+    private async Task ShowOnlinePopup()
+    {
+        bool switchToOnline = await JSRuntime.InvokeAsync<bool>("offlineManager.showOnlinePrompt");
+        
+        if (switchToOnline)
+        {
+            // Reset view to login
+            currentView = AuthView.Login;
+            StateHasChanged();
+        }
+    }
 
     private void SetActiveView(AuthView view)
     {
@@ -64,6 +151,14 @@
             model.Password == "client")
         {
             Console.WriteLine("Client login successful - redirecting to portal");
+            
+            // Store credentials securely before navigating
+            if (isOnline)
+            {
+                await JSRuntime.InvokeVoidAsync("credentialManager.storeCredentials", 
+                    model.Username, model.Password, model.IsAdmin, model.AdminId);
+            }
+            
             NavigationManager.NavigateTo("/Client/ScanPage");
             return;
         }
@@ -76,6 +171,14 @@
             model.AdminId == "admin")
         {
             Console.WriteLine("Admin login successful - redirecting to dashboard");
+            
+            // Store credentials securely before navigating
+            if (isOnline)
+            {
+                await JSRuntime.InvokeVoidAsync("credentialManager.storeCredentials", 
+                    model.Username, model.Password, model.IsAdmin, model.AdminId);
+            }
+            
             NavigationManager.NavigateTo("/Admin/SuperiorDashboard");
             return;
         }
@@ -84,7 +187,6 @@
         Console.WriteLine("Login failed - credentials don't match any known user");
         // You could add error display logic here
     }
-
 
     private async Task HandleSignUp(SignUpModel model)
     {

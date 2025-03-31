@@ -1,5 +1,4 @@
 /* AuthPage.razor.css */
-
 .auth-page {
     min-height: 100vh;
     display: flex;
@@ -17,6 +16,13 @@
     padding: 2rem;
     position: relative;
     z-index: 10;
+}
+
+.theme-toggle-wrapper {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    z-index: 20;
 }
 
 .auth-header {
