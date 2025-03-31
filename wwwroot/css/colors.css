@@ -41,7 +41,7 @@
     --dark-text-secondary: #e0e0e0;
     --dark-text-tertiary: #9e9e9e;
 
-    /* Success, Error, Warning, Info */
+    /* Status Colors */
     --success: #4caf50;
     --error: #f44336;
     --warning: #ff9800;
@@ -56,7 +56,7 @@
     --cube-side: 2.75rem;
     --cube-side-half: calc(var(--cube-side) / 2);
 
-    /* Default Theme (Light) */
+    /* Default Theme Values (Light Mode) */
     --bg-primary: var(--light-bg-primary);
     --bg-secondary: var(--light-bg-secondary);
     --bg-tertiary: var(--light-bg-tertiary);
@@ -65,7 +65,7 @@
     --text-tertiary: var(--light-text-tertiary);
     --border: var(--light-border);
 
-    /* Nav Colors */
+    /* Navigation Colors */
     --nav-background: var(--primary-700);
     --nav-hover: var(--primary-600);
     --nav-active: var(--primary-800);
@@ -76,14 +76,33 @@
     --button-primary-hover: var(--primary-700);
     --button-secondary: var(--secondary-600);
     --button-secondary-hover: var(--secondary-700);
-    --button-text: white;
+    --button-text: #ffffff;
 
     /* Icon Colors */
     --icon-primary: var(--primary-600);
     --icon-secondary: var(--secondary-600);
+
+    /* Backwards Compatibility Variables */
+    --facebook-blue: var(--facebook);
+    --hover-facebook-blue: #3b5998;
+    --button-text-color: var(--button-text);
+    --primary: var(--primary-600);
+    --white: #FFFFFF;
+    --text-color: var(--text-primary);
+    --dark-text-color: var(--dark-text-primary);
+    --secondary: var(--secondary-200);
+    --h1-color: var(--text-secondary);
+    --h2-color: var(--text-secondary);
+    --text: var(--text-primary);
+    --bg: var(--bg-primary);
+    --icon-color: var(--icon-primary);
+    --bg-light: var(--light-bg-secondary);
+    --border-color: var(--border);
+    --primary-color: var(--secondary-400);
+    --primary-rgb: var(--secondary-100);
 }
 
-/* Dark Mode Class for Body */
+/* Dark Mode Overrides */
 body.dark-mode {
     --bg-primary: var(--dark-bg-primary);
     --bg-secondary: var(--dark-bg-secondary);
@@ -93,36 +112,13 @@ body.dark-mode {
     --text-tertiary: var(--dark-text-tertiary);
     --border: var(--dark-border);
 
-    /* Nav Colors - Dark Mode */
+    /* Navigation Colors for Dark Mode */
     --nav-background: var(--primary-900);
     --nav-hover: var(--primary-800);
     --nav-active: var(--primary-700);
     --nav-text: var(--dark-text-primary);
 
-    /* Button Colors Remain the Same for Recognition */
-    /* Icon Colors Adjusted for Dark Mode */
+    /* Icon Colors for Dark Mode */
     --icon-primary: var(--primary-300);
     --icon-secondary: var(--secondary-300);
-}
-
-/* CSS Variables for Backwards Compatibility */
-:root {
-    /* Legacy variables maintained for compatibility */
-    --facebook-blue: var(--facebook);
-    --hover-facebook-blue: #3b5998;
-    --button-text-color: var(--button-text);
-    --primary: var(--primary-600);
-    --white: #FFFFFF;
-    --text-color: var(--text-primary);
-    --dark-text-color: var(--light-text-primary);
-    --secondary: var(--secondary-200);
-    --h1-color: var(--text-secondary);
-    --h2-color: var(--text-secondary);
-    --text: var(--text-primary);
-    --bg: var(--bg-primary);
-    --icon-color: var(--icon-primary);
-    --bg-light: var(--text-secondary);
-    --border-color: var(--border);
-    --primary-color: var(--secondary-400);
-    --primary-rgb: var(--secondary-100);
 }

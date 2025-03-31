@@ -1,12 +1,20 @@
 // wwwroot/js/connectivityServices.js
 
 // Connectivity checker service
+console.log("connectivityServices.js loaded");
+
 window.connectivityChecker = {
     dotNetReference: null,
     isOnline: navigator.onLine,
     checkIntervalId: null,
+    // Add a method to get the online status
+    getOnlineStatus: function() {
+        console.log("connectivityChecker.getOnlineStatus called, isOnline:", this.isOnline);
+        return this.isOnline;
+    },
 
     init: function (dotNetRef) {
+        console.log("connectivityChecker.init called with dotNetRef:", dotNetRef);
         this.dotNetReference = dotNetRef;
 
         // Add event listeners for online/offline events
@@ -19,7 +27,9 @@ window.connectivityChecker = {
         return true;
     },
 
+
     handleOnlineEvent: function () {
+        console.log("handleOnlineEvent called.");
         if (!this.isOnline) {
             this.isOnline = true;
             this.notifyDotNet(true);
@@ -27,6 +37,7 @@ window.connectivityChecker = {
     },
 
     handleOfflineEvent: function () {
+        console.log("handleOfflineEvent called.");
         if (this.isOnline) {
             this.isOnline = false;
             this.notifyDotNet(false);
@@ -36,18 +47,26 @@ window.connectivityChecker = {
     checkConnectivity: function () {
         const currentStatus = navigator.onLine;
         if (this.isOnline !== currentStatus) {
+            console.log("checkConnectivity: status changed from", this.isOnline, "to", currentStatus);
             this.isOnline = currentStatus;
             this.notifyDotNet(currentStatus);
         }
     },
 
     notifyDotNet: function (isOnline) {
+        console.log("notifyDotNet called with isOnline:", isOnline);
         if (this.dotNetReference) {
-            this.dotNetReference.invokeMethodAsync('OnConnectivityChanged', isOnline);
+            this.dotNetReference.invokeMethodAsync('OnConnectivityChanged', isOnline)
+                .then(() => { console.log("DotNet notified successfully."); })
+                .catch(err => { console.error("Error notifying DotNet:", err); });
+        } else {
+            console.warn("dotNetReference is not set, cannot notify DotNet.");
         }
     },
 
+
     dispose: function () {
+        console.log("Disposing connectivityChecker...");
         window.removeEventListener('online', this.handleOnlineEvent);
         window.removeEventListener('offline', this.handleOfflineEvent);
 
@@ -58,11 +77,9 @@ window.connectivityChecker = {
 
         this.dotNetReference = null;
     }
+
 };
-// Add this function to your JS file
-window.checkOnlineStatus = function() {
-    return navigator.onLine;
-};
+
 // Offline manager for showing prompts and managing offline state
 window.offlineManager = {
     showOfflinePrompt: function () {
@@ -177,37 +194,3 @@ window.credentialManager = {
         return atob(encryptedData); // Base64 decoding is NOT decryption
     }
 };
-
-// Theme switcher
-window.themeSwitcher = {
-    toggleTheme: function() {
-        const body = document.body;
-        body.classList.toggle('dark-mode');
-
-        // Save preference to localStorage
-        const isDarkMode = body.classList.contains('dark-mode');
-        localStorage.setItem('AirCode_darkMode', isDarkMode);
-
-        return isDarkMode;
-    },
-
-    initTheme: function() {
-        const savedDarkMode = localStorage.getItem('AirCode_darkMode');
-
-        if (savedDarkMode === 'true') {
-            document.body.classList.add('dark-mode');
-        } else if (savedDarkMode === null) {
-            // If no preference is stored, check system preference
-            const prefersDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
-            if (prefersDarkMode) {
-                document.body.classList.add('dark-mode');
-                localStorage.setItem('AirCode_darkMode', 'true');
-            }
-        }
-    }
-};
-
-// Initialize theme when document loads
-document.addEventListener('DOMContentLoaded', function() {
-    window.themeSwitcher.initTheme();
-});

@@ -68,7 +68,8 @@
         await Task.Delay(1000);
     
         // Change this line
-        isOnline = await JSRuntime.InvokeAsync<bool>("connectivityChecker.isOnline");
+        // In Auth.razor
+        isOnline = await JSRuntime.InvokeAsync<bool>("connectivityChecker.getOnlineStatus");
         hasCheckedConnectivity = true;
     
         if (!isOnline)
