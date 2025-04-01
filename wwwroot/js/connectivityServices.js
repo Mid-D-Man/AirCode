@@ -113,84 +113,57 @@ window.offlineManager = {
 };
 
 // Credential manager for securely storing and retrieving credentials
+// Device fingerprinting and credential management
 window.credentialManager = {
+    // Store credentials securely
     storeCredentials: function (username, password, isAdmin, adminId) {
-        // In a real application, you should use a more secure method
-        // like the Credential Management API or IndexedDB with encryption
         try {
-            // Create a credential object
-            const credentials = {
-                username: username,
-                // Store a hashed version of the password, never the plain password
-                // This is a simple hash for demonstration, use a proper hashing in production
-                passwordHash: this.simpleHash(password),
-                isAdmin: isAdmin,
-                adminId: adminId,
-                deviceId: this.getDeviceFingerprint(),
-                timestamp: new Date().getTime()
-            };
+            // We'll use the C# side for actual encryption, but we can add 
+            // additional fingerprinting here
+            const fingerprint = this.getDeviceFingerprint();
 
-            // Store encrypted credentials
-            localStorage.setItem('AirCode_credentials', this.encryptData(JSON.stringify(credentials)));
+            // Return success
             return true;
         } catch (error) {
-            console.error("Error storing credentials:", error);
+            console.error("Error storing credentials", error);
             return false;
         }
     },
 
-    getStoredCredentials: function () {
-        try {
-            const encryptedCredentials = localStorage.getItem('AirCode_credentials');
-            if (!encryptedCredentials) return null;
+    // Generate a simple fingerprint based on browser and device data
+    getDeviceFingerprint: function () {
+        const nav = window.navigator;
+        const screen = window.screen;
 
-            const credentialsJson = this.decryptData(encryptedCredentials);
-            return JSON.parse(credentialsJson);
-        } catch (error) {
-            console.error("Error retrieving stored credentials:", error);
-            return null;
-        }
+        // Collect various device properties
+        const fingerprint = {
+            userAgent: nav.userAgent,
+            language: nav.language,
+            platform: nav.platform,
+            cores: nav.hardwareConcurrency || 'unknown',
+            screenWidth: screen.width,
+            screenHeight: screen.height,
+            colorDepth: screen.colorDepth,
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            touchPoints: nav.maxTouchPoints || 0
+        };
+
+        // Convert to string and hash (simple algorithm for demo)
+        const fingerprintStr = JSON.stringify(fingerprint);
+        return this.simpleHash(fingerprintStr);
     },
 
     clearCredentials: function () {
         localStorage.removeItem('AirCode_credentials');
     },
-
-    // Simple hash function (for demonstration only)
-    // In production, use a proper cryptographic hash function
-    simpleHash: function (input) {
+    // Simple hash function for demonstration
+    simpleHash: function (str) {
         let hash = 0;
-        if (input.length === 0) return hash;
-
-        for (let i = 0; i < input.length; i++) {
-            const char = input.charCodeAt(i);
+        for (let i = 0; i < str.length; i++) {
+            const char = str.charCodeAt(i);
             hash = ((hash << 5) - hash) + char;
             hash = hash & hash; // Convert to 32bit integer
         }
-
-        return hash.toString(16);
-    },
-
-    // Device fingerprinting (simplified)
-    getDeviceFingerprint: function () {
-        const screenPrint = `${screen.height}x${screen.width}x${screen.colorDepth}`;
-        const userAgent = navigator.userAgent;
-        const timeZoneOffset = new Date().getTimezoneOffset();
-        const language = navigator.language;
-
-        return this.simpleHash(`${screenPrint}-${userAgent}-${timeZoneOffset}-${language}`);
-    },
-
-    // Simple encryption/decryption for demonstration
-    // In production, use a proper encryption library
-    encryptData: function (data) {
-        // This is a placeholder for a real encryption implementation
-        // For production, use the Web Crypto API or a library like CryptoJS
-        return btoa(data); // Base64 encoding is NOT encryption
-    },
-
-    decryptData: function (encryptedData) {
-        // This is a placeholder for a real decryption implementation
-        return atob(encryptedData); // Base64 decoding is NOT decryption
+        return hash.toString(36); // Convert to base-36 for readability
     }
 };

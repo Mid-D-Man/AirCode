@@ -202,7 +202,6 @@
         width: 75%;
         max-width: 280px;
         z-index: 1000;
-        background-color: var(--bg-secondary);
         box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
         transform: translateX(-100%);
         transition: transform 0.3s ease-in-out;
@@ -271,20 +270,6 @@
     }
 }
 
-/* Dark mode adjustments */
-@media (prefers-color-scheme: dark) {
-    /* These will be overridden by your JS-based dark mode toggle, 
-       but provide a fallback for browsers that support it */
-    :root {
-        --bg-primary: var(--dark-bg-primary);
-        --bg-secondary: var(--dark-bg-secondary);
-        --bg-tertiary: var(--dark-bg-tertiary);
-        --text-primary: var(--dark-text-primary);
-        --text-secondary: var(--dark-text-secondary);
-        --border: var(--dark-border);
-    }
-}
-
 /* Print styles */
 @media print {
     .nav-menu, .burger-icon, .no-print {
@@ -298,8 +283,6 @@
 
     body {
         font-size: 12pt;
-        color: #000;
-        background: #fff;
     }
 
     a[href]:after {

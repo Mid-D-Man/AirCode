@@ -10,6 +10,7 @@
 .auth-container {
     width: 100%;
     max-width: 480px;
+    /* Updated to use correct theme variables */
     background: var(--bg-secondary);
     border-radius: 10px 80px 10px 80px;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
@@ -49,8 +50,8 @@
 }
 
 ::deep(.primary-button:not(.active)) {
-    background-color: var(--light-bg-tertiary);
-    color: var(--light-text-secondary);
+    background-color: var(--bg-tertiary);
+    color: var(--text-secondary);
 }
 
 /* Admin login fields */

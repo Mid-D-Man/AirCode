@@ -44,7 +44,8 @@ namespace AirCode.Utilities.HelperScripts
             string upperInput = input.ToUpper().Trim();
             if (upperInput == "NULL" || upperInput == "UNDEFINED" || upperInput == "NONE")
                 return false;
-
+//we should also add checks for bad words for valid string to prevent any un professional words cause ya go never sabi the kind bullshit
+//pikins go use as username
             return true;
         }
 

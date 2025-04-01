@@ -55,14 +55,21 @@
     /* Component Specific */
     --cube-side: 2.75rem;
     --cube-side-half: calc(var(--cube-side) / 2);
+}
 
-    /* Default Theme Values (Light Mode) */
+/* Default Theme Values (Light Mode) - Always explicitly set these */
+body {
+    /* Background Colors */
     --bg-primary: var(--light-bg-primary);
     --bg-secondary: var(--light-bg-secondary);
     --bg-tertiary: var(--light-bg-tertiary);
+
+    /* Text Colors */
     --text-primary: var(--light-text-primary);
     --text-secondary: var(--light-text-secondary);
     --text-tertiary: var(--light-text-tertiary);
+
+    /* Border Colors */
     --border: var(--light-border);
 
     /* Navigation Colors */
@@ -104,12 +111,17 @@
 
 /* Dark Mode Overrides */
 body.dark-mode {
+    /* Background Colors */
     --bg-primary: var(--dark-bg-primary);
-    --bg-secondary: var(--dark-bg-secondary);
+    --bg-secondary: var(--dark-bg-secondary) !important;
     --bg-tertiary: var(--dark-bg-tertiary);
+
+    /* Text Colors */
     --text-primary: var(--dark-text-primary);
     --text-secondary: var(--dark-text-secondary);
     --text-tertiary: var(--dark-text-tertiary);
+
+    /* Border Colors */
     --border: var(--dark-border);
 
     /* Navigation Colors for Dark Mode */
@@ -121,4 +133,53 @@ body.dark-mode {
     /* Icon Colors for Dark Mode */
     --icon-primary: var(--primary-300);
     --icon-secondary: var(--secondary-300);
+
+    /* Update backwards compatibility variables for dark mode */
+    --bg-light: var(--dark-bg-secondary);
+    --text-color: var(--dark-text-primary);
+    --text: var(--dark-text-primary);
+    --bg: var(--dark-bg-primary);
+    --border-color: var(--dark-border);
 }
+
+/* Helper classes to directly apply theme variables */
+.bg-primary {
+    background-color: var(--bg-primary) !important;
+}
+
+.bg-secondary {
+    background-color: var(--bg-secondary) !important;
+}
+
+.bg-tertiary {
+    background-color: var(--bg-tertiary) !important;
+}
+
+.text-primary {
+    color: var(--text-primary) !important;
+}
+
+.text-secondary {
+    color: var(--text-secondary) !important;
+}
+
+.text-tertiary {
+    color: var(--text-tertiary) !important;
+}
+
+.border-theme {
+    border-color: var(--border) !important;
+}
+
+/* Force theme colors for specific elements that might be problematic */
+.card, .panel, .sidebar, .content-box {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    border-color: var(--border);
+}
+
+/* Ensure proper theme inheritance */
+* {
+    transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+}
+

@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace AirCode.Models;
 
+//its user name or pasword
 public class LoginModel
 {
     [Required(ErrorMessage = "Username is required")]
