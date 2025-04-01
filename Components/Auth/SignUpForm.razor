@@ -1,7 +1,9 @@
 @using AirCode.Components.SharedPrefabs.Buttons
-@* Components/Auth/SignUpForm.razor *@
+@using AirCode.Components.SharedPrefabs.Fields
+@inject IJSRuntime JSRuntime
+
 <div class="signup-form-container">
-    <div class="progress-bar-container">
+    <div class="progress-container">
         <div class="progress-bar" style="width: @($"{((currentStep / 3.0) * 100)}%")"></div>
     </div>
 
@@ -17,16 +19,24 @@
             case 1:
                 <div class="step-content">
                     <div class="form-group">
-                        <label>First Name</label>
-                        <InputText @bind-Value="signUpModel.FirstName" class="form-control" />
+                        <FormField
+                            Label="First Name"
+                            @bind-Value="signUpModel.FirstName"
+                            Placeholder="Enter your first name"
+                            IsRequired="true" />
                     </div>
                     <div class="form-group">
-                        <label>Middle Name</label>
-                        <InputText @bind-Value="signUpModel.MiddleName" class="form-control" />
+                        <FormField
+                            Label="Middle Name"
+                            @bind-Value="signUpModel.MiddleName"
+                            Placeholder="Enter your middle name (optional)" />
                     </div>
                     <div class="form-group">
-                        <label>Last Name</label>
-                        <InputText @bind-Value="signUpModel.LastName" class="form-control" />
+                        <FormField
+                            Label="Last Name"
+                            @bind-Value="signUpModel.LastName"
+                            Placeholder="Enter your last name"
+                            IsRequired="true" />
                     </div>
                 </div>
                 break;
@@ -34,69 +44,82 @@
             case 2:
                 <div class="step-content">
                     <div class="form-group">
-                        <label>Date of Birth</label>
-                        <InputDate @bind-Value="signUpModel.DateOfBirth" class="form-control" />
+                        <label class="date-label required">Date of Birth</label>
+                        <InputDate @bind-Value="signUpModel.DateOfBirth" class="form-input" />
                     </div>
                     <div class="form-group">
-                        <label>Gender</label>
-                        <InputSelect @bind-Value="signUpModel.Gender" class="form-control">
+                        <label class="select-label required">Gender</label>
+                        <InputSelect @bind-Value="signUpModel.Gender" class="form-input">
                             <option value="">Select Gender</option>
                             <option value="Male">Male</option>
                             <option value="Female">Female</option>
                         </InputSelect>
                     </div>
-                  
                 </div>
                 break;
 
             case 3:
                 <div class="step-content">
                     <div class="form-group">
-                        <label>Email</label>
-                        <InputText @bind-Value="signUpModel.Email" class="form-control" />
+                        <FormField
+                            Label="Email"
+                            Type="email"
+                            @bind-Value="signUpModel.Email"
+                            Placeholder="Enter your email address"
+                            IsRequired="true" />
                     </div>
                     <div class="form-group">
-                        <label>Matriculation Number</label>
-                        <InputText @bind-Value="signUpModel.MatriculationNumber" class="form-control" />
+                        <FormField
+                            Label="Matriculation Number"
+                            @bind-Value="signUpModel.MatriculationNumber"
+                            Placeholder="Enter your matriculation number"
+                            IsRequired="true" />
                     </div>
-                    <div class="form-group">
+                    <div class="form-group admin-checkbox">
                         <label class="checkbox-container">
-                            <InputCheckbox @bind-Value="signUpModel.IsAdmin" />
-                            Sign up as Administrator
+                            <input type="checkbox" checked="@signUpModel.IsAdmin" @onchange="AdminCheckChanged" />
+                            <span class="checkbox-text">Sign up as Administrator</span>
                         </label>
                     </div>
                     @if (signUpModel.IsAdmin)
                     {
-                        <div class="form-group">
-                            <label>Admin ID</label>
-                            <InputText @bind-Value="signUpModel.AdminId" class="form-control" />
+                        <div class="form-group admin-id-section">
+                            <FormField
+                                Label="Admin ID"
+                                @bind-Value="signUpModel.AdminId"
+                                Placeholder="Enter Admin ID"
+                                IsRequired="true" />
                         </div>
                     }
                 </div>
                 break;
         }
 
-        <div class="button-group">
+        <div class="form-navigation">
             @if (currentStep > 1)
             {
-                <PrimaryButton
-                    Text="Previous"
-                    OnClick="PreviousStep"
-                    Class="secondary" />
+                <div class="nav-button prev-button">
+                    <PrimaryButton
+                        Text="Previous"
+                        OnClick="PreviousStep"
+                        Class="secondary" />
+                </div>
             }
 
-            @if (currentStep < 3)
-            {
-                <PrimaryButton
-                    Text="Next"
-                    OnClick="NextStep" />
-            }
-            else
-            {
-                <PrimaryButton
-                    Type="submit"
-                    Text="Complete Sign Up" />
-            }
+            <div class="nav-button @(currentStep < 3 ? "next-button" : "submit-button")">
+                @if (currentStep < 3)
+                {
+                    <PrimaryButton
+                        Text="Next"
+                        OnClick="NextStep" />
+                }
+                else
+                {
+                    <PrimaryButton
+                        Type="submit"
+                        Text="Complete Sign Up" />
+                }
+            </div>
         </div>
     </EditForm>
 </div>
@@ -107,6 +130,17 @@
 
     [Parameter]
     public EventCallback<SignUpModel> OnSignUp { get; set; }
+
+    private async Task AdminCheckChanged(ChangeEventArgs e)
+    {
+        if (e.Value is bool isChecked)
+        {
+            signUpModel.IsAdmin = isChecked;
+            
+            // Force UI refresh
+            StateHasChanged();
+        }
+    }
 
     private void NextStep()
     {

@@ -59,12 +59,11 @@ label.required::after {
     margin-top: 0.25rem;
 }
 
-/* Removed the earlier input-field::before that was causing the line to appear too low */
-
-/* Add a bottom border highlight that sticks directly to the input */
+/* Remove the problematic underline that was appearing too low */
+/* we Instead, just enhance the border-bottom on focus */
 .input-field:focus-within .form-input {
-    border-bottom-width: 1px;
     border-bottom-color: var(--primary-500);
+    border-bottom-width: 2px;
 }
 
 /* Dark mode specific adjustments */
