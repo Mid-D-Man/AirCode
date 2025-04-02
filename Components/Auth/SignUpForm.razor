@@ -14,7 +14,7 @@
             }
         </div>
         <div class="progress-bar">
-            <div class="progress" style="width: @(((currentStep) * 50) + "%")"></div>
+            <div class="progress" style="width: @(((currentStep) * 33.33) + "%")"></div>
         </div>
     </div>
 
@@ -46,7 +46,11 @@
                         Placeholder="Enter your last name"
                         IsRequired="true" />
                 </div>
-
+            </div>
+        }
+        else if (currentStep == 1)
+        {
+            <div class="form-step">
                 <div class="form-group">
                     <label class="@("required")">Date of Birth</label>
                     <input type="date" class="form-input date-input" 
@@ -65,11 +69,7 @@
                         <option value="Other">Other</option>
                     </select>
                 </div>
-            </div>
-        }
-        else if (currentStep == 1)
-        {
-            <div class="form-step">
+                
                 <div class="form-group">
                     <FormField
                         Label="Email"
@@ -78,7 +78,11 @@
                         Placeholder="Enter your email"
                         IsRequired="true" />
                 </div>
-
+            </div>
+        }
+        else if (currentStep == 2)
+        {
+            <div class="form-step">
                 <div class="form-group">
                     <FormField
                         Label="Username"
@@ -106,7 +110,7 @@
                 </div>
             </div>
         }
-        else if (currentStep == 2)
+        else if (currentStep == 3)
         {
             <div class="form-step">
                 <div class="form-group">
@@ -150,16 +154,16 @@
         <div class="form-navigation">
             @if (currentStep > 0)
             {
-                <button class="secondary-button" type="button" @onclick="PreviousStep">Previous</button>
+                <PrimaryButton Type="button" Text="Previous" OnClick="PreviousStep" Class="secondary-button" />
             }
             else
             {
                 <div></div> <!-- Empty div for flex spacing -->
             }
 
-            @if (currentStep < 2)
+            @if (currentStep < 3)
             {
-                <button class="primary-button" type="button" @onclick="NextStep">Next</button>
+                <PrimaryButton Type="button" Text="Next" OnClick="NextStep" />
             }
             else
             {
@@ -222,7 +226,7 @@
 
     private void NextStep()
     {
-        if (currentStep < 2)
+        if (currentStep < 3)
         {
             currentStep++;
         }
