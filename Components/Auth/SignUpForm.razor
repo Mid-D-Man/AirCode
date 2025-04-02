@@ -1,6 +1,7 @@
 @using System.ComponentModel.DataAnnotations
 @using AirCode.Components.SharedPrefabs.Buttons
 @using AirCode.Components.SharedPrefabs.Fields
+@using AirCode.Utilities.HelperScripts
 @inject IJSRuntime JSRuntime
 
 <div class="signup-form-container">
@@ -8,13 +9,13 @@
         <div class="progress-steps">
             @for (int i = 0; i < 4; i++)
             {
-                <div class="step @(currentStep > i ? (stepValidations[i] ? "completed" : "warning") : currentStep == i ? "active" : "")">
-                    <span class="step-number">@(i + 1)</span>
-                </div>
+            <div class="step @(currentStep > i ? (stepValidations[i] ? "completed" : "warning") : currentStep == i ? "active" : "")">
+                <span class="step-number">@(i + 1)</span>
+            </div>
             }
         </div>
         <div class="progress-bar">
-            <div class="progress" style="width: @(((currentStep) * 33.33) + "%")"></div>
+            <div class="progress" style="width: @(((currentStep) * 100 / 3) + "%")"></div>
         </div>
     </div>
 
@@ -326,4 +327,60 @@
         await JSRuntime.InvokeVoidAsync("console.log", $"Form submitted - Role: {signUpModel.Role}, AdminId: {signUpModel.AdminId}");
         await OnSignUp.InvokeAsync(signUpModel);
     }
+    
+    #region Validation Checks
+    
+    private bool IsValidName(string name)
+    {
+        return MID_HelperFunctions.IsValidPattern(name, @"^[a-zA-Z]{2,50}$");
+    }
+
+    private bool IsValidEmail(string email)
+    {
+        return MID_HelperFunctions.IsValidPattern(email, @"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$");
+    }
+
+    private bool IsValidUsername(string username)
+    {
+        return MID_HelperFunctions.IsValidPattern(username, @"^[a-zA-Z0-9_]{4,20}$");
+    }
+
+    private bool IsValidPassword(string password)
+    {
+        return MID_HelperFunctions.IsValidPattern(password, @"^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$");
+    }
+
+    private bool IsPasswordsMatch()
+    {
+        return signUpModel.Password == signUpModel.ConfirmPassword;
+    }
+
+    private bool IsValidId(string id)
+    {
+        // Different validation based on role
+        if (IsLecturerRole())
+        {
+            // Lecturer ID format validation
+            return MID_HelperFunctions.IsValidPattern(id, @"^LEC-\d{6}$");
+        }
+        else
+        {
+            // Matriculation number format validation
+            return MID_HelperFunctions.IsValidPattern(id, @"^[A-Z]{3}/\d{2}/\d{4}$");
+        }
+    }
+
+    private bool IsValidAdminId(string adminId)
+    {
+        // Admin ID format validation
+        return MID_HelperFunctions.IsValidPattern(adminId, @"^ADM-\d{6}$");
+    }
+
+    private bool IsValidDateOfBirth(DateTime dateOfBirth)
+    {
+        // Check if user is at least 16 years old
+        return dateOfBirth <= DateTime.Now.AddYears(-16);
+    }
+    
+    #endregion
 }
