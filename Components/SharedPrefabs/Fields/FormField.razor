@@ -16,42 +16,51 @@
 
     @if (IsInvalid && !string.IsNullOrEmpty(ErrorMessage))
     {
-        <div class="error-message">@ErrorMessage</div>
+    <div class="error-message">@ErrorMessage</div>
     }
 </div>
 
 @code {
-    [Parameter] public string Label { get; set; } = "";
-    [Parameter] public string Placeholder { get; set; } = "";
-    [Parameter] public string Type { get; set; } = "text";
-    [Parameter] public string Value { get; set; } = "";
-    [Parameter] public bool IsRequired { get; set; }
-    [Parameter] public bool IsInvalid { get; set; }
-    [Parameter] public string ErrorMessage { get; set; } = "";
-    [Parameter] public EventCallback<string> ValueChanged { get; set; }
-    [Parameter] public EventCallback<FocusEventArgs> OnBlur { get; set; }
-    [Parameter] public EventCallback<FocusEventArgs> OnFocus { get; set; }
-    [Parameter] public RenderFragment ChildContent { get; set; }
-    [Parameter] public string Id { get; set; } = "";
+[Parameter] public string Label { get; set; } = "";
+[Parameter] public string Placeholder { get; set; } = "";
+[Parameter] public string Type { get; set; } = "text";
+[Parameter] public string Value { get; set; } = "";
+[Parameter] public bool IsRequired { get; set; }
+[Parameter] public bool IsInvalid { get; set; }
+[Parameter] public string ErrorMessage { get; set; } = "";
+[Parameter] public EventCallback<string> ValueChanged { get; set; }
+[Parameter] public EventCallback<FocusEventArgs> OnBlur { get; set; }
+[Parameter] public EventCallback<FocusEventArgs> OnFocus { get; set; }
+[Parameter] public RenderFragment ChildContent { get; set; }
+[Parameter] public string Id { get; set; } = "";
 
-// Generate a unique ID if one isn't provided
-    private string FieldId => !string.IsNullOrEmpty(Id) ? Id : $"field_{Guid.NewGuid().ToString("N")}";
+// Use a stable field for the ID so it remains consistent across renders.
+private string _fieldId;
 
-    private async Task OnInputHandler(ChangeEventArgs e)
-    {
-        if (e.Value is string value)
-        {
-            await ValueChanged.InvokeAsync(value);
-        }
-    }
+private string FieldId => _fieldId;
 
-    private async Task OnBlurHandler(FocusEventArgs args)
-    {
-        await OnBlur.InvokeAsync(args);
-    }
+protected override void OnInitialized()
+{
+_fieldId = !string.IsNullOrEmpty(Id)
+? Id
+: $"field_{Guid.NewGuid():N}";
+}
 
-    private async Task OnFocusHandler(FocusEventArgs args)
-    {
-        await OnFocus.InvokeAsync(args);
-    }
+private async Task OnInputHandler(ChangeEventArgs e)
+{
+if (e.Value is string value)
+{
+await ValueChanged.InvokeAsync(value);
+}
+}
+
+private async Task OnBlurHandler(FocusEventArgs args)
+{
+await OnBlur.InvokeAsync(args);
+}
+
+private async Task OnFocusHandler(FocusEventArgs args)
+{
+await OnFocus.InvokeAsync(args);
+}
 }

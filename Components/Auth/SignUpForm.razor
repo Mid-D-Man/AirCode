@@ -1,159 +1,251 @@
+@using System.ComponentModel.DataAnnotations
 @using AirCode.Components.SharedPrefabs.Buttons
 @using AirCode.Components.SharedPrefabs.Fields
 @inject IJSRuntime JSRuntime
 
 <div class="signup-form-container">
-    <div class="progress-container">
-        <div class="progress-bar" style="width: @($"{((currentStep / 3.0) * 100)}%")"></div>
-    </div>
-
-    <div class="step-indicator">
-        Step @(currentStep) of 3
+    <div class="progress-bar-container">
+        <div class="progress-steps">
+            @for (int i = 0; i < 4; i++)
+            {
+                <div class="step @(currentStep > i ? "completed" : currentStep == i ? "active" : "")">
+                    <span class="step-number">@(i + 1)</span>
+                </div>
+            }
+        </div>
+        <div class="progress-bar">
+            <div class="progress" style="width: @(((currentStep) * 50) + "%")"></div>
+        </div>
     </div>
 
     <EditForm Model="@signUpModel" OnValidSubmit="HandleSubmit">
         <DataAnnotationsValidator />
 
-        @switch (currentStep)
+        @if (currentStep == 0)
         {
-            case 1:
-                <div class="step-content">
-                    <div class="form-group">
-                        <FormField
-                            Label="First Name"
-                            @bind-Value="signUpModel.FirstName"
-                            Placeholder="Enter your first name"
-                            IsRequired="true" />
-                    </div>
-                    <div class="form-group">
-                        <FormField
-                            Label="Middle Name"
-                            @bind-Value="signUpModel.MiddleName"
-                            Placeholder="Enter your middle name (optional)" />
-                    </div>
-                    <div class="form-group">
-                        <FormField
-                            Label="Last Name"
-                            @bind-Value="signUpModel.LastName"
-                            Placeholder="Enter your last name"
-                            IsRequired="true" />
-                    </div>
+            <div class="form-step">
+                <div class="form-group">
+                    <FormField
+                        Label="First Name"
+                        @bind-Value="signUpModel.FirstName"
+                        Placeholder="Enter your first name"
+                        IsRequired="true" />
                 </div>
-                break;
 
-            case 2:
-                <div class="step-content">
-                    <div class="form-group">
-                        <label class="date-label required">Date of Birth</label>
-                        <InputDate @bind-Value="signUpModel.DateOfBirth" class="form-input" />
-                    </div>
-                    <div class="form-group">
-                        <label class="select-label required">Gender</label>
-                        <InputSelect @bind-Value="signUpModel.Gender" class="form-input">
-                            <option value="" disabled selected>Select Gender</option>
-                            <option value="Male">Male</option>
-                            <option value="Female">Female</option>
-                        </InputSelect>
-                    </div>
+                <div class="form-group">
+                    <FormField
+                        Label="Middle Name"
+                        @bind-Value="signUpModel.MiddleName"
+                        Placeholder="Enter your middle name (optional)" />
                 </div>
-                break;
 
-            case 3:
-                <div class="step-content">
-                    <div class="form-group">
-                        <FormField
-                            Label="Email"
-                            Type="email"
-                            @bind-Value="signUpModel.Email"
-                            Placeholder="Enter your email address"
-                            IsRequired="true" />
-                    </div>
-                    <div class="form-group">
-                        <FormField
-                            Label="Matriculation Number"
-                            @bind-Value="signUpModel.MatriculationNumber"
-                            Placeholder="Enter your matriculation number"
-                            IsRequired="true" />
-                    </div>
-                    <div class="form-group admin-checkbox">
-                        <label class="checkbox-container">
-                            <input type="checkbox" checked="@signUpModel.IsAdmin" @onchange="AdminCheckChanged" />
-                            <span class="checkbox-text">Sign up as Administrator</span>
-                        </label>
-                    </div>
-                    @if (signUpModel.IsAdmin)
-                    {
-                        <div class="form-group admin-id-section">
-                            <FormField
-                                Label="Admin ID"
-                                @bind-Value="signUpModel.AdminId"
-                                Placeholder="Enter Admin ID"
-                                IsRequired="true" />
-                        </div>
-                    }
+                <div class="form-group">
+                    <FormField
+                        Label="Last Name"
+                        @bind-Value="signUpModel.LastName"
+                        Placeholder="Enter your last name"
+                        IsRequired="true" />
                 </div>
-                break;
+
+                <div class="form-group">
+                    <label class="@("required")">Date of Birth</label>
+                    <input type="date" class="form-input date-input" 
+                        value="@signUpModel.DateOfBirth.ToString("yyyy-MM-dd")"
+                        @onchange="OnDateChanged" />
+                </div>
+
+                <div class="form-group">
+                    <label class="@("required")">Gender</label>
+                    <select class="form-input select-input" 
+                        value="@signUpModel.Gender"
+                        @onchange="OnGenderChanged">
+                        <option value="">Select gender</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+            </div>
+        }
+        else if (currentStep == 1)
+        {
+            <div class="form-step">
+                <div class="form-group">
+                    <FormField
+                        Label="Email"
+                        Type="email"
+                        @bind-Value="signUpModel.Email"
+                        Placeholder="Enter your email"
+                        IsRequired="true" />
+                </div>
+
+                <div class="form-group">
+                    <FormField
+                        Label="Username"
+                        @bind-Value="signUpModel.Username"
+                        Placeholder="Choose a username"
+                        IsRequired="true" />
+                </div>
+
+                <div class="form-group">
+                    <FormField
+                        Label="Password"
+                        Type="password"
+                        @bind-Value="signUpModel.Password"
+                        Placeholder="Create a password"
+                        IsRequired="true" />
+                </div>
+
+                <div class="form-group">
+                    <FormField
+                        Label="Confirm Password"
+                        Type="password"
+                        @bind-Value="signUpModel.ConfirmPassword"
+                        Placeholder="Confirm your password"
+                        IsRequired="true" />
+                </div>
+            </div>
+        }
+        else if (currentStep == 2)
+        {
+            <div class="form-step">
+                <div class="form-group">
+                    <label class="required">Role</label>
+                    <select class="form-input select-input" 
+                        value="@signUpModel.Role"
+                        @onchange="OnRoleChanged">
+                        <option value="0">Student</option>
+                        <option value="1">Lecturer</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <FormField
+                        Label="@(signUpModel.Role == AirCode.Domain.Enums.UserRole.Student ? "Matriculation Number" : "Lecturer ID")"
+                        @bind-Value="signUpModel.MatriculationNumber"
+                        Placeholder="@(signUpModel.Role == AirCode.Domain.Enums.UserRole.Student ? "Enter matriculation number" : "Enter lecturer ID")"
+                        IsRequired="true" />
+                </div>
+
+                <div class="form-group admin-checkbox">
+                    <label class="checkbox-container">
+                        <input type="checkbox" checked="@signUpModel.IsAdmin" @onchange="AdminCheckChanged" />
+                        <span class="checkbox-text">Register as Administrator</span>
+                    </label>
+                </div>
+
+                @if (showAdminId)
+                {
+                    <div class="form-group admin-id-section">
+                        <FormField
+                            Label="Admin ID"
+                            @bind-Value="signUpModel.AdminId"
+                            Placeholder="Enter Admin ID"
+                            IsRequired="true" />
+                    </div>
+                }
+            </div>
         }
 
         <div class="form-navigation">
-            @if (currentStep > 1)
+            @if (currentStep > 0)
             {
-                <div class="nav-button prev-button">
-                    <PrimaryButton
-                        Text="Previous"
-                        OnClick="PreviousStep"
-                        Class="secondary" />
-                </div>
+                <button class="secondary-button" type="button" @onclick="PreviousStep">Previous</button>
+            }
+            else
+            {
+                <div></div> <!-- Empty div for flex spacing -->
             }
 
-            <div class="nav-button @(currentStep < 3 ? "next-button" : "submit-button")">
-                @if (currentStep < 3)
-                {
-                    <PrimaryButton
-                        Text="Next"
-                        OnClick="NextStep" />
-                }
-                else
-                {
-                    <PrimaryButton
-                        Type="submit"
-                        Text="Complete Sign Up" />
-                }
-            </div>
+            @if (currentStep < 2)
+            {
+                <button class="primary-button" type="button" @onclick="NextStep">Next</button>
+            }
+            else
+            {
+                <PrimaryButton Type="submit" Text="Sign Up" />
+            }
         </div>
     </EditForm>
 </div>
 
 @code {
     private SignUpModel signUpModel = new();
-    private int currentStep = 1;
+    private bool showAdminId = false;
+    [Range(0,3)]
+    private int currentStep = 0;
 
     [Parameter]
     public EventCallback<SignUpModel> OnSignUp { get; set; }
+
+    protected override void OnInitialized()
+    {
+        // Set default date to today minus 18 years
+        signUpModel.DateOfBirth = DateTime.Now.AddYears(-18);
+    }
 
     private async Task AdminCheckChanged(ChangeEventArgs e)
     {
         if (e.Value is bool isChecked)
         {
             signUpModel.IsAdmin = isChecked;
+            showAdminId = isChecked;
             
             // Force UI refresh
             StateHasChanged();
         }
     }
 
+    private void OnDateChanged(ChangeEventArgs e)
+    {
+        if (e.Value is string dateString && DateTime.TryParse(dateString, out DateTime date))
+        {
+            signUpModel.DateOfBirth = date;
+        }
+    }
+
+    private void OnGenderChanged(ChangeEventArgs e)
+    {
+        if (e.Value is string gender)
+        {
+            signUpModel.Gender = gender;
+        }
+    }
+    
+    private void OnRoleChanged(ChangeEventArgs e)
+    {
+        if (e.Value is string roleValue && int.TryParse(roleValue, out int role))
+        {
+            signUpModel.Role = (AirCode.Domain.Enums.UserRole)role;
+        }
+    }
+
     private void NextStep()
     {
-        if (currentStep < 3) currentStep++;
+        if (currentStep < 2)
+        {
+            currentStep++;
+        }
     }
 
     private void PreviousStep()
     {
-        if (currentStep > 1) currentStep--;
+        if (currentStep > 0)
+        {
+            currentStep--;
+        }
     }
 
     private async Task HandleSubmit()
     {
+        // Ensure AdminId is required for admin login
+        if (signUpModel.IsAdmin && string.IsNullOrWhiteSpace(signUpModel.AdminId))
+        {
+            await JSRuntime.InvokeVoidAsync("console.log", "Admin ID is required but empty");
+            return;
+        }
+
+        await JSRuntime.InvokeVoidAsync("console.log", $"Form submitted - IsAdmin: {signUpModel.IsAdmin}, AdminId: {signUpModel.AdminId}");
         await OnSignUp.InvokeAsync(signUpModel);
     }
 }
