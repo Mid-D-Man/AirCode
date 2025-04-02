@@ -8,7 +8,7 @@
         <div class="progress-steps">
             @for (int i = 0; i < 4; i++)
             {
-                <div class="step @(currentStep > i ? "completed" : currentStep == i ? "active" : "")">
+                <div class="step @(currentStep > i ? (stepValidations[i] ? "completed" : "warning") : currentStep == i ? "active" : "")">
                     <span class="step-number">@(i + 1)</span>
                 </div>
             }
@@ -66,7 +66,6 @@
                         <option value="">Select gender</option>
                         <option value="Male">Male</option>
                         <option value="Female">Female</option>
-                        <option value="Other">Other</option>
                     </select>
                 </div>
                 
@@ -123,7 +122,6 @@
                         <option value="3">Assistant Lecturer</option>
                         <option value="2">Course Rep Admin</option>
                         <option value="1">Lecturer Admin</option>
-                        <option value="0">Superior Admin</option>
                     </select>
                 </div>
 
@@ -145,6 +143,13 @@
                             IsRequired="true" />
                     </div>
                 }
+            </div>
+        }
+
+        @if (!stepValidations[currentStep] && showValidationErrors)
+        {
+            <div class="validation-error">
+                Please fill in all required fields before proceeding.
             </div>
         }
 
@@ -174,6 +179,8 @@
     private SignUpModel signUpModel = new();
     [Range(0,3)]
     private int currentStep = 0;
+    private bool[] stepValidations = new bool[4] { false, false, false, false };
+    private bool showValidationErrors = false;
 
     [Parameter]
     public EventCallback<SignUpModel> OnSignUp { get; set; }
@@ -243,11 +250,48 @@
                signUpModel.Role == AirCode.Domain.Enums.UserRole.AssistantLecturer;
     }
 
+    private bool ValidateCurrentStep()
+    {
+        switch (currentStep)
+        {
+            case 0:
+                return !string.IsNullOrWhiteSpace(signUpModel.FirstName) && 
+                       !string.IsNullOrWhiteSpace(signUpModel.LastName);
+            case 1:
+                return !string.IsNullOrWhiteSpace(signUpModel.Gender) && 
+                       !string.IsNullOrWhiteSpace(signUpModel.Email);
+            case 2:
+                return !string.IsNullOrWhiteSpace(signUpModel.Username) && 
+                       !string.IsNullOrWhiteSpace(signUpModel.Password) && 
+                       !string.IsNullOrWhiteSpace(signUpModel.ConfirmPassword);
+            case 3:
+                bool isValid = !string.IsNullOrWhiteSpace(signUpModel.MatriculationNumber);
+                if (RequiresAdminId())
+                {
+                    isValid = isValid && !string.IsNullOrWhiteSpace(signUpModel.AdminId);
+                }
+                return isValid;
+            default:
+                return false;
+        }
+    }
+
     private void NextStep()
     {
-        if (currentStep < 3)
+        bool isValid = ValidateCurrentStep();
+        stepValidations[currentStep] = isValid;
+        
+        if (isValid)
         {
-            currentStep++;
+            showValidationErrors = false;
+            if (currentStep < 3)
+            {
+                currentStep++;
+            }
+        }
+        else
+        {
+            showValidationErrors = true;
         }
     }
 
@@ -255,12 +299,23 @@
     {
         if (currentStep > 0)
         {
+            showValidationErrors = false;
             currentStep--;
         }
     }
 
     private async Task HandleSubmit()
     {
+        // Validate final step
+        bool isValid = ValidateCurrentStep();
+        stepValidations[currentStep] = isValid;
+        
+        if (!isValid)
+        {
+            showValidationErrors = true;
+            return;
+        }
+
         // Ensure AdminId is required for admin roles
         if (RequiresAdminId() && string.IsNullOrWhiteSpace(signUpModel.AdminId))
         {
