@@ -1,5 +1,6 @@
 
 @* Components/SharedPrefabs/Fields/FormField.razor *@
+@* Components/SharedPrefabs/Fields/FormField.razor *@
 <div class="input-field">
     <label for="@FieldId" class="@(IsRequired ? "required" : "")">
         @Label
@@ -10,6 +11,7 @@
         class="form-input @(IsInvalid ? "invalid" : "")"
         placeholder="@Placeholder"
         value="@Value"
+        maxlength="@MaxLength"
         @oninput="OnInputHandler"
         @onblur="OnBlurHandler"
         @onfocus="OnFocusHandler" />
@@ -33,6 +35,8 @@
 [Parameter] public EventCallback<FocusEventArgs> OnFocus { get; set; }
 [Parameter] public RenderFragment ChildContent { get; set; }
 [Parameter] public string Id { get; set; } = "";
+[Parameter] public int MaxLength { get; set; } = 100; // Default max length
+[Parameter] public EventCallback<ValidationEventArgs> OnValidate { get; set; }
 
 // Use a stable field for the ID so it remains consistent across renders.
 private string _fieldId;
@@ -56,6 +60,17 @@ await ValueChanged.InvokeAsync(value);
 
 private async Task OnBlurHandler(FocusEventArgs args)
 {
+// Trigger validation when field loses focus (if there's a value)
+if (!string.IsNullOrEmpty(Value))
+{
+var validationArgs = new ValidationEventArgs
+{
+Value = Value,
+FieldName = Label
+};
+await OnValidate.InvokeAsync(validationArgs);
+}
+
 await OnBlur.InvokeAsync(args);
 }
 
@@ -63,4 +78,13 @@ private async Task OnFocusHandler(FocusEventArgs args)
 {
 await OnFocus.InvokeAsync(args);
 }
+
+public class ValidationEventArgs
+{
+public string Value { get; set; }
+public string FieldName { get; set; }
+public bool IsValid { get; set; } = true;
+public string ErrorMessage { get; set; } = string.Empty;
+}
+
 }

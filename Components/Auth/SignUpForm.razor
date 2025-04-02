@@ -30,14 +30,20 @@
                         Label="First Name"
                         @bind-Value="signUpModel.FirstName"
                         Placeholder="Enter your first name"
-                        IsRequired="true" />
+                        IsRequired="true"
+                        MaxLength="50"
+                        IsInvalid="@(!string.IsNullOrEmpty(firstNameError))"
+                        ErrorMessage="@firstNameError"
+                        OnValidate="ValidateFirstName" />
                 </div>
 
                 <div class="form-group">
                     <FormField
                         Label="Middle Name"
                         @bind-Value="signUpModel.MiddleName"
-                        Placeholder="Enter your middle name (optional)" />
+                        Placeholder="Enter your middle name (optional)" 
+                        MaxLength="50"
+                        OnValidate="ValidateMiddleName" />
                 </div>
 
                 <div class="form-group">
@@ -45,7 +51,11 @@
                         Label="Last Name"
                         @bind-Value="signUpModel.LastName"
                         Placeholder="Enter your last name"
-                        IsRequired="true" />
+                        IsRequired="true"
+                        MaxLength="50"
+                        IsInvalid="@(!string.IsNullOrEmpty(lastNameError))"
+                        ErrorMessage="@lastNameError"
+                        OnValidate="ValidateLastName" />
                 </div>
             </div>
         }
@@ -54,20 +64,30 @@
             <div class="form-step">
                 <div class="form-group">
                     <label class="@("required")">Date of Birth</label>
-                    <input type="date" class="form-input date-input" 
+                    <input type="date" class="form-input date-input @(dateOfBirthError != null ? "invalid" : "")" 
                         value="@signUpModel.DateOfBirth.ToString("yyyy-MM-dd")"
-                        @onchange="OnDateChanged" />
+                        @onchange="OnDateChanged" 
+                        @onblur="ValidateDateOfBirth" />
+                    @if (!string.IsNullOrEmpty(dateOfBirthError))
+                    {
+                        <div class="error-message">@dateOfBirthError</div>
+                    }
                 </div>
 
                 <div class="form-group">
                     <label class="@("required")">Gender</label>
-                    <select class="form-input select-input" 
+                    <select class="form-input select-input @(genderError != null ? "invalid" : "")" 
                         value="@signUpModel.Gender"
-                        @onchange="OnGenderChanged">
+                        @onchange="OnGenderChanged"
+                        @onblur="ValidateGender">
                         <option value="">Select gender</option>
                         <option value="Male">Male</option>
                         <option value="Female">Female</option>
                     </select>
+                    @if (!string.IsNullOrEmpty(genderError))
+                    {
+                        <div class="error-message">@genderError</div>
+                    }
                 </div>
                 
                 <div class="form-group">
@@ -76,7 +96,11 @@
                         Type="email"
                         @bind-Value="signUpModel.Email"
                         Placeholder="Enter your email"
-                        IsRequired="true" />
+                        IsRequired="true"
+                        MaxLength="100"
+                        IsInvalid="@(!string.IsNullOrEmpty(emailError))"
+                        ErrorMessage="@emailError"
+                        OnValidate="ValidateEmail" />
                 </div>
             </div>
         }
@@ -88,7 +112,11 @@
                         Label="Username"
                         @bind-Value="signUpModel.Username"
                         Placeholder="Choose a username"
-                        IsRequired="true" />
+                        IsRequired="true"
+                        MaxLength="20"
+                        IsInvalid="@(!string.IsNullOrEmpty(usernameError))"
+                        ErrorMessage="@usernameError"
+                        OnValidate="ValidateUsername" />
                 </div>
 
                 <div class="form-group">
@@ -97,7 +125,11 @@
                         Type="password"
                         @bind-Value="signUpModel.Password"
                         Placeholder="Create a password"
-                        IsRequired="true" />
+                        IsRequired="true"
+                        MaxLength="50"
+                        IsInvalid="@(!string.IsNullOrEmpty(passwordError))"
+                        ErrorMessage="@passwordError"
+                        OnValidate="ValidatePassword" />
                 </div>
 
                 <div class="form-group">
@@ -106,7 +138,11 @@
                         Type="password"
                         @bind-Value="signUpModel.ConfirmPassword"
                         Placeholder="Confirm your password"
-                        IsRequired="true" />
+                        IsRequired="true"
+                        MaxLength="50"
+                        IsInvalid="@(!string.IsNullOrEmpty(confirmPasswordError))"
+                        ErrorMessage="@confirmPasswordError"
+                        OnValidate="ValidateConfirmPassword" />
                 </div>
             </div>
         }
@@ -115,15 +151,20 @@
             <div class="form-step">
                 <div class="form-group">
                     <label class="required">Role</label>
-                    <select class="form-input select-input" 
+                    <select class="form-input select-input @(roleError != null ? "invalid" : "")" 
                         value="@((int)signUpModel.Role)"
-                        @onchange="OnRoleChanged">
+                        @onchange="OnRoleChanged"
+                        @onblur="ValidateRole">
                         <option value="5">Student</option>
                         <option value="4">Assistant Course Rep</option>
                         <option value="3">Assistant Lecturer</option>
                         <option value="2">Course Rep Admin</option>
                         <option value="1">Lecturer Admin</option>
                     </select>
+                    @if (!string.IsNullOrEmpty(roleError))
+                    {
+                        <div class="error-message">@roleError</div>
+                    }
                 </div>
 
                 <div class="form-group">
@@ -131,7 +172,11 @@
                         Label="@GetIdFieldLabel()"
                         @bind-Value="signUpModel.MatriculationNumber"
                         Placeholder="@GetIdFieldPlaceholder()"
-                        IsRequired="true" />
+                        IsRequired="true"
+                        MaxLength="20"
+                        IsInvalid="@(!string.IsNullOrEmpty(matricNumberError))"
+                        ErrorMessage="@matricNumberError"
+                        OnValidate="ValidateMatricNumber" />
                 </div>
 
                 @if (RequiresAdminId())
@@ -141,7 +186,11 @@
                             Label="Admin ID"
                             @bind-Value="signUpModel.AdminId"
                             Placeholder="Enter Admin ID"
-                            IsRequired="true" />
+                            IsRequired="true"
+                            MaxLength="20"
+                            IsInvalid="@(!string.IsNullOrEmpty(adminIdError))"
+                            ErrorMessage="@adminIdError"
+                            OnValidate="ValidateAdminId" />
                     </div>
                 }
             </div>
@@ -183,6 +232,20 @@
     private bool[] stepValidations = new bool[4] { false, false, false, false };
     private bool showValidationErrors = false;
 
+    // Error message fields for each input
+    private string firstNameError = string.Empty;
+    private string lastNameError = string.Empty;
+    private string middleNameError = string.Empty;
+    private string dateOfBirthError = string.Empty;
+    private string genderError = string.Empty;
+    private string emailError = string.Empty;
+    private string usernameError = string.Empty;
+    private string passwordError = string.Empty;
+    private string confirmPasswordError = string.Empty;
+    private string roleError = string.Empty;
+    private string matricNumberError = string.Empty;
+    private string adminIdError = string.Empty;
+
     [Parameter]
     public EventCallback<SignUpModel> OnSignUp { get; set; }
 
@@ -200,11 +263,35 @@
         }
     }
 
+    private void ValidateDateOfBirth()
+    {
+        if (IsValidDateOfBirth(signUpModel.DateOfBirth))
+        {
+            dateOfBirthError = string.Empty;
+        }
+        else
+        {
+            dateOfBirthError = "You must be at least 16 years old to register";
+        }
+    }
+
     private void OnGenderChanged(ChangeEventArgs e)
     {
         if (e.Value is string gender)
         {
             signUpModel.Gender = gender;
+        }
+    }
+
+    private void ValidateGender()
+    {
+        if (string.IsNullOrWhiteSpace(signUpModel.Gender))
+        {
+            genderError = "Please select a gender";
+        }
+        else
+        {
+            genderError = string.Empty;
         }
     }
     
@@ -221,11 +308,18 @@
             if (!RequiresAdminId())
             {
                 signUpModel.AdminId = "";
+                adminIdError = string.Empty;
             }
             
             // Force UI refresh
             StateHasChanged();
         }
+    }
+
+    private void ValidateRole()
+    {
+        // Role is selected from a dropdown, so it should always be valid
+        roleError = string.Empty;
     }
 
     private bool RequiresAdminId()
@@ -251,27 +345,251 @@
                signUpModel.Role == AirCode.Domain.Enums.UserRole.AssistantLecturer;
     }
 
+    private void ValidateFirstName(FormField.ValidationEventArgs args)
+    {
+        if (string.IsNullOrWhiteSpace(args.Value))
+        {
+            firstNameError = "First name is required";
+            return;
+        }
+
+        if (!IsValidName(args.Value))
+        {
+            firstNameError = "First name should contain only letters and be between 2-50 characters";
+        }
+        else
+        {
+            firstNameError = string.Empty;
+        }
+    }
+
+    private void ValidateMiddleName(FormField.ValidationEventArgs args)
+    {
+        // Middle name is optional
+        if (string.IsNullOrWhiteSpace(args.Value))
+        {
+            middleNameError = string.Empty;
+            return;
+        }
+
+        if (!IsValidName(args.Value))
+        {
+            middleNameError = "Middle name should contain only letters and be between 2-50 characters";
+        }
+        else
+        {
+            middleNameError = string.Empty;
+        }
+    }
+
+    private void ValidateLastName(FormField.ValidationEventArgs args)
+    {
+        if (string.IsNullOrWhiteSpace(args.Value))
+        {
+            lastNameError = "Last name is required";
+            return;
+        }
+
+        if (!IsValidName(args.Value))
+        {
+            lastNameError = "Last name should contain only letters and be between 2-50 characters";
+        }
+        else
+        {
+            lastNameError = string.Empty;
+        }
+    }
+
+    private void ValidateEmail(FormField.ValidationEventArgs args)
+    {
+        if (string.IsNullOrWhiteSpace(args.Value))
+        {
+            emailError = "Email is required";
+            return;
+        }
+
+        if (!IsValidEmail(args.Value))
+        {
+            emailError = "Please enter a valid email address";
+        }
+        else
+        {
+            emailError = string.Empty;
+        }
+    }
+
+    private void ValidateUsername(FormField.ValidationEventArgs args)
+    {
+        if (string.IsNullOrWhiteSpace(args.Value))
+        {
+            usernameError = "Username is required";
+            return;
+        }
+
+        if (!IsValidUsername(args.Value))
+        {
+            usernameError = "Username must be 4-20 characters and can only contain letters, numbers, and underscores";
+        }
+        else
+        {
+            usernameError = string.Empty;
+        }
+    }
+
+    private void ValidatePassword(FormField.ValidationEventArgs args)
+    {
+        if (string.IsNullOrWhiteSpace(args.Value))
+        {
+            passwordError = "Password is required";
+            return;
+        }
+
+        if (!IsValidPassword(args.Value))
+        {
+            passwordError = "Password must contain at least 8 characters, including letters, numbers, and special characters";
+        }
+        else
+        {
+            passwordError = string.Empty;
+        }
+
+        // If confirm password has a value, validate it again when password changes
+        if (!string.IsNullOrWhiteSpace(signUpModel.ConfirmPassword))
+        {
+            ValidatePasswordMatch();
+        }
+    }
+
+    private void ValidateConfirmPassword(FormField.ValidationEventArgs args)
+    {
+        if (string.IsNullOrWhiteSpace(args.Value))
+        {
+            confirmPasswordError = "Confirm password is required";
+            return;
+        }
+
+        ValidatePasswordMatch();
+    }
+
+    private void ValidatePasswordMatch()
+    {
+        if (signUpModel.Password != signUpModel.ConfirmPassword)
+        {
+            confirmPasswordError = "Passwords do not match";
+        }
+        else
+        {
+            confirmPasswordError = string.Empty;
+        }
+    }
+
+    private void ValidateMatricNumber(FormField.ValidationEventArgs args)
+    {
+        if (string.IsNullOrWhiteSpace(args.Value))
+        {
+            matricNumberError = $"{GetIdFieldLabel()} is required";
+            return;
+        }
+
+        if (!IsValidId(args.Value))
+        {
+            string format = IsLecturerRole() ? "LEC-123456" : "ABC/12/1234";
+            matricNumberError = $"{GetIdFieldLabel()} must be in the format: {format}";
+        }
+        else
+        {
+            matricNumberError = string.Empty;
+        }
+    }
+
+    private void ValidateAdminId(FormField.ValidationEventArgs args)
+    {
+        if (!RequiresAdminId())
+        {
+            adminIdError = string.Empty;
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(args.Value))
+        {
+            adminIdError = "Admin ID is required";
+            return;
+        }
+
+        if (!IsValidAdminId(args.Value))
+        {
+            adminIdError = "Admin ID must be in the format: ADM-123456";
+        }
+        else
+        {
+            adminIdError = string.Empty;
+        }
+    }
+
     private bool ValidateCurrentStep()
     {
         switch (currentStep)
         {
             case 0:
-                return !string.IsNullOrWhiteSpace(signUpModel.FirstName) && 
+                // Validate step 1 fields
+                ValidateFirstName(new FormField.ValidationEventArgs { Value = signUpModel.FirstName });
+                ValidateLastName(new FormField.ValidationEventArgs { Value = signUpModel.LastName });
+                if (!string.IsNullOrWhiteSpace(signUpModel.MiddleName))
+                {
+                    ValidateMiddleName(new FormField.ValidationEventArgs { Value = signUpModel.MiddleName });
+                }
+                return string.IsNullOrEmpty(firstNameError) && 
+                       string.IsNullOrEmpty(lastNameError) &&
+                       string.IsNullOrEmpty(middleNameError) &&
+                       !string.IsNullOrWhiteSpace(signUpModel.FirstName) && 
                        !string.IsNullOrWhiteSpace(signUpModel.LastName);
+                
             case 1:
-                return !string.IsNullOrWhiteSpace(signUpModel.Gender) && 
-                       !string.IsNullOrWhiteSpace(signUpModel.Email);
+                // Validate step 2 fields
+                ValidateDateOfBirth();
+                ValidateGender();
+                ValidateEmail(new FormField.ValidationEventArgs { Value = signUpModel.Email });
+                return string.IsNullOrEmpty(dateOfBirthError) && 
+                       string.IsNullOrEmpty(genderError) &&
+                       string.IsNullOrEmpty(emailError) &&
+                       !string.IsNullOrWhiteSpace(signUpModel.Gender) && 
+                       !string.IsNullOrWhiteSpace(signUpModel.Email) &&
+                       IsValidDateOfBirth(signUpModel.DateOfBirth);
+                
             case 2:
-                return !string.IsNullOrWhiteSpace(signUpModel.Username) && 
-                       !string.IsNullOrWhiteSpace(signUpModel.Password) && 
+                // Validate step 3 fields
+                ValidateUsername(new FormField.ValidationEventArgs { Value = signUpModel.Username });
+                ValidatePassword(new FormField.ValidationEventArgs { Value = signUpModel.Password });
+                ValidateConfirmPassword(new FormField.ValidationEventArgs { Value = signUpModel.ConfirmPassword });
+                return string.IsNullOrEmpty(usernameError) && 
+                       string.IsNullOrEmpty(passwordError) &&
+                       string.IsNullOrEmpty(confirmPasswordError) &&
+                       !string.IsNullOrWhiteSpace(signUpModel.Username) && 
+                       !string.IsNullOrWhiteSpace(signUpModel.Password) &&
                        !string.IsNullOrWhiteSpace(signUpModel.ConfirmPassword);
+                
             case 3:
-                bool isValid = !string.IsNullOrWhiteSpace(signUpModel.MatriculationNumber);
+                // Validate step 4 fields
+                ValidateRole();
+                ValidateMatricNumber(new FormField.ValidationEventArgs { Value = signUpModel.MatriculationNumber });
                 if (RequiresAdminId())
                 {
-                    isValid = isValid && !string.IsNullOrWhiteSpace(signUpModel.AdminId);
+                    ValidateAdminId(new FormField.ValidationEventArgs { Value = signUpModel.AdminId });
                 }
+                
+                bool isValid = string.IsNullOrEmpty(roleError) && 
+                              string.IsNullOrEmpty(matricNumberError) &&
+                              !string.IsNullOrWhiteSpace(signUpModel.MatriculationNumber);
+                              
+                if (RequiresAdminId())
+                {
+                    isValid = isValid && 
+                              string.IsNullOrEmpty(adminIdError) &&
+                              !string.IsNullOrWhiteSpace(signUpModel.AdminId);
+                }
+                
                 return isValid;
+                
             default:
                 return false;
         }
