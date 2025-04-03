@@ -1,17 +1,16 @@
 using Supabase;
-using Supabase.Gotrue;
 using System;
+using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 using AirCode.Models;
 using AirCode.Domain.Enums;
-using Constants = Supabase.Postgrest.Constants;
-
+/*
 namespace AirCode.Services.SupaBase
 {
     public class SupaBaseService : ISupaBaseService
     {
-        private readonly Client _supabaseClient;
+        private readonly Supabase.Client _supabaseClient;
         
         public SupaBaseService(string supabaseUrl, string supabaseKey)
         {
@@ -21,7 +20,7 @@ namespace AirCode.Services.SupaBase
                 AutoConnectRealtime = true
             };
             
-            _supabaseClient = new Client(supabaseUrl, supabaseKey, options);
+            _supabaseClient = new Supabase.Client(supabaseUrl, supabaseKey, options);
         }
         
         public async Task<bool> SignUpAsync(SignUpModel model)
@@ -52,16 +51,13 @@ namespace AirCode.Services.SupaBase
                 }
                 
                 // Sign up user with Supabase
-                var signUpOptions = new SignUpOptions
-                {
-                    EmailRedirectTo = "https://yourapp.com/auth/callback",
-                    Data = userMetadata
-                };
-                
                 var response = await _supabaseClient.Auth.SignUp(
                     model.Email,
                     model.Password,
-                    signUpOptions);
+                    new Supabase.Gotrue.SignUpOptions { 
+                        Data = userMetadata,
+                        RedirectTo = "https://yourapp.com/auth/callback"
+                    });
                 
                 // Check if signup was successful
                 return response.User != null;
@@ -80,7 +76,7 @@ namespace AirCode.Services.SupaBase
                 // Determine if input is email or username
                 bool isEmail = userNameOrEmail.Contains("@");
                 
-                Session session;
+                Supabase.Gotrue.Session session;
                 
                 if (isEmail)
                 {
@@ -90,14 +86,15 @@ namespace AirCode.Services.SupaBase
                 else
                 {
                     // Sign in with username by querying users table first
-                    var response = await _supabaseClient
-                        .From("users")
+                    var response = await _supabaseClient.From("users")
                         .Select("email")
-                        .Filter("username", Constants.Operator.Equals, userNameOrEmail)
-                        .Single();
+                        .eq("username", userNameOrEmail)
+                        .Single<UserEmailResponse>();
                     
-                    string email = response.Email;
-                    session = await _supabaseClient.Auth.SignIn(email, password);
+                    if (response == null || string.IsNullOrEmpty(response.Email))
+                        return false;
+                        
+                    session = await _supabaseClient.Auth.SignIn(response.Email, password);
                 }
                 
                 // Verify admin status if adminId provided
@@ -147,9 +144,8 @@ namespace AirCode.Services.SupaBase
                 // Send password reset email
                 await _supabaseClient.Auth.ResetPasswordForEmail(
                     email,
-                    new ResetPasswordForEmailOptions
-                    {
-                        RedirectTo = "https://yourapp.com/reset-password"
+                    new Supabase.Gotrue.ResetPasswordForEmailOptions { 
+                        RedirectTo = "https://yourapp.com/reset-password" 
                     });
                 
                 return true;
@@ -179,8 +175,9 @@ namespace AirCode.Services.SupaBase
         {
             try
             {
-                var session = await _supabaseClient.Auth.GetSession();
-                return session?.User != null;
+                // Get current user or session
+                var user = await _supabaseClient.Auth.GetUser();
+                return user != null;
             }
             catch
             {
@@ -190,40 +187,32 @@ namespace AirCode.Services.SupaBase
         
         public async Task<string?> GetCurrentUserIdAsync()
         {
-            var session = await _supabaseClient.Auth.GetSession();
-            return session?.User?.Id;
-        }
-        
-        public async Task<bool> SetupMFAAsync(string email)
-        {
-            try
-            {
-                // Check if Supabase instance supports MFA
-                // Note: This requires a paid plan in Supabase
-                await _supabaseClient.Auth.SetupMFA();
-                return true;
+            try {
+                var user = await _supabaseClient.Auth.GetUser();
+                return user?.Id;
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"MFA setup error: {ex.Message}");
-                return false;
+            catch {
+                return null;
             }
         }
         
-        public async Task<bool> VerifyMFAAsync(string email, string token)
+        // For free MFA, we can implement TOTP with a library like OtpNet
+        public Task<bool> SetupMFAAsync(string email)
         {
-            try
-            {
-                // Verify MFA token
-                // Note: Actual implementation depends on Supabase client specifics
-                var response = await _supabaseClient.Auth.VerifyMFAToken(token);
-                return response != null;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"MFA verification error: {ex.Message}");
-                return false;
-            }
+            // We'll implement this with a third-party TOTP library later
+            return Task.FromResult(false);
+        }
+        
+        public Task<bool> VerifyMFAAsync(string email, string token)
+        {
+            // We'll implement this with a third-party TOTP library later
+            return Task.FromResult(false);
         }
     }
-}
+    
+    // Helper class for user email response
+    public class UserEmailResponse
+    {
+        public string Email { get; set; }
+    }
+    */

@@ -10,6 +10,8 @@ public interface ISupaBaseService
     Task<bool> SignOutAsync();
     Task<bool> IsAuthenticatedAsync();
     Task<string?> GetCurrentUserIdAsync();
+    
+    // Keeping these methods in the interface for future implementation with a third-party provider
     Task<bool> SetupMFAAsync(string email);
     Task<bool> VerifyMFAAsync(string email, string token);
 }

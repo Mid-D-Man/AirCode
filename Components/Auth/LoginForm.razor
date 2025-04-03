@@ -5,6 +5,7 @@
 <div class="login-form-container">
     <EditForm Model="@loginModel" OnValidSubmit="HandleSubmit">
         <DataAnnotationsValidator />
+        <ValidationSummary />
 
         <div class="form-group">
             <FormField
@@ -12,6 +13,7 @@
                 @bind-Value="loginModel.Username"
                 Placeholder="Enter your username or email"
                 IsRequired="true" />
+            <ValidationMessage For="@(() => loginModel.Username)" />
         </div>
 
         <div class="form-group">
@@ -21,6 +23,7 @@
                 @bind-Value="loginModel.Password"
                 Placeholder="Enter your password"
                 IsRequired="true" />
+            <ValidationMessage For="@(() => loginModel.Password)" />
         </div>
 
         <div class="form-group admin-checkbox">
@@ -38,18 +41,64 @@
                     @bind-Value="loginModel.AdminId"
                     Placeholder="Enter Admin ID"
                     IsRequired="true" />
+                <ValidationMessage For="@(() => loginModel.AdminId)" />
             </div>
         }
 
         <div class="form-submit">
-            <PrimaryButton Type="submit" Text="Login" />
+            <PrimaryButton Type="submit" Text="Login" IsLoading="@isLoading" />
+        </div>
+        
+        <div class="quick-access-buttons">
+            <SecondaryButton Text="Login as Client" OnClick="QuickLoginAsClient" />
+            <SecondaryButton Text="Login as Admin" OnClick="QuickLoginAsAdmin" />
+        </div>
+
+        <div class="forgot-password-container">
+            <button type="button" class="forgot-password-link" @onclick="HandleForgotPassword">
+                Forgot Password?
+            </button>
         </div>
     </EditForm>
+
+    @if (showForgotPasswordForm)
+    {
+        <div class="forgot-password-form">
+            <div class="overlay" @onclick="CloseForgotPasswordForm"></div>
+            <div class="form-card">
+                <h3 class="form-title">Reset Password</h3>
+                <p class="form-subtitle">Enter your email to receive password reset instructions</p>
+                
+                <EditForm Model="@forgotPasswordModel" OnValidSubmit="HandleForgotPasswordSubmit">
+                    <DataAnnotationsValidator />
+                    
+                    <div class="form-group">
+                        <FormField
+                            Label="Email"
+                            Type="email"
+                            @bind-Value="forgotPasswordModel.Email"
+                            Placeholder="Enter your email address"
+                            IsRequired="true" />
+                        <ValidationMessage For="@(() => forgotPasswordModel.Email)" />
+                    </div>
+                    
+                    <div class="form-actions">
+                        <SecondaryButton Text="Cancel" OnClick="CloseForgotPasswordForm" />
+                        <PrimaryButton Type="submit" Text="Send Reset Link" IsLoading="@isResetLoading" />
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    }
 </div>
 
 @code {
     private LoginModel loginModel = new();
+    private ForgotPasswordModel forgotPasswordModel = new();
     private bool showAdminId = false;
+    private bool showForgotPasswordForm = false;
+    private bool isLoading = false;
+    private bool isResetLoading = false;
 
     [Parameter]
     public EventCallback<LoginModel> OnLogin { get; set; }
@@ -71,14 +120,75 @@
 
     private async Task HandleSubmit()
     {
-        // Ensure AdminId is required for admin login
-        if (loginModel.IsAdmin && string.IsNullOrWhiteSpace(loginModel.AdminId))
-        {
-            await JSRuntime.InvokeVoidAsync("console.log", "Admin ID is required but empty");
-            return;
-        }
+        isLoading = true;
+        
+        try {
+            // Ensure AdminId is required for admin login
+            if (loginModel.IsAdmin && string.IsNullOrWhiteSpace(loginModel.AdminId))
+            {
+                await JSRuntime.InvokeVoidAsync("console.log", "Admin ID is required but empty");
+                return;
+            }
 
-        await JSRuntime.InvokeVoidAsync("console.log", $"Form submitted - IsAdmin: {loginModel.IsAdmin}, AdminId: {loginModel.AdminId}");
-        await OnLogin.InvokeAsync(loginModel);
+            await JSRuntime.InvokeVoidAsync("console.log", $"Form submitted - IsAdmin: {loginModel.IsAdmin}, AdminId: {loginModel.AdminId}");
+            await OnLogin.InvokeAsync(loginModel);
+        }
+        finally {
+            isLoading = false;
+        }
+    }
+    
+    private void HandleForgotPassword()
+    {
+        showForgotPasswordForm = true;
+    }
+    
+    private void CloseForgotPasswordForm()
+    {
+        showForgotPasswordForm = false;
+        forgotPasswordModel = new ForgotPasswordModel();
+    }
+    
+    private async Task HandleForgotPasswordSubmit()
+    {
+        isResetLoading = true;
+        
+        try {
+            // In a real application, you would call a service to send a reset email
+            await Task.Delay(1000); // Simulate API call
+            
+            await JSRuntime.InvokeVoidAsync("console.log", $"Password reset requested for: {forgotPasswordModel.Email}");
+            await JSRuntime.InvokeVoidAsync("alert", $"Password reset link sent to {forgotPasswordModel.Email}");
+            
+            CloseForgotPasswordForm();
+        }
+        finally {
+            isResetLoading = false;
+        }
+    }
+    
+    private async Task QuickLoginAsClient()
+    {
+        loginModel = new LoginModel
+        {
+            Username = "client",
+            Password = "client",
+            IsAdmin = false
+        };
+        
+        await HandleSubmit();
+    }
+     
+    private async Task QuickLoginAsAdmin()
+    {
+        loginModel = new LoginModel
+        {
+            Username = "admin",
+            Password = "admin",
+            IsAdmin = true,
+            AdminId = "admin"
+        };
+        
+        await HandleSubmit();
     }
 }
