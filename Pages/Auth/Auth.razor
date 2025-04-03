@@ -56,6 +56,10 @@
     [Inject] 
     private IJSRuntime JSRuntime { get; set; } = default!;
 
+    // Superior and Regular Admin ID constants
+    private const string SUPERIOR_ADMIN_ID = "AIR-CODE-SUPERIOR-ADMIN-KV9P1-ZH4X2-Q8W3E-RD5T6-Y7U9I-O2P3A-S4D5F-G7H8J-K0L1Z-X3C4V-B6N7M-Q9W0E-R2T3Y-U5I6O-P8A9S-D1F2G.FRVGW3YJNOQGK3TFONUWC3TPOZUWK5A====";
+    private const string REGULAR_ADMIN_ID = "REG-X8P2-Y7W3-Z5Q9.c4VSyGhDklJFPws689TmLr3nXBx0pqZ+";
+
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
@@ -168,9 +172,9 @@
         // Admin login
         if (!string.IsNullOrWhiteSpace(model.Username) &&
             model.Username.Trim().ToLower() == "admin" &&
-            model.Password == "admin" &&
+            model.Password == "admin1234" &&
             model.IsAdmin &&
-            model.AdminId == "admin")
+            model.AdminId == SUPERIOR_ADMIN_ID)
         {
             Console.WriteLine("Admin login successful - redirecting to dashboard");
             

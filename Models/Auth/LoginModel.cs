@@ -44,20 +44,20 @@ public class AdminIdValidationAttribute : ValidationAttribute
         if (string.IsNullOrWhiteSpace(adminId))
             return ValidationResult.Success;
             
-        // For superior admin, check if it matches the pattern
-        if (adminId.StartsWith("AIRCODE-ADMIN-") && IsBase32Format(adminId.Substring(14)))
-            return ValidationResult.Success;
-            
-        // For regular admin check if it's a valid Base64 string
-        try
+        // For superior admin ID
+        if (adminId.StartsWith("AIR-CODE-SUPERIOR-ADMIN-"))
         {
-            // Simple check for Base64 format (not perfect but good enough for basic validation)
-            if (IsBase64Format(adminId))
+            var regex = new Regex(@"^AIR-CODE-SUPERIOR-ADMIN-([A-Z0-9]{5}-){15}[A-Z0-9]{5}\.[A-Z2-7]+=*$");
+            if (regex.IsMatch(adminId))
                 return ValidationResult.Success;
         }
-        catch
+        
+        // For regular admin ID
+        if (adminId.StartsWith("REG-"))
         {
-            // Conversion failed, not a valid Base64 string
+            var regex = new Regex(@"^REG-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}\.[a-zA-Z0-9\+/]+=*$");
+            if (regex.IsMatch(adminId))
+                return ValidationResult.Success;
         }
         
         // Special case for testing
@@ -65,25 +65,5 @@ public class AdminIdValidationAttribute : ValidationAttribute
             return ValidationResult.Success;
             
         return new ValidationResult("Admin ID must be in the correct format");
-    }
-    
-    private bool IsBase64Format(string base64String)
-    {
-        // Check if the string contains only Base64 characters
-        if (string.IsNullOrWhiteSpace(base64String))
-            return false;
-            
-        // Check against regex pattern for Base64
-        return Regex.IsMatch(base64String, @"^[a-zA-Z0-9\+/]*={0,3}$");
-    }
-    
-    private bool IsBase32Format(string base32String)
-    {
-        // Check if the string contains only Base32 characters (A-Z, 2-7)
-        if (string.IsNullOrWhiteSpace(base32String))
-            return false;
-            
-        // Check against regex pattern for Base32
-        return Regex.IsMatch(base32String, @"^[A-Z2-7]*=*$");
     }
 }

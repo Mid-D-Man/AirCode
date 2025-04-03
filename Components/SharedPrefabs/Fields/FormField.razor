@@ -1,6 +1,5 @@
 
 @* Components/SharedPrefabs/Fields/FormField.razor *@
-@* Components/SharedPrefabs/Fields/FormField.razor *@
 <div class="input-field">
     <label for="@FieldId" class="@(IsRequired ? "required" : "")">
         @Label
@@ -35,7 +34,7 @@
 [Parameter] public EventCallback<FocusEventArgs> OnFocus { get; set; }
 [Parameter] public RenderFragment ChildContent { get; set; }
 [Parameter] public string Id { get; set; } = "";
-[Parameter] public int MaxLength { get; set; } = 100; // Default max length
+[Parameter] public int MaxLength { get; set; } = 200; // Increased default max length from 100 to 200
 [Parameter] public EventCallback<ValidationEventArgs> OnValidate { get; set; }
 
 // Use a stable field for the ID so it remains consistent across renders.
@@ -86,5 +85,5 @@ public string FieldName { get; set; }
 public bool IsValid { get; set; } = true;
 public string ErrorMessage { get; set; } = string.Empty;
 }
-
+}
 }

@@ -46,7 +46,8 @@
                     IsRequired="true"
                     IsInvalid="@(!string.IsNullOrEmpty(adminIdError))"
                     ErrorMessage="@adminIdError"
-                    OnValidate="ValidateAdminId" />
+                    OnValidate="ValidateAdminId"
+                    MaxLength="200" />
             </div>
         }
 
@@ -113,13 +114,18 @@
     private string adminIdError = string.Empty;
     private string emailError = string.Empty;
 
+    // Superior and Regular Admin ID constants
+    private const string SUPERIOR_ADMIN_ID = "AIR-CODE-SUPERIOR-ADMIN-KV9P1-ZH4X2-Q8W3E-RD5T6-Y7U9I-O2P3A-S4D5F-G7H8J-K0L1Z-X3C4V-B6N7M-Q9W0E-R2T3Y-U5I6O-P8A9S-D1F2G.FRVGW3YJNOQGK3TFONUWC3TPOZUWK5A====";
+    private const string REGULAR_ADMIN_ID = "REG-X8P2-Y7W3-Z5Q9.c4VSyGhDklJFPws689TmLr3nXBx0pqZ+";
+
     [Parameter]
     public EventCallback<LoginModel> OnLogin { get; set; }
-
-    //ok for sake of testing here is sup admin id,
-    //AIR-CODE-SUPERIOR-ADMIN-KV9P1-ZH4X2-Q8W3E-RD5T6-Y7U9I-O2P3A-S4D5F-G7H8J-K0L1Z-X3C4V-B6N7M-Q9W0E-R2T3Y-U5I6O-P8A9S-D1F2G.FRVGW3YJNOQGK3TFONUWC3TPOZUWK5A====
-    //and regular admin id example
-    //REG-X8P2-Y7W3-Z5Q9.c4VSyGhDklJFPws689TmLr3nXBx0pqZ+
+    
+    protected override void OnInitialized()
+    {
+        // For debugging purposes
+        Console.WriteLine($"Superior Admin ID length: {SUPERIOR_ADMIN_ID.Length}");
+    }
     
     private async Task AdminCheckChanged(ChangeEventArgs e)
     {
@@ -207,18 +213,38 @@
             return;
         }
         
-        // For superior admin, check if it matches the pattern
-        if (args.Value.StartsWith("AIRCODE-ADMIN-") && IsBase32Format(args.Value.Substring(14)))
+        // For Superior Admins
+        if (args.Value.StartsWith("AIR-CODE-SUPERIOR-ADMIN-"))
         {
-            adminIdError = string.Empty;
-            return;
+            // For quick login test, accept the exact test ID
+            if (args.Value == SUPERIOR_ADMIN_ID)
+            {
+                adminIdError = string.Empty;
+                return;
+            }
+            
+            if (IsValidSuperiorAdminId(args.Value))
+            {
+                adminIdError = string.Empty;
+                return;
+            }
         }
         
-        // For regular admin check if it's a valid Base64 string
-        if (IsBase64Format(args.Value))
+        // For Regular Admins
+        if (args.Value.StartsWith("REG-"))
         {
-            adminIdError = string.Empty;
-            return;
+            // For quick login test, accept the exact test ID
+            if (args.Value == REGULAR_ADMIN_ID)
+            {
+                adminIdError = string.Empty;
+                return;
+            }
+            
+            if (IsValidRegularAdminId(args.Value))
+            {
+                adminIdError = string.Empty;
+                return;
+            }
         }
         
         // Special case for testing
@@ -229,6 +255,36 @@
         }
         
         adminIdError = "Admin ID must be in the correct format";
+    }
+    
+    private bool IsValidSuperiorAdminId(string adminId)
+    {
+        try
+        {
+            // Check for AIR-CODE-SUPERIOR-ADMIN- prefix followed by 16 segments of 5 chars, a period, and Base32 characters
+            var regex = new System.Text.RegularExpressions.Regex(
+                @"^AIR-CODE-SUPERIOR-ADMIN-([A-Z0-9]{5}-){15}[A-Z0-9]{5}\.[A-Z2-7]+=*$");
+            return regex.IsMatch(adminId);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+    
+    private bool IsValidRegularAdminId(string adminId)
+    {
+        try
+        {
+            // Check for REG- prefix followed by 3 groups of 4 chars, a period, and Base64 characters
+            var regex = new System.Text.RegularExpressions.Regex(
+                @"^REG-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}\.[a-zA-Z0-9\+/]+=*$");
+            return regex.IsMatch(adminId);
+        }
+        catch
+        {
+            return false;
+        }
     }
     
     private void ValidateEmail(FormField.ValidationEventArgs args)
@@ -349,15 +405,25 @@
         loginModel = new LoginModel
         {
             Username = "admin",
-            Password = "admin",
+            Password = "admin1234", // Updated password as requested
             IsAdmin = true,
-            AdminId = "admin"
+            AdminId = SUPERIOR_ADMIN_ID // Use the superior admin ID for quick login
         };
         
         // Clear any previous errors
         usernameError = string.Empty;
         passwordError = string.Empty;
         adminIdError = string.Empty;
+        
+        showAdminId = true; // Make sure admin ID field is visible
+        
+        // Log the admin ID length to help debugging
+        await JSRuntime.InvokeVoidAsync("console.log", $"Admin ID length: {loginModel.AdminId.Length}");
+        await JSRuntime.InvokeVoidAsync("console.log", $"Admin ID: {loginModel.AdminId}");
+        
+        StateHasChanged();
+        
+        await Task.Delay(100); // Give UI time to update
         
         await HandleSubmit();
     }
@@ -372,26 +438,6 @@
     private bool IsValidUsername(string username)
     {
         return System.Text.RegularExpressions.Regex.IsMatch(username, @"^[a-zA-Z0-9_]{3,20}$");
-    }
-    
-    private bool IsBase64Format(string base64String)
-    {
-        // Check if the string contains only Base64 characters
-        if (string.IsNullOrWhiteSpace(base64String))
-            return false;
-            
-        // Check against regex pattern for Base64
-        return System.Text.RegularExpressions.Regex.IsMatch(base64String, @"^[a-zA-Z0-9\+/]*={0,3}$");
-    }
-    
-    private bool IsBase32Format(string base32String)
-    {
-        // Check if the string contains only Base32 characters (A-Z, 2-7)
-        if (string.IsNullOrWhiteSpace(base32String))
-            return false;
-            
-        // Check against regex pattern for Base32
-        return System.Text.RegularExpressions.Regex.IsMatch(base32String, @"^[A-Z2-7]*=*$");
     }
     
     #endregion
