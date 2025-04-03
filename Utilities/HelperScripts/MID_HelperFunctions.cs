@@ -182,6 +182,7 @@ namespace AirCode.Utilities.HelperScripts
                 .Select(s => s[random.Next(s.Length)]).ToArray());
         }
 
+        
         #region  Debug Utilities/StructMember Values
 
         public static string GetStructOrClassMemberValues<T>(T structOrClassInstance) where T : notnull
