@@ -1,10 +1,22 @@
-<button class="primary-button" @onclick="OnClick">
-    @Text
+@using AirCode.Components.SharedPrefabs.Buttons
+
+<button class="primary-button @Class @(IsLoading ? "loading" : "")"
+        type="@Type"
+        @onclick="OnClick"
+        disabled="@IsLoading">
+    @if (IsLoading)
+    {
+        <div class="loading-indicator">
+            <span class="loading-line"></span>
+        </div>
+    }
+    <span class="button-text">@Text</span>
 </button>
 
 @code {
     [Parameter] public string Text { get; set; }
     [Parameter] public EventCallback OnClick { get; set; }
-    [Parameter] public string Class { get; set; } 
-    [Parameter] public string Type { get; set; } = "button"; //Login Signup
+    [Parameter] public string Class { get; set; }
+    [Parameter] public string Type { get; set; } = "button";
+    [Parameter] public bool IsLoading { get; set; } = false;
 }
