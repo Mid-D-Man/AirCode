@@ -57,4 +57,4 @@ jobs:
       # Deploy to GitHub Pages
       - name: Deploy
         id: deployment
-        uses: actions/deploy-pages@v1
+        uses: actions/upload-artifact@v3
