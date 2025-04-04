@@ -43,9 +43,7 @@ BlobBackground.razor            ConnectionModal.razor           DynamicBlob.razo
 BlobBackground.razor.css        ConnectionModal.razor.css
 
 ./Components/SharedPrefabs/QrCode:
-QRCodeCompo.razor       QRCodeCompo.razor.css   mid
-
-./Components/SharedPrefabs/QrCode/mid:
+QRCodeCompo.razor       QRCodeCompo.razor.css
 
 ./Components/SharedPrefabs/Scanner:
 MidQrScanner.razor      MidQrScanner.razor.css  ZXingScanner.razor      ZXingScanner.razor.css
@@ -167,8 +165,27 @@ Debug   Release
 ./bin/Debug:
 net7.0
 
+./bin/Debug/net7.0:
 
 
+
+
+./public:
+index.html
+
+./wwwroot:
+404.html                        index.html                      sample-data                     svgs
+css                             js                              service-worker.js               wasm
+icons                           manifest.json                   service-worker.published.js
+
+./wwwroot/css:
+app.css         bootstrap       colors.css      open-iconic     responsive.css
+
+./wwwroot/css/bootstrap:
+bootstrap.min.css       bootstrap.min.css.map
+
+./wwwroot/css/open-iconic:
+FONT-LICENSE    ICON-LICENSE    README.md       font
 
 ./wwwroot/css/open-iconic/font:
 css     fonts
@@ -183,7 +200,8 @@ open-iconic.eot         open-iconic.otf         open-iconic.svg         open-ico
 favicon.png     icon-192.png    icon-512.png
 
 ./wwwroot/js:
-midQrScannerModule.js   qrCodeModule.js         shaderRenderer1.js      themeSwitcher.js        zxingScanner.js
+connectivityServices.js qrCodeModule.js         themeSwitcher.js
+midQrScannerModule.js   shaderRenderer1.js      zxingScanner.js
 
 ./wwwroot/sample-data:
 weather.json
@@ -193,9 +211,7 @@ Admin_Icon.svg          Cources_Icon.svg        QRCode_Icon.svg         Stats_Ic
 ContactUs_Icon.svg      Logout_Icon.svg         Report_Icon.svg         Users_Icon.svg
 
 ./wwwroot/wasm:
-mid_air_code_lib                qr_code_generator.d.ts          qr_code_generator_bg.wasm       qr_code_module
 package.json                    qr_code_generator.js            qr_code_generator_bg.wasm.d.ts
+qr_code_generator.d.ts          qr_code_generator_bg.wasm
+midman@MID-D-MAN AirCode % 
 
-./wwwroot/wasm/mid_air_code_lib:
-
-./wwwroot/wasm/qr_code_module:
