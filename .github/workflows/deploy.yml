@@ -16,17 +16,53 @@ jobs:
         with:
           dotnet-version: 7.0.x
 
+      - name: List directory before publish
+        run: ls -la
+
       - name: Publish .NET Project
         run: |
           dotnet restore
           dotnet build --configuration Release --no-restore
-          dotnet publish AirCode.csproj -c Release -o release --nologo -p:BlazorWasmPrerenderMode=WebAssemblyPrerendered -p:StaticWebAssetBasePath=AirCode
-          touch release/wwwroot/.nojekyll
-          cp release/wwwroot/index.html release/wwwroot/404.html
+          dotnet publish AirCode.csproj -c Release -o release --nologo
+
+      - name: Debug publish output
+        run: |
+          echo "Listing release directory:"
+          ls -la release
+          echo "Listing wwwroot in release directory:"
+          ls -la release/wwwroot || echo "wwwroot not found in release directory"
+
+      - name: Create and update required files
+        run: |
+          # Create .nojekyll file
+          touch release/wwwroot/.nojekyll || mkdir -p release/wwwroot && touch release/wwwroot/.nojekyll
+          
+          # Copy index.html to 404.html for SPA routing
+          if [ -f release/wwwroot/index.html ]; then
+            cp release/wwwroot/index.html release/wwwroot/404.html
+            echo "Successfully copied index.html to 404.html"
+          else
+            echo "WARNING: index.html not found in expected location"
+            # Try to find index.html
+            find release -name "index.html"
+          fi
+          
+          # Update base href in index.html
+          if [ -f release/wwwroot/index.html ]; then
+            sed -i 's|<base href="/" />|<base href="/AirCode/" />|g' release/wwwroot/index.html
+            echo "Updated base href in index.html"
+          fi
           
           # Update the manifest.json with the correct base path
           if [ -f release/wwwroot/manifest.json ]; then
             sed -i 's|"start_url": "./"|"start_url": "/AirCode/"|g' release/wwwroot/manifest.json
+            echo "Updated start_url in manifest.json"
+          fi
+          
+          # Update service worker registration in index.html
+          if [ -f release/wwwroot/index.html ]; then
+            sed -i 's|<script>navigator.serviceWorker.register(\'service-worker.js\');</script>|<script>navigator.serviceWorker.register(\'service-worker.js\', { scope: \'/AirCode/\' });</script>|g' release/wwwroot/index.html
+            echo "Updated service worker registration in index.html"
           fi
 
       - name: Deploy to GitHub Pages
