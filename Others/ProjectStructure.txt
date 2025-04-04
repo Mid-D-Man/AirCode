@@ -1,5 +1,4 @@
 
-
 AirCode.csproj  Components      Models          Program.cs      Shared          _Imports.razor  obj
 AirCode.sln     Domain          Others          Properties      TestData        bin             public
 App.razor       Layout          Pages           Services        Utilities       global.json     wwwroot
@@ -29,8 +28,9 @@ LoadingScreen.razor     LoadingScreen.razor.css
 Buttons Cards   Fields  Others  QrCode  Scanner Search
 
 ./Components/SharedPrefabs/Buttons:
-CircularNavigationButton.razor          PrimaryButton.razor                     ThemeToggle.razor
-CircularNavigationButton.razor.css      PrimaryButton.razor.css                 ThemeToggle.razor.css
+CircularNavigationButton.razor          PrimaryButton.razor.css                 ThemeToggle.razor
+CircularNavigationButton.razor.css      SecondaryButton.razor                   ThemeToggle.razor.css
+PrimaryButton.razor                     SecondaryButton.razor.css
 
 ./Components/SharedPrefabs/Cards:
 CourseCard.razor        CourseCard.razor.css
@@ -39,7 +39,8 @@ CourseCard.razor        CourseCard.razor.css
 FormField.razor         FormField.razor.css
 
 ./Components/SharedPrefabs/Others:
-BlobBackground.razor            BlobBackground.razor.css        DynamicBlob.razor
+BlobBackground.razor            ConnectionModal.razor           DynamicBlob.razor
+BlobBackground.razor.css        ConnectionModal.razor.css
 
 ./Components/SharedPrefabs/QrCode:
 QRCodeCompo.razor       QRCodeCompo.razor.css   mid
@@ -120,10 +121,11 @@ Index.razor             Index.razor.css         ShaderPage1.razor       TestPage
 launchSettings.json
 
 ./Services:
-Auth            Courses         Permissions     Scanner         Search          Storage
+Auth            Courses         Permissions     Scanner         Search          Storage         SupaBase
 
 ./Services/Auth:
-IUserStorageService.cs  UserStorageService.cs
+IOfflineCredentialService.cs    OfflineAuthService.cs           SecureCredentialService.cs
+IUserStorageService.cs          OfflineCredentialService.cs     UserStorageService.cs
 
 ./Services/Courses:
 CourseService.cs        ICourseService.cs
@@ -139,6 +141,9 @@ ISearchContextService.cs        SearchContextService.cs
 
 ./Services/Storage:
 BlazorLocalStorageService.cs    ILocalStorageService.cs
+
+./Services/SupaBase:
+ISupaBaseService.cs     SupaBaseService.cs
 
 ./Shared:
 SplashScreen.razor      SplashScreen.razor.css
@@ -161,6 +166,8 @@ Debug   Release
 
 ./bin/Debug:
 net7.0
+
+
 
 
 ./wwwroot/css/open-iconic/font:
