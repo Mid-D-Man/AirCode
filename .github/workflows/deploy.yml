@@ -33,12 +33,15 @@ jobs:
           # Update base href in index.html
           sed -i 's|<base href="/" />|<base href="/AirCode/" />|g' release/wwwroot/index.html
           
+          # Fix CSP to include 'self' for img-src
+          sed -i 's|img-src \'self\' data:|img-src \'self\' data:|g' release/wwwroot/index.html || echo "CSP img-src already correct"
+          
           # Update the manifest.json with the correct base path
           if [ -f release/wwwroot/manifest.json ]; then
             sed -i 's|"start_url": "./"|"start_url": "/AirCode/"|g' release/wwwroot/manifest.json
           fi
           
-          # Update service worker registration - fixing the syntax error with proper escaping
+          # Update service worker registration
           sed -i "s|navigator\.serviceWorker\.register('service-worker\.js')|navigator.serviceWorker.register('service-worker.js', { scope: '/AirCode/' })|g" release/wwwroot/index.html
 
       - name: Deploy to GitHub Pages
