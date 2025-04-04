@@ -33,8 +33,8 @@ jobs:
           # Update base href in index.html
           sed -i 's|<base href="/" />|<base href="/AirCode/" />|g' release/wwwroot/index.html
           
-          # Fix CSP to include 'self' for img-src
-          sed -i 's|img-src \'self\' data:|img-src \'self\' data:|g' release/wwwroot/index.html || echo "CSP img-src already correct"
+          # Fix CSP to include 'self' for img-src (fixed syntax)
+          sed -i "s|img-src 'self' data:|img-src 'self' data:|g" release/wwwroot/index.html || echo "CSP img-src already correct"
           
           # Update the manifest.json with the correct base path
           if [ -f release/wwwroot/manifest.json ]; then
