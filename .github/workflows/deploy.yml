@@ -20,9 +20,14 @@ jobs:
         run: |
           dotnet restore
           dotnet build --configuration Release --no-restore
-          dotnet publish AirCode.csproj -c Release -o release --nologo -p:BaseBlazorPath=/AirCode/
+          dotnet publish AirCode.csproj -c Release -o release --nologo -p:BlazorWasmPrerenderMode=WebAssemblyPrerendered -p:StaticWebAssetBasePath=AirCode
           touch release/wwwroot/.nojekyll
           cp release/wwwroot/index.html release/wwwroot/404.html
+          
+          # Update the manifest.json with the correct base path
+          if [ -f release/wwwroot/manifest.json ]; then
+            sed -i 's|"start_url": "./"|"start_url": "/AirCode/"|g' release/wwwroot/manifest.json
+          fi
 
       - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
