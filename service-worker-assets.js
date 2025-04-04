@@ -1,6 +1,14 @@
 ﻿self.assetsManifest = {
   "assets": [
     {
+      "hash": "sha256-47DEQpj8HBSa+\/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=",
+      "url": ".nojekyll"
+    },
+    {
+      "hash": "sha256-+9vU2jDOYhol6ppPeIRb7CC\/FgbATfCxzawPY4Dvl8w=",
+      "url": "404.html"
+    },
+    {
       "hash": "sha256-10KEeWxsgry5D9LUZc0K86lpIg9RcWdyyBB5sXq6Ypk=",
       "url": "css\/app.css"
     },
@@ -69,7 +77,7 @@
       "url": "icons\/icon-512.png"
     },
     {
-      "hash": "sha256-ocUkR+xj+pI6mkuu\/jGMuDOgsOHhh2dvpw+1XF3jgp8=",
+      "hash": "sha256-lC+rrdYFume10I1MGOHaBaksdg6a+wMTxjgoyjyu38E=",
       "url": "index.html"
     },
     {
@@ -193,11 +201,11 @@
       "url": "_framework\/icudt.dat"
     },
     {
-      "hash": "sha256-FRcbSSf5ozq+veYTov40ZhyU6EmBnW18qOq8u1\/ozfY=",
+      "hash": "sha256-ffvpqDnZNzaIxVv7Y\/gtlYPpw0ljTkBxnsZKNmPeBXc=",
       "url": "_framework\/blazor.boot.json"
     },
     {
-      "hash": "sha256-1fII402ojt7HOTeL2Ode+bGJ3w+QWuBoONJzPQvKfNA=",
+      "hash": "sha256-zhhD+IaS+Pefehf1mbviaO910ZHhWrD7EOT8EQgqsh0=",
       "url": "_framework\/AirCode.dll"
     },
     {
@@ -629,5 +637,5 @@
       "url": "_content\/ZXingBlazor\/ZXingBlazor.bundle.scp.css"
     }
   ],
-  "version": "np59lrda"
+  "version": "b1FdWTPD"
 };

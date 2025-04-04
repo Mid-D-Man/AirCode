@@ -4,8 +4,10 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <!-- Add this updated CSP meta tag -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://*.supabase.co; font-src 'self'; frame-src 'self';">
     <title>AirCode</title>
-    <base href="/AirCode/" />
+    <base href="/" />
     <link href="css/bootstrap/bootstrap.min.css" rel="stylesheet" />
     <link href="css/app.css" rel="stylesheet" />
     <link rel="icon" type="image/png" href="icons/favicon.png" />
@@ -17,7 +19,23 @@
 
     <link rel="apple-touch-icon" sizes="512x512" href="icons/icon-512.png" />
     <link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png" />
+    <link rel="icon" type="image/png" href="icons/favicon.png" />
 
+    <script type="text/javascript">
+        // Single Page Apps for GitHub Pages
+        // MIT License
+        // https://github.com/rafgraph/spa-github-pages
+        (function(l) {
+            if (l.search[1] === '/' ) {
+                var decoded = l.search.slice(1).split('&').map(function(s) {
+                    return s.replace(/~and~/g, '&')
+                }).join('?');
+                window.history.replaceState(null, null,
+                    l.pathname.slice(0, -1) + decoded + l.hash
+                );
+            }
+        }(window.location))
+    </script>
 </head>
 
 <body>
