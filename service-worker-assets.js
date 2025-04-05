@@ -77,12 +77,16 @@
       "url": "icon-512.png"
     },
     {
-      "hash": "sha256-oz4HJn8rBrs3ndp6mTiD\/T7mC0EVfSdPA\/rphQ81860=",
+      "hash": "sha256-JaajsDVnXfhG1ur5Y3pUlBC\/oiMQ\/50vVSIOhV6Zvqs=",
       "url": "index.html"
     },
     {
       "hash": "sha256-QVMzlS4EM9bf0mpwKNduLKVlL69UgC6Unj71kuDi8v4=",
       "url": "js\/connectivityServices.js"
+    },
+    {
+      "hash": "sha256-dP5lwFXr0wHp+KvOCpzJ4C3CkloQUJRDU4deDpX4J38=",
+      "url": "js\/debug.js"
     },
     {
       "hash": "sha256-V7FJnY8V8ug9OnVYW9qn1hHl+r+GwiYGHNtJMcK4VJ8=",
@@ -637,5 +641,5 @@
       "url": "_content\/ZXingBlazor\/ZXingBlazor.bundle.scp.css"
     }
   ],
-  "version": "mv2gDA9d"
+  "version": "yxPFZT1B"
 };
