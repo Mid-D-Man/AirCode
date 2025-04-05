@@ -24,7 +24,7 @@ jobs:
 
       - name: Create and update required files
         run: |
-          # Create .nojekyll file (prevents GitHub Pages from using Jekyll)
+          # Create .nojekyll file
           touch release/wwwroot/.nojekyll
           
           # Copy index.html to 404.html for SPA routing
@@ -34,26 +34,25 @@ jobs:
           sed -i 's|<base href="/" />|<base href="/AirCode/" />|g' release/wwwroot/index.html
           sed -i 's|<base href="/" />|<base href="/AirCode/" />|g' release/wwwroot/404.html
           
-          # Replace CSP with a properly formatted one that includes all required sources
-          sed -i 's|<meta http-equiv="Content-Security-Policy".*>|<meta http-equiv="Content-Security-Policy" content="default-src '\''self'\''; script-src '\''self'\'' '\''unsafe-inline'\'' '\''unsafe-eval'\'' https://unpkg.com; style-src '\''self'\'' '\''unsafe-inline'\''; img-src '\''self'\'' https: data: '\''mid-d-man.github.io'\''; connect-src '\''self'\'' https://*.supabase.co; font-src '\''self'\''; frame-src '\''self'\'';">|g' release/wwwroot/index.html
-          sed -i 's|<meta http-equiv="Content-Security-Policy".*>|<meta http-equiv="Content-Security-Policy" content="default-src '\''self'\''; script-src '\''self'\'' '\''unsafe-inline'\'' '\''unsafe-eval'\'' https://unpkg.com; style-src '\''self'\'' '\''unsafe-inline'\''; img-src '\''self'\'' https: data: '\''mid-d-man.github.io'\''; connect-src '\''self'\'' https://*.supabase.co; font-src '\''self'\''; frame-src '\''self'\'';">|g' release/wwwroot/404.html
-          
-          # Handle favicon properly - copy to all common locations browsers look for it
+          # Move favicon.png to root and rename to favicon.ico
           cp release/wwwroot/icons/favicon.png release/wwwroot/favicon.ico
-          cp release/wwwroot/icons/favicon.png release/wwwroot/favicon.png
           
-          # Update the manifest.json with the correct base path
+          # Completely replace CSP in both index.html and 404.html with inline style that allows all images
+          sed -i 's|<meta http-equiv="Content-Security-Policy".*>|<meta http-equiv="Content-Security-Policy" content="default-src '\''self'\''; script-src '\''self'\'' '\''unsafe-inline'\'' '\''unsafe-eval'\'' https://unpkg.com; style-src '\''self'\'' '\''unsafe-inline'\''; img-src '\''self'\'' data: https: *; connect-src '\''self'\'' https://*.supabase.co; font-src '\''self'\''; frame-src '\''self'\'';">|g' release/wwwroot/index.html
+          sed -i 's|<meta http-equiv="Content-Security-Policy".*>|<meta http-equiv="Content-Security-Policy" content="default-src '\''self'\''; script-src '\''self'\'' '\''unsafe-inline'\'' '\''unsafe-eval'\'' https://unpkg.com; style-src '\''self'\'' '\''unsafe-inline'\''; img-src '\''self'\'' data: https: *; connect-src '\''self'\'' https://*.supabase.co; font-src '\''self'\''; frame-src '\''self'\'';">|g' release/wwwroot/404.html
+          
+          # Update favicon references to point at root favicon
+          sed -i 's|<link rel="icon" type="image/png" href="/AirCode/icons/favicon.png" />|<link rel="icon" href="/AirCode/favicon.ico" /><link rel="shortcut icon" href="/AirCode/favicon.ico" />|g' release/wwwroot/index.html
+          sed -i 's|<link rel="icon" type="image/png" href="/AirCode/icons/favicon.png" />|<link rel="icon" href="/AirCode/favicon.ico" /><link rel="shortcut icon" href="/AirCode/favicon.ico" />|g' release/wwwroot/404.html
+          
+          # Update the manifest.json
           if [ -f release/wwwroot/manifest.json ]; then
             sed -i 's|"start_url": "./"|"start_url": "/AirCode/"|g' release/wwwroot/manifest.json
           fi
           
-          # Update service worker registration to use correct scope
+          # Update service worker registration
           sed -i "s|navigator\.serviceWorker\.register('service-worker\.js')|navigator.serviceWorker.register('service-worker.js', { scope: '/AirCode/' })|g" release/wwwroot/index.html
           sed -i "s|navigator\.serviceWorker\.register('service-worker\.js')|navigator.serviceWorker.register('service-worker.js', { scope: '/AirCode/' })|g" release/wwwroot/404.html
-          
-          # Make sure favicon links use the correct path
-          sed -i 's|<link rel="icon" type="image/png" href="/AirCode/icons/favicon.png" />|<link rel="icon" type="image/png" href="/AirCode/icons/favicon.png" /><link rel="shortcut icon" href="/AirCode/favicon.ico" /><link rel="icon" href="/AirCode/favicon.ico" />|g' release/wwwroot/index.html
-          sed -i 's|<link rel="icon" type="image/png" href="/AirCode/icons/favicon.png" />|<link rel="icon" type="image/png" href="/AirCode/icons/favicon.png" /><link rel="shortcut icon" href="/AirCode/favicon.ico" /><link rel="icon" href="/AirCode/favicon.ico" />|g' release/wwwroot/404.html
 
       - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
