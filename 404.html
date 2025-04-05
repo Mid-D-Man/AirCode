@@ -4,13 +4,16 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <!-- Updated CSP meta tag to fix image loading issues -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://*.github.io; connect-src 'self' https://*.supabase.co; font-src 'self'; frame-src 'self';">
+    <!-- Completely updated CSP meta tag -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:; connect-src 'self' https://*.supabase.co; font-src 'self'; frame-src 'self';">
     <title>AirCode</title>
     <base href="/AirCode/" />
     <link href="css/bootstrap/bootstrap.min.css" rel="stylesheet" />
     <link href="css/app.css" rel="stylesheet" />
-    <link rel="icon" type="image/png" href="icons/favicon.png" />
+    <!-- Define favicon with absolute path -->
+    <link rel="icon" type="image/png" href="/AirCode/icons/favicon.png" />
+    <!-- Add a fallback favicon that browsers sometimes request by default -->
+    <link rel="shortcut icon" href="/AirCode/icons/favicon.png" />
     <link href="AirCode.styles.css" rel="stylesheet" />
     <link href="manifest.json" rel="manifest" />
 
@@ -19,7 +22,6 @@
 
     <link rel="apple-touch-icon" sizes="512x512" href="icons/icon-512.png" />
     <link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png" />
-    <link rel="icon" type="image/png" href="icons/favicon.png" />
 
     <script type="text/javascript">
         // Single Page Apps for GitHub Pages
