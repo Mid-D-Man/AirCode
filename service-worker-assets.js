@@ -77,7 +77,7 @@
       "url": "icon-512.png"
     },
     {
-      "hash": "sha256-JaajsDVnXfhG1ur5Y3pUlBC\/oiMQ\/50vVSIOhV6Zvqs=",
+      "hash": "sha256-8FuLCLsyjrUor9pSf1ziCS115teJGu700zWJICls284=",
       "url": "index.html"
     },
     {
@@ -85,7 +85,7 @@
       "url": "js\/connectivityServices.js"
     },
     {
-      "hash": "sha256-dP5lwFXr0wHp+KvOCpzJ4C3CkloQUJRDU4deDpX4J38=",
+      "hash": "sha256-QDKfNgDzEfl7uhdEA2hTSpGCP5velyfESFSz9\/DE0kQ=",
       "url": "js\/debug.js"
     },
     {
@@ -205,11 +205,11 @@
       "url": "_framework\/icudt.dat"
     },
     {
-      "hash": "sha256-TDn0lfHEEqU8cKmHptHiE0Sk0kGlyCF3v0kAqR8q1Rg=",
+      "hash": "sha256-GMOve6bGqLvl2lDbs2t9DpUlWkNrPtbov22MOX05rxI=",
       "url": "_framework\/blazor.boot.json"
     },
     {
-      "hash": "sha256-bh1Kjs2\/OoWOBm3rRneCw7U+WVjUgv9oacf58So3688=",
+      "hash": "sha256-lW+oDaLC+JtS06GlA4aAk\/R4tEJYFllihQXwTrwGF5Y=",
       "url": "_framework\/AirCode.dll"
     },
     {
@@ -641,5 +641,5 @@
       "url": "_content\/ZXingBlazor\/ZXingBlazor.bundle.scp.css"
     }
   ],
-  "version": "yxPFZT1B"
+  "version": "4THdXxnI"
 };
