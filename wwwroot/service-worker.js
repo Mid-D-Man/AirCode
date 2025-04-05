@@ -1,8 +1,8 @@
 // Service worker for AirCode PWA
 // Version specifically designed for GitHub Pages deployment
 
-// Cache name with version
-const CACHE_NAME = 'aircode-cache-v6';
+// Cache name with version - bump this when deploying changes
+const CACHE_NAME = 'aircode-cache-v7';
 
 // Get the base URL from service worker's location
 const baseUrl = self.registration.scope;
@@ -14,18 +14,18 @@ self.addEventListener('install', (event) => {
     // Dynamically build the URLs to cache based on the base URL
     const urlsToCache = [
         baseUrl,
-        new URL('index.html', baseUrl),
-        new URL('404.html', baseUrl),
-        new URL('favicon.png', baseUrl),
-        new URL('css/app.css', baseUrl),
-        new URL('css/bootstrap/bootstrap.min.css', baseUrl),
-        new URL('css/colors.css', baseUrl),
-        new URL('css/responsive.css', baseUrl),
-        new URL('_framework/blazor.webassembly.js', baseUrl),
-        new URL('js/debug.js', baseUrl),
-        new URL('js/connectivityServices.js', baseUrl),
-        new URL('js/themeSwitcher.js', baseUrl),
-        new URL('manifest.json', baseUrl)
+        new URL('index.html', baseUrl).href,
+        new URL('404.html', baseUrl).href,
+        new URL('favicon.png', baseUrl).href,
+        new URL('css/app.css', baseUrl).href,
+        new URL('css/bootstrap/bootstrap.min.css', baseUrl).href,
+        new URL('css/colors.css', baseUrl).href,
+        new URL('css/responsive.css', baseUrl).href,
+        new URL('_framework/blazor.webassembly.js', baseUrl).href,
+        new URL('js/debug.js', baseUrl).href,
+        new URL('js/connectivityServices.js', baseUrl).href,
+        new URL('js/themeSwitcher.js', baseUrl).href,
+        new URL('manifest.json', baseUrl).href
     ];
 
     console.log('[ServiceWorker] URLs to cache:', urlsToCache);
@@ -66,34 +66,41 @@ self.addEventListener('fetch', (event) => {
     // Skip non-GET requests
     if (event.request.method !== 'GET') return;
 
+    // Log the request URL for debugging
+    console.log('[ServiceWorker] Fetching:', event.request.url);
+
     // Handle the fetch
     event.respondWith(
         caches.match(event.request)
             .then(cachedResponse => {
                 if (cachedResponse) {
                     // Return cached response
+                    console.log('[ServiceWorker] Returning cached:', event.request.url);
                     return cachedResponse;
                 }
 
                 // Not in cache, fetch from network
                 return fetch(event.request)
                     .then(response => {
-                        // Cache valid responses for future
-                        if (response && response.status === 200) {
+                        // Only cache same-origin responses
+                        if (response && response.status === 200 &&
+                            (event.request.url.startsWith(self.location.origin) ||
+                                event.request.url.includes('github.io'))) {
                             const responseToCache = response.clone();
                             caches.open(CACHE_NAME)
                                 .then(cache => {
+                                    console.log('[ServiceWorker] Caching new resource:', event.request.url);
                                     cache.put(event.request, responseToCache);
                                 });
                         }
                         return response;
                     })
                     .catch(error => {
-                        console.log('[ServiceWorker] Fetch failed:', error);
+                        console.log('[ServiceWorker] Fetch failed:', error, event.request.url);
 
                         // For navigation requests, try to return index.html
                         if (event.request.mode === 'navigate') {
-                            return caches.match(new URL('index.html', baseUrl));
+                            return caches.match(new URL('index.html', baseUrl).href);
                         }
 
                         // Return a proper error for other requests
