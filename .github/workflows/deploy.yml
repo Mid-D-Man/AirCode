@@ -36,11 +36,11 @@ jobs:
           
           # Update service worker registration to be more robust
           sed -i 's|navigator\.serviceWorker\.register|if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register|g' release/wwwroot/index.html
-          sed -i 's|register(.*);|register\1.then(function(r){console.log("SW registered")}).catch(function(e){console.error("SW error",e)});})}|g' release/wwwroot/index.html
+          sed -i 's|register(.*);|register\\1.then(function(r){console.log("SW registered")}).catch(function(e){console.error("SW error",e)});})}|g' release/wwwroot/index.html
           
           # Similar updates for 404.html
           sed -i 's|navigator\.serviceWorker\.register|if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register|g' release/wwwroot/404.html
-          sed -i 's|register(.*);|register\1.then(function(r){console.log("SW registered")}).catch(function(e){console.error("SW error",e)});})}|g' release/wwwroot/404.html
+          sed -i 's|register(.*);|register\\1.then(function(r){console.log("SW registered")}).catch(function(e){console.error("SW error",e)});})}|g' release/wwwroot/404.html
           
           # Update manifest.json if needed
           if [ -f release/wwwroot/manifest.json ]; then
