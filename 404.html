@@ -4,23 +4,24 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <!-- Completely updated CSP meta tag with permissive img-src -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: *; connect-src 'self' https://*.supabase.co; font-src 'self'; frame-src 'self';">
+    <!-- Updated CSP meta tag -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com; style-src 'self' 'unsafe-inline'; img-src 'self' https: data: 'mid-d-man.github.io'; connect-src 'self' https://*.supabase.co; font-src 'self'; frame-src 'self';">
     <title>AirCode</title>
     <base href="/AirCode/" />
     <link href="css/bootstrap/bootstrap.min.css" rel="stylesheet" />
     <link href="css/app.css" rel="stylesheet" />
-    <!-- Updated favicon links to point to root favicon.ico -->
-    <link rel="icon" href="/AirCode/favicon.ico" />
-    <link rel="shortcut icon" href="/AirCode/favicon.ico" />
+    <!-- Updated favicon links -->
+    <link rel="icon" type="image/png" href="/AirCode/favicon.png" />
+    <link rel="shortcut icon" href="/AirCode/favicon.png" />
     <link href="AirCode.styles.css" rel="stylesheet" />
     <link href="manifest.json" rel="manifest" />
 
     <link rel="stylesheet" href="css/colors.css" />
     <link rel="stylesheet" href="css/responsive.css" />
 
-    <link rel="apple-touch-icon" sizes="512x512" href="icons/icon-512.png" />
-    <link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png" />
+    <!-- Updated icon paths -->
+    <link rel="apple-touch-icon" sizes="512x512" href="icon-512.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
 
     <script type="text/javascript">
         // Single Page Apps for GitHub Pages
@@ -28,7 +29,7 @@
         // https://github.com/rafgraph/spa-github-pages
         (function(l) {
             if (l.search[1] === '/' ) {
-                var decoded = l.search.slice(1).split('&').map(function(s) {
+                let decoded = l.search.slice(1).split('&').map(function(s) {
                     return s.replace(/~and~/g, '&')
                 }).join('?');
                 window.history.replaceState(null, null,

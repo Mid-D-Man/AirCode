@@ -5,7 +5,7 @@
       "url": ".nojekyll"
     },
     {
-      "hash": "sha256-+9vU2jDOYhol6ppPeIRb7CC\/FgbATfCxzawPY4Dvl8w=",
+      "hash": "sha256-CWE89lSnQSs6O0a22fTr116JBiatXQbsk5kv+yZMRJc=",
       "url": "404.html"
     },
     {
@@ -66,18 +66,18 @@
     },
     {
       "hash": "sha256-4mWsDy3aHl36ZbGt8zByK7Pvd4kRUoNgTYzRnwmPHwg=",
-      "url": "icons\/favicon.png"
+      "url": "favicon.png"
     },
     {
       "hash": "sha256-DbpQaq68ZSb5IoPosBErM1QWBfsbTxpJqhU0REi6wP4=",
-      "url": "icons\/icon-192.png"
+      "url": "icon-192.png"
     },
     {
       "hash": "sha256-oEo6d+KqX5fjxTiZk\/w9NB3Mi0+ycS5yLwCKwr4IkbA=",
-      "url": "icons\/icon-512.png"
+      "url": "icon-512.png"
     },
     {
-      "hash": "sha256-J3Cf47XqBFrhXH2wpKNjzQSuWXC5gEi4d0njuxliWhY=",
+      "hash": "sha256-0Yc2jKCRHwffALKjxCsyqPn3awM8ejH+3heEeTRKMo4=",
       "url": "index.html"
     },
     {
@@ -105,7 +105,7 @@
       "url": "js\/zxingScanner.js"
     },
     {
-      "hash": "sha256-ZWk5D5tjao0dkrCaFgn5HR54sRQz8KOu7MvLDJJZrhU=",
+      "hash": "sha256-0d+bWK3Cdik6KijtIOayIDavFCq6wNRRX4yh9+2priw=",
       "url": "manifest.json"
     },
     {
@@ -637,5 +637,5 @@
       "url": "_content\/ZXingBlazor\/ZXingBlazor.bundle.scp.css"
     }
   ],
-  "version": "kqNaHo3m"
+  "version": "GS+qGOtM"
 };
