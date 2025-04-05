@@ -24,7 +24,7 @@ jobs:
 
       - name: Prepare for deployment
         run: |
-          # Create .nojekyll file
+          # Create .nojekyll file (must be empty)
           touch release/wwwroot/.nojekyll
           
           # Create 404.html for SPA routing
@@ -34,17 +34,13 @@ jobs:
           sed -i 's|<base href="/" />|<base href="/AirCode/" />|g' release/wwwroot/index.html
           sed -i 's|<base href="/" />|<base href="/AirCode/" />|g' release/wwwroot/404.html
           
-          # Update service worker registration to be more robust
-          sed -i 's|navigator\.serviceWorker\.register|if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register|g' release/wwwroot/index.html
-          sed -i 's|register(.*);|register\\1.then(function(r){console.log("SW registered")}).catch(function(e){console.error("SW error",e)});})}|g' release/wwwroot/index.html
+          # Make sure the paths in the service worker are correct
+          sed -i 's|const baseUrl = \'/AirCode\';|const baseUrl = \'\';|g' release/wwwroot/service-worker.js
           
-          # Similar updates for 404.html
-          sed -i 's|navigator\.serviceWorker\.register|if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register|g' release/wwwroot/404.html
-          sed -i 's|register(.*);|register\\1.then(function(r){console.log("SW registered")}).catch(function(e){console.error("SW error",e)});})}|g' release/wwwroot/404.html
-          
-          # Update manifest.json if needed
-          if [ -f release/wwwroot/manifest.json ]; then
-            sed -i 's|"start_url": "./"|"start_url": "/AirCode/"|g' release/wwwroot/manifest.json
+          # Verify _framework folder is included in the deployment
+          if [ ! -d "release/wwwroot/_framework" ]; then
+            echo "ERROR: _framework folder is missing in the build output"
+            exit 1
           fi
           
           # Generate a list of deployed files for debugging

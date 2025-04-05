@@ -194,15 +194,16 @@
         // You could add error display logic here
     }
 
-    private async Task HandleSignUp(SignUpModel model)
-    {
-        // Handle signup logic
-        await UserStorage.AddUser(new User
-        {
-            FirstName = model.FirstName,
-            MiddleName = model.MiddleName,
-            LastName = model.LastName,
-            // ... other properties
-        });
-    }
+private async Task HandleSignUp(SignUpModel model)
+{
+// Handle signup logic
+await UserStorage.AddUser(new User
+{
+FirstName = model.FirstName,
+MiddleName = model.MiddleName,
+LastName = model.LastName,
+// ... other properties
+});
+}
+
 }

@@ -1,14 +1,17 @@
-// Base path handling for GitHub Pages
-const baseUrl = '/AirCode';
+// Service worker for AirCode PWA
+// This version uses relative paths instead of absolute paths with baseUrl
 
-// Smaller cache list to avoid potential issues
-const CACHE_NAME = 'aircode-cache-v3';
+// Cache name with version
+const CACHE_NAME = 'aircode-cache-v4';
+
+// URLs to cache - using relative paths to work with any base URL
 const urlsToCache = [
-    `${baseUrl}/`,
-    `${baseUrl}/index.html`,
-    `${baseUrl}/404.html`,
-    `${baseUrl}/favicon.png`,
-    `${baseUrl}/css/app.css`
+    './',
+    './index.html',
+    './404.html',
+    './favicon.png',
+    './css/app.css',
+    './_framework/blazor.webassembly.js'
 ];
 
 self.addEventListener('install', (event) => {
@@ -20,6 +23,9 @@ self.addEventListener('install', (event) => {
                 console.log('[ServiceWorker] Caching core assets');
                 return cache.addAll(urlsToCache);
             })
+            .catch(error => {
+                console.error('[ServiceWorker] Cache failed:', error);
+            })
     );
 });
 
@@ -30,31 +36,59 @@ self.addEventListener('activate', (event) => {
             return Promise.all(
                 cacheNames.map(cacheName => {
                     if (cacheName !== CACHE_NAME) {
+                        console.log('[ServiceWorker] Clearing old cache:', cacheName);
                         return caches.delete(cacheName);
                     }
                 })
             );
-        }).then(() => self.clients.claim())
+        }).then(() => {
+            console.log('[ServiceWorker] Claiming clients');
+            return self.clients.claim();
+        })
     );
 });
 
-// Simplified fetch handler that falls back to network for most requests
+// Improved fetch handler with better error handling
 self.addEventListener('fetch', (event) => {
-    // Only cache same-origin requests
-    if (event.request.url.startsWith(self.location.origin)) {
-        event.respondWith(
-            caches.match(event.request).then(cachedResponse => {
+    // Skip non-GET requests
+    if (event.request.method !== 'GET') return;
+
+    // Handle the fetch
+    event.respondWith(
+        caches.match(event.request)
+            .then(cachedResponse => {
                 if (cachedResponse) {
+                    // Return cached response
                     return cachedResponse;
                 }
 
-                return fetch(event.request).catch(() => {
-                    // For navigation, return the cached index page as fallback
-                    if (event.request.mode === 'navigate') {
-                        return caches.match(`${baseUrl}/index.html`);
-                    }
-                });
+                // Not in cache, fetch from network
+                return fetch(event.request)
+                    .then(response => {
+                        // Cache valid responses for future
+                        if (response && response.status === 200) {
+                            const responseToCache = response.clone();
+                            caches.open(CACHE_NAME)
+                                .then(cache => {
+                                    cache.put(event.request, responseToCache);
+                                });
+                        }
+                        return response;
+                    })
+                    .catch(error => {
+                        console.log('[ServiceWorker] Fetch failed:', error);
+
+                        // For navigation requests, return index.html as fallback
+                        if (event.request.mode === 'navigate') {
+                            return caches.match('./index.html');
+                        }
+
+                        // Return a proper error for other requests
+                        return new Response('Network error', {
+                            status: 408,
+                            headers: new Headers({ 'Content-Type': 'text/plain' })
+                        });
+                    });
             })
-        );
-    }
+    );
 });
