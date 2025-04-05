@@ -1,10 +1,13 @@
 // Base path handling for GitHub Pages
 const baseUrl = '/AirCode';
 
-const CACHE_NAME = 'aircode-cache-v1';
+const CACHE_NAME = 'aircode-cache-v1.1'; // Incremented version to force cache refresh
 const urlsToCache = [
     `${baseUrl}/`,
     `${baseUrl}/index.html`,
+    `${baseUrl}/404.html`,
+    `${baseUrl}/favicon.ico`,
+    `${baseUrl}/favicon.png`,
     `${baseUrl}/css/bootstrap/bootstrap.min.css`,
     `${baseUrl}/css/app.css`,
     `${baseUrl}/css/colors.css`,
@@ -20,6 +23,7 @@ const urlsToCache = [
 
 self.addEventListener('install', (event) => {
     console.log('[ServiceWorker] Install');
+    self.skipWaiting(); // Force the waiting service worker to become the active service worker
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then((cache) => {
@@ -43,20 +47,37 @@ self.addEventListener('activate', (event) => {
                     }
                 })
             );
+        }).then(() => {
+            // Tell the active service worker to take control of the page immediately
+            return self.clients.claim();
         })
     );
 });
 
 self.addEventListener('fetch', (event) => {
+    // Special handling for favicon.ico requests
+    if (event.request.url.endsWith('favicon.ico')) {
+        event.respondWith(
+            caches.match(`${baseUrl}/favicon.ico`).then(response => {
+                return response || fetch(event.request);
+            })
+        );
+        return;
+    }
+
     // Check if the request URL starts with the base URL
     const url = new URL(event.request.url);
-    const isBaseUrl = url.pathname.startsWith(baseUrl);
 
     event.respondWith(
         caches.match(event.request).then((response) => {
             // Return asset from cache if available
             if (response) {
                 return response;
+            }
+
+            // For navigation requests, return the index.html if no match is found
+            if (event.request.mode === 'navigate') {
+                return caches.match(`${baseUrl}/index.html`);
             }
 
             // Otherwise, fetch from the network
@@ -82,7 +103,10 @@ self.addEventListener('fetch', (event) => {
                 return networkResponse;
             }).catch(error => {
                 console.error('[ServiceWorker] Fetch failed:', error);
-                // You could return a custom offline page here
+                // For navigation failures, return the cached index.html
+                if (event.request.mode === 'navigate') {
+                    return caches.match(`${baseUrl}/index.html`);
+                }
             });
         })
     );

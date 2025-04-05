@@ -24,34 +24,36 @@ jobs:
 
       - name: Create and update required files
         run: |
-          # Create .nojekyll file
+          # Create .nojekyll file (prevents GitHub Pages from using Jekyll)
           touch release/wwwroot/.nojekyll
           
           # Copy index.html to 404.html for SPA routing
           cp release/wwwroot/index.html release/wwwroot/404.html
           
-          # Update base href in index.html
+          # Update base href in index.html and 404.html
           sed -i 's|<base href="/" />|<base href="/AirCode/" />|g' release/wwwroot/index.html
+          sed -i 's|<base href="/" />|<base href="/AirCode/" />|g' release/wwwroot/404.html
           
-          # COMPLETELY Replace CSP with a more permissive one for images
-          sed -i 's|<meta http-equiv="Content-Security-Policy".*>|<meta http-equiv="Content-Security-Policy" content="default-src '\''self'\''; script-src '\''self'\'' '\''unsafe-inline'\'' '\''unsafe-eval'\'' https://unpkg.com; style-src '\''self'\'' '\''unsafe-inline'\''; img-src '\''self'\'' https: data:; connect-src '\''self'\'' https://*.supabase.co; font-src '\''self'\''; frame-src '\''self'\'';">|g' release/wwwroot/index.html
+          # Replace CSP with a properly formatted one that includes all required sources
+          sed -i 's|<meta http-equiv="Content-Security-Policy".*>|<meta http-equiv="Content-Security-Policy" content="default-src '\''self'\''; script-src '\''self'\'' '\''unsafe-inline'\'' '\''unsafe-eval'\'' https://unpkg.com; style-src '\''self'\'' '\''unsafe-inline'\''; img-src '\''self'\'' https: data: '\''mid-d-man.github.io'\''; connect-src '\''self'\'' https://*.supabase.co; font-src '\''self'\''; frame-src '\''self'\'';">|g' release/wwwroot/index.html
+          sed -i 's|<meta http-equiv="Content-Security-Policy".*>|<meta http-equiv="Content-Security-Policy" content="default-src '\''self'\''; script-src '\''self'\'' '\''unsafe-inline'\'' '\''unsafe-eval'\'' https://unpkg.com; style-src '\''self'\'' '\''unsafe-inline'\''; img-src '\''self'\'' https: data: '\''mid-d-man.github.io'\''; connect-src '\''self'\'' https://*.supabase.co; font-src '\''self'\''; frame-src '\''self'\'';">|g' release/wwwroot/404.html
           
-          # Copy favicon to the root for browsers that try to access it there
+          # Handle favicon properly - copy to all common locations browsers look for it
           cp release/wwwroot/icons/favicon.png release/wwwroot/favicon.ico
-          
-          # Create a symbolic link to the favicon in the root as well (fallback)
-          ln -sf icons/favicon.png release/wwwroot/favicon.png
+          cp release/wwwroot/icons/favicon.png release/wwwroot/favicon.png
           
           # Update the manifest.json with the correct base path
           if [ -f release/wwwroot/manifest.json ]; then
             sed -i 's|"start_url": "./"|"start_url": "/AirCode/"|g' release/wwwroot/manifest.json
           fi
           
-          # Update service worker registration
+          # Update service worker registration to use correct scope
           sed -i "s|navigator\.serviceWorker\.register('service-worker\.js')|navigator.serviceWorker.register('service-worker.js', { scope: '/AirCode/' })|g" release/wwwroot/index.html
+          sed -i "s|navigator\.serviceWorker\.register('service-worker\.js')|navigator.serviceWorker.register('service-worker.js', { scope: '/AirCode/' })|g" release/wwwroot/404.html
           
-          # Update favicon links to use absolute paths
-          sed -i 's|<link rel="icon" type="image/png" href="icons/favicon.png" />|<link rel="icon" type="image/png" href="/AirCode/icons/favicon.png" /><link rel="shortcut icon" href="/AirCode/icons/favicon.png" />|g' release/wwwroot/index.html
+          # Make sure favicon links use the correct path
+          sed -i 's|<link rel="icon" type="image/png" href="/AirCode/icons/favicon.png" />|<link rel="icon" type="image/png" href="/AirCode/icons/favicon.png" /><link rel="shortcut icon" href="/AirCode/favicon.ico" /><link rel="icon" href="/AirCode/favicon.ico" />|g' release/wwwroot/index.html
+          sed -i 's|<link rel="icon" type="image/png" href="/AirCode/icons/favicon.png" />|<link rel="icon" type="image/png" href="/AirCode/icons/favicon.png" /><link rel="shortcut icon" href="/AirCode/favicon.ico" /><link rel="icon" href="/AirCode/favicon.ico" />|g' release/wwwroot/404.html
 
       - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
