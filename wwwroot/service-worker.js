@@ -1,21 +1,22 @@
 // Base path handling for GitHub Pages
 const baseUrl = '/AirCode';
 
-const CACHE_NAME = 'aircode-cache-v1.2'; // Incremented version to force cache refresh
+const CACHE_NAME = 'aircode-cache-v1.3'; // Incremented version to force cache refresh
 const urlsToCache = [
     `${baseUrl}/`,
     `${baseUrl}/index.html`,
     `${baseUrl}/404.html`,
-    `${baseUrl}/favicon.ico`,
+    `${baseUrl}/favicon.png`,
+    `${baseUrl}/icon-192.png`,
+    `${baseUrl}/icon-512.png`,
     `${baseUrl}/css/bootstrap/bootstrap.min.css`,
     `${baseUrl}/css/app.css`,
     `${baseUrl}/css/colors.css`,
     `${baseUrl}/css/responsive.css`,
-    `${baseUrl}/icons/icon-512.png`,
-    `${baseUrl}/icons/icon-192.png`,
     `${baseUrl}/js/themeSwitcher.js`,
     `${baseUrl}/js/connectivityServices.js`,
     `${baseUrl}/_framework/blazor.webassembly.js`,
+    // Add any other essential assets, like fonts or additional scripts
 ];
 
 self.addEventListener('install', (event) => {
@@ -52,10 +53,10 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
     const url = new URL(event.request.url);
 
-    // Special handling for favicon requests at root
-    if (event.request.url.includes('favicon.ico')) {
+    // Special handling for favicon requests
+    if (event.request.url.includes('favicon.ico') || event.request.url.includes('favicon.png')) {
         event.respondWith(
-            caches.match(`${baseUrl}/favicon.ico`)
+            caches.match(`${baseUrl}/favicon.png`)
                 .then(response => {
                     return response || fetch(event.request);
                 })

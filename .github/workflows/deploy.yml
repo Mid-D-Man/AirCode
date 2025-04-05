@@ -34,20 +34,32 @@ jobs:
           sed -i 's|<base href="/" />|<base href="/AirCode/" />|g' release/wwwroot/index.html
           sed -i 's|<base href="/" />|<base href="/AirCode/" />|g' release/wwwroot/404.html
           
-          # Move favicon.png to root and rename to favicon.ico
-          cp release/wwwroot/icons/favicon.png release/wwwroot/favicon.ico
+          # Copy icons to root level
+          cp release/wwwroot/icons/favicon.png release/wwwroot/favicon.png
+          cp release/wwwroot/icons/icon-192.png release/wwwroot/icon-192.png
+          cp release/wwwroot/icons/icon-512.png release/wwwroot/icon-512.png
           
-          # Completely replace CSP in both index.html and 404.html with inline style that allows all images
+          # Update CSP in index.html and 404.html
           sed -i 's|<meta http-equiv="Content-Security-Policy".*>|<meta http-equiv="Content-Security-Policy" content="default-src '\''self'\''; script-src '\''self'\'' '\''unsafe-inline'\'' '\''unsafe-eval'\'' https://unpkg.com; style-src '\''self'\'' '\''unsafe-inline'\''; img-src '\''self'\'' data: https: *; connect-src '\''self'\'' https://*.supabase.co; font-src '\''self'\''; frame-src '\''self'\'';">|g' release/wwwroot/index.html
-          sed -i 's|<meta http-equiv="Content-Security-Policy".*>|<meta http-equiv="Content-Security-Policy" content="default-src '\''self'\''; script-src '\''self'\'' '\''unsafe-inline'\'' '\''unsafe-eval'\'' https://unpkg.com; style-src '\''self'\'' '\''unsafe-inline'\''; img-src '\''self'\'' data: https: *; connect-src '\''self'\'' https://*.supabase.co; font-src '\''self'\''; frame-src '\''self'\'';">|g' release/wwwroot/404.html
+          sed -i 's|<meta http-equiv="Content-Security-Policy".*>|<meta http-equiv="Content-Security-Policy" content="default-src '\''self'\''; script-src '\''self'\'' '\''unsafe-inline'\'' '\''unsafe-eval'\'' https://unpkg.com; style-src '\''self'\'' '\''unsafe-inline'\''; img-src '\''self'\'' data: https: *; connect-src '\''self'\'' https://*.supabase.co; font-src '\''self'\''; frame-src '\''self'\''; ">|g' release/wwwroot/404.html
           
-          # Update favicon references to point at root favicon
-          sed -i 's|<link rel="icon" type="image/png" href="/AirCode/icons/favicon.png" />|<link rel="icon" href="/AirCode/favicon.ico" /><link rel="shortcut icon" href="/AirCode/favicon.ico" />|g' release/wwwroot/index.html
-          sed -i 's|<link rel="icon" type="image/png" href="/AirCode/icons/favicon.png" />|<link rel="icon" href="/AirCode/favicon.ico" /><link rel="shortcut icon" href="/AirCode/favicon.ico" />|g' release/wwwroot/404.html
+          # Update favicon links
+          sed -i 's|<link rel="icon" type="image/png" href="/AirCode/icons/favicon.png" />|<link rel="icon" type="image/png" href="/AirCode/favicon.png" /><link rel="shortcut icon" href="/AirCode/favicon.png" />|g' release/wwwroot/index.html
+          sed -i 's|<link rel="icon" type="image/png" href="/AirCode/icons/favicon.png" />|<link rel="icon" type="image/png" href="/AirCode/favicon.png" /><link rel="shortcut icon" href="/AirCode/favicon.png" />|g' release/wwwroot/404.html
+          
+          # Update apple-touch-icon links
+          sed -i 's|<link rel="apple-touch-icon" sizes="512x512" href="icons/icon-512.png" />|<link rel="apple-touch-icon" sizes="512x512" href="icon-512.png" />|g' release/wwwroot/index.html
+          sed -i 's|<link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png" />|<link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />|g' release/wwwroot/index.html
+          sed -i 's|<link rel="apple-touch-icon" sizes="512x512" href="icons/icon-512.png" />|<link rel="apple-touch-icon" sizes="512x512" href="icon-512.png" />|g' release/wwwroot/404.html
+          sed -i 's|<link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png" />|<link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />|g' release/wwwroot/404.html
           
           # Update the manifest.json
           if [ -f release/wwwroot/manifest.json ]; then
             sed -i 's|"start_url": "./"|"start_url": "/AirCode/"|g' release/wwwroot/manifest.json
+            sed -i 's|"src": "icons/icon-512.png"|"src": "icon-512.png"|g' release/wwwroot/manifest.json
+            sed -i 's|"src": "icons/icon-192.png"|"src": "icon-192.png"|g' release/wwwroot/manifest.json
+            # Add favicon to manifest if not present
+            grep -q "favicon.png" release/wwwroot/manifest.json || sed -i '/"icons": \[/a \    {\n      "src": "favicon.png",\n      "type": "image/png",\n      "sizes": "32x32"\n    },' release/wwwroot/manifest.json
           fi
           
           # Update service worker registration
