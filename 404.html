@@ -38,6 +38,19 @@
             }
         }(window.location))
     </script>
+    <script>
+        // Unregister all service workers before registering new ones
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                for(let registration of registrations) {
+                    registration.unregister();
+                }
+            }).then(function() {
+                // After unregistering, reload the page
+                window.location.reload();
+            });
+        }
+    </script>
 </head>
 
 <body>

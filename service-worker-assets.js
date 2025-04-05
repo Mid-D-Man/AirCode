@@ -5,7 +5,7 @@
       "url": ".nojekyll"
     },
     {
-      "hash": "sha256-CWE89lSnQSs6O0a22fTr116JBiatXQbsk5kv+yZMRJc=",
+      "hash": "sha256-NUhhO30blcoNvFJH3Id2scJkYJQN03gPNHJTJ7EAB7k=",
       "url": "404.html"
     },
     {
@@ -77,7 +77,7 @@
       "url": "icon-512.png"
     },
     {
-      "hash": "sha256-0Yc2jKCRHwffALKjxCsyqPn3awM8ejH+3heEeTRKMo4=",
+      "hash": "sha256-oz4HJn8rBrs3ndp6mTiD\/T7mC0EVfSdPA\/rphQ81860=",
       "url": "index.html"
     },
     {
@@ -637,5 +637,5 @@
       "url": "_content\/ZXingBlazor\/ZXingBlazor.bundle.scp.css"
     }
   ],
-  "version": "GS+qGOtM"
+  "version": "WNHEkKC6"
 };
