@@ -113,8 +113,8 @@ ClientProfile.razor             ClientSettings.razor            ClientStats.razo
 ClientProfile.razor.css         ClientSettings.razor.css        ClientStats.razor.css           ScanPage.razor.css
 
 ./Pages/TestPages:
-Index.razor             Index.razor.css         ShaderPage1.razor       TestPage.razor          TestPage.razor.css
-
+                   ShaderPage1.razor       TestPage.razor          TestPage.razor.css
+Index.razor  Index.razor.css  
 ./Properties:
 launchSettings.json
 
