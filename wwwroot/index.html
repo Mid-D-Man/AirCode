@@ -5,7 +5,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <!-- Updated CSP meta tag -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com; style-src 'self' 'unsafe-inline'; img-src 'self' https: data: 'mid-d-man.github.io'; connect-src 'self' https://*.supabase.co; font-src 'self'; frame-src 'self';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com; style-src 'self' 'unsafe-inline'; img-src * 'self' data:; connect-src 'self' https://*.supabase.co; font-src 'self'; frame-src 'self';">
     <title>AirCode</title>
     <base href="/AirCode/" />
     <link href="css/bootstrap/bootstrap.min.css" rel="stylesheet" />
@@ -37,6 +37,19 @@
                 );
             }
         }(window.location))
+    </script>
+    <script>
+        // Unregister all service workers before registering new ones
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                for(let registration of registrations) {
+                    registration.unregister();
+                }
+            }).then(function() {
+                // After unregistering, reload the page
+                window.location.reload();
+            });
+        }
     </script>
 </head>
 
