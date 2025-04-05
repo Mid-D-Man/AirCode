@@ -1,12 +1,11 @@
 @page "/"
 @inject NavigationManager NavigationManager
 
-<component type="typeof(Components.Loading.LoadingScreen)" render-mode="ServerPrerendered" />
-
 @code {
 protected override void OnInitialized()
 {
 // Navigate to Auth page after initial load
 NavigationManager.NavigateTo("Auth");
 }
+
 }
