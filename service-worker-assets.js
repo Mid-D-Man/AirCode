@@ -77,7 +77,7 @@
       "url": "icons\/icon-512.png"
     },
     {
-      "hash": "sha256-Y2Hl7\/D5hm3T7K5OR168iQ3MMdWc2k0okXC15ZFFlIs=",
+      "hash": "sha256-uyv\/ff14Za\/P3LgNh+HCl5FxCtI7ndRiiyFXRCwrkFQ=",
       "url": "index.html"
     },
     {
@@ -637,5 +637,5 @@
       "url": "_content\/ZXingBlazor\/ZXingBlazor.bundle.scp.css"
     }
   ],
-  "version": "gIEl99mo"
+  "version": "RCj4r+a+"
 };
