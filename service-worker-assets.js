@@ -9,7 +9,7 @@
       "url": "404.html"
     },
     {
-      "hash": "sha256-WeCZ7hFwX6kRH9ftgoD9QpPO9ZB1pHlg9vFFgbtbWco=",
+      "hash": "sha256-esl0SGj2cXS05dX+Jp2A8Ch7v2sROCfleN0SpK0NNEs=",
       "url": "css\/app.css"
     },
     {
@@ -77,7 +77,7 @@
       "url": "icon-512.png"
     },
     {
-      "hash": "sha256-9iIVD9IRW7h8bck0mj3cvrAOqW06bmouPoI3uka+GPM=",
+      "hash": "sha256-WQ3nA4HJHv7rmcwfc7mfH81ZEcxD69ek47jyzQdM53M=",
       "url": "index.html"
     },
     {
@@ -641,5 +641,5 @@
       "url": "_content\/ZXingBlazor\/ZXingBlazor.bundle.scp.css"
     }
   ],
-  "version": "IVIH0weV"
+  "version": "Lzvvxreg"
 };

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>AirCode Preflight Check</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 2rem; }
+    .success { color: green; }
+    .failure { color: red; }
+    table { border-collapse: collapse; margin-top: 1rem; }
+    td, th { border: 1px solid #ddd; padding: 8px; }
+    tr:nth-child(even) { background-color: #f2f2f2; }
+  </style>
+</head>
+<body>
+  <h1>AirCode Deployment Preflight Check</h1>
+  <div id="results"></div>
+  <script>
+    const files = [
+      'index.html',
+      'css/app.css',
+      'css/colors.css',
+      '_framework/blazor.webassembly.js',
+      'service-worker.js',
+      'manifest.json'
+    ];
+
+    async function checkFiles() {
+      const results = document.getElementById('results');
+      const table = document.createElement('table');
+
+      // Header row
+      const headerRow = document.createElement('tr');
+      ['File', 'Status', 'Size', 'Response Type'].forEach(text => {
+        const th = document.createElement('th');
+        th.textContent = text;
+        headerRow.appendChild(th);
+      });
+      table.appendChild(headerRow);
+
+      // Check each file
+      for (const file of files) {
+        const row = document.createElement('tr');
+
+        // File name
+        const fileCell = document.createElement('td');
+        fileCell.textContent = file;
+        row.appendChild(fileCell);
+
+        try {
+          const response = await fetch(file);
+
+          // Status
+          const statusCell = document.createElement('td');
+          if (response.ok) {
+            statusCell.textContent = '✅ ' + response.status;
+            statusCell.className = 'success';
+          } else {
+            statusCell.textContent = '❌ ' + response.status;
+            statusCell.className = 'failure';
+          }
+          row.appendChild(statusCell);
+
+          // Size
+          const sizeCell = document.createElement('td');
+          const blob = await response.blob();
+          sizeCell.textContent = (blob.size / 1024).toFixed(2) + ' KB';
+          row.appendChild(sizeCell);
+
+          // Content type
+          const typeCell = document.createElement('td');
+          typeCell.textContent = response.headers.get('content-type');
+          row.appendChild(typeCell);
+
+        } catch (error) {
+          // Error cells
+          const errorCell = document.createElement('td');
+          errorCell.textContent = '❌ Error';
+          errorCell.className = 'failure';
+          errorCell.colSpan = 3;
+          row.appendChild(errorCell);
+        }
+
+        table.appendChild(row);
+      }
+
+      results.appendChild(table);
+
+      // Add base href info
+      const baseInfo = document.createElement('div');
+      baseInfo.innerHTML = `<h3>Environment</h3>
+        <p>Base Href: ${document.querySelector('base')?.href || 'Not set'}</p>
+        <p>URL: ${window.location.href}</p>
+        <p>Current Path: ${window.location.pathname}</p>
+        <p>User Agent: ${navigator.userAgent}</p>`;
+      results.appendChild(baseInfo);
+    }
+
+    window.addEventListener('load', checkFiles);
+  </script>
+</body>
+</html>
