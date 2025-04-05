@@ -1,32 +1,35 @@
 // Service worker for AirCode PWA
-// This version uses relative paths instead of absolute paths with baseUrl
+// Version specifically designed for GitHub Pages deployment
 
 // Cache name with version
-const CACHE_NAME = 'aircode-cache-v5';
+const CACHE_NAME = 'aircode-cache-v6';
 
-// Current base URL
-const baseUrl = self.location.pathname.replace(/\/[^\/]*$/, '/');
-
-// URLs to cache - using relative paths to work with any base URL
-const urlsToCache = [
-    './',
-    './index.html',
-    './404.html',
-    './favicon.png',
-    './css/app.css',
-    './css/bootstrap/bootstrap.min.css',
-    './css/colors.css',
-    './css/responsive.css',
-    './_framework/blazor.webassembly.js',
-    './js/debug.js',
-    './js/connectivityServices.js',
-    './js/themeSwitcher.js',
-    './manifest.json'
-];
+// Get the base URL from service worker's location
+const baseUrl = self.registration.scope;
 
 self.addEventListener('install', (event) => {
-    console.log('[ServiceWorker] Install');
+    console.log('[ServiceWorker] Install started');
     self.skipWaiting();
+
+    // Dynamically build the URLs to cache based on the base URL
+    const urlsToCache = [
+        baseUrl,
+        new URL('index.html', baseUrl),
+        new URL('404.html', baseUrl),
+        new URL('favicon.png', baseUrl),
+        new URL('css/app.css', baseUrl),
+        new URL('css/bootstrap/bootstrap.min.css', baseUrl),
+        new URL('css/colors.css', baseUrl),
+        new URL('css/responsive.css', baseUrl),
+        new URL('_framework/blazor.webassembly.js', baseUrl),
+        new URL('js/debug.js', baseUrl),
+        new URL('js/connectivityServices.js', baseUrl),
+        new URL('js/themeSwitcher.js', baseUrl),
+        new URL('manifest.json', baseUrl)
+    ];
+
+    console.log('[ServiceWorker] URLs to cache:', urlsToCache);
+
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then((cache) => {
@@ -58,7 +61,7 @@ self.addEventListener('activate', (event) => {
     );
 });
 
-// Improved fetch handler with better error handling
+// Improved fetch handler with better error handling and path normalization
 self.addEventListener('fetch', (event) => {
     // Skip non-GET requests
     if (event.request.method !== 'GET') return;
@@ -88,9 +91,9 @@ self.addEventListener('fetch', (event) => {
                     .catch(error => {
                         console.log('[ServiceWorker] Fetch failed:', error);
 
-                        // For navigation requests, return index.html as fallback
+                        // For navigation requests, try to return index.html
                         if (event.request.mode === 'navigate') {
-                            return caches.match('./index.html');
+                            return caches.match(new URL('index.html', baseUrl));
                         }
 
                         // Return a proper error for other requests
@@ -102,3 +105,12 @@ self.addEventListener('fetch', (event) => {
             })
     );
 });
+
+// Add a message handler to receive and log messages from the main page
+self.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'LOG') {
+        console.log('[ServiceWorker] From page:', event.data.message);
+    }
+});
+
+console.log('[ServiceWorker] Initialized with scope:', self.registration.scope);
