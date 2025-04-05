@@ -9,7 +9,7 @@
       "url": "404.html"
     },
     {
-      "hash": "sha256-10KEeWxsgry5D9LUZc0K86lpIg9RcWdyyBB5sXq6Ypk=",
+      "hash": "sha256-WeCZ7hFwX6kRH9ftgoD9QpPO9ZB1pHlg9vFFgbtbWco=",
       "url": "css\/app.css"
     },
     {
@@ -77,7 +77,7 @@
       "url": "icon-512.png"
     },
     {
-      "hash": "sha256-atcEL\/c+6xqiWrCrnPj8tgB+6GEYywGGt\/7xo8vsT5w=",
+      "hash": "sha256-9iIVD9IRW7h8bck0mj3cvrAOqW06bmouPoI3uka+GPM=",
       "url": "index.html"
     },
     {
@@ -85,7 +85,7 @@
       "url": "js\/connectivityServices.js"
     },
     {
-      "hash": "sha256-QDKfNgDzEfl7uhdEA2hTSpGCP5velyfESFSz9\/DE0kQ=",
+      "hash": "sha256-14y9otYEgwXBhbhi5McA6Q0GmnVi\/nh3+02NIj0gfWI=",
       "url": "js\/debug.js"
     },
     {
@@ -169,7 +169,7 @@
       "url": "wasm\/qr_code_generator.js"
     },
     {
-      "hash": "sha256-KnmCub3IpOrMtHO47Vbfl6dZ6YOupETr1th3J5N\/xto=",
+      "hash": "sha256-gWADiwAs+Hj7S3uKvnNR\/hLfpTcDLN7fB917jf7g\/iM=",
       "url": "AirCode.styles.css"
     },
     {
@@ -205,11 +205,11 @@
       "url": "_framework\/icudt.dat"
     },
     {
-      "hash": "sha256-GMOve6bGqLvl2lDbs2t9DpUlWkNrPtbov22MOX05rxI=",
+      "hash": "sha256-PU+CuW4FD6NTTezZ+Kk7s3iekmV05LIWDsB2+fDL5Ys=",
       "url": "_framework\/blazor.boot.json"
     },
     {
-      "hash": "sha256-lW+oDaLC+JtS06GlA4aAk\/R4tEJYFllihQXwTrwGF5Y=",
+      "hash": "sha256-9FKq71R98p28NCUe9SXBHX3ZkUknRp+e2Ov2Xy10y8E=",
       "url": "_framework\/AirCode.dll"
     },
     {
@@ -641,5 +641,5 @@
       "url": "_content\/ZXingBlazor\/ZXingBlazor.bundle.scp.css"
     }
   ],
-  "version": "KF7iHzym"
+  "version": "IVIH0weV"
 };

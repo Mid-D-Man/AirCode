@@ -7,7 +7,7 @@
   "linkerEnabled": true,
   "resources": {
     "assembly": {
-      "AirCode.dll": "sha256-lW+oDaLC+JtS06GlA4aAk\/R4tEJYFllihQXwTrwGF5Y=",
+      "AirCode.dll": "sha256-9FKq71R98p28NCUe9SXBHX3ZkUknRp+e2Ov2Xy10y8E=",
       "Blazored.LocalStorage.dll": "sha256-xcO4wZtFwM5I9DIZf1sZpOdcsaTjw1HyqJ5AWciMDAk=",
       "Microsoft.AspNetCore.Authorization.dll": "sha256-zoQOkw5eKH2GZRDjA64sA7jMrAiu4fkCTS+xMyQDlgA=",
       "Microsoft.AspNetCore.Components.dll": "sha256-wvbpQ2PGFrWwgCgdWdTvfGv8iboUNPlORvswYN8Y4zU=",
