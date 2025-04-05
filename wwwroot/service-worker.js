@@ -2,7 +2,10 @@
 // This version uses relative paths instead of absolute paths with baseUrl
 
 // Cache name with version
-const CACHE_NAME = 'aircode-cache-v4';
+const CACHE_NAME = 'aircode-cache-v5';
+
+// Current base URL
+const baseUrl = self.location.pathname.replace(/\/[^\/]*$/, '/');
 
 // URLs to cache - using relative paths to work with any base URL
 const urlsToCache = [
@@ -11,7 +14,14 @@ const urlsToCache = [
     './404.html',
     './favicon.png',
     './css/app.css',
-    './_framework/blazor.webassembly.js'
+    './css/bootstrap/bootstrap.min.css',
+    './css/colors.css',
+    './css/responsive.css',
+    './_framework/blazor.webassembly.js',
+    './js/debug.js',
+    './js/connectivityServices.js',
+    './js/themeSwitcher.js',
+    './manifest.json'
 ];
 
 self.addEventListener('install', (event) => {

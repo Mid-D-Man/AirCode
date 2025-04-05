@@ -9,46 +9,35 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v1
+        uses: actions/setup-dotnet@v3
         with:
-          dotnet-version: 7.0.x
+          dotnet-version: '7.0.x'
 
-      - name: Publish .NET Project
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Publish
+        run: dotnet publish -c Release -o publish
+
+      - name: Change base-tag in index.html
         run: |
-          dotnet restore
-          dotnet build --configuration Release --no-restore
-          dotnet publish AirCode.csproj -c Release -o release --nologo
+          find publish/wwwroot -name "index.html" -exec sed -i 's/<base href="\/"/<base href="\/AirCode\/"/g' {} \;
 
-      - name: Prepare for deployment
-        run: |
-          # Create .nojekyll file (must be empty)
-          touch release/wwwroot/.nojekyll
-          
-          # Create 404.html for SPA routing
-          cp release/wwwroot/index.html release/wwwroot/404.html
-          
-          # Update base href
-          sed -i 's|<base href="/" />|<base href="/AirCode/" />|g' release/wwwroot/index.html
-          sed -i 's|<base href="/" />|<base href="/AirCode/" />|g' release/wwwroot/404.html
-          
-          # Make sure the paths in the service worker are correct
-          sed -i 's|const baseUrl = '\''/AirCode'\''|const baseUrl = '\'''\''|g' release/wwwroot/service-worker.js
-          
-          # Verify _framework folder is included in the deployment
-          if [ ! -d "release/wwwroot/_framework" ]; then
-            echo "ERROR: _framework folder is missing in the build output"
-            exit 1
-          fi
-          
-          # Generate a list of deployed files for debugging
-          find release/wwwroot -type f | sort > release/wwwroot/files.txt
+      - name: Add .nojekyll file
+        run: touch publish/wwwroot/.nojekyll
 
-      - name: Deploy to GitHub Pages
+      - name: Copy index.html to 404.html
+        run: cp publish/wwwroot/index.html publish/wwwroot/404.html
+
+      - name: GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: release/wwwroot
           branch: gh-pages
+          folder: publish/wwwroot
           clean: true
