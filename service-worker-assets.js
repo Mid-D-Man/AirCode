@@ -201,11 +201,11 @@
       "url": "_framework\/icudt.dat"
     },
     {
-      "hash": "sha256-TXHwjHYa8mRoU\/ZixfgusfUzeITnpRzKJPlpKARVtpA=",
+      "hash": "sha256-TDn0lfHEEqU8cKmHptHiE0Sk0kGlyCF3v0kAqR8q1Rg=",
       "url": "_framework\/blazor.boot.json"
     },
     {
-      "hash": "sha256-\/JrMMX4yJ+4rcbFFhMzqIHpHypoCmhF0Ce3a4TwZlKA=",
+      "hash": "sha256-bh1Kjs2\/OoWOBm3rRneCw7U+WVjUgv9oacf58So3688=",
       "url": "_framework\/AirCode.dll"
     },
     {
@@ -637,5 +637,5 @@
       "url": "_content\/ZXingBlazor\/ZXingBlazor.bundle.scp.css"
     }
   ],
-  "version": "\/V0weEsG"
+  "version": "mv2gDA9d"
 };
