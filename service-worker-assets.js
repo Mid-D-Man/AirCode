@@ -5,7 +5,7 @@
       "url": ".nojekyll"
     },
     {
-      "hash": "sha256-NUhhO30blcoNvFJH3Id2scJkYJQN03gPNHJTJ7EAB7k=",
+      "hash": "sha256-k0pN3K\/fXuNvH\/LpfzxwiheegjrAi\/Kx6HlkVHd8ZsI=",
       "url": "404.html"
     },
     {
@@ -77,7 +77,7 @@
       "url": "icon-512.png"
     },
     {
-      "hash": "sha256-8FuLCLsyjrUor9pSf1ziCS115teJGu700zWJICls284=",
+      "hash": "sha256-atcEL\/c+6xqiWrCrnPj8tgB+6GEYywGGt\/7xo8vsT5w=",
       "url": "index.html"
     },
     {
@@ -109,7 +109,7 @@
       "url": "js\/zxingScanner.js"
     },
     {
-      "hash": "sha256-0d+bWK3Cdik6KijtIOayIDavFCq6wNRRX4yh9+2priw=",
+      "hash": "sha256-IJX5JAQXO80FedeT6kljryj+EDRkoJOCBW24zD5c1EA=",
       "url": "manifest.json"
     },
     {
@@ -641,5 +641,5 @@
       "url": "_content\/ZXingBlazor\/ZXingBlazor.bundle.scp.css"
     }
   ],
-  "version": "4THdXxnI"
+  "version": "KF7iHzym"
 };

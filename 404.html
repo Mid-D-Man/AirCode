@@ -7,28 +7,15 @@
     <!-- More permissive CSP for debugging -->
     <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://*.supabase.co data: blob:; connect-src 'self' https://*.supabase.co;">
     <title>AirCode</title>
-    <base href="/AirCode/" />
-    <!-- Add a fallback stylesheet first -->
-    <style>
-        /* Minimal fallback styles before app.css loads */
-        body { font-family: system-ui, sans-serif; margin: 0; padding: 0; }
-        #blazor-error-ui { display: none; }
-        .loading-progress {
-            width: 64px; height: 64px; margin: 100px auto;
-            border: 6px solid #e0e0e0; border-radius: 50%;
-            border-top-color: #3498db; animation: spin 1s infinite linear;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .splash-screen {
-            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            background-color: #f5f5f5; z-index: 9999;
-            transition: opacity 0.3s ease-in-out;
-        }
-        .splash-screen img { max-width: 150px; margin-bottom: 20px; }
-        .splash-screen h1 { font-size: 24px; margin: 0 0 20px 0; }
-        .splash-screen p { margin: 0; }
-    </style>
+    <!-- Dynamic base path for GitHub Pages -->
+    <script>
+        // Set base href dynamically based on the current URL
+        (function() {
+            let basePath = location.pathname.replace(/\/[^\/]*$/, '/');
+            document.write('<base href="' + basePath + '" />');
+            console.log('Dynamic base path set to:', basePath);
+        })();
+    </script>
     <!-- App stylesheets with integrity checks removed for debugging -->
     <link href="css/bootstrap/bootstrap.min.css" rel="stylesheet" />
     <link href="css/app.css" rel="stylesheet" />
@@ -78,7 +65,7 @@
             'Failed to load the Blazor WebAssembly application. ' +
             'This could be due to network issues or an incorrect base path. ' +
             '<a href="javascript:location.reload()">Try reloading</a> or ' +
-            '<a href="/AirCode/">return to home</a>.';
+            '<a href="./">return to home</a>.';
     }, 15000); // 15 seconds timeout
 
     // Function to hide custom splash screen when Blazor is ready
@@ -118,9 +105,20 @@
                 });
         }
 
-        // Hide splash screen when Blazor is ready or after a timeout
+        // Fixed event listener for Blazor
         if (window.Blazor) {
-            window.Blazor.addEventListener('afterStarted', hideSplashScreen);
+            // For newer Blazor versions
+            if (typeof window.Blazor.addEventListener === 'function') {
+                window.Blazor.addEventListener('afterStarted', hideSplashScreen);
+            }
+            // For older Blazor versions
+            else if (window.Blazor._internal) {
+                window.Blazor._internal.afterStarted(hideSplashScreen);
+            }
+            // Fallback
+            else {
+                setTimeout(hideSplashScreen, 3000);
+            }
         } else {
             setTimeout(hideSplashScreen, 10000); // Fallback timeout
         }
