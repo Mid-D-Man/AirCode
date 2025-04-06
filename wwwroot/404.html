@@ -2,36 +2,49 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>Redirecting...</title>
+    <title>AirCode - Redirecting...</title>
     <script>
-        // Store the actual path (everything after the repo name) in session storage
+        // This script handles GitHub Pages SPA navigation redirects
         (function() {
-            const ghPagesPattern = /github\.io/;
-            const isGitHubPages = window.location.hostname.match(ghPagesPattern);
+            // Get the repository name from the URL path 
+            const pathSegments = window.location.pathname.split('/');
+            const repoName = pathSegments[1];
 
-            if (isGitHubPages) {
-                const pathParts = window.location.pathname.split('/');
-                const repoName = pathParts[1];
-
-                // Calculate the part of the path after the repo name
-                const basePath = '/' + repoName + '/';
-                let relativePath = window.location.pathname;
-
-                if (relativePath.startsWith(basePath)) {
-                    relativePath = relativePath.substring(basePath.length - 1);
-                }
-
-                // Store the path and redirect to the base path
-                sessionStorage.setItem('navigationPath', relativePath);
-                console.log('Stored navigation path:', relativePath);
-
-                // Redirect to the root of the GitHub Pages site
-                window.location.href = basePath;
+            // Remove the repo name from the path
+            let redirectPath = window.location.pathname;
+            if (repoName && redirectPath.startsWith('/' + repoName)) {
+                redirectPath = redirectPath.substring(repoName.length + 1);
             }
+
+            // Store the intended path in session storage
+            sessionStorage.setItem('navigationPath', redirectPath || '/');
+
+            // Redirect to the base URL
+            const basePath = '/' + repoName + '/';
+            console.log('404 redirect to:', basePath);
+            window.location.replace(basePath);
         })();
     </script>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+        }
+        h1 {
+            color: #1b6ec2;
+        }
+    </style>
 </head>
 <body>
-Redirecting...
+<h1>Redirecting...</h1>
+<p>Please wait while we navigate to the requested page.</p>
+<p>If you're not redirected automatically, <a href="/">click here</a> to go to the homepage.</p>
 </body>
 </html>
