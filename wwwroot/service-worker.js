@@ -2,7 +2,7 @@
 // Version specifically designed for GitHub Pages deployment
 
 // Cache name with version - bump this when deploying changes
-const CACHE_NAME = 'aircode-cache-v7';
+const CACHE_NAME = 'aircode-cache-v8';
 
 // Get the base URL from service worker's location
 const baseUrl = self.registration.scope;
@@ -61,13 +61,10 @@ self.addEventListener('activate', (event) => {
     );
 });
 
-// Improved fetch handler with better error handling and path normalization
+// Improved fetch handler with better SPA support
 self.addEventListener('fetch', (event) => {
     // Skip non-GET requests
     if (event.request.method !== 'GET') return;
-
-    // Log the request URL for debugging
-    console.log('[ServiceWorker] Fetching:', event.request.url);
 
     // Handle the fetch
     event.respondWith(
@@ -75,38 +72,53 @@ self.addEventListener('fetch', (event) => {
             .then(cachedResponse => {
                 if (cachedResponse) {
                     // Return cached response
-                    console.log('[ServiceWorker] Returning cached:', event.request.url);
                     return cachedResponse;
                 }
 
-                // Not in cache, fetch from network
+                // Special handling for navigation requests
+                if (event.request.mode === 'navigate') {
+                    return fetch(event.request)
+                        .then(response => {
+                            // If we got a 404 for a navigation request, serve index.html
+                            if (response.status === 404) {
+                                // Store the path for the app to handle
+                                console.log('[ServiceWorker] Navigation to uncached route:', event.request.url);
+                                return caches.match(new URL('index.html', baseUrl).href);
+                            }
+                            return response;
+                        })
+                        .catch(error => {
+                            console.log('[ServiceWorker] Navigation fetch failed:', error);
+                            return caches.match(new URL('index.html', baseUrl).href);
+                        });
+                }
+
+                // Regular fetch for non-navigation requests
                 return fetch(event.request)
                     .then(response => {
-                        // Only cache same-origin responses
+                        // Only cache same-origin successful responses
                         if (response && response.status === 200 &&
                             (event.request.url.startsWith(self.location.origin) ||
                                 event.request.url.includes('github.io'))) {
                             const responseToCache = response.clone();
                             caches.open(CACHE_NAME)
                                 .then(cache => {
-                                    console.log('[ServiceWorker] Caching new resource:', event.request.url);
                                     cache.put(event.request, responseToCache);
                                 });
                         }
                         return response;
                     })
                     .catch(error => {
-                        console.log('[ServiceWorker] Fetch failed:', error, event.request.url);
-
-                        // For navigation requests, try to return index.html
-                        if (event.request.mode === 'navigate') {
-                            return caches.match(new URL('index.html', baseUrl).href);
-                        }
-
-                        // Return a proper error for other requests
-                        return new Response('Network error', {
-                            status: 408,
-                            headers: new Headers({ 'Content-Type': 'text/plain' })
+                        console.log('[ServiceWorker] Fetch failed:', error);
+                        // For API requests, return a proper error
+                        return new Response(JSON.stringify({
+                            error: 'Network error',
+                            offline: true
+                        }), {
+                            status: 503,
+                            headers: new Headers({
+                                'Content-Type': 'application/json'
+                            })
                         });
                     });
             })
