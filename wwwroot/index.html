@@ -26,7 +26,7 @@
                 basePath = '/';
             }
 
-            document.write('<base href="' + basePath + '" />');
+            document.write('<base href="/AirCode/" />');
             console.log('Dynamic base path set to:', basePath);
 
             // Store base path for service worker and other scripts
@@ -116,7 +116,7 @@
 </script>
 
 <!-- Load Blazor -->
-<script src="_framework/blazor.webassembly.js" onerror="document.getElementById('blazor-error-ui').style.display = 'block'"></script>
+<script src="_framework/blazor.webassembly.js" onerror="document.getElementById('blazor-error-ui').style.display = 'block'" autostart="false"></script>
 
 <!-- External libraries -->
 <script src="https://unpkg.com/@zxing/library@0.18.6/umd/index.min.js"></script>
@@ -179,5 +179,6 @@
         setTimeout(hideSplashScreen, 10000);
     });
 </script>
+    <script src="brotliloader.min.js" type="module"></script>
 </body>
 </html>

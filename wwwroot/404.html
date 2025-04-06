@@ -1,24 +1,184 @@
 <!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <title>AirCode</title>
-    <script type="text/javascript">
-        // Single Page Apps for GitHub Pages
-        // https://github.com/rafrex/spa-github-pages
-        var pathSegmentsToKeep = 1; // Keeps '/AirCode/'
+<html lang="en">
 
-        var l = window.location;
-        l.replace(
-            l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
-            l.pathname.split('/').slice(0, 1 + pathSegmentsToKeep).join('/') + '/?/' +
-            l.pathname.slice(1).split('/').slice(pathSegmentsToKeep).join('/').replace(/&/g, '~and~') +
-            (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
-            l.hash
-        );
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <!-- More permissive CSP for debugging -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://*.supabase.co data: blob:; connect-src 'self' https://*.supabase.co;">
+    <title>AirCode</title>
+
+    <!-- Set base href dynamically BEFORE loading any resources -->
+    <script>
+        // Set base href dynamically based on the current URL
+        (function() {
+            const ghPagesPattern = /github\.io/;
+            const isGitHubPages = window.location.hostname.match(ghPagesPattern);
+
+            let basePath;
+            if (isGitHubPages) {
+                // For GitHub Pages, use the repository name as the base path
+                const pathParts = window.location.pathname.split('/');
+                const repoName = pathParts[1]; // First segment after the leading slash
+                basePath = '/' + repoName + '/';
+            } else {
+                // For other environments, use root
+                basePath = '/';
+            }
+
+            document.write('<base href="/AirCode/" />');
+            console.log('Dynamic base path set to:', basePath);
+
+            // Store base path for service worker and other scripts
+            window.BASE_PATH = basePath;
+        })();
     </script>
+
+    <!-- App stylesheets loaded AFTER base tag is set -->
+    <link href="css/bootstrap/bootstrap.min.css" rel="stylesheet" />
+    <link href="css/app.css" rel="stylesheet" />
+    <link href="css/colors.css" rel="stylesheet" />
+    <link href="css/responsive.css" rel="stylesheet" />
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <link href="manifest.json" rel="manifest" />
+    <link rel="apple-touch-icon" sizes="512x512" href="icon-512.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
 </head>
+
 <body>
-Redirecting...
+<!-- Improved custom splash screen with spinner -->
+<div id="custom-splash" class="splash-screen">
+    <img src="favicon.png" alt="AirCode Logo" />
+    <h1>AirCode</h1>
+    <p>Loading application...</p>
+    <div class="spinner-container">
+        <div class="spinner"></div>
+    </div>
+    <div class="loading-progress-percentage">0%</div>
+</div>
+
+<div id="app">
+    <!-- This will be replaced by Blazor -->
+</div>
+
+<div id="blazor-error-ui" style="display: none;">
+    An unhandled error has occurred.
+    <a href="" class="reload">Reload</a>
+    <a class="dismiss">🗙</a>
+</div>
+
+<!-- Load debug script first -->
+<script src="js/debug.js"></script>
+
+<!-- Improved splash screen loading -->
+<script>
+    // Set initial loading progress 
+    let loadingProgress = 0;
+    let progressIntervalActive = true;
+
+    const progressInterval = setInterval(() => {
+        if (!progressIntervalActive) {
+            clearInterval(progressInterval);
+            return;
+        }
+
+        if (loadingProgress < 90) {
+            loadingProgress += Math.floor(Math.random() * 5) + 1; // Random progress for more natural feel
+            if (loadingProgress > 90) loadingProgress = 90;
+            updateLoadingProgress(loadingProgress);
+        }
+    }, 300);
+
+    function updateLoadingProgress(percentage) {
+        const percentageDisplay = document.querySelector('#custom-splash .loading-progress-percentage');
+
+        if (percentageDisplay) {
+            percentageDisplay.textContent = percentage + '%';
+        }
+    }
+
+    // Function to hide custom splash screen when Blazor is ready
+    window.hideSplashScreen = function() {
+        progressIntervalActive = false;
+        clearInterval(progressInterval);
+        updateLoadingProgress(100);
+
+        setTimeout(() => {
+            let splash = document.getElementById('custom-splash');
+            if (splash) {
+                splash.style.opacity = '0';
+                setTimeout(function() {
+                    splash.style.display = 'none';
+                }, 300);
+            }
+        }, 500);
+    };
+</script>
+
+<!-- Load Blazor -->
+<script src="_framework/blazor.webassembly.js" onerror="document.getElementById('blazor-error-ui').style.display = 'block'" autostart="false"></script>
+
+<!-- External libraries -->
+<script src="https://unpkg.com/@zxing/library@0.18.6/umd/index.min.js"></script>
+
+<!-- App scripts -->
+<script src="js/connectivityServices.js"></script>
+<script src="js/themeSwitcher.js"></script>
+
+<!-- Improved service worker registration -->
+<script>
+    // Register service worker when page has loaded
+    window.addEventListener('load', function() {
+        if ('serviceWorker' in navigator) {
+            const swUrl = new URL('service-worker.js', document.baseURI).href;
+
+            navigator.serviceWorker.register(swUrl, {
+                scope: document.baseURI
+            })
+                .then(function(registration) {
+                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                })
+                .catch(function(error) {
+                    console.log('ServiceWorker registration failed: ', error);
+                });
+        }
+
+        // Simplified Blazor loading detection
+        const checkBlazorStarted = () => {
+            if (window.Blazor) {
+                // For newer versions that support addEventListener
+                if (typeof window.Blazor.addEventListener === 'function') {
+                    window.Blazor.addEventListener('afterStarted', hideSplashScreen);
+                } else {
+                    // For older versions, use MutationObserver
+                    const observer = new MutationObserver((mutations) => {
+                        if (document.querySelector('#app > *')) {
+                            hideSplashScreen();
+                            observer.disconnect();
+                        }
+                    });
+
+                    observer.observe(document.getElementById('app'), {
+                        childList: true,
+                        subtree: true
+                    });
+
+                    // Safety fallback
+                    setTimeout(hideSplashScreen, 5000);
+                }
+            } else {
+                // Retry if Blazor hasn't loaded yet
+                setTimeout(checkBlazorStarted, 100);
+            }
+        };
+
+        // Start checking if Blazor has started
+        checkBlazorStarted();
+
+        // Ultimate safety fallback
+        setTimeout(hideSplashScreen, 10000);
+    });
+</script>
+    <script src="brotliloader.min.js" type="module"></script>
 </body>
 </html>

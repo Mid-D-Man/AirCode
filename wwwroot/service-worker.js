@@ -1,123 +1,49 @@
-// Service worker for AirCode PWA
-// Version specifically designed for GitHub Pages deployment
+// Caution! Be sure you understand the caveats before publishing an application with
+// offline support. See https://aka.ms/blazor-offline-considerations
 
-// Cache name with version - bump this when deploying changes
-const CACHE_NAME = 'aircode-cache-v7';
+self.importScripts('./service-worker-assets.js');
+self.addEventListener('install', event => event.waitUntil(onInstall(event)));
+self.addEventListener('activate', event => event.waitUntil(onActivate(event)));
+self.addEventListener('fetch', event => event.respondWith(onFetch(event)));
 
-// Get the base URL from service worker's location
-const baseUrl = self.registration.scope;
+const cacheNamePrefix = 'offline-cache-';
+const cacheName = `${cacheNamePrefix}${self.assetsManifest.version}`;
+const offlineAssetsInclude = [ /\.dll$/, /\.pdb$/, /\.wasm/, /\.html/, /\.js$/, /\.json$/, /\.css$/, /\.woff$/, /\.png$/, /\.jpe?g$/, /\.gif$/, /\.ico$/, /\.blat$/, /\.dat$/ ];
+const offlineAssetsExclude = [ /^service-worker\.js$/ ];
 
-self.addEventListener('install', (event) => {
-    console.log('[ServiceWorker] Install started');
-    self.skipWaiting();
+async function onInstall(event) {
+    console.info('Service worker: Install');
 
-    // Dynamically build the URLs to cache based on the base URL
-    const urlsToCache = [
-        baseUrl,
-        new URL('index.html', baseUrl).href,
-        new URL('404.html', baseUrl).href,
-        new URL('favicon.png', baseUrl).href,
-        new URL('css/app.css', baseUrl).href,
-        new URL('css/bootstrap/bootstrap.min.css', baseUrl).href,
-        new URL('css/colors.css', baseUrl).href,
-        new URL('css/responsive.css', baseUrl).href,
-        new URL('_framework/blazor.webassembly.js', baseUrl).href,
-        new URL('js/debug.js', baseUrl).href,
-        new URL('js/connectivityServices.js', baseUrl).href,
-        new URL('js/themeSwitcher.js', baseUrl).href,
-        new URL('manifest.json', baseUrl).href
-    ];
+    // Fetch and cache all matching items from the assets manifest
+    const assetsRequests = self.assetsManifest.assets
+        .filter(asset => offlineAssetsInclude.some(pattern => pattern.test(asset.url)))
+        .filter(asset => !offlineAssetsExclude.some(pattern => pattern.test(asset.url)))
+        .map(asset => new Request(asset.url, { integrity: asset.hash, cache: 'no-cache' }));
+    await caches.open(cacheName).then(cache => cache.addAll(assetsRequests));
+}
 
-    console.log('[ServiceWorker] URLs to cache:', urlsToCache);
+async function onActivate(event) {
+    console.info('Service worker: Activate');
 
-    event.waitUntil(
-        caches.open(CACHE_NAME)
-            .then((cache) => {
-                console.log('[ServiceWorker] Caching core assets');
-                return cache.addAll(urlsToCache);
-            })
-            .catch(error => {
-                console.error('[ServiceWorker] Cache failed:', error);
-            })
-    );
-});
+    // Delete unused caches
+    const cacheKeys = await caches.keys();
+    await Promise.all(cacheKeys
+        .filter(key => key.startsWith(cacheNamePrefix) && key !== cacheName)
+        .map(key => caches.delete(key)));
+}
 
-self.addEventListener('activate', (event) => {
-    console.log('[ServiceWorker] Activate');
-    event.waitUntil(
-        caches.keys().then(cacheNames => {
-            return Promise.all(
-                cacheNames.map(cacheName => {
-                    if (cacheName !== CACHE_NAME) {
-                        console.log('[ServiceWorker] Clearing old cache:', cacheName);
-                        return caches.delete(cacheName);
-                    }
-                })
-            );
-        }).then(() => {
-            console.log('[ServiceWorker] Claiming clients');
-            return self.clients.claim();
-        })
-    );
-});
+async function onFetch(event) {
+    let cachedResponse = null;
+    if (event.request.method === 'GET') {
+        // For all navigation requests, try to serve index.html from cache
+        // If you need some URLs to be server-rendered, edit the following check to exclude those URLs
+        const shouldServeIndexHtml = event.request.mode === 'navigate';
 
-// Improved fetch handler with better error handling and path normalization
-self.addEventListener('fetch', (event) => {
-    // Skip non-GET requests
-    if (event.request.method !== 'GET') return;
-
-    // Log the request URL for debugging
-    console.log('[ServiceWorker] Fetching:', event.request.url);
-
-    // Handle the fetch
-    event.respondWith(
-        caches.match(event.request)
-            .then(cachedResponse => {
-                if (cachedResponse) {
-                    // Return cached response
-                    console.log('[ServiceWorker] Returning cached:', event.request.url);
-                    return cachedResponse;
-                }
-
-                // Not in cache, fetch from network
-                return fetch(event.request)
-                    .then(response => {
-                        // Only cache same-origin responses
-                        if (response && response.status === 200 &&
-                            (event.request.url.startsWith(self.location.origin) ||
-                                event.request.url.includes('github.io'))) {
-                            const responseToCache = response.clone();
-                            caches.open(CACHE_NAME)
-                                .then(cache => {
-                                    console.log('[ServiceWorker] Caching new resource:', event.request.url);
-                                    cache.put(event.request, responseToCache);
-                                });
-                        }
-                        return response;
-                    })
-                    .catch(error => {
-                        console.log('[ServiceWorker] Fetch failed:', error, event.request.url);
-
-                        // For navigation requests, try to return index.html
-                        if (event.request.mode === 'navigate') {
-                            return caches.match(new URL('index.html', baseUrl).href);
-                        }
-
-                        // Return a proper error for other requests
-                        return new Response('Network error', {
-                            status: 408,
-                            headers: new Headers({ 'Content-Type': 'text/plain' })
-                        });
-                    });
-            })
-    );
-});
-
-// Add a message handler to receive and log messages from the main page
-self.addEventListener('message', (event) => {
-    if (event.data && event.data.type === 'LOG') {
-        console.log('[ServiceWorker] From page:', event.data.message);
+        const request = shouldServeIndexHtml ? 'index.html' : event.request;
+        const cache = await caches.open(cacheName);
+        cachedResponse = await cache.match(request);
     }
-});
 
-console.log('[ServiceWorker] Initialized with scope:', self.registration.scope);
+    return cachedResponse || fetch(event.request);
+}
+/* Manifest version: FZHPcv2x */
