@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [ main ]  # Change this to your main branch name if different
+    branches: [ master ]  # Change this to your main branch name if different
   workflow_dispatch:    # Allow manual triggering
 
 jobs:
@@ -26,6 +26,9 @@ jobs:
 
       - name: Publish
         run: dotnet publish -c Release -o publish
+
+      - name: List publish directory
+        run: ls -R publish
 
       - name: Fix Base Path in index.html
         run: |
