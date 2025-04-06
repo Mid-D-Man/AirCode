@@ -66,6 +66,15 @@ self.addEventListener('fetch', (event) => {
     // Skip non-GET requests
     if (event.request.method !== 'GET') return;
 
+    // Parse the URL
+    const url = new URL(event.request.url);
+
+    // Skip external requests that aren't to our site
+    if (!url.origin.includes('github.io') &&
+        url.origin !== self.location.origin) {
+        return;
+    }
+
     // Handle the fetch
     event.respondWith(
         caches.match(event.request)
@@ -81,8 +90,7 @@ self.addEventListener('fetch', (event) => {
                         .then(response => {
                             // If we got a 404 for a navigation request, serve index.html
                             if (response.status === 404) {
-                                // Store the path for the app to handle
-                                console.log('[ServiceWorker] Navigation to uncached route:', event.request.url);
+                                console.log('[ServiceWorker] Serving SPA index for route:', event.request.url);
                                 return caches.match(new URL('index.html', baseUrl).href);
                             }
                             return response;
@@ -93,13 +101,33 @@ self.addEventListener('fetch', (event) => {
                         });
                 }
 
-                // Regular fetch for non-navigation requests
+                // For favicon and other icon requests, try different paths
+                if (url.pathname.includes('favicon') || url.pathname.includes('icon')) {
+                    return fetch(event.request)
+                        .catch(() => {
+                            // Try alternate locations
+                            const paths = [
+                                new URL('favicon.png', baseUrl).href,
+                                new URL('icon-192.png', baseUrl).href
+                            ];
+
+                            return Promise.any(
+                                paths.map(path => fetch(path))
+                            ).catch(() => {
+                                // If all fail, return a blank image
+                                return new Response(
+                                    'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
+                                    { headers: {'Content-Type': 'image/gif'} }
+                                );
+                            });
+                        });
+                }
+
+                // Regular fetch for all other requests
                 return fetch(event.request)
                     .then(response => {
-                        // Only cache same-origin successful responses
-                        if (response && response.status === 200 &&
-                            (event.request.url.startsWith(self.location.origin) ||
-                                event.request.url.includes('github.io'))) {
+                        // Only cache successful responses
+                        if (response && response.status === 200) {
                             const responseToCache = response.clone();
                             caches.open(CACHE_NAME)
                                 .then(cache => {
@@ -110,16 +138,21 @@ self.addEventListener('fetch', (event) => {
                     })
                     .catch(error => {
                         console.log('[ServiceWorker] Fetch failed:', error);
-                        // For API requests, return a proper error
-                        return new Response(JSON.stringify({
-                            error: 'Network error',
-                            offline: true
-                        }), {
-                            status: 503,
-                            headers: new Headers({
-                                'Content-Type': 'application/json'
-                            })
-                        });
+                        // For API requests with .json, return an offline indicator
+                        if (url.pathname.endsWith('.json')) {
+                            return new Response(JSON.stringify({
+                                error: 'Network error',
+                                offline: true
+                            }), {
+                                status: 503,
+                                headers: new Headers({
+                                    'Content-Type': 'application/json'
+                                })
+                            });
+                        }
+
+                        // For other resources, try to return something cached
+                        return caches.match(new URL('index.html', baseUrl).href);
                     });
             })
     );

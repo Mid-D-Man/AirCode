@@ -2,23 +2,38 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>AirCode</title>
-    <script type="text/javascript">
-        // Single Page Apps for GitHub Pages
-        // https://github.com/rafrex/spa-github-pages
-        var pathSegmentsToKeep = 1; // Keeps '/AirCode/'
+    <title>AirCode - Redirecting...</title>
+    <script>
+        // SPA routing handler for GitHub Pages
+        (function() {
+            const ghPagesPattern = /github\.io/;
+            const isGitHubPages = window.location.hostname.match(ghPagesPattern);
 
-        var l = window.location;
-        l.replace(
-            l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
-            l.pathname.split('/').slice(0, 1 + pathSegmentsToKeep).join('/') + '/?/' +
-            l.pathname.slice(1).split('/').slice(pathSegmentsToKeep).join('/').replace(/&/g, '~and~') +
-            (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
-            l.hash
-        );
+            if (isGitHubPages) {
+                // For GitHub Pages, determine the base path
+                const pathParts = window.location.pathname.split('/');
+                // The first segment after the leading slash is the repo name
+                const repoName = pathParts[1];
+                const basePath = '/' + repoName + '/';
+
+                // Store the real path for the SPA to handle
+                const fullPath = window.location.pathname;
+                const relativePath = fullPath.substring(basePath.length - 1);
+
+                // Store in session storage and redirect to index
+                sessionStorage.setItem('navigationPath', relativePath);
+                console.log('404 handler storing navigation path:', relativePath);
+
+                // Redirect to the index
+                window.location.href = basePath;
+            } else {
+                // For local development or other environments, redirect to root
+                window.location.href = '/';
+            }
+        })();
     </script>
 </head>
 <body>
-Redirecting...
+<p>Redirecting...</p>
 </body>
 </html>

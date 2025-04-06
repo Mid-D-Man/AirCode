@@ -31,6 +31,35 @@ jobs:
       - name: Add .nojekyll file
         run: touch publish/wwwroot/.nojekyll
 
+      # Add this section to your GitHub workflow after the "Add .nojekyll file" step
+      - name: Generate redirect script for GitHub Pages
+        run: |
+          cat > publish/wwwroot/redirect.js << 'EOF'
+          // SPA redirect script for direct navigation to routes
+          (function() {
+            const isGitHubPages = window.location.hostname.includes('github.io');
+            if (!isGitHubPages) return;
+
+            const pathSegments = window.location.pathname.split('/');
+            const repoName = pathSegments[1];
+            const basePath = '/' + repoName + '/';
+
+            // Check if this is a direct navigation to a route
+            if (window.location.pathname !== basePath && 
+                !window.location.pathname.endsWith('/index.html') && 
+                !window.location.pathname.endsWith('/404.html')) {
+
+                const routePath = window.location.pathname.substring(basePath.length - 1);
+                sessionStorage.setItem('navigationPath', routePath);
+                console.log('Stored navigation path for redirect:', routePath);
+            }
+          })();
+          EOF
+
+          # Add the redirect script to both index.html and 404.html
+          sed -i '/<\/head>/i <script src="redirect.js"></script>' publish/wwwroot/index.html
+          sed -i '/<\/head>/i <script src="redirect.js"></script>' publish/wwwroot/404.html
+
       - name: Copy index.html to 404.html
         run: cp publish/wwwroot/index.html publish/wwwroot/404.html
 
