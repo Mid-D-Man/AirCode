@@ -61,8 +61,7 @@ self.addEventListener('activate', (event) => {
     );
 });
 
-// Add this improved fetch handler to your service-worker.js
-
+// Improved fetch handler with better SPA support
 self.addEventListener('fetch', (event) => {
     // Skip non-GET requests
     if (event.request.method !== 'GET') return;
@@ -70,7 +69,13 @@ self.addEventListener('fetch', (event) => {
     // Parse the URL
     const url = new URL(event.request.url);
 
-    // Handle the fetch with SPA awareness
+    // Skip external requests that aren't to our site
+    if (!url.origin.includes('github.io') &&
+        url.origin !== self.location.origin) {
+        return;
+    }
+
+    // Handle the fetch
     event.respondWith(
         caches.match(event.request)
             .then(cachedResponse => {
@@ -79,96 +84,75 @@ self.addEventListener('fetch', (event) => {
                     return cachedResponse;
                 }
 
-                // Handle different request types
-                if (event.request.mode === 'navigate' ||
-                    url.pathname.endsWith('.html') ||
-                    // This pattern catches client-side routes
-                    (url.pathname.includes('/Client/') ||
-                        url.pathname.includes('/Admin/') ||
-                        url.pathname.match(/\/[^/.]+$/))) {
-
-                    // For navigation requests or client routes, serve index.html
-                    console.log('[ServiceWorker] Handling SPA route:', url.pathname);
-                    return caches.match(new URL('index.html', self.registration.scope).href)
-                        .then(indexResponse => {
-                            if (indexResponse) {
-                                return indexResponse;
+                // Special handling for navigation requests
+                if (event.request.mode === 'navigate') {
+                    return fetch(event.request)
+                        .then(response => {
+                            // If we got a 404 for a navigation request, serve index.html
+                            if (response.status === 404) {
+                                console.log('[ServiceWorker] Serving SPA index for route:', event.request.url);
+                                return caches.match(new URL('index.html', baseUrl).href);
                             }
-                            // Try fetching from network if not cached
-                            return fetch(event.request)
-                                .catch(() => {
-                                    // As last resort, create a simple response
-                                    return new Response(
-                                        '<html><body><h1>AirCode</h1><p>Unable to load content. Please check your connection.</p></body></html>',
-                                        { headers: { 'Content-Type': 'text/html' } }
-                                    );
-                                });
+                            return response;
+                        })
+                        .catch(error => {
+                            console.log('[ServiceWorker] Navigation fetch failed:', error);
+                            return caches.match(new URL('index.html', baseUrl).href);
                         });
                 }
 
-                // For favicon requests that might fail
-                if (url.pathname.includes('favicon') || url.pathname.endsWith('.ico')) {
+                // For favicon and other icon requests, try different paths
+                if (url.pathname.includes('favicon') || url.pathname.includes('icon')) {
                     return fetch(event.request)
                         .catch(() => {
-                            // Try alternate favicon location
-                            return fetch(new URL('favicon.png', self.registration.scope).href)
-                                .catch(() => {
-                                    // Return empty image as last resort
-                                    return new Response(
-                                        'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
-                                        { headers: { 'Content-Type': 'image/gif' } }
-                                    );
-                                });
+                            // Try alternate locations
+                            const paths = [
+                                new URL('favicon.png', baseUrl).href,
+                                new URL('icon-192.png', baseUrl).href
+                            ];
+
+                            return Promise.any(
+                                paths.map(path => fetch(path))
+                            ).catch(() => {
+                                // If all fail, return a blank image
+                                return new Response(
+                                    'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
+                                    { headers: {'Content-Type': 'image/gif'} }
+                                );
+                            });
                         });
                 }
 
-                // Standard fetch for all other assets
+                // Regular fetch for all other requests
                 return fetch(event.request)
                     .then(response => {
-                        // Clone the response to cache it
-                        if (response.ok) {
-                            const clonedResponse = response.clone();
-                            caches.open(CACHE_NAME).then(cache => {
-                                cache.put(event.request, clonedResponse);
-                            });
+                        // Only cache successful responses
+                        if (response && response.status === 200) {
+                            const responseToCache = response.clone();
+                            caches.open(CACHE_NAME)
+                                .then(cache => {
+                                    cache.put(event.request, responseToCache);
+                                });
                         }
                         return response;
                     })
                     .catch(error => {
-                        console.error('[ServiceWorker] Fetch failed:', error);
-                        // For API endpoints
-                        if (url.pathname.includes('/api/') || url.pathname.endsWith('.json')) {
-                            return new Response(
-                                JSON.stringify({ error: 'Network error', offline: true }),
-                                {
-                                    status: 503,
-                                    headers: { 'Content-Type': 'application/json' }
-                                }
-                            );
+                        console.log('[ServiceWorker] Fetch failed:', error);
+                        // For API requests with .json, return an offline indicator
+                        if (url.pathname.endsWith('.json')) {
+                            return new Response(JSON.stringify({
+                                error: 'Network error',
+                                offline: true
+                            }), {
+                                status: 503,
+                                headers: new Headers({
+                                    'Content-Type': 'application/json'
+                                })
+                            });
                         }
 
-                        // For other assets, return a placeholder or cached fallback
-                        if (url.pathname.endsWith('.css')) {
-                            return new Response('/* Offline fallback stylesheet */',
-                                { headers: { 'Content-Type': 'text/css' } });
-                        }
-
-                        if (url.pathname.endsWith('.js')) {
-                            return new Response('console.log("Offline fallback script");',
-                                { headers: { 'Content-Type': 'application/javascript' } });
-                        }
-
-                        // For images, try to find cached images or return empty gif
-                        if (url.pathname.match(/\.(png|jpg|jpeg|gif|svg)$/)) {
-                            return new Response(
-                                'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
-                                { headers: { 'Content-Type': 'image/gif' } }
-                            );
-                        }
-
-                        // Default response for anything else
-                        return new Response('Offline content unavailable',
-                            { headers: { 'Content-Type': 'text/plain' } });
+                        // For other resources, try to return something cached
+                        return caches.match(new URL('index.html', baseUrl).href);
                     });
             })
     );
