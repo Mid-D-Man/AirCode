@@ -20,8 +20,8 @@ jobs:
 
       # Publish the site
       - name: Publish
-        #      Don't missing to add "p:GHPages=true". 👇
-        run: dotnet publish ProjectDir/Project.csproj -p:GHPages=true -o:public -c:Release
+        #      Don't miss to add "p:GHPages=true". 👇
+        run: dotnet publish  /Users/midman/RiderProjects/AirCode/AirCode.csproj -p:GHPages=true -o:public -c:Release
 
       # Deploy the site
       - name: Deploy
@@ -29,4 +29,4 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: public/wwwroot
-          force_orphan: true
+          force_orphan: true 
