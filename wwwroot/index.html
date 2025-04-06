@@ -5,7 +5,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <!-- More permissive CSP for debugging -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://*.supabase.co data: blob:; connect-src 'self' https://*.supabase.co; img-src 'self' https://*.github.io data: blob:;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://*.supabase.co https://*.github.io data: blob:; connect-src 'self' https://*.github.io https://*.supabase.co wss://*.supabase.co; img-src 'self' https://*.github.io data: blob:; font-src 'self' data:;">
     <title>AirCode</title>
 
     <!-- Set base href dynamically BEFORE loading any resources -->
@@ -23,7 +23,7 @@
                 const repoName = pathParts[1];
                 basePath = '/' + repoName + '/';
             } else {
-                // For other environments, use root
+                // For local development, always use root path
                 basePath = '/';
             }
 
@@ -32,15 +32,6 @@
 
             // Store base path for service worker and other scripts
             window.BASE_PATH = basePath;
-
-            // Save path info to session storage to maintain state across 404 redirects
-            const currentPath = window.location.pathname;
-            if (isGitHubPages && currentPath !== basePath && !currentPath.endsWith('/index.html') && !currentPath.endsWith('/404.html')) {
-                // We may be hitting a client-side route directly - store the path
-                const relativePath = currentPath.substring(basePath.length - 1);
-                sessionStorage.setItem('navigationPath', relativePath);
-                console.log('Stored navigation path:', relativePath);
-            }
         })();
     </script>
 

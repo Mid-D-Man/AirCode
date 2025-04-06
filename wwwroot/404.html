@@ -2,78 +2,36 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AirCode - Redirecting</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            margin-top: 50px;
-            background-color: #f5f5f5;
-        }
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: white;
-            border-radius: 5px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        .logo {
-            margin-bottom: 20px;
-            max-width: 100px;
-        }
-        .spinner {
-            width: 40px;
-            height: 40px;
-            margin: 20px auto;
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #3498db;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-    </style>
+    <title>Redirecting...</title>
     <script>
-        // SPA redirect script
+        // Store the actual path (everything after the repo name) in session storage
         (function() {
-            // Only run for GitHub Pages
-            if (!window.location.hostname.includes('github.io')) {
-                window.location.href = '/';
-                return;
-            }
+            const ghPagesPattern = /github\.io/;
+            const isGitHubPages = window.location.hostname.match(ghPagesPattern);
 
-            // Extract repository name and path
-            const pathSegments = window.location.pathname.split('/');
-            const repoName = pathSegments[1];
-            const basePath = '/' + repoName + '/';
+            if (isGitHubPages) {
+                const pathParts = window.location.pathname.split('/');
+                const repoName = pathParts[1];
 
-            // Get the path to navigate to (everything after the repo name)
-            let relativePath = '/';
-            if (pathSegments.length > 2) {
-                relativePath = '/' + pathSegments.slice(2).join('/');
-            }
+                // Calculate the part of the path after the repo name
+                const basePath = '/' + repoName + '/';
+                let relativePath = window.location.pathname;
 
-            // Store for SPA to handle and redirect to base
-            console.log('404.html storing path:', relativePath);
-            sessionStorage.setItem('navigationPath', relativePath);
+                if (relativePath.startsWith(basePath)) {
+                    relativePath = relativePath.substring(basePath.length - 1);
+                }
 
-            // Redirect to app root with small delay
-            setTimeout(function() {
+                // Store the path and redirect to the base path
+                sessionStorage.setItem('navigationPath', relativePath);
+                console.log('Stored navigation path:', relativePath);
+
+                // Redirect to the root of the GitHub Pages site
                 window.location.href = basePath;
-            }, 500);
+            }
         })();
     </script>
 </head>
 <body>
-<div class="container">
-    <img src="favicon.png" alt="AirCode Logo" class="logo">
-    <h1>Redirecting to AirCode</h1>
-    <p>Please wait while we direct you to the requested page...</p>
-    <div class="spinner"></div>
-</div>
+Redirecting...
 </body>
 </html>

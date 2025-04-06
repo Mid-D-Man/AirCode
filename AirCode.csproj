@@ -5,6 +5,8 @@
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
         <ServiceWorkerAssetsManifest>service-worker-assets.js</ServiceWorkerAssetsManifest>
+        <!-- Enable static web assets for GitHub Pages -->
+        <StaticWebAssetBasePath>$(RepositoryName)</StaticWebAssetBasePath>
     </PropertyGroup>
 
     <ItemGroup>
@@ -17,6 +19,11 @@
         <PackageReference Include="YamlDotNet" Version="16.3.0" />
         <PackageReference Include="ZXingBlazor" Version="1.1.5" />
     </ItemGroup>
+    <ItemGroup>
+        <!-- Ensure these files are published -->
+        <Content Include=".nojekyll" CopyToPublishDirectory="Always" />
+        <Content Include="404.html" CopyToPublishDirectory="Always" />
+    </ItemGroup>
 
     <ItemGroup>
         <ServiceWorker Include="wwwroot\service-worker.js" PublishedContent="wwwroot\service-worker.published.js" />
@@ -24,10 +31,6 @@
 
     <ItemGroup>
       <_ContentIncludedByDefault Remove="Components\SharedPrefabs\QrCode\npmBased\QrCodeCompo2.razor" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <Folder Include="wwwroot\icons\" />
     </ItemGroup>
 
 </Project>

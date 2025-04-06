@@ -2,14 +2,11 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [ main ]
-  workflow_dispatch:
+    branches: [ main ]  # Change this to your default branch
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v3
 
@@ -21,242 +18,21 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore
 
-      - name: Build
-        run: dotnet build --configuration Release --no-restore
-
-      - name: Publish
-        run: dotnet publish -c Release -o publish
+      - name: Build and publish
+        run: dotnet publish -c Release -o release --no-restore
 
       - name: Add .nojekyll file
-        run: touch publish/wwwroot/.nojekyll
+        run: touch release/wwwroot/.nojekyll
 
-      - name: Generate redirect script for GitHub Pages
+      - name: Update service worker scope
         run: |
-          cat > publish/wwwroot/redirect.js << 'EOF'
-          // SPA redirect script for direct navigation to routes
-          (function() {
-            const isGitHubPages = window.location.hostname.includes('github.io');
-            if (!isGitHubPages) return;
+          # Replace service worker registration with correct scope
+          REPO_NAME=$(echo "$GITHUB_REPOSITORY" | cut -d '/' -f 2)
+          sed -i "s|scope: document.baseURI|scope: '/$REPO_NAME/'|g" release/wwwroot/service-worker.js
 
-            const pathSegments = window.location.pathname.split('/');
-            const repoName = pathSegments[1];
-            const basePath = '/' + repoName + '/';
-
-            // Check if this is a direct navigation to a route
-            if (window.location.pathname !== basePath && 
-                !window.location.pathname.endsWith('/index.html') && 
-                !window.location.pathname.endsWith('/404.html')) {
-
-                const routePath = window.location.pathname.substring(basePath.length - 1);
-                sessionStorage.setItem('navigationPath', routePath);
-                console.log('Stored navigation path for redirect:', routePath);
-            }
-          })();
-          EOF
-
-          # Add the redirect script to index.html
-          if [ -f publish/wwwroot/index.html ]; then
-            sed -i '/<\/head>/i <script src="redirect.js"></script>' publish/wwwroot/index.html
-          else
-            echo "Warning: index.html not found"
-          fi
-
-      - name: Prepare and copy 404.html
-        run: |
-          # Create proper 404.html for SPA routing
-          cat > publish/wwwroot/404.html << 'EOF'
-          <!DOCTYPE html>
-          <html lang="en">
-          <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>AirCode - Redirecting</title>
-          <script src="redirect.js"></script>
-          <style>
-          body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            margin-top: 50px;
-            background-color: #f5f5f5;
-          }
-          .container {
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: white;
-            border-radius: 5px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-          }
-          .logo {
-            margin-bottom: 20px;
-            max-width: 100px;
-          }
-          .spinner {
-            width: 40px;
-            height: 40px;
-            margin: 20px auto;
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #3498db;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-          }
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-          </style>
-          <script>
-          // SPA redirect script
-          (function() {
-            // Only run for GitHub Pages
-            if (!window.location.hostname.includes('github.io')) {
-              window.location.href = '/';
-              return;
-            }
-          
-            // Extract repository name and path
-            const pathSegments = window.location.pathname.split('/');
-            const repoName = pathSegments[1];
-            const basePath = '/' + repoName + '/';
-          
-            // Get the path to navigate to (everything after the repo name)
-            let relativePath = '/';
-            if (pathSegments.length > 2) {
-              relativePath = '/' + pathSegments.slice(2).join('/');
-            }
-          
-            // Store for SPA to handle and redirect to base
-            console.log('404.html storing path:', relativePath);
-            sessionStorage.setItem('navigationPath', relativePath);
-          
-            // Redirect to app root with small delay
-            setTimeout(function() {
-              window.location.href = basePath;
-            }, 300);
-          })();
-          </script>
-          </head>
-          <body>
-          <div class="container">
-          <img src="favicon.png" alt="AirCode Logo" class="logo" onerror="this.style.display='none'">
-          <h1>Redirecting to AirCode</h1>
-          <p>Please wait while we direct you to the requested page...</p>
-          <div class="spinner"></div>
-          </div>
-          </body>
-          </html>
-          EOF
-      # Add a preflight check script
-      - name: Generate preflight check
-        run: |
-          cat > publish/wwwroot/preflight.html << 'EOF'
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <title>AirCode Preflight Check</title>
-            <style>
-              body { font-family: Arial, sans-serif; margin: 2rem; }
-              .success { color: green; }
-              .failure { color: red; }
-              table { border-collapse: collapse; margin-top: 1rem; }
-              td, th { border: 1px solid #ddd; padding: 8px; }
-              tr:nth-child(even) { background-color: #f2f2f2; }
-            </style>
-          </head>
-          <body>
-            <h1>AirCode Deployment Preflight Check</h1>
-            <div id="results"></div>
-            <script>
-              const files = [
-                'index.html',
-                'css/app.css',
-                'css/colors.css',
-                '_framework/blazor.webassembly.js',
-                'service-worker.js',
-                'manifest.json'
-              ];
-          
-              async function checkFiles() {
-                const results = document.getElementById('results');
-                const table = document.createElement('table');
-          
-                // Header row
-                const headerRow = document.createElement('tr');
-                ['File', 'Status', 'Size', 'Response Type'].forEach(text => {
-                  const th = document.createElement('th');
-                  th.textContent = text;
-                  headerRow.appendChild(th);
-                });
-                table.appendChild(headerRow);
-          
-                // Check each file
-                for (const file of files) {
-                  const row = document.createElement('tr');
-          
-                  // File name
-                  const fileCell = document.createElement('td');
-                  fileCell.textContent = file;
-                  row.appendChild(fileCell);
-          
-                  try {
-                    const response = await fetch(file);
-          
-                    // Status
-                    const statusCell = document.createElement('td');
-                    if (response.ok) {
-                      statusCell.textContent = '✅ ' + response.status;
-                      statusCell.className = 'success';
-                    } else {
-                      statusCell.textContent = '❌ ' + response.status;
-                      statusCell.className = 'failure';
-                    }
-                    row.appendChild(statusCell);
-          
-                    // Size
-                    const sizeCell = document.createElement('td');
-                    const blob = await response.blob();
-                    sizeCell.textContent = (blob.size / 1024).toFixed(2) + ' KB';
-                    row.appendChild(sizeCell);
-          
-                    // Content type
-                    const typeCell = document.createElement('td');
-                    typeCell.textContent = response.headers.get('content-type');
-                    row.appendChild(typeCell);
-          
-                  } catch (error) {
-                    // Error cells
-                    const errorCell = document.createElement('td');
-                    errorCell.textContent = '❌ Error';
-                    errorCell.className = 'failure';
-                    errorCell.colSpan = 3;
-                    row.appendChild(errorCell);
-                  }
-          
-                  table.appendChild(row);
-                }
-          
-                results.appendChild(table);
-          
-                // Add base href info
-                const baseInfo = document.createElement('div');
-                baseInfo.innerHTML = `<h3>Environment</h3>
-                  <p>Base Href: ${document.querySelector('base')?.href || 'Not set'}</p>
-                  <p>URL: ${window.location.href}</p>
-                  <p>Current Path: ${window.location.pathname}</p>
-                  <p>User Agent: ${navigator.userAgent}</p>`;
-                results.appendChild(baseInfo);
-              }
-          
-              window.addEventListener('load', checkFiles);
-            </script>
-          </body>
-          </html>
-          EOF
-        
-
-      - name: GitHub Pages
-        uses: JamesIves/github-pages-deploy-action@v4
+      - name: Deploy to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@v4.4.1
         with:
           branch: gh-pages
-          folder: publish/wwwroot
+          folder: release/wwwroot
           clean: true
