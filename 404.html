@@ -5,7 +5,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <!-- More permissive CSP for debugging -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://*.supabase.co data: blob:; connect-src 'self' https://*.supabase.co; img-src 'self' data: blob:;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://*.supabase.co data: blob:; connect-src 'self' https://*.supabase.co; img-src 'self' data: blob: https://*.github.io;">
     <title>AirCode</title>
 
     <!-- Set base href dynamically BEFORE loading any resources -->
@@ -53,6 +53,7 @@
     <link href="manifest.json" rel="manifest" />
     <link rel="apple-touch-icon" sizes="512x512" href="icon-512.png" />
     <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
+<script src="redirect.js"></script>
 </head>
 
 <body>
@@ -156,6 +157,20 @@
         // Get base path
         const basePath = baseElement.getAttribute('href');
 
+        // Check if we need to handle a redirect from 404.html
+        const redirectPath = sessionStorage.getItem('navigationPath');
+        if (redirectPath) {
+            console.log('Redirecting to stored path:', redirectPath);
+            sessionStorage.removeItem('navigationPath');
+            // Wait for Blazor to initialize
+            const waitForBlazor = setInterval(() => {
+                if (window.Blazor && window.Blazor.navigateTo) {
+                    clearInterval(waitForBlazor);
+                    window.Blazor.navigateTo(redirectPath);
+                }
+            }, 100);
+        }
+
         // Add click handler to all internal links
         document.addEventListener('click', function(event) {
             // Only handle left clicks on anchor tags
@@ -178,12 +193,9 @@
             // Prevent default link behavior
             event.preventDefault();
 
-            // Store the full path in session storage
-            const fullPath = href.startsWith('/') ? href : basePath + href;
-            console.log('Internal navigation to:', fullPath);
-
             // Let Blazor handle the routing
             if (window.Blazor && window.Blazor.navigateTo) {
+                console.log('Using Blazor navigation for:', href);
                 window.Blazor.navigateTo(href);
             }
         });
