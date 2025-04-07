@@ -14,12 +14,12 @@
     private string GetRandomColor()
     {
         string[] colors = { 
-            "rgba(255, 0, 0, 0.3)", 
-            "rgba(60, 0, 255, 0.3)", 
-            "rgba(30, 255, 0, 0.3)", 
-            "rgba(255, 107, 0, 0.3)", 
-            "rgba(255, 0, 234, 0.3)", 
-            "rgba(0, 255, 255, 0.3)"
+            "rgba(33, 150, 243, 0.4)",  // Blue (primary-500)
+            "rgba(244, 67, 54, 0.4)",   // Red (error color)
+            "rgba(255, 235, 59, 0.4)",  // Yellow (bright)
+            "rgba(156, 39, 176, 0.4)",  // Purple (secondary-500)
+            "rgba(76, 175, 80, 0.4)",   // Green (success)
+            "rgba(255, 152, 0, 0.4)"    // Orange (warning)
         };
         return colors[random.Next(colors.Length)];
     }

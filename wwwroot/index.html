@@ -4,206 +4,43 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <!-- Fully permissive CSP for testing -->
-    <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; connect-src * wss: blob:; img-src * data: blob:; font-src * data:;">
     <title>AirCode</title>
-
-    <!-- Set base href dynamically - critical for GitHub Pages -->
-    <script>
-        // Set base href dynamically based on the current URL
-        (function() {
-            // Check if we're on GitHub Pages
-            const isGitHubPages = window.location.hostname.indexOf('github.io') > -1;
-
-            let basePath = '/';
-            if (isGitHubPages) {
-                // Extract repository name from path (second segment after domain)
-                const pathSegments = window.location.pathname.split('/');
-                if (pathSegments.length > 1) {
-                    basePath = '/' + pathSegments[1] + '/';
-                }
-            }
-
-            // Write the base tag
-            document.write('<base href="' + basePath + '" />');
-            console.log('Base path set to:', basePath);
-
-            // Store for later use
-            window.BASE_PATH = basePath;
-        })();
-    </script>
-
-    <!-- App stylesheets -->
+    <base href="/" />
     <link href="css/bootstrap/bootstrap.min.css" rel="stylesheet" />
     <link href="css/app.css" rel="stylesheet" />
-    <link href="css/colors.css" rel="stylesheet" />
-    <link href="css/responsive.css" rel="stylesheet" />
-
-    <!-- PWA support -->
     <link rel="icon" type="image/png" href="favicon.png" />
+    <link href="AirCode.styles.css" rel="stylesheet" />
     <link href="manifest.json" rel="manifest" />
+
+    <link rel="stylesheet" href="css/colors.css" />
+    <link rel="stylesheet" href="css/responsive.css" />
+
     <link rel="apple-touch-icon" sizes="512x512" href="icon-512.png" />
     <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
+
 </head>
 
 <body>
-<!-- Custom splash screen with spinner -->
-<div id="custom-splash" class="splash-screen">
-    <img src="favicon.png" alt="AirCode Logo" onerror="this.onerror=null; this.src='icon-192.png';" />
-    <h1>AirCode</h1>
-    <p>Loading application...</p>
-    <div class="spinner-container">
-        <div class="spinner"></div>
-    </div>
-    <div class="loading-progress-percentage">0%</div>
-</div>
-
 <div id="app">
-    <!-- This will be replaced by Blazor -->
+    <svg class="loading-progress">
+        <circle r="40%" cx="50%" cy="50%" />
+        <circle r="40%" cx="50%" cy="50%" />
+    </svg>
+    <div class="loading-progress-text"></div>
 </div>
 
-<div id="blazor-error-ui" style="display: none;">
+<div id="blazor-error-ui">
     An unhandled error has occurred.
     <a href="" class="reload">Reload</a>
     <a class="dismiss">🗙</a>
 </div>
-
-<!-- Debug script -->
 <script src="js/debug.js"></script>
-
-<!-- Loading progress script -->
-<script>
-    // Set initial loading progress 
-    let loadingProgress = 0;
-    let progressIntervalActive = true;
-
-    const progressInterval = setInterval(() => {
-        if (!progressIntervalActive) {
-            clearInterval(progressInterval);
-            return;
-        }
-
-        if (loadingProgress < 90) {
-            loadingProgress += Math.floor(Math.random() * 5) + 1;
-            if (loadingProgress > 90) loadingProgress = 90;
-
-            const percentageDisplay = document.querySelector('#custom-splash .loading-progress-percentage');
-            if (percentageDisplay) {
-                percentageDisplay.textContent = loadingProgress + '%';
-            }
-        }
-    }, 300);
-
-    // Function to hide splash screen
-    window.hideSplashScreen = function() {
-        progressIntervalActive = false;
-        clearInterval(progressInterval);
-
-        const percentageDisplay = document.querySelector('#custom-splash .loading-progress-percentage');
-        if (percentageDisplay) {
-            percentageDisplay.textContent = '100%';
-        }
-
-        setTimeout(() => {
-            const splash = document.getElementById('custom-splash');
-            if (splash) {
-                splash.style.opacity = '0';
-                setTimeout(() => {
-                    splash.style.display = 'none';
-                }, 300);
-            }
-        }, 500);
-    };
-</script>
-
-<!-- Load Blazor -->
-<script src="_framework/blazor.webassembly.js" onerror="document.getElementById('blazor-error-ui').style.display = 'block'"></script>
-
-<!-- Required libraries -->
+<script src="_framework/blazor.webassembly.js"></script>
+<script>navigator.serviceWorker.register('service-worker.js');</script>
 <script src="https://unpkg.com/@zxing/library@0.18.6/umd/index.min.js"></script>
-
-<!-- App scripts -->
 <script src="js/connectivityServices.js"></script>
 <script src="js/themeSwitcher.js"></script>
 
-<!-- GitHub Pages SPA routing handler -->
-<script>
-    // Special routing for GitHub Pages
-    window.addEventListener('load', function() {
-        const baseHref = document.querySelector('base').getAttribute('href') || '/';
-        console.log('Active base href:', baseHref);
-
-        // Check if we're on GitHub Pages
-        const isGitHubPages = window.location.hostname.indexOf('github.io') > -1;
-
-        if (isGitHubPages) {
-            console.log('Running on GitHub Pages - setting up SPA routing');
-
-            // Add click handler to internal links
-            document.addEventListener('click', function(event) {
-                const linkElement = event.target.closest('a');
-                if (!linkElement) return;
-
-                const href = linkElement.getAttribute('href');
-                if (!href || href.startsWith('http') || href.startsWith('#') ||
-                    href.startsWith('mailto:') || href.startsWith('tel:') ||
-                    linkElement.getAttribute('download') || linkElement.getAttribute('target')) {
-                    return;
-                }
-
-                event.preventDefault();
-
-                if (window.Blazor && window.Blazor.navigateTo) {
-                    console.log('Navigating via Blazor to:', href);
-                    window.Blazor.navigateTo(href);
-                }
-            });
-        }
-
-        // Register service worker
-        if ('serviceWorker' in navigator) {
-            const swUrl = new URL('service-worker.js', document.baseURI).href;
-
-            navigator.serviceWorker.register(swUrl, { scope: document.baseURI })
-                .then(reg => console.log('Service worker registered:', reg.scope))
-                .catch(err => console.error('Service worker registration failed:', err));
-        }
-
-        // Try to detect when Blazor has started
-        function checkBlazorStarted() {
-            if (window.Blazor) {
-                if (typeof window.Blazor.addEventListener === 'function') {
-                    window.Blazor.addEventListener('afterStarted', hideSplashScreen);
-                } else {
-                    // Watch for Blazor to render content
-                    const observer = new MutationObserver((mutations) => {
-                        if (document.querySelector('#app > *')) {
-                            hideSplashScreen();
-                            observer.disconnect();
-                        }
-                    });
-
-                    observer.observe(document.getElementById('app'), {
-                        childList: true,
-                        subtree: true
-                    });
-                }
-            } else {
-                setTimeout(checkBlazorStarted, 100);
-            }
-        }
-
-        checkBlazorStarted();
-
-        // Safety fallback to hide splash after 10 seconds regardless
-        setTimeout(hideSplashScreen, 10000);
-
-        // Show debug panel in development mode
-        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-            const debugPanel = document.getElementById('debug-panel');
-            if (debugPanel) debugPanel.style.display = 'block';
-        }
-    });
-</script>
 </body>
+
 </html>

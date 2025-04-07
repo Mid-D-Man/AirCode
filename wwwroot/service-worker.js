@@ -1,187 +1,76 @@
-// Service worker for AirCode PWA with improved GitHub Pages support
-// Version: v10
-
-// Cache name - increment this when updating 
-const CACHE_NAME = 'aircode-cache-v10';
-
-// Get the base URL from service worker's location
-const baseUrl = self.registration.scope;
+// In development, always fetch from the network and do not enable offline support.
+// This is because caching would make development more difficult (changes would not
+// be reflected on the first load after each change).
+//self.addEventListener('fetch', () => { });
+const CACHE_NAME = 'aircode-cache-v1';
+const urlsToCache = [
+    '/', // Your index.html
+    '/index.html',
+    '/css/bootstrap/bootstrap.min.css',
+    '/css/app.css',
+    '/css/colors.css',
+    '/css/responsive.css',
+    '/icons/favicon.png',
+    '/icons/icon-512.png',
+    '/icons/icon-192.png',
+    '/js/themeSwitcher.js',
+    '/js/connectivityServices.js',
+    // Add any other essential assets, like fonts or additional scripts
+];
 
 self.addEventListener('install', (event) => {
-    console.log('[ServiceWorker] Install started with scope:', baseUrl);
-    self.skipWaiting();
-
-    // Assets to cache - using scope-relative paths
-    const urlsToCache = [
-        '', // Root URL - important!
-        'index.html',
-        'favicon.png',
-        'icon-192.png',
-        'icon-512.png',
-        'manifest.json',
-        'css/app.css',
-        'css/bootstrap/bootstrap.min.css',
-        'css/colors.css',
-        'css/responsive.css',
-        '_framework/blazor.webassembly.js',
-        'js/debug.js',
-        'js/connectivityServices.js',
-        'js/themeSwitcher.js'
-    ];
-
-    // Generate full URLs based on scope
-    const fullUrlsToCache = urlsToCache.map(path => new URL(path, baseUrl).href);
-
-    console.log('[ServiceWorker] Caching URLs:', fullUrlsToCache);
-
+    console.log('[ServiceWorker] Install');
     event.waitUntil(
         caches.open(CACHE_NAME)
-            .then(cache => {
-                // Use a more resilient caching approach with individual fetches
-                const cachePromises = fullUrlsToCache.map(url =>
-                    fetch(url)
-                        .then(response => {
-                            if (!response.ok) {
-                                throw new Error(`Failed to cache: ${url}`);
-                            }
-                            return cache.put(url, response);
-                        })
-                        .catch(error => {
-                            console.warn(`[ServiceWorker] Failed to cache ${url}:`, error);
-                            // Continue even if one file fails
-                            return Promise.resolve();
-                        })
-                );
-
-                return Promise.all(cachePromises);
+            .then((cache) => {
+                console.log('[ServiceWorker] Caching app shell');
+                return cache.addAll(urlsToCache);
             })
-            .then(() => console.log('[ServiceWorker] Initial caching complete'))
+            .catch(err => console.error('[ServiceWorker] Failed to cache during install:', err))
     );
 });
 
 self.addEventListener('activate', (event) => {
     console.log('[ServiceWorker] Activate');
-
     event.waitUntil(
         caches.keys().then(cacheNames => {
             return Promise.all(
                 cacheNames.map(cacheName => {
+                    // Remove old caches that don’t match the current CACHE_NAME
                     if (cacheName !== CACHE_NAME) {
-                        console.log('[ServiceWorker] Clearing old cache:', cacheName);
+                        console.log('[ServiceWorker] Removing old cache:', cacheName);
                         return caches.delete(cacheName);
                     }
-                    return Promise.resolve();
                 })
             );
-        }).then(() => {
-            console.log('[ServiceWorker] Claiming clients');
-            return self.clients.claim();
         })
     );
 });
 
-// Improved fetch handler for SPA and GitHub Pages
 self.addEventListener('fetch', (event) => {
-    // Skip non-GET requests
-    if (event.request.method !== 'GET') return;
-
-    const url = new URL(event.request.url);
-
-    // Special handling for navigation requests (HTML pages)
-    if (event.request.mode === 'navigate') {
-        event.respondWith(
-            fetch(event.request)
-                .catch(() => {
-                    // If fetch fails, serve the cached index.html
-                    console.log('[ServiceWorker] Serving cached index.html for navigation');
-                    return caches.match(new URL('index.html', baseUrl).href);
-                })
-        );
-        return;
-    }
-
-    // Handle other requests
     event.respondWith(
-        caches.match(event.request)
-            .then(cachedResponse => {
-                if (cachedResponse) {
-                    // Return from cache if available
-                    return cachedResponse;
+        caches.match(event.request).then((response) => {
+            // Return asset from cache if available
+            if (response) {
+                return response;
+            }
+            // Otherwise, fetch from the network
+            return fetch(event.request).then((networkResponse) => {
+                // If the network response is valid, clone it
+                if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
+                    return networkResponse;
                 }
-
-                // Special handling for framework files - critical for Blazor
-                if (url.pathname.includes('/_framework/')) {
-                    return fetch(event.request);
-                }
-
-                // For favicon and other icon requests, try different paths if needed
-                if (url.pathname.includes('favicon') || url.pathname.includes('icon')) {
-                    return fetch(event.request)
-                        .catch(() => {
-                            // Try alternate paths
-                            const iconPaths = [
-                                new URL('favicon.png', baseUrl).href,
-                                new URL('icon-192.png', baseUrl).href
-                            ];
-
-                            // Try each path until one works
-                            return Promise.any(
-                                iconPaths.map(path => fetch(path))
-                            ).catch(() => {
-                                console.log('[ServiceWorker] All icon fallbacks failed');
-                                return new Response('');
-                            });
-                        });
-                }
-
-                // Regular network request with cache update
-                return fetch(event.request)
-                    .then(response => {
-                        // Only cache successful responses
-                        if (response && response.status === 200) {
-                            const responseToCache = response.clone();
-                            caches.open(CACHE_NAME)
-                                .then(cache => {
-                                    cache.put(event.request, responseToCache);
-                                });
-                        }
-                        return response;
+                const responseToCache = networkResponse.clone();
+                // Use event.waitUntil to ensure caching is attempted, but don't block the response
+                event.waitUntil(
+                    caches.open(CACHE_NAME).then((cache) => {
+                        return cache.put(event.request, responseToCache);
+                    }).catch(err => {
+                        console.error('Error caching response:', err);
                     })
-                    .catch(error => {
-                        console.log('[ServiceWorker] Fetch failed:', error);
-
-                        // For API requests, return a network error indicator
-                        if (url.pathname.endsWith('.json')) {
-                            return new Response(JSON.stringify({
-                                error: 'Network error',
-                                offline: true
-                            }), {
-                                status: 503,
-                                headers: {'Content-Type': 'application/json'}
-                            });
-                        }
-
-                        // Return the index.html for navigation-like requests
-                        if (url.pathname.endsWith('/') || !url.pathname.includes('.')) {
-                            return caches.match(new URL('index.html', baseUrl).href);
-                        }
-
-                        // Otherwise return an empty response
-                        return new Response('');
-                    });
-            })
+                );
+                return networkResponse;
+            });
+        })
     );
 });
-
-// Handle messages from the main thread
-self.addEventListener('message', (event) => {
-    if (event.data && event.data.type === 'SKIP_WAITING') {
-        self.skipWaiting();
-    }
-
-    if (event.data && event.data.type === 'LOG') {
-        console.log('[ServiceWorker] From page:', event.data.message);
-    }
-});
-
-console.log('[ServiceWorker] Loaded with scope:', self.registration.scope);

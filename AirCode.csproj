@@ -19,11 +19,6 @@
         <PackageReference Include="YamlDotNet" Version="16.3.0" />
         <PackageReference Include="ZXingBlazor" Version="1.1.5" />
     </ItemGroup>
-    <ItemGroup>
-        <!-- Ensure these files are published -->
-        <Content Include=".nojekyll" CopyToPublishDirectory="Always" />
-        <Content Include="404.html" CopyToPublishDirectory="Always" />
-    </ItemGroup>
 
     <ItemGroup>
         <ServiceWorker Include="wwwroot\service-worker.js" PublishedContent="wwwroot\service-worker.published.js" />

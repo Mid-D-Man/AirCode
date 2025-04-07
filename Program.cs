@@ -15,11 +15,6 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 
-// Determine base path for GitHub Pages
-var baseAddress = builder.HostEnvironment.BaseAddress;
-Console.WriteLine($"Base Address: {baseAddress}");
-
-//damn this is slow progreesing 
 
 //localstorage
 builder.Services.AddScoped<ILocalStorageService, BlazorLocalStorageService>();

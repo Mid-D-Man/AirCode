@@ -1,4 +1,3 @@
-/* Base styles from the original CSS */
 @import url('open-iconic/font/css/open-iconic-bootstrap.min.css');
 
 html, body {
@@ -68,40 +67,6 @@ a, .btn-link {
     content: "An error has occurred."
 }
 
-/* Fixed Blazor loading progress styles - replacing CSS variables with direct values */
-.loading-progress {
-    position: relative;
-    display: block;
-    width: 8rem;
-    height: 8rem;
-    margin: 20vh auto 1rem auto;
-}
-
-.loading-progress circle {
-    fill: none;
-    stroke: #e0e0e0;
-    stroke-width: 0.6rem;
-    transform-origin: 50% 50%;
-    transform: rotate(-90deg);
-}
-
-.loading-progress circle:last-child {
-    stroke: #1b6ec2;
-    stroke-dasharray: calc(3.141 * 0 * 0.8), 500%; /* Fixed percentage value */
-    transition: stroke-dasharray 0.05s ease-in-out;
-}
-
-.loading-progress-text {
-    position: absolute;
-    text-align: center;
-    font-weight: bold;
-    inset: calc(20vh + 3.25rem) 0 auto 0.2rem;
-}
-
-.loading-progress-text:after {
-    content: "Loading"; /* Fixed text value */
-}
-
 /* Custom splash screen styles */
 .splash-screen {
     display: flex;
@@ -135,7 +100,7 @@ a, .btn-link {
     color: #555;
 }
 
-/* Spinner styles */
+/* New spinner styles */
 .spinner-container {
     margin: 20px 0;
 }
@@ -159,19 +124,36 @@ a, .btn-link {
     color: #555;
 }
 
-/* Debug panel styles */
-#debug-panel {
-    position: fixed;
-    bottom: 10px;
-    right: 10px;
-    background: #f0f0f0;
-    padding: 5px;
-    border: 1px solid #ccc;
-    z-index: 10000;
-    font-size: 12px;
-    max-width: 300px;
-    max-height: 200px;
-    overflow: auto;
-    opacity: 0.8;
-    display: none; /* Hidden by default */
+/* Original Blazor loading styles - keeping for compatibility */
+.loading-progress {
+    position: relative;
+    display: block;
+    width: 8rem;
+    height: 8rem;
+    margin: 20vh auto 1rem auto;
+}
+
+.loading-progress circle {
+    fill: none;
+    stroke: #e0e0e0;
+    stroke-width: 0.6rem;
+    transform-origin: 50% 50%;
+    transform: rotate(-90deg);
+}
+
+.loading-progress circle:last-child {
+    stroke: #1b6ec2;
+    stroke-dasharray: calc(3.141 * var(--blazor-load-percentage, 0%) * 0.8), 500%;
+    transition: stroke-dasharray 0.05s ease-in-out;
+}
+
+.loading-progress-text {
+    position: absolute;
+    text-align: center;
+    font-weight: bold;
+    inset: calc(20vh + 3.25rem) 0 auto 0.2rem;
+}
+
+.loading-progress-text:after {
+    content: var(--blazor-load-percentage-text, "Loading");
 }

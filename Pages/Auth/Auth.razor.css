@@ -5,6 +5,7 @@
     justify-content: center;
     align-items: center;
     background-color: transparent;
+    padding: 3rem 0;  /* Add vertical padding to ensure space for expansion */
 }
 
 .auth-container {
@@ -17,6 +18,7 @@
     padding: 2rem;
     position: relative;
     z-index: 10;
+    max-height: 80vh; /* Limit to 80% of viewport height */
 }
 
 .theme-toggle-wrapper {
@@ -66,6 +68,7 @@
         padding: 1.5rem;
         margin: 0 var(--container-padding);
         border-radius: 10px 40px 10px 40px;
+        max-height: 85vh; /* Slightly larger on mobile */
     }
 
     ::deep(.primary-button) {
