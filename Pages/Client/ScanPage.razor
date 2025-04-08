@@ -1,5 +1,6 @@
 @page "/Client/ScanPage"
 @using AirCode.Components.SharedPrefabs
+@using AirCode.Components.SharedPrefabs.Scanner
 @layout AirQrCode.Layout.ClientLayout.ClientLayout
 @inject IJSRuntime JSRuntime
 
@@ -9,9 +10,30 @@
         <p>Scan the attendance QR code to mark your presence</p>
     </div>
     
+    <div class="scanner-options">
+        <label class="scanner-toggle">
+            <input type="checkbox" @bind="useMidScanner" />
+            <span class="slider"></span>
+            <span class="toggle-label">@(useMidScanner ? "MID Scanner" : "Standard Scanner")</span>
+        </label>
+    </div>
+    
     <div class="scan-container">
-        <!-- Removed the BarcodeReader component and added our custom ZXingScanner below -->
-        <ZXingScanner />
+        @if (useMidScanner)
+        {
+            <MidQrScanner SvgElementId="qrCodeSvg" OnScanComplete="HandleMidScanResult" />
+        }
+        else
+        {
+            <ZXingScanner OnScanResult="HandleZXingScanResult" />
+        }
+    </div>
+    
+    <!-- Hidden SVG for MID scanner to access -->
+    <div style="display: none;">
+        <svg id="qrCodeSvg" width="200" height="200" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 29 29">
+            <!-- This will be populated dynamically when needed -->
+        </svg>
     </div>
     
     <div class="scan-history">
@@ -49,12 +71,43 @@
 
 @code {
     private List<ScanRecord> recentScans = new List<ScanRecord>();
-
+    private bool useMidScanner = true;
+    
+    private void HandleZXingScanResult(string result)
+    {
+        AddScanRecord(result, !string.IsNullOrEmpty(result));
+    }
+    
+    private void HandleMidScanResult(string result)
+    {
+        AddScanRecord(result, !string.IsNullOrEmpty(result));
+    }
+    
+    private void AddScanRecord(string data, bool isSuccessful)
+    {
+        var scanRecord = new ScanRecord
+        {
+            Data = data ?? "Invalid code",
+            ScanTime = DateTime.Now,
+            IsSuccessful = isSuccessful
+        };
+        
+        recentScans.Insert(0, scanRecord);
+        
+        // Keep only the most recent scans (limit to 5)
+        if (recentScans.Count > 5)
+        {
+            recentScans.RemoveAt(recentScans.Count - 1);
+        }
+        
+        StateHasChanged();
+    }
+    
     private string GetDisplayText(string data)
     {
         if (string.IsNullOrEmpty(data))
             return "Invalid code";
-            
+        
         return data.Length > 30 ? data.Substring(0, 27) + "..." : data;
     }
     

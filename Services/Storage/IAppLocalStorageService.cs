@@ -6,7 +6,7 @@ namespace AirCode.Services.Storage
     /// <summary>
     /// Interface for local storage service
     /// </summary>
-    public interface ILocalStorageService
+    public interface IAppLocalStorageService
     {
         Task<T> GetItemAsync<T>(string key);
         Task<bool> SetItemAsync<T>(string key, T value);

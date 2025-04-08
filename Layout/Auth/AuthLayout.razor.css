@@ -3,7 +3,7 @@
     width: 100%;
     min-height: 100vh; /* Ensure minimum full height */
     overflow-y: auto; /* Allow scrolling when needed */
-    overflow-x: hidden; /* Prevent horizontal scroll */
+    /* Removed overflow-x: hidden to prevent squeezing */
     display: flex;
     justify-content: center;
     align-items: center;
@@ -16,7 +16,7 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    padding: 1rem 0;
+    padding: 1rem;  /* Added horizontal padding */
 }
 
 /* Make sure page scrolls smoothly if needed */

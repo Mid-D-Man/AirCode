@@ -1,7 +1,9 @@
 
-AirCode.csproj  Components      Models          Program.cs      Shared          _Imports.razor  obj
-AirCode.sln     Domain          Others          Properties      TestData        bin             public
-App.razor       Layout          Pages           Services        Utilities       global.json     wwwroot
+AirCode.csproj          Layout                  Properties              _Imports.razor          global.json
+AirCode.sln             Models                  Services                bin                     obj
+App.razor               Others                  Shared                  firebase.json           public
+Components              Pages                   TestData                firestore.indexes.json  wwwroot
+Domain                  Program.cs              Utilities               firestore.rules
 
 ./Components:
 Admin           Auth            Loading         SharedPrefabs
@@ -98,7 +100,7 @@ CourseDto.cs    SessionData.cs  User.cs
 Info.txt                ProjectStructure.txt
 
 ./Pages:
-Admin           Auth            Client          TestPages
+Admin           Auth            Client          Index.razor     Index.razor.css TestPages
 
 ./Pages/Admin:
 CreateSession.razor             Dashboard.razor.css             ManageSession.razor             Reports.razor.css
@@ -113,20 +115,23 @@ ClientProfile.razor             ClientSettings.razor            ClientStats.razo
 ClientProfile.razor.css         ClientSettings.razor.css        ClientStats.razor.css           ScanPage.razor.css
 
 ./Pages/TestPages:
-                   ShaderPage1.razor       TestPage.razor          TestPage.razor.css
-Index.razor  Index.razor.css  
+ShaderPage1.razor       TestPage.razor          TestPage.razor.css
+
 ./Properties:
 launchSettings.json
 
 ./Services:
-Auth            Courses         Permissions     Scanner         Search          Storage         SupaBase
+Auth            Courses         Firebase        Permissions     Scanner         Search          Storage         SupaBase
 
 ./Services/Auth:
-IOfflineCredentialService.cs    OfflineAuthService.cs           SecureCredentialService.cs
-IUserStorageService.cs          OfflineCredentialService.cs     UserStorageService.cs
+Auth0Service.cs                 IOfflineCredentialService.cs    OfflineAuthService.cs           SecureCredentialService.cs
+IAuth0Service.cs                IUserStorageService.cs          OfflineCredentialService.cs     UserStorageService.cs
 
 ./Services/Courses:
 CourseService.cs        ICourseService.cs
+
+./Services/Firebase:
+FirestoreService.cs     IFirestoreService.cs
 
 ./Services/Permissions:
 IPermissionService.cs   PermissionService.cs
@@ -138,7 +143,7 @@ IScannerService.cs
 ISearchContextService.cs        SearchContextService.cs
 
 ./Services/Storage:
-BlazorLocalStorageService.cs    ILocalStorageService.cs
+BlazorAppLocalStorageService.cs IAppLocalStorageService.cs
 
 ./Services/SupaBase:
 ISupaBaseService.cs     SupaBaseService.cs
@@ -170,10 +175,10 @@ net7.0
 index.html
 
 ./wwwroot:
-404.html                        icon-512.png                    manifest.json                   svgs
-css                             icons                           sample-data                     wasm
-favicon.png                     index.html                      service-worker.js
-icon-192.png                    js                              service-worker.published.js
+css                             icon-512.png                    sample-data                     wasm
+dotnet-serve-config.json        index.html                      service-worker.js
+favicon.png                     js                              service-worker.published.js
+icon-192.png                    manifest.json                   svgs
 
 ./wwwroot/css:
 app.css         bootstrap       colors.css      open-iconic     responsive.css
@@ -193,11 +198,9 @@ open-iconic-bootstrap.min.css
 ./wwwroot/css/open-iconic/font/fonts:
 open-iconic.eot         open-iconic.otf         open-iconic.svg         open-iconic.ttf         open-iconic.woff
 
-./wwwroot/icons:
-
 ./wwwroot/js:
-connectivityServices.js midQrScannerModule.js   shaderRenderer1.js      zxingScanner.js
-debug.js                qrCodeModule.js         themeSwitcher.js
+connectivityServices.js firestoreModule.js      qrCodeModule.js         themeSwitcher.js
+debug.js                midQrScannerModule.js   shaderRenderer1.js      zxingScanner.js
 
 ./wwwroot/sample-data:
 weather.json
@@ -209,5 +212,3 @@ ContactUs_Icon.svg      Logout_Icon.svg         Report_Icon.svg         Users_Ic
 ./wwwroot/wasm:
 package.json                    qr_code_generator.js            qr_code_generator_bg.wasm.d.ts
 qr_code_generator.d.ts          qr_code_generator_bg.wasm
-
-

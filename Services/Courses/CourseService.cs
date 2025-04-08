@@ -14,37 +14,37 @@ namespace AirCode.Services.Courses
     public class CourseService : ICourseService
     {
         private readonly IPermissionService _permissionService;
-        private readonly ILocalStorageService _localStorageService;
+        private readonly IAppLocalStorageService _appLocalStorageService;
         
         // Dependency injection
-        public CourseService(IPermissionService permissionService, ILocalStorageService localStorageService)
+        public CourseService(IPermissionService permissionService, IAppLocalStorageService appLocalStorageService)
         {
             _permissionService = permissionService;
-            _localStorageService = localStorageService;
+            _appLocalStorageService = appLocalStorageService;
         }
         
         // Queries - no permission checks needed for read operations
         public async Task<Course> GetCourseAsync(string courseId)
         {
-            var courses = await _localStorageService.GetItemAsync<List<Course>>("courses") ?? new List<Course>();
+            var courses = await _appLocalStorageService.GetItemAsync<List<Course>>("courses") ?? new List<Course>();
             return courses.FirstOrDefault(c => c.CourseId == courseId);
         }
         
         public async Task<List<Course>> GetCoursesByDepartmentAsync(string departmentId)
         {
-            var courses = await _localStorageService.GetItemAsync<List<Course>>("courses") ?? new List<Course>();
+            var courses = await _appLocalStorageService.GetItemAsync<List<Course>>("courses") ?? new List<Course>();
             return courses.Where(c => c.DepartmentId == departmentId).ToList();
         }
         
         public async Task<List<Course>> GetCoursesByLecturerAsync(string lecturerId)
         {
-            var courses = await _localStorageService.GetItemAsync<List<Course>>("courses") ?? new List<Course>();
+            var courses = await _appLocalStorageService.GetItemAsync<List<Course>>("courses") ?? new List<Course>();
             return courses.Where(c => c.LecturerIds.Contains(lecturerId)).ToList();
         }
         
         public async Task<List<Course>> GetCoursesByLevelAsync(string departmentId, LevelType level)
         {
-            var courses = await _localStorageService.GetItemAsync<List<Course>>("courses") ?? new List<Course>();
+            var courses = await _appLocalStorageService.GetItemAsync<List<Course>>("courses") ?? new List<Course>();
             return courses.Where(c => c.DepartmentId == departmentId && c.Level == level).ToList();
         }
         
@@ -55,7 +55,7 @@ namespace AirCode.Services.Courses
             if (!await _permissionService.CanEditCourseInfoAsync(userId, null))
                 throw new UnauthorizedAccessException("User cannot create courses");
             
-            var courses = await _localStorageService.GetItemAsync<List<Course>>("courses") ?? new List<Course>();
+            var courses = await _appLocalStorageService.GetItemAsync<List<Course>>("courses") ?? new List<Course>();
             
             // Ensure course ID is unique
             if (courses.Any(c => c.CourseId == course.CourseId))
@@ -70,7 +70,7 @@ namespace AirCode.Services.Courses
             };
             
             courses.Add(securedCourse);
-            await _localStorageService.SetItemAsync("courses", courses);
+            await _appLocalStorageService.SetItemAsync("courses", courses);
             
             return securedCourse;
         }
@@ -81,7 +81,7 @@ namespace AirCode.Services.Courses
             if (!await _permissionService.CanEditCourseInfoAsync(userId, courseId))
                 throw new UnauthorizedAccessException("User cannot edit this course");
                 
-            var courses = await _localStorageService.GetItemAsync<List<Course>>("courses") ?? new List<Course>();
+            var courses = await _appLocalStorageService.GetItemAsync<List<Course>>("courses") ?? new List<Course>();
             var existingCourse = courses.FirstOrDefault(c => c.CourseId == courseId);
             
             if (existingCourse == null)
@@ -100,7 +100,7 @@ namespace AirCode.Services.Courses
             courses[index] = updatedCourse;
             
             // Save updated list
-            await _localStorageService.SetItemAsync("courses", courses);
+            await _appLocalStorageService.SetItemAsync("courses", courses);
             
             return updatedCourse;
         }
@@ -110,7 +110,7 @@ namespace AirCode.Services.Courses
             if (!await _permissionService.CanEditCourseInfoAsync(userId, courseId))
                 throw new UnauthorizedAccessException("User cannot edit this course");
                 
-            var courses = await _localStorageService.GetItemAsync<List<Course>>("courses") ?? new List<Course>();
+            var courses = await _appLocalStorageService.GetItemAsync<List<Course>>("courses") ?? new List<Course>();
             var existingCourse = courses.FirstOrDefault(c => c.CourseId == courseId);
             
             if (existingCourse == null)
@@ -126,7 +126,7 @@ namespace AirCode.Services.Courses
             var index = courses.FindIndex(c => c.CourseId == courseId);
             courses[index] = updatedCourse;
             
-            await _localStorageService.SetItemAsync("courses", courses);
+            await _appLocalStorageService.SetItemAsync("courses", courses);
             
             return updatedCourse;
         }
@@ -136,7 +136,7 @@ namespace AirCode.Services.Courses
             if (!await _permissionService.CanEditCourseInfoAsync(userId, courseId))
                 throw new UnauthorizedAccessException("User cannot edit this course");
                 
-            var courses = await _localStorageService.GetItemAsync<List<Course>>("courses") ?? new List<Course>();
+            var courses = await _appLocalStorageService.GetItemAsync<List<Course>>("courses") ?? new List<Course>();
             var existingCourse = courses.FirstOrDefault(c => c.CourseId == courseId);
             
             if (existingCourse == null)
@@ -152,7 +152,7 @@ namespace AirCode.Services.Courses
             var index = courses.FindIndex(c => c.CourseId == courseId);
             courses[index] = updatedCourse;
             
-            await _localStorageService.SetItemAsync("courses", courses);
+            await _appLocalStorageService.SetItemAsync("courses", courses);
             
             return updatedCourse;
         }
@@ -162,7 +162,7 @@ namespace AirCode.Services.Courses
             if (!await _permissionService.CanEditCourseInfoAsync(userId, courseId))
                 throw new UnauthorizedAccessException("User cannot edit this course");
                 
-            var courses = await _localStorageService.GetItemAsync<List<Course>>("courses") ?? new List<Course>();
+            var courses = await _appLocalStorageService.GetItemAsync<List<Course>>("courses") ?? new List<Course>();
             var existingCourse = courses.FirstOrDefault(c => c.CourseId == courseId);
             
             if (existingCourse == null)
@@ -185,7 +185,7 @@ namespace AirCode.Services.Courses
             var index = courses.FindIndex(c => c.CourseId == courseId);
             courses[index] = updatedCourse;
             
-            await _localStorageService.SetItemAsync("courses", courses);
+            await _appLocalStorageService.SetItemAsync("courses", courses);
             
             return updatedCourse;
         }
@@ -195,7 +195,7 @@ namespace AirCode.Services.Courses
             if (!await _permissionService.CanEditCourseInfoAsync(userId, courseId))
                 throw new UnauthorizedAccessException("User cannot edit this course");
                 
-            var courses = await _localStorageService.GetItemAsync<List<Course>>("courses") ?? new List<Course>();
+            var courses = await _appLocalStorageService.GetItemAsync<List<Course>>("courses") ?? new List<Course>();
             var existingCourse = courses.FirstOrDefault(c => c.CourseId == courseId);
             
             if (existingCourse == null)
@@ -219,7 +219,7 @@ namespace AirCode.Services.Courses
             var index = courses.FindIndex(c => c.CourseId == courseId);
             courses[index] = updatedCourse;
             
-            await _localStorageService.SetItemAsync("courses", courses);
+            await _appLocalStorageService.SetItemAsync("courses", courses);
             
             return updatedCourse;
         }
@@ -229,7 +229,7 @@ namespace AirCode.Services.Courses
             if (!await _permissionService.CanEditCourseInfoAsync(userId, courseId))
                 throw new UnauthorizedAccessException("User cannot edit this course");
                 
-            var courses = await _localStorageService.GetItemAsync<List<Course>>("courses") ?? new List<Course>();
+            var courses = await _appLocalStorageService.GetItemAsync<List<Course>>("courses") ?? new List<Course>();
             var existingCourse = courses.FirstOrDefault(c => c.CourseId == courseId);
             
             if (existingCourse == null)
@@ -245,7 +245,7 @@ namespace AirCode.Services.Courses
             var index = courses.FindIndex(c => c.CourseId == courseId);
             courses[index] = updatedCourse;
             
-            await _localStorageService.SetItemAsync("courses", courses);
+            await _appLocalStorageService.SetItemAsync("courses", courses);
             
             return updatedCourse;
         }
@@ -255,14 +255,14 @@ namespace AirCode.Services.Courses
             if (!await _permissionService.CanEditCourseInfoAsync(userId, courseId))
                 throw new UnauthorizedAccessException("User cannot delete this course");
                 
-            var courses = await _localStorageService.GetItemAsync<List<Course>>("courses") ?? new List<Course>();
+            var courses = await _appLocalStorageService.GetItemAsync<List<Course>>("courses") ?? new List<Course>();
             var existingCourse = courses.FirstOrDefault(c => c.CourseId == courseId);
             
             if (existingCourse == null)
                 return false; // Course doesn't exist
             
             courses.RemoveAll(c => c.CourseId == courseId);
-            await _localStorageService.SetItemAsync("courses", courses);
+            await _appLocalStorageService.SetItemAsync("courses", courses);
             
             return true;
         }

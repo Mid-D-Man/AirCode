@@ -1,62 +1,187 @@
-// Components/Scanner/QrScanner.razor
-@inject IScannerService ScannerService
+@inject IJSRuntime JSRuntime
 @implements IAsyncDisposable
 
-<div class="scanner">
-    <div class="scanner__viewport">
-        <video id="scanner-video" autoplay playsinline></video>
-        <div class="scanner__overlay">
-            <div class="scanner__target"></div>
-        </div>
+<div class="scanner-container @(_isScanning ? "scanning" : "")">
+    <div class="scanner-frame">
+        <div class="corner top-left"></div>
+        <div class="corner top-right"></div>
+        <div class="corner bottom-left"></div>
+        <div class="corner bottom-right"></div>
+        
+        @if (_isScanning)
+        {
+            <div class="scan-line"></div>
+        }
     </div>
-    <div class="scanner__controls">
-        @if (!_isScanning)
-        {
-            <button class="scanner__button" @onclick="StartScanningAsync">
-                Start Scan
-            </button>
-        }
-        else
-        {
-            <button class="scanner__button scanner__button--stop" @onclick="StopScanningAsync">
-                Stop Scan
-            </button>
-        }
+    
+    <div class="scanner-viewport" @ref="_viewportRef">
+        <canvas @ref="_canvasRef" class="scanner-canvas"></canvas>
+    </div>
+    
+    @if (!string.IsNullOrEmpty(_result))
+    {
+        <div class="result-overlay">
+            <div class="result-card">
+                <h3>QR Code Detected</h3>
+                <p class="result-content">@_result</p>
+                <button class="dismiss-btn" @onclick="() => _result = string.Empty">Dismiss</button>
+            </div>
+        </div>
+    }
+    
+    <div class="control-panel">
+        <button class="scan-button" @onclick="ToggleScanningAsync">
+            <span class="scan-icon">@(_isScanning ? "■" : "▶")</span>
+            <span class="scan-text">@(_isScanning ? "Stop" : "Start Scanning")</span>
+        </button>
     </div>
 </div>
 
 @code {
-    private bool _isScanning;
-
-    [Parameter] public EventCallback<string> OnCodeScanned { get; set; }
-
+    [Parameter] public EventCallback<string> OnScanComplete { get; set; }
+    [Parameter] public string SvgElementId { get; set; } = "qrCodeSvg";
+    [Parameter] public bool AutoStart { get; set; } = false;
+    
+    private ElementReference _viewportRef;
+    private ElementReference _canvasRef;
+    private bool _isScanning = false;
+    private string _result = string.Empty;
+    private bool _initialized = false;
+    private DotNetObjectReference<MidQrScanner> _dotNetRef;
+    private IJSObjectReference _module;
+    
     protected override async Task OnInitializedAsync()
     {
-        await ScannerService.InitializeCameraAsync();
+        _dotNetRef = DotNetObjectReference.Create(this);
     }
-
-    private async Task StartScanningAsync()
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        _isScanning = true;
-        while (_isScanning)
+        if (firstRender)
         {
-            var result = await ScannerService.ScanQrCodeAsync();
-            if (!string.IsNullOrEmpty(result))
+            await InitializeScannerAsync();
+            
+            if (AutoStart)
             {
-                await OnCodeScanned.InvokeAsync(result);
+                await ToggleScanningAsync();
             }
-            await Task.Delay(500);
         }
     }
-
-    private async Task StopScanningAsync()
+    
+    private async Task InitializeScannerAsync()
     {
-        _isScanning = false;
-        await ScannerService.StopScanningAsync();
+        if (!_initialized)
+        {
+            try
+            {
+                _module = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "/js/midQrScannerModule.js");
+                _initialized = await _module.InvokeAsync<bool>("midQrScanner.initialize");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to initialize scanner: {ex.Message}");
+            }
+        }
     }
-
-    async ValueTask IAsyncDisposable.DisposeAsync()
+    
+    private async Task ToggleScanningAsync()
     {
-        await StopScanningAsync();
+        try
+        {
+            _isScanning = !_isScanning;
+            
+            if (_isScanning)
+            {
+                await StartScanningAsync();
+            }
+            else
+            {
+                // Stop any ongoing scanning operations if needed
+            }
+            
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error toggling scanner: {ex.Message}");
+            _isScanning = false;
+            StateHasChanged();
+        }
+    }
+    
+    private async Task StartScanningAsync()
+    {
+        if (!_initialized)
+        {
+            await InitializeScannerAsync();
+        }
+        
+        try
+        {
+            // Get the SVG element content
+            var svgContent = await JSRuntime.InvokeAsync<string>(
+                "document.getElementById", SvgElementId);
+            
+            if (!string.IsNullOrEmpty(svgContent))
+            {
+                // Check if SVG is valid
+                bool isValid = await _module.InvokeAsync<bool>("midQrScanner.validateSvg", svgContent);
+                
+                if (isValid)
+                {
+                    // Start processing the SVG (simulate scanning)
+                    await SimulateScanningAsync();
+                }
+                else
+                {
+                    _result = "Invalid QR code format";
+                    _isScanning = false;
+                }
+            }
+            else
+            {
+                _result = "No QR code found";
+                _isScanning = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            _result = $"Scanning error: {ex.Message}";
+            _isScanning = false;
+        }
+        
+        StateHasChanged();
+    }
+    
+    // For demo purposes - simulate scanning process
+    private async Task SimulateScanningAsync()
+    {
+        // In a real implementation, you'd use the actual scanner
+        await Task.Delay(2000); // Simulate processing time
+        
+        if (_isScanning)
+        {
+            _result = "Sample QR Code: https://example.com/12345"; 
+            _isScanning = false;
+            await OnScanComplete.InvokeAsync(_result);
+        }
+    }
+    
+    [JSInvokable]
+    public void OnScanResult(string result)
+    {
+        _result = result;
+        _isScanning = false;
+        StateHasChanged();
+    }
+    
+    public async ValueTask DisposeAsync()
+    {
+        _dotNetRef?.Dispose();
+        
+        if (_module != null)
+        {
+            await _module.DisposeAsync();
+        }
     }
 }

@@ -9,12 +9,12 @@ namespace AirCode.Services.Storage
     /// <summary>
     /// Service for handling local storage operations in Blazor applications
     /// </summary>
-    public class BlazorLocalStorageService : ILocalStorageService
+    public class BlazorAppLocalStorageService : IAppLocalStorageService
     {
         private readonly IJSRuntime _jsRuntime;
         private const string LocalStorageKey = "AirCode_";
 
-        public BlazorLocalStorageService(IJSRuntime jsRuntime)
+        public BlazorAppLocalStorageService(IJSRuntime jsRuntime)
         {
             _jsRuntime = jsRuntime;
         }

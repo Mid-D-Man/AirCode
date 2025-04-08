@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="JavaScriptLibraryMappings">
+    <file url="PROJECT" libraries="{@zxing/library, firebase-app-compat, firebase-database-compat, firebase-firestore-compat}" />
+  </component>
+</project>

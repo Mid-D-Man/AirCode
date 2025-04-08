@@ -10,7 +10,7 @@ namespace AirCode.Services.Auth
 {
     public class SecureCredentialService : IOfflineCredentialService
     {
-        private readonly ILocalStorageService _localStorage;
+        private readonly IAppLocalStorageService _appLocalStorage;
         private const string CREDENTIALS_KEY = "aircode_secure_credentials";
         private const string DEVICE_ID_KEY = "aircode_device_fingerprint";
         
@@ -18,9 +18,9 @@ namespace AirCode.Services.Auth
         private static readonly byte[] AES_KEY = GenerateSecureKey("AirCodeEncryptionKey2025");
         private static readonly byte[] AES_IV = GenerateSecureKey("AirCodeInitVector2025").AsSpan(0, 16).ToArray();
         
-        public SecureCredentialService(ILocalStorageService localStorage)
+        public SecureCredentialService(IAppLocalStorageService appLocalStorage)
         {
-            _localStorage = localStorage;
+            _appLocalStorage = appLocalStorage;
         }
 
         public async Task<bool> StoreCredentials(string username, string password, bool isAdmin, string adminId)
@@ -45,7 +45,7 @@ namespace AirCode.Services.Auth
                 string json = JsonSerializer.Serialize(credentials);
                 string encrypted = EncryptString(json);
                 
-                await _localStorage.SetItemAsync(CREDENTIALS_KEY, encrypted);
+                await _appLocalStorage.SetItemAsync(CREDENTIALS_KEY, encrypted);
                 return true;
             }
             catch (Exception ex)
@@ -59,7 +59,7 @@ namespace AirCode.Services.Auth
         {
             try
             {
-                string encrypted = await _localStorage.GetItemAsync<string>(CREDENTIALS_KEY);
+                string encrypted = await _appLocalStorage.GetItemAsync<string>(CREDENTIALS_KEY);
                 
                 if (string.IsNullOrEmpty(encrypted))
                     return null;
@@ -76,13 +76,13 @@ namespace AirCode.Services.Auth
 
         public async Task<bool> HasStoredCredentials()
         {
-            string encrypted = await _localStorage.GetItemAsync<string>(CREDENTIALS_KEY);
+            string encrypted = await _appLocalStorage.GetItemAsync<string>(CREDENTIALS_KEY);
             return !string.IsNullOrEmpty(encrypted);
         }
 
         public async Task ClearCredentials()
         {
-            await _localStorage.RemoveItemAsync(CREDENTIALS_KEY);
+            await _appLocalStorage.RemoveItemAsync(CREDENTIALS_KEY);
         }
 
         public async Task<bool> ValidateOfflineLogin(string username, string password, bool isAdmin, string adminId)
@@ -183,7 +183,7 @@ namespace AirCode.Services.Auth
         
         private async Task<string> GetOrCreateDeviceId()
         {
-            string deviceId = await _localStorage.GetItemAsync<string>(DEVICE_ID_KEY);
+            string deviceId = await _appLocalStorage.GetItemAsync<string>(DEVICE_ID_KEY);
             
             if (string.IsNullOrEmpty(deviceId))
             {
@@ -191,7 +191,7 @@ namespace AirCode.Services.Auth
                 deviceId = Guid.NewGuid().ToString();
                 
                 // Store the device ID
-                await _localStorage.SetItemAsync(DEVICE_ID_KEY, deviceId);
+                await _appLocalStorage.SetItemAsync(DEVICE_ID_KEY, deviceId);
             }
             
             return deviceId;

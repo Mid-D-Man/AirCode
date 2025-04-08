@@ -17,7 +17,7 @@ builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.
 
 
 //localstorage
-builder.Services.AddScoped<ILocalStorageService, BlazorLocalStorageService>();
+builder.Services.AddScoped<IAppLocalStorageService, BlazorAppLocalStorageService>();
 
 //scanner
 builder.Services.AddScoped<IScannerService, ScannerService>();
@@ -30,6 +30,9 @@ builder.Services.AddScoped<IUserStorageService, UserStorageService>();
 builder.Services.AddScoped<IPermissionService, PermissionService>();
 builder.Services.AddScoped<ICourseService, CourseService>();
 builder.Services.AddScoped<ISearchContextService, SearchContextService>();
+
+// Firebase Services
+builder.Services.AddScoped<AirCode.Services.Firebase.IFirestoreService, AirCode.Services.Firebase.FirestoreService>();
 
 await builder.Build().RunAsync();
 
