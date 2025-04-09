@@ -25,12 +25,6 @@
     justify-content: center;
 }
 
-.nav-button .icon img {
-    width: 20px;
-    height: 20px;
-    object-fit: contain;
-}
-
 .nav-button .text {
     font-size: 0.9rem;
     white-space: nowrap;

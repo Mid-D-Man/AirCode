@@ -41,8 +41,8 @@ CourseCard.razor        CourseCard.razor.css
 FormField.razor         FormField.razor.css
 
 ./Components/SharedPrefabs/Others:
-BlobBackground.razor            ConnectionModal.razor           DynamicBlob.razor
-BlobBackground.razor.css        ConnectionModal.razor.css
+BlobBackground.razor            ConnectionModal.razor           DynamicBlob.razor               SvgIcon.razor.css
+BlobBackground.razor.css        ConnectionModal.razor.css       SvgIcon.razor
 
 ./Components/SharedPrefabs/QrCode:
 QRCodeCompo.razor       QRCodeCompo.razor.css
@@ -121,11 +121,12 @@ ShaderPage1.razor       TestPage.razor          TestPage.razor.css
 launchSettings.json
 
 ./Services:
-Auth            Courses         Firebase        Permissions     Scanner         Search          Storage         SupaBase
+Auth            Firebase        Scanner         Storage         VisualElements
+Courses         Permissions     Search          SupaBase
 
 ./Services/Auth:
-Auth0Service.cs                 IOfflineCredentialService.cs            
-IAuth0Service.cs                IUserStorageService.cs          OfflineCredentialService.cs     UserStorageService.cs
+Auth0Service.cs                 IOfflineCredentialService.cs    OfflineCredentialService.cs
+IAuth0Service.cs                IUserStorageService.cs          UserStorageService.cs
 
 ./Services/Courses:
 CourseService.cs        ICourseService.cs
@@ -137,16 +138,19 @@ FirestoreService.cs     IFirestoreService.cs
 IPermissionService.cs   PermissionService.cs
 
 ./Services/Scanner:
-IScannerService.cs
+IZxingScannerService.cs
 
 ./Services/Search:
 ISearchContextService.cs        SearchContextService.cs
 
 ./Services/Storage:
-BlazorAppLocalStorageService.cs IAppLocalStorageService.cs
+BlazorAppLocalStorageService.cs         IBlazorAppLocalStorageService.cs
 
 ./Services/SupaBase:
 ISupaBaseService.cs     SupaBaseService.cs
+
+./Services/VisualElements:
+ISvgIconService.cs      SvgIconService.cs
 
 ./Shared:
 SplashScreen.razor      SplashScreen.razor.css
@@ -169,6 +173,7 @@ Debug   Release
 
 ./bin/Debug:
 net7.0
+
 
 
 ./public:
