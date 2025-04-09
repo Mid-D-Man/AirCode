@@ -6,8 +6,8 @@ using AirCode.Services.Auth;
 using AirCode.Services.Courses;
 using AirCode.Services.Permissions;
 using AirCode.Services.Search;
-using ZXingBlazor;
-using AirCode.Services.Storage; 
+using AirCode.Services.Storage;
+using AirCode.Services.VisualElements;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
@@ -25,6 +25,10 @@ builder.Services.AddScoped<IZxingScannerService, ZxingScannerService>();
 //auth registry
 builder.Services.AddAuthorizationCore();
 builder.Services.AddScoped<IUserStorageService, UserStorageService>();
+
+//visual elements
+builder.Services.AddScoped<ISvgIconService, SvgIconService>();
+
 
 // Add services
 builder.Services.AddScoped<IPermissionService, PermissionService>();

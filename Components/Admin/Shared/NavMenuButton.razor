@@ -1,8 +1,9 @@
+@using AirCode.Components.SharedPrefabs.Others
 @* Components/Admin/Shared/NavMenuButton.razor *@
 @namespace Aircode.Components.Admin.Shared
 <div class="nav-button" @onclick="@OnClick">
     <div class="icon">
-        <img src="@IconPath" alt="@Label" />
+        <SvgIcon IconName="@IconName" Width="20px" Height="20px" />
     </div>
     @if (IsExpanded)
     {
@@ -12,7 +13,7 @@
 
 @code {
     [Parameter]
-    public string IconPath { get; set; } = "";
+    public string IconName { get; set; } = "";
 
     [Parameter]
     public string Label { get; set; } = "";
@@ -23,4 +24,3 @@
     [Parameter]
     public EventCallback OnClick { get; set; }
 }
-

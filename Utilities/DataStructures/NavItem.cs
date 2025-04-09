@@ -1,27 +1,24 @@
 namespace AirCode.Utilities.DataStructures;
-
 public class NavItem
-{
-    public string IconPath { get; set; }
-    public string Label { get; set; }
-    public string? Path { get; set; }
-    public Action? Action { get; set; }
-
-    // Constructor for navigation items (with Path)
-    public NavItem(string iconPath, string label, string path)
     {
-        IconPath = iconPath;
-        Label = label;
-        Path = path;
-        Action = null;
-    }
+        public string IconName { get; set; }
+        public string Label { get; set; }
+        public string? Path { get; set; }
+        public Action? Action { get; set; }
 
-    // Constructor for action items (with Action)
-    public NavItem(string iconPath, string label, Action action)
-    {
-        IconPath = iconPath;
-        Label = label;
-        Path = null;
-        Action = action;
+        // Constructor for navigation items with path
+        public NavItem(string iconName, string label, string path)
+        {
+            IconName = iconName;
+            Label = label;
+            Path = path;
+        }
+
+        // Constructor for action items (like bottom items)
+        public NavItem(string iconName, string label, Action action)
+        {
+            IconName = iconName;
+            Label = label;
+            Action = action;
+        }
     }
-}
