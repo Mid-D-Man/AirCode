@@ -1,4 +1,3 @@
-
 using System;
 using System.Text.Json;
 using System.Collections.Generic;
@@ -19,6 +18,7 @@ namespace AirCode.Services.Auth
         
         private const string AUTH_TOKEN_KEY = "auth0_token";
         private const string USER_KEY = "auth0_user";
+        private bool _isInitialized = false;
 
         public Auth0Service(
             IJSRuntime jsRuntime,
@@ -34,13 +34,39 @@ namespace AirCode.Services.Auth
 
         public async Task InitializeAsync()
         {
+            if (_isInitialized)
+            {
+                return;
+            }
+            
             try
             {
+                Console.WriteLine("Starting Auth0 initialization...");
+                
+                // First check if auth0Client.js is available
+                var isModuleLoaded = await _jsRuntime.InvokeAsync<bool>(
+                    "eval", 
+                    "typeof window.auth0Client !== 'undefined'"
+                );
+                
+                if (!isModuleLoaded)
+                {
+                    Console.WriteLine("Auth0Client module not found in window object");
+                    return;
+                }
+                
                 await _jsRuntime.InvokeVoidAsync("auth0Client.initialize");
+                _isInitialized = true;
+                
+                Console.WriteLine("Auth0 initialization completed successfully");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error initializing Auth0: {ex.Message}");
+                Console.WriteLine($"Error initializing Auth0: {ex.GetType().Name} - {ex.Message}");
+                if (ex.InnerException != null)
+                {
+                    Console.WriteLine($"Inner Exception: {ex.InnerException.Message}");
+                }
             }
         }
 
@@ -48,6 +74,14 @@ namespace AirCode.Services.Auth
         {
             try
             {
+                if (!_isInitialized)
+                {
+                    Console.WriteLine("Auth0 not initialized, attempting to initialize before signup");
+                    await InitializeAsync();
+                }
+                
+                Console.WriteLine($"Starting signup for user: {model.Username}");
+                
                 // Create user metadata with extra properties
                 var userMetadata = new Dictionary<string, object>
                 {
@@ -63,8 +97,22 @@ namespace AirCode.Services.Auth
                 };
 
                 var metadataJson = JsonSerializer.Serialize(userMetadata);
+                Console.WriteLine("User metadata prepared");
+                
+                // Check if auth0Client is available
+                var isClientAvailable = await _jsRuntime.InvokeAsync<bool>(
+                    "eval", 
+                    "typeof window.auth0Client !== 'undefined' && typeof window.auth0Client.signUp === 'function'"
+                );
+                
+                if (!isClientAvailable)
+                {
+                    Console.WriteLine("Auth0Client.signUp function is not available");
+                    return false;
+                }
                 
                 // Call Auth0 signup via JS interop
+                Console.WriteLine("Calling Auth0 signup...");
                 var success = await _jsRuntime.InvokeAsync<bool>(
                     "auth0Client.signUp", 
                     model.Email, 
@@ -74,6 +122,8 @@ namespace AirCode.Services.Auth
                 
                 if (success)
                 {
+                    Console.WriteLine("Auth0 signup successful, storing credentials for offline use");
+                    
                     // Store offline credentials for offline operation
                     await _offlineCredentialService.StoreCredentials(
                         model.Username, 
@@ -102,13 +152,23 @@ namespace AirCode.Services.Auth
                     
                     // Also store in user repository for offline use
                     await _userStorageService.AddUser(user);
+                    
+                    Console.WriteLine("User data stored successfully");
+                }
+                else
+                {
+                    Console.WriteLine("Auth0 signup failed");
                 }
                 
                 return success;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error during signup: {ex.Message}");
+                Console.WriteLine($"Error during signup: {ex.GetType().Name} - {ex.Message}");
+                if (ex.InnerException != null)
+                {
+                    Console.WriteLine($"Inner Exception: {ex.InnerException.Message}");
+                }
                 return false;
             }
         }
@@ -117,11 +177,33 @@ namespace AirCode.Services.Auth
         {
             try
             {
+                if (!_isInitialized)
+                {
+                    Console.WriteLine("Auth0 not initialized, attempting to initialize before login");
+                    await InitializeAsync();
+                }
+                
+                Console.WriteLine($"Starting login for user: {model.Username}");
+                
                 // Check network connectivity first
-                var isOnline = await _jsRuntime.InvokeAsync<bool>("connectivityService.isOnline");
+                var isOnline = await _jsRuntime.InvokeAsync<bool>("eval", "navigator.onLine");
                 
                 if (isOnline)
                 {
+                    Console.WriteLine("Online mode detected, using Auth0 for authentication");
+                    
+                    // Check if auth0Client is available
+                    var isClientAvailable = await _jsRuntime.InvokeAsync<bool>(
+                        "eval", 
+                        "typeof window.auth0Client !== 'undefined' && typeof window.auth0Client.login === 'function'"
+                    );
+                    
+                    if (!isClientAvailable)
+                    {
+                        Console.WriteLine("Auth0Client.login function is not available");
+                        return false;
+                    }
+                    
                     // Online login through Auth0
                     var result = await _jsRuntime.InvokeAsync<bool>(
                         "auth0Client.login", 
@@ -132,6 +214,8 @@ namespace AirCode.Services.Auth
                     
                     if (result)
                     {
+                        Console.WriteLine("Auth0 login successful, retrieving user profile");
+                        
                         // Get user profile from Auth0
                         var userJson = await _jsRuntime.InvokeAsync<string>("auth0Client.getUserProfile");
                         if (!string.IsNullOrEmpty(userJson))
@@ -144,13 +228,25 @@ namespace AirCode.Services.Auth
                                 model.Password, 
                                 model.IsAdmin, 
                                 model.AdminId);
+                                
+                            Console.WriteLine("User profile stored for offline use");
                         }
+                        else
+                        {
+                            Console.WriteLine("Could not retrieve user profile from Auth0");
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine("Auth0 login failed");
                     }
                     
                     return result;
                 }
                 else
                 {
+                    Console.WriteLine("Offline mode detected, using stored credentials");
+                    
                     // Offline login using stored credentials
                     return await _offlineCredentialService.ValidateOfflineLogin(
                         model.Username, 
@@ -161,7 +257,11 @@ namespace AirCode.Services.Auth
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error during login: {ex.Message}");
+                Console.WriteLine($"Error during login: {ex.GetType().Name} - {ex.Message}");
+                if (ex.InnerException != null)
+                {
+                    Console.WriteLine($"Inner Exception: {ex.InnerException.Message}");
+                }
                 return false;
             }
         }
@@ -194,7 +294,7 @@ namespace AirCode.Services.Auth
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error getting current user: {ex.Message}");
+                Console.WriteLine($"Error getting current user: {ex.GetType().Name} - {ex.Message}");
                 return null;
             }
         }
@@ -214,7 +314,7 @@ namespace AirCode.Services.Auth
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error during logout: {ex.Message}");
+                Console.WriteLine($"Error during logout: {ex.GetType().Name} - {ex.Message}");
                 return false;
             }
         }
@@ -223,6 +323,22 @@ namespace AirCode.Services.Auth
         {
             try
             {
+                if (!_isInitialized)
+                {
+                    return false;
+                }
+                
+                // Check if auth0Client is available
+                var isClientAvailable = await _jsRuntime.InvokeAsync<bool>(
+                    "eval", 
+                    "typeof window.auth0Client !== 'undefined' && typeof window.auth0Client.isAuthenticated === 'function'"
+                );
+                
+                if (!isClientAvailable)
+                {
+                    return false;
+                }
+                
                 // Check Auth0 authentication status
                 return await _jsRuntime.InvokeAsync<bool>("auth0Client.isAuthenticated");
             }

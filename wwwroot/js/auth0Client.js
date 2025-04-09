@@ -1,68 +1,97 @@
-// auth0Client.js
+/// auth0Client.js
 let auth0 = null;
+const AUTH0_DOMAIN = 'dev-msf1vlcbx1a8wtg3.eu.auth0.com';
+const AUTH0_CLIENT_ID = 'JGLYuTjBEYGcbl0TCqYbIQh1IlKH0sSD';
 const AUTH0_TOKEN_KEY = 'auth0_token';
 const AUTH0_USER_KEY = 'auth0_user';
 
 window.auth0Client = {
     initialize: async function() {
-        // Load Auth0 client script if not already loaded
-        if (!window.auth0) {
-            await loadScript('https://cdnjs.cloudflare.com/ajax/libs/auth0-spa-js/2.1.2/auth0-spa-js.production.min.js');
-        }
+        try {
+            // Load Auth0 client script if not already loaded
+            if (typeof createAuth0Client === 'undefined') {
+                await loadScript('https://cdn.auth0.com/js/auth0-spa-js/2.0/auth0-spa-js.production.min.js');
 
-        // Create Auth0 client
-        auth0 = await createAuth0Client({
-            domain: 'dev-msf1vlcbx1a8wtg3.eu.auth0.com', // e.g. 'dev-yourapp.us.auth0.com'
-            client_id: 'JGLYuTjBEYGcbl0TCqYbIQh1IlKH0sSD',
-            redirect_uri: window.location.origin,
-            cacheLocation: 'localstorage',
-            audience: 'https://aircode-api/', // Optional API audience
-            scope: 'openid profile email'
-        });
-
-        // Handle callback from Auth0 redirect
-        if (window.location.search.includes('code=')) {
-            try {
-                await auth0.handleRedirectCallback();
-                // Remove query parameters
-                window.history.replaceState({}, document.title, '/');
-
-                // Get and store token
-                const token = await auth0.getTokenSilently();
-                localStorage.setItem(AUTH0_TOKEN_KEY, token);
-
-                // Get and store user
-                const user = await auth0.getUser();
-                localStorage.setItem(AUTH0_USER_KEY, JSON.stringify(user));
-            } catch (err) {
-                console.error('Error handling redirect:', err);
+                // Wait a moment to ensure script is fully loaded
+                await new Promise(resolve => setTimeout(resolve, 100));
             }
+
+            if (typeof createAuth0Client === 'undefined') {
+                console.error('Auth0 client library not loaded properly');
+                return;
+            }
+
+            // Create Auth0 client
+            auth0 = await createAuth0Client({
+                domain: AUTH0_DOMAIN,
+                clientId: AUTH0_CLIENT_ID, // Note: clientId, not client_id
+                authorizationParams: {
+                    redirect_uri: window.location.origin,
+                    audience: 'https://aircode-api/',
+                    scope: 'openid profile email'
+                },
+                cacheLocation: 'localstorage'
+            });
+
+            console.log("Auth0 client initialized successfully");
+
+            // Handle callback from Auth0 redirect
+            if (window.location.search.includes('code=') && window.location.search.includes('state=')) {
+                try {
+                    await auth0.handleRedirectCallback();
+                    // Remove query parameters
+                    window.history.replaceState({}, document.title, '/');
+
+                    // Get and store token
+                    const token = await auth0.getTokenSilently();
+                    localStorage.setItem(AUTH0_TOKEN_KEY, token);
+
+                    // Get and store user
+                    const user = await auth0.getUser();
+                    localStorage.setItem(AUTH0_USER_KEY, JSON.stringify(user));
+                } catch (err) {
+                    console.error('Error handling redirect:', err);
+                }
+            }
+        } catch (err) {
+            console.error('Error initializing Auth0:', err);
         }
     },
 
     signUp: async function(email, password, username, metadata) {
         try {
-            // This is a simplified signup. In a real implementation,
-            // you would likely use Auth0's Database Connections API
-            // or handle signup on your backend with Auth0 Management API
-            const response = await fetch(`https://${auth0.domain}/dbconnections/signup`, {
+            if (!auth0) {
+                console.error('Auth0 client not initialized');
+                return false;
+            }
+
+            // Parse metadata if it's a string
+            const metadataObj = typeof metadata === 'string' ? JSON.parse(metadata) : metadata;
+
+            // Using Auth0's Database API
+            const response = await fetch(`https://${AUTH0_DOMAIN}/dbconnections/signup`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    client_id: auth0.client_id,
+                    client_id: AUTH0_CLIENT_ID,
                     email: email,
                     password: password,
                     connection: 'Username-Password-Authentication',
                     username: username,
-                    user_metadata: JSON.parse(metadata)
+                    user_metadata: metadataObj
                 })
             });
 
-            if (response.ok) {
-                // Auto login after signup
-                return await this.login(username, password, false, '');
+            if (!response.ok) {
+                const errorData = await response.json();
+                console.error('Auth0 signup error:', errorData);
+                return false;
             }
-            return false;
+
+            console.log('Auth0 signup successful');
+
+            // Auto login after signup
+            return await this.login(username, password, false, '');
         } catch (err) {
             console.error('Signup error:', err);
             return false;
@@ -71,16 +100,28 @@ window.auth0Client = {
 
     login: async function(username, password, isAdmin, adminId) {
         try {
-            await auth0.loginWithRedirect({
-                username: username,
-                password: password,
-                // You can include additional parameters if needed
-                appState: {
-                    isAdmin: isAdmin,
-                    adminId: adminId
-                }
-            });
-            return true;
+            if (!auth0) {
+                console.error('Auth0 client not initialized');
+                return false;
+            }
+
+            // For username/password login
+            // Note: This requires enabling the Password Grant in your Auth0 application settings
+            try {
+                await auth0.loginWithRedirect({
+                    authorizationParams: {
+                        login_hint: username
+                    },
+                    appState: {
+                        isAdmin: isAdmin,
+                        adminId: adminId
+                    }
+                });
+                return true;
+            } catch (loginErr) {
+                console.error('Auth0 login error:', loginErr);
+                return false;
+            }
         } catch (err) {
             console.error('Login error:', err);
             return false;
@@ -89,8 +130,15 @@ window.auth0Client = {
 
     logout: async function() {
         try {
+            if (!auth0) {
+                console.error('Auth0 client not initialized');
+                return false;
+            }
+
             await auth0.logout({
-                returnTo: window.location.origin
+                logoutParams: {
+                    returnTo: window.location.origin
+                }
             });
 
             // Clear local storage
@@ -133,8 +181,14 @@ function loadScript(url) {
     return new Promise((resolve, reject) => {
         const script = document.createElement('script');
         script.src = url;
-        script.onload = resolve;
-        script.onerror = reject;
+        script.onload = () => {
+            console.log(`Script loaded: ${url}`);
+            resolve();
+        };
+        script.onerror = (err) => {
+            console.error(`Script load error: ${url}`, err);
+            reject(err);
+        };
         document.head.appendChild(script);
     });
 }
