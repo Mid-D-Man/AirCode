@@ -205,7 +205,7 @@ open-iconic.eot         open-iconic.otf         open-iconic.svg         open-ico
 
 ./wwwroot/js:
 connectivityServices.js firestoreModule.js      qrCodeModule.js         themeSwitcher.js
-debug.js                midQrScannerModule.js   shaderRenderer1.js      zxingScanner.js
+debug.js                midQrScannerModule.js   shaderRenderer1.js      zxingScanner.js auth0Client.js
 
 ./wwwroot/sample-data:
 weather.json
@@ -248,4 +248,4 @@ Warning_Icon.svg
 
 ./wwwroot/wasm:
 package.json                    qr_code_generator.js            qr_code_generator_bg.wasm.d.ts
-qr_code_generator.d.ts          qr_code_generator_bg.wasm
+qr_code_generator.d.ts          qr_code_generator_bg.wasm 
