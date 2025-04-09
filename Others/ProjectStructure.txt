@@ -206,8 +206,40 @@ debug.js                midQrScannerModule.js   shaderRenderer1.js      zxingSca
 weather.json
 
 ./wwwroot/svgs:
-Admin_Icon.svg          Cources_Icon.svg        QRCode_Icon.svg         Stats_Icon.svg
-ContactUs_Icon.svg      Logout_Icon.svg         Report_Icon.svg         Users_Icon.svg
+AddUser_Icon.svg
+Admin_Icon.svg
+Airplane_Icon.svg
+Book2_Icon.svg
+Book3_Icon.svg
+Book_Icon.svg
+Close2_Icon.svg
+Close_Icon.svg
+ContactUs_Icon.svg
+Cources_Icon.svg
+Courses2_Icon.svg
+Courses_Icon.svg
+CrowGuy_Icon.svg
+History_Icon.svg
+Home_Icon.svg
+Logo_Icon.svg
+Logout_Icon.svg
+NoConnection_Icon.svg
+Notification2_Icon.svg
+Notification_Icon.svg
+QRCode_Icon.svg
+QrScan_Icon.svg
+Record2_Icon.svg
+Records_Icon.svg
+RemoveUser_Icon.svg
+Report_Icon.svg
+ScanQrCode_Icon.svg
+Search_Icon.svg
+Settings_Icon.svg
+Stats2_Icon.svg
+Stats_Icon.svg
+Stats_Icon 2.svg
+Users_Icon.svg
+Warning_Icon.svg
 
 ./wwwroot/wasm:
 package.json                    qr_code_generator.js            qr_code_generator_bg.wasm.d.ts
