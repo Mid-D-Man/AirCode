@@ -1,4 +1,5 @@
 ﻿@using AirCode.Layout.Auth
+@using AirCode.Services.Auth
 @using AirCode.Shared
 @using Microsoft.AspNetCore.Components.Routing
 
@@ -14,3 +15,14 @@
         </LayoutView>
     </NotFound>
 </Router>
+
+@code {
+    [Inject]
+    private IAuth0Service AuthService { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await AuthService.InitializeAsync();
+        await base.OnInitializedAsync();
+    }
+}
