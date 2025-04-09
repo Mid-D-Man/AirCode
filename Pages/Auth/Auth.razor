@@ -71,6 +71,10 @@
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
+        if (useAuth0)
+        {
+           // await Auth0Service.InitializeAsync();
+        }
         await CheckConnectivity();
     }
 
@@ -162,7 +166,7 @@
             // Use Auth0 when online and enabled
             if (isOnline && useAuth0)
             {
-                signupSuccess = await Auth0Service.SignUpAsync(model);
+                signupSuccess =  true;
                 
                 if (signupSuccess)
                 {
@@ -217,92 +221,9 @@
             await JSRuntime.InvokeVoidAsync("alert", "An error occurred during signup. Please try again.");
         }
     }
-    
     // Similarly, update the HandleLogin method to use Auth0
     private async Task HandleLogin(LoginModel model)
     {
-        try
-        {
-            bool loginSuccess = false;
-            
-            // Use Auth0 when online and enabled
-            if (isOnline && useAuth0)
-            {
-                loginSuccess = await Auth0Service.LoginAsync(model);
-                
-                if (loginSuccess)
-                {
-                    var user = await Auth0Service.GetCurrentUserAsync();
-                    if (user != null)
-                    {
-                        // Navigate based on role
-                        if (user.Role == Domain.Enums.UserRole.SuperiorAdmin || 
-                            user.Role == Domain.Enums.UserRole.LecturerAdmin)
-                        {
-                            NavigationManager.NavigateTo("/Admin/SuperiorDashboard");
-                        }
-                        else if (user.Role == Domain.Enums.UserRole.Student)
-                        {
-                            NavigationManager.NavigateTo("/Client/ScanPage");
-                        }
-                        else
-                        {
-                            NavigationManager.NavigateTo("/Admin/Dashboard");
-                        }
-                        return;
-                    }
-                }
-                
-                // Try fallback to test credentials if Auth0 login fails
-            }
-            
-            // Client login
-            if (!string.IsNullOrWhiteSpace(model.Username) &&
-                model.Username.Trim().ToLower() == "client" &&
-                model.Password == "client")
-            {
-                Console.WriteLine("Client login successful - redirecting to portal");
-                
-                // Store credentials securely before navigating
-                if (isOnline)
-                {
-                    await JSRuntime.InvokeVoidAsync("credentialManager.storeCredentials", 
-                        model.Username, model.Password, model.IsAdmin, model.AdminId);
-                }
-                
-                NavigationManager.NavigateTo("/Client/ScanPage");
-                return;
-            }
-
-            // Admin login
-            if (!string.IsNullOrWhiteSpace(model.Username) &&
-                model.Username.Trim().ToLower() == "admin" &&
-                model.Password == "admin1234" &&
-                model.IsAdmin &&
-                model.AdminId == SUPERIOR_ADMIN_ID)
-            {
-                Console.WriteLine("Admin login successful - redirecting to dashboard");
-                
-                // Store credentials securely before navigating
-                if (isOnline)
-                {
-                    await JSRuntime.InvokeVoidAsync("credentialManager.storeCredentials", 
-                        model.Username, model.Password, model.IsAdmin, model.AdminId);
-                }
-                
-                NavigationManager.NavigateTo("/Admin/SuperiorDashboard");
-                return;
-            }
-
-            // Failed login
-            Console.WriteLine("Login failed - credentials don't match any known user");
-            await JSRuntime.InvokeVoidAsync("alert", "Invalid username or password");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Login error: {ex.Message}");
-            await JSRuntime.InvokeVoidAsync("alert", "An error occurred during login. Please try again.");
-        }
     }
 
 }

@@ -1,0 +1,29 @@
+@page "/authentication/login-callback"
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@using System.Web
+
+<h3>Processing login...</h3>
+
+@code {
+    [Inject]
+    public NavigationManager NavigationManager { get; set; }
+
+    protected override void OnInitialized()
+    {
+        // Parse the code from the query string
+        var uri = new Uri(NavigationManager.Uri);
+        var query = HttpUtility.ParseQueryString(uri.Query);
+        var code = query["code"];
+
+        if (!string.IsNullOrEmpty(code))
+        {
+            // Navigate to your app's home page or dashboard
+            NavigationManager.NavigateTo("/");
+        }
+        else
+        {
+            // Handle error
+            NavigationManager.NavigateTo("/login?error=auth_failed");
+        }
+    }
+}

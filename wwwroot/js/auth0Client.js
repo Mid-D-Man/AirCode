@@ -105,23 +105,44 @@ window.auth0Client = {
                 return false;
             }
 
-            // For username/password login
-            // Note: This requires enabling the Password Grant in your Auth0 application settings
-            try {
-                await auth0.loginWithRedirect({
-                    authorizationParams: {
-                        login_hint: username
-                    },
-                    appState: {
-                        isAdmin: isAdmin,
-                        adminId: adminId
-                    }
-                });
-                return true;
-            } catch (loginErr) {
-                console.error('Auth0 login error:', loginErr);
+            // Use resource owner password flow instead of redirect
+            const tokenResponse = await fetch(`https://${AUTH0_DOMAIN}/oauth/token`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    grant_type: 'password',
+                    username: username,
+                    password: password,
+                    client_id: AUTH0_CLIENT_ID,
+                    audience: 'https://aircode-api/',
+                    scope: 'openid profile email'
+                })
+            });
+
+            if (!tokenResponse.ok) {
+                console.error('Auth0 login failed');
                 return false;
             }
+
+            const tokenData = await tokenResponse.json();
+            localStorage.setItem(AUTH0_TOKEN_KEY, tokenData.access_token);
+
+            // Get user profile
+            const userInfoResponse = await fetch(`https://${AUTH0_DOMAIN}/userinfo`, {
+                headers: {
+                    Authorization: `Bearer ${tokenData.access_token}`
+                }
+            });
+
+            if (!userInfoResponse.ok) {
+                console.error('Failed to get user info');
+                return false;
+            }
+
+            const userInfo = await userInfoResponse.json();
+            localStorage.setItem(AUTH0_USER_KEY, JSON.stringify(userInfo));
+
+            return true;
         } catch (err) {
             console.error('Login error:', err);
             return false;
@@ -187,7 +208,17 @@ function loadScript(url) {
         };
         script.onerror = (err) => {
             console.error(`Script load error: ${url}`, err);
-            reject(err);
+            // Try alternative CDN if main one fails
+            if (url.includes('cdn.auth0.com')) {
+                console.log('Trying alternative CDN...');
+                const altScript = document.createElement('script');
+                altScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/auth0-spa-js/2.0.0/auth0-spa-js.production.min.js';
+                altScript.onload = resolve;
+                altScript.onerror = reject;
+                document.head.appendChild(altScript);
+            } else {
+                reject(err);
+            }
         };
         document.head.appendChild(script);
     });

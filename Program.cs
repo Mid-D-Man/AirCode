@@ -9,11 +9,33 @@ using AirCode.Services.Search;
 using AirCode.Services.Storage;
 using AirCode.Services.VisualElements;
 
+using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
+
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
+
+// Add auth services
+builder.Services.AddOidcAuthentication(options =>
+{
+    builder.Configuration.Bind("Auth0", options.ProviderOptions);
+    options.ProviderOptions.ResponseType = "code";
+    options.ProviderOptions.AdditionalProviderParameters.Add("audience", builder.Configuration["Auth0:Audience"]);
+});
+
+// Add auth state provider
+builder.Services.AddAuthorizationCore();
+
+// Add HTTP client factory
+builder.Services.AddHttpClient("AirCodeAPI", client => 
+        client.BaseAddress = new Uri(builder.HostEnvironment.BaseAddress))
+    .AddHttpMessageHandler<BaseAddressAuthorizationMessageHandler>();
+
+// Add scoped HTTP client for authorized requests
+builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>()
+    .CreateClient("AirCodeAPI"));
 
 
 //localstorage
@@ -23,7 +45,6 @@ builder.Services.AddScoped<IOfflineCredentialService, OfflineCredentialService>(
 builder.Services.AddScoped<IZxingScannerService, ZxingScannerService>();
 
 //auth registry
-builder.Services.AddAuthorizationCore();
 builder.Services.AddScoped<IUserStorageService, UserStorageService>();
 
 //visual elements
@@ -38,8 +59,15 @@ builder.Services.AddScoped<ISearchContextService, SearchContextService>();
 // Firebase Services
 builder.Services.AddScoped<AirCode.Services.Firebase.IFirestoreService, AirCode.Services.Firebase.FirestoreService>();
 
-//Auth0
-builder.Services.AddScoped<IAuth0Service, Auth0Service>();
+// Register Auth0 settings
+var auth0Settings = new Auth0Settings();
+builder.Services.AddSingleton(auth0Settings);
+
+// Register Auth0 service
+builder.Services.AddScoped<Auth0Service>();
+
+// Add HttpClient
+builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 
 
 await builder.Build().RunAsync();

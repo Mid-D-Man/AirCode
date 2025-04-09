@@ -74,31 +74,6 @@
 <!-- Custom JS modules -->
 <script src="js/firestoreModule.js"></script>
 
-<!-- Auth0 script should be loaded BEFORE auth0Client.js -->
-<script src="https://cdn.auth0.com/js/auth0-spa-js/2.0/auth0-spa-js.production.min.js"></script>
-<script src="js/auth0Client.js"></script>
-
-<!-- Add this script to check auth0 initialization -->
-<script>
-    // Ensure Auth0 script is loaded
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log("DOM loaded, checking Auth0 script status");
-
-        // Check for Auth0 SPA SDK
-        if (typeof createAuth0Client === 'undefined') {
-            console.error("Auth0 SPA SDK not loaded");
-        } else {
-            console.log("Auth0 SPA SDK loaded successfully");
-        }
-
-        // Check for our custom auth0Client
-        if (typeof window.auth0Client === 'undefined') {
-            console.error("auth0Client not initialized");
-        } else {
-            console.log("auth0Client object available");
-        }
-    });
-</script>
 
 </body>
 

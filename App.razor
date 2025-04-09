@@ -15,14 +15,3 @@
         </LayoutView>
     </NotFound>
 </Router>
-
-@code {
-    [Inject]
-    private IAuth0Service AuthService { get; set; }
-
-    protected override async Task OnInitializedAsync()
-    {
-        await AuthService.InitializeAsync();
-        await base.OnInitializedAsync();
-    }
-}

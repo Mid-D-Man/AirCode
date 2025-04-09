@@ -1,11 +1,23 @@
 @page "/"
+@using AirCode.Services.Auth
 @inject NavigationManager NavigationManager
+@inject Auth0Service Auth0Service
+
+
+<h1>Welcome to AirCode</h1>
+
+<button class="btn btn-primary" @onclick="Login">Login with Auth0</button>
+
 
 @code {
-protected override void OnInitialized()
+protected override  void OnInitialized()
 {
 // Navigate to Auth page after initial load
-NavigationManager.NavigateTo("Auth");
+//NavigationManager.NavigateTo("Auth");
+    //await Auth0Service.LoginAsync();
 }
-
+private async Task Login()
+{
+    await Auth0Service.LoginAsync();
+}
 }

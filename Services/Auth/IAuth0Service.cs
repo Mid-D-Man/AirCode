@@ -1,16 +1,19 @@
-using AirCode.Domain.Enums;
-using AirCode.Models;
 using System.Threading.Tasks;
 
 namespace AirCode.Services.Auth
 {
     public interface IAuth0Service
     {
-        Task<bool> SignUpAsync(SignUpModel model);
-        Task<bool> LoginAsync(LoginModel model);
-        Task<User> GetCurrentUserAsync();
-        Task<bool> LogoutAsync();
-        Task<bool> IsAuthenticatedAsync();
-        Task InitializeAsync();
+        /// <summary>
+        /// Initiates the login process by redirecting to Auth0 Universal Login
+        /// </summary>
+        /// <returns>Task representing the operation</returns>
+        Task LoginAsync();
+        
+        /// <summary>
+        /// Gets the Auth0 login URL
+        /// </summary>
+        /// <returns>The URL to the Auth0 Universal Login</returns>
+        string GetLoginUrl();
     }
 }
