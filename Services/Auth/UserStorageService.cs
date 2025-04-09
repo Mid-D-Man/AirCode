@@ -8,11 +8,11 @@ namespace AirCode.Services.Auth;
 public class UserStorageService : IUserStorageService
 {
     private const string USERS_KEY = "users";
-    private readonly IAppLocalStorageService _appLocalStorage; // This is from Blazored.LocalStorage
+    private readonly IBlazorAppLocalStorageService _blazorAppLocalStorage; // This is from Blazored.LocalStorage
 
-    public UserStorageService(IAppLocalStorageService appLocalStorage)
+    public UserStorageService(IBlazorAppLocalStorageService blazorAppLocalStorage)
     {
-        _appLocalStorage = appLocalStorage;
+        _blazorAppLocalStorage = blazorAppLocalStorage;
     }
 
     public async Task<bool> SaveUsers(List<User> users)
@@ -20,7 +20,7 @@ public class UserStorageService : IUserStorageService
         try
         {
             var json = JsonHelper.Serialize(users);
-            await _appLocalStorage.SetItemAsync(USERS_KEY, json);
+            await _blazorAppLocalStorage.SetItemAsync(USERS_KEY, json);
             return true;
         }
         catch
@@ -33,7 +33,7 @@ public class UserStorageService : IUserStorageService
     {
         try
         {
-            var json = await _appLocalStorage.GetItemAsync<string>(USERS_KEY);
+            var json = await _blazorAppLocalStorage.GetItemAsync<string>(USERS_KEY);
             return JsonHelper.Deserialize<List<User>>(json) ?? new List<User>();
         }
         catch

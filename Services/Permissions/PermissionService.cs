@@ -9,11 +9,11 @@ namespace AirCode.Services.Permissions
 {
     public class PermissionService : IPermissionService
     {
-        private readonly IAppLocalStorageService _appLocalStorageService;
+        private readonly IBlazorAppLocalStorageService _blazorAppLocalStorageService;
         
-        public PermissionService(IAppLocalStorageService appLocalStorageService)
+        public PermissionService(IBlazorAppLocalStorageService blazorAppLocalStorageService)
         {
-            _appLocalStorageService = appLocalStorageService;
+            _blazorAppLocalStorageService = blazorAppLocalStorageService;
         }
         
         public async Task<bool> CanEditAttendanceAsync(string userId, string courseId)
@@ -108,7 +108,7 @@ namespace AirCode.Services.Permissions
         {
             try
             {
-                return await _appLocalStorageService.GetItemAsync<UserEntity>("CurrentUser");
+                return await _blazorAppLocalStorageService.GetItemAsync<UserEntity>("CurrentUser");
             }
             catch
             {

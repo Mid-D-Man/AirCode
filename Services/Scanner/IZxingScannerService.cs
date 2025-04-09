@@ -1,8 +1,8 @@
 using Microsoft.JSInterop;
 
-namespace AirCode.Services;
+namespace AirCode.Services.Scanner;
 // Services/Scanner/IScannerService.cs
-public interface IScannerService
+public interface IZxingScannerService
 {
     Task<bool> InitializeCameraAsync();
     Task<string> ScanQrCodeAsync();
@@ -10,13 +10,13 @@ public interface IScannerService
 }
 
 // Services/Scanner/ScannerService.cs
-public class ScannerService : IScannerService
+public class ZxingScannerService : IZxingScannerService
 {
     private readonly IJSRuntime _jsRuntime;
     private bool _isInitialized;
-    private DotNetObjectReference<ScannerService> _dotNetRef;
+    private DotNetObjectReference<ZxingScannerService> _dotNetRef;
 
-    public ScannerService(IJSRuntime jsRuntime)
+    public ZxingScannerService(IJSRuntime jsRuntime)
     {
         _jsRuntime = jsRuntime;
         _dotNetRef = DotNetObjectReference.Create(this);

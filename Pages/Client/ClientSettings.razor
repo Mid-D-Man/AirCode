@@ -1,7 +1,7 @@
 @page "/Client/Settings"
-@using ILocalStorageService = AirCode.Services.Storage.IAppLocalStorageService
+@using ILocalStorageService = AirCode.Services.Storage.IBlazorAppLocalStorageService
 @layout AirQrCode.Layout.ClientLayout.ClientLayout
-@inject ILocalStorageService AppLocalStorage
+@inject ILocalStorageService BlazorAppLocalStorage
 
 <div class="client-settings-page">
     <div class="settings-header">
@@ -95,30 +95,30 @@
     protected override async Task OnInitializedAsync()
     {
         // Load settings from local storage
-        isDarkModeEnabled = await AppLocalStorage.GetItemAsync<bool>("darkMode");
-        isTwoFactorEnabled = await AppLocalStorage.GetItemAsync<bool>("twoFactor");
-        isDataCollectionEnabled = await AppLocalStorage.GetItemAsync<bool>("dataCollection");
-        selectedNotificationPreference = await AppLocalStorage.GetItemAsync<string>("notificationPreference") ?? "all";
+        isDarkModeEnabled = await BlazorAppLocalStorage.GetItemAsync<bool>("darkMode");
+        isTwoFactorEnabled = await BlazorAppLocalStorage.GetItemAsync<bool>("twoFactor");
+        isDataCollectionEnabled = await BlazorAppLocalStorage.GetItemAsync<bool>("dataCollection");
+        selectedNotificationPreference = await BlazorAppLocalStorage.GetItemAsync<string>("notificationPreference") ?? "all";
     }
 
     private async Task ToggleDarkMode(ChangeEventArgs e)
     {
         isDarkModeEnabled = (bool)e.Value;
-        await AppLocalStorage.SetItemAsync("darkMode", isDarkModeEnabled);
+        await BlazorAppLocalStorage.SetItemAsync("darkMode", isDarkModeEnabled);
         // TODO: Actually implement dark mode theme switching
     }
 
     private async Task ToggleTwoFactor(ChangeEventArgs e)
     {
         isTwoFactorEnabled = (bool)e.Value;
-        await AppLocalStorage.SetItemAsync("twoFactor", isTwoFactorEnabled);
+        await BlazorAppLocalStorage.SetItemAsync("twoFactor", isTwoFactorEnabled);
         // TODO: Implement 2FA setup/disable logic
     }
 
     private async Task ToggleDataCollection(ChangeEventArgs e)
     {
         isDataCollectionEnabled = (bool)e.Value;
-        await AppLocalStorage.SetItemAsync("dataCollection", isDataCollectionEnabled);
+        await BlazorAppLocalStorage.SetItemAsync("dataCollection", isDataCollectionEnabled);
         // TODO: Handle data collection opt-in/out
     }
 
@@ -129,10 +129,10 @@
         isDataCollectionEnabled = false;
         selectedNotificationPreference = "all";
 
-        await AppLocalStorage.SetItemAsync("darkMode", isDarkModeEnabled);
-        await AppLocalStorage.SetItemAsync("twoFactor", isTwoFactorEnabled);
-        await AppLocalStorage.SetItemAsync("dataCollection", isDataCollectionEnabled);
-        await AppLocalStorage.SetItemAsync("notificationPreference", selectedNotificationPreference);
+        await BlazorAppLocalStorage.SetItemAsync("darkMode", isDarkModeEnabled);
+        await BlazorAppLocalStorage.SetItemAsync("twoFactor", isTwoFactorEnabled);
+        await BlazorAppLocalStorage.SetItemAsync("dataCollection", isDataCollectionEnabled);
+        await BlazorAppLocalStorage.SetItemAsync("notificationPreference", selectedNotificationPreference);
 
         StateHasChanged();
     }

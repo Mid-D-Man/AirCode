@@ -124,7 +124,7 @@ launchSettings.json
 Auth            Courses         Firebase        Permissions     Scanner         Search          Storage         SupaBase
 
 ./Services/Auth:
-Auth0Service.cs                 IOfflineCredentialService.cs    OfflineAuthService.cs           SecureCredentialService.cs
+Auth0Service.cs                 IOfflineCredentialService.cs            
 IAuth0Service.cs                IUserStorageService.cs          OfflineCredentialService.cs     UserStorageService.cs
 
 ./Services/Courses:

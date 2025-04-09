@@ -1,13 +1,13 @@
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using AirCode;
-using AirCode.Services;
+using AirCode.Services.Scanner;
 using AirCode.Services.Auth;
 using AirCode.Services.Courses;
 using AirCode.Services.Permissions;
 using AirCode.Services.Search;
 using ZXingBlazor;
-using AirCode.Services.Storage; // Add this namespace import
+using AirCode.Services.Storage; 
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
@@ -17,10 +17,10 @@ builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.
 
 
 //localstorage
-builder.Services.AddScoped<IAppLocalStorageService, BlazorAppLocalStorageService>();
+builder.Services.AddScoped<IBlazorAppLocalStorageService, BlazorAppLocalStorageService>();
 
 //scanner
-builder.Services.AddScoped<IScannerService, ScannerService>();
+builder.Services.AddScoped<IZxingScannerService, ZxingScannerService>();
 
 //auth registry
 builder.Services.AddAuthorizationCore();
