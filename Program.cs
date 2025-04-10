@@ -64,7 +64,7 @@ var auth0Settings = new Auth0Settings();
 builder.Services.AddSingleton(auth0Settings);
 
 // Register Auth0 service
-builder.Services.AddScoped<Auth0Service>();
+builder.Services.AddScoped<IAuth0Service, Auth0Service>();
 
 // Add HttpClient
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });

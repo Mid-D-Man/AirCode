@@ -1,40 +1,81 @@
-// Enhanced debug script with comprehensive storage management
+/****************************************************************************
+ * Enhanced Debug Script for AirCode
+ * This script helps diagnose asset load issues, service worker registration,
+ * localStorage management, and overall system diagnostics.
+ *
+ * Ensure your <base href="/"> is set correctly so that relative paths resolve
+ * as expected.
+ ****************************************************************************/
+
 console.log('Enhanced debug script loaded');
 
-// Global error handler
+// Global error handler: Logs resource load failures (SCRIPT, IMG, or LINK)
 window.addEventListener('error', function(e) {
     if (e && e.target && (e.target.tagName === 'LINK' || e.target.tagName === 'SCRIPT' || e.target.tagName === 'IMG')) {
         console.error('Resource failed to load:', e.target.src || e.target.href);
 
-        // Try to detect pattern in failing URLs
+        // Analyze the problematic URL
         const failedUrl = e.target.src || e.target.href;
         if (failedUrl) {
             console.log('Analyzing failed URL:', failedUrl);
-
-            // Check if it's a relative path issue
-            if (failedUrl.includes('//')) {
-                const url = new URL(failedUrl);
+            try {
+                const url = new URL(failedUrl, document.baseURI);
                 console.log('URL analysis:', {
                     origin: url.origin,
                     pathname: url.pathname,
                     baseHref: document.querySelector('base')?.href
                 });
+            } catch (err) {
+                console.error('Invalid URL format:', err);
             }
         }
     }
 });
 
-// Improved path analysis when page loads
+// Function to check critical file accessibility using cache busting
+function checkFile(file) {
+    // Define base paths based on current deployment; note that we no longer
+    // include extraneous paths like '/AirCode/' since <base href="/"> is used.
+    const basePaths = [
+        '',           // Relative to base href
+        document.baseURI, // Absolute base URI
+        './'
+    ];
+    let fileFound = false;
+    basePaths.forEach((basePath, index) => {
+        setTimeout(() => {
+            if (!fileFound) {
+                const url = basePath + file;
+                const timestamp = new Date().getTime(); // Cache-busting parameter
+                fetch(`${url}?t=${timestamp}`)
+                    .then(response => {
+                        if (response.ok && !fileFound) {
+                            fileFound = true;
+                            console.log(`✅ Found file "${file}" at path: ${url}`);
+                            if (index > 0) {
+                                console.warn(`Path issue detected: "${file}" works at ${url} but not at the base path.`);
+                            }
+                        }
+                    })
+                    .catch(() => {
+                        // Fail silently; error logging handled above if needed.
+                    });
+            }
+        }, index * 100);
+    });
+}
+
 window.addEventListener('DOMContentLoaded', function() {
+    // Log current page and service worker details
     console.log('Current base href:', document.querySelector('base')?.href);
     console.log('Current path:', window.location.pathname);
     console.log('Document URL:', document.URL);
     console.log('Service worker scope:', navigator.serviceWorker?.controller?.scriptURL || 'No active service worker');
 
-    // Add diagnostics panel after a short delay
+    // Start diagnostics panel after a short delay
     setTimeout(addDiagnosticsPanel, 1000);
 
-    // Check if critical files are accessible with retry logic
+    // Check accessibility for critical files
     const criticalFiles = [
         '_framework/blazor.webassembly.js',
         'manifest.json',
@@ -42,53 +83,13 @@ window.addEventListener('DOMContentLoaded', function() {
         'favicon.png',
         'service-worker.js'
     ];
-
     criticalFiles.forEach(checkFile);
-
-    function checkFile(file) {
-        // Try fetching the file with different path combinations
-        const basePaths = [
-            '', // Use base href
-            '/',
-            document.baseURI,
-            '/AirCode/',
-            './'
-        ];
-
-        let fileFound = false;
-
-        basePaths.forEach((basePath, index) => {
-            // Add small delay between requests
-            setTimeout(() => {
-                if (!fileFound) {
-                    const url = basePath + file;
-                    const timestamp = new Date().getTime(); // Cache-busting
-
-                    fetch(`${url}?t=${timestamp}`)
-                        .then(response => {
-                            if (response.ok && !fileFound) {
-                                fileFound = true;
-                                console.log(`✅ Found at path: ${url}`);
-
-                                // If this is not the direct path (index 0), log it as a path issue
-                                if (index > 0) {
-                                    console.warn(`Path issue detected: ${file} works at ${url} but not at base path`);
-                                }
-                            }
-                        })
-                        .catch(() => {});
-                }
-            }, index * 100);
-        });
-    }
 
     // Monitor Blazor loading state
     let blazorCheckInterval = setInterval(() => {
         if (window.Blazor) {
             console.log('✅ Blazor loaded successfully');
             clearInterval(blazorCheckInterval);
-
-            // Update diagnostics if panel exists
             if (document.getElementById('debug-content')) {
                 window.updateDiagnostics({
                     blazorLoaded: true,
@@ -98,7 +99,7 @@ window.addEventListener('DOMContentLoaded', function() {
         }
     }, 500);
 
-    // Check service worker registration
+    // Check service worker registrations
     if (navigator.serviceWorker) {
         navigator.serviceWorker.getRegistrations().then(registrations => {
             console.log('Service Worker registrations:', registrations.length);
@@ -110,7 +111,7 @@ window.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Enhanced diagnostics panel with storage management
+// Adds a floating diagnostics panel for real-time feedback and storage management
 function addDiagnosticsPanel() {
     if (!document.getElementById('debug-panel')) {
         const panel = document.createElement('div');
@@ -124,26 +125,28 @@ function addDiagnosticsPanel() {
         header.style.cssText = 'font-weight:bold; cursor:pointer; padding-bottom:5px; ' +
             'border-bottom:1px solid #ccc; margin-bottom:8px; color:#333; font-size:14px;';
 
-        const content = document.createElement('div');
-        content.id = 'debug-content';
-
-        // Toggle button
         const toggleButton = document.createElement('button');
         toggleButton.textContent = '▼';
         toggleButton.style.cssText = 'float:right; cursor:pointer; background:none; border:none; font-size:14px;';
         header.appendChild(toggleButton);
 
         toggleButton.addEventListener('click', () => {
-            if (content.style.display === 'none') {
-                content.style.display = 'block';
-                toggleButton.textContent = '▼';
-            } else {
-                content.style.display = 'none';
-                toggleButton.textContent = '►';
+            const content = document.getElementById('debug-content');
+            if (content) {
+                if (content.style.display === 'none') {
+                    content.style.display = 'block';
+                    toggleButton.textContent = '▼';
+                } else {
+                    content.style.display = 'none';
+                    toggleButton.textContent = '►';
+                }
             }
         });
 
         panel.appendChild(header);
+
+        const content = document.createElement('div');
+        content.id = 'debug-content';
         panel.appendChild(content);
 
         // Storage Management Section
@@ -164,7 +167,6 @@ function addDiagnosticsPanel() {
                 localStorage.clear();
                 console.log('🗑️ All localStorage cleared');
                 alert('All localStorage cleared');
-
                 updateStorageInfo();
             }
         });
@@ -176,8 +178,6 @@ function addDiagnosticsPanel() {
         clearAppButton.style.cssText = 'margin:3px 0; padding:3px 8px; cursor:pointer; display:block; width:100%; background:#ff9900; color:white; border:none; border-radius:3px;';
         clearAppButton.addEventListener('click', () => {
             const prefix = 'AirCode_';
-
-            // Get all keys that start with our prefix
             const keysToRemove = [];
             for (let i = 0; i < localStorage.length; i++) {
                 const key = localStorage.key(i);
@@ -185,15 +185,11 @@ function addDiagnosticsPanel() {
                     keysToRemove.push(key);
                 }
             }
-
-            // Remove the keys
             keysToRemove.forEach(key => {
                 localStorage.removeItem(key);
             });
-
             console.log(`🗑️ ${keysToRemove.length} AirCode storage items cleared`);
             alert(`${keysToRemove.length} AirCode storage items cleared`);
-
             updateStorageInfo();
         });
         storageSection.appendChild(clearAppButton);
@@ -216,13 +212,10 @@ function addDiagnosticsPanel() {
                 alert('Please enter a key');
                 return;
             }
-
-            // Check if the key exists
             let fullKey = key;
             if (!fullKey.startsWith('AirCode_')) {
                 fullKey = 'AirCode_' + key;
             }
-
             if (localStorage.getItem(fullKey)) {
                 localStorage.removeItem(fullKey);
                 console.log(`🗑️ Removed item with key: ${fullKey}`);
@@ -233,7 +226,6 @@ function addDiagnosticsPanel() {
                 alert(`Key not found: ${fullKey}`);
             }
         });
-
         keyInputGroup.appendChild(keyInput);
         keyInputGroup.appendChild(deleteKeyButton);
         storageSection.appendChild(keyInputGroup);
@@ -270,15 +262,13 @@ function addDiagnosticsPanel() {
             let totalItems = localStorage.length;
             let appItems = 0;
             let appSize = 0;
-
             for (let i = 0; i < localStorage.length; i++) {
                 const key = localStorage.key(i);
                 if (key && key.startsWith('AirCode_')) {
                     appItems++;
-                    appSize += localStorage.getItem(key).length * 2; // UTF-16 uses 2 bytes per character
+                    appSize += localStorage.getItem(key).length * 2; // 2 bytes per character (UTF-16)
                 }
             }
-
             storageInfo.innerHTML = `
                 <div>Total localStorage items: ${totalItems}</div>
                 <div>AirCode_ items: ${appItems}</div>
@@ -286,48 +276,37 @@ function addDiagnosticsPanel() {
                 <div>Last updated: ${new Date().toLocaleTimeString()}</div>
             `;
         }
-
-        // Call initially
         updateStorageInfo();
 
-        // Storage keys list button
+        // Storage keys list toggle
         const toggleKeysButton = document.createElement('button');
         toggleKeysButton.textContent = 'Show Storage Keys';
         toggleKeysButton.style.cssText = 'margin:5px 0; padding:3px 8px; cursor:pointer; width:100%; background:#6c757d; color:white; border:none; border-radius:3px;';
-
         const keysList = document.createElement('div');
         keysList.id = 'keys-list';
         keysList.style.cssText = 'margin-top:5px; display:none; max-height:150px; overflow-y:auto; border:1px solid #ddd; padding:3px; font-size:10px;';
-
         toggleKeysButton.addEventListener('click', () => {
             if (keysList.style.display === 'none') {
-                // Populate keys list
                 keysList.innerHTML = '';
                 const keys = [];
                 for (let i = 0; i < localStorage.length; i++) {
                     const key = localStorage.key(i);
                     if (key) keys.push(key);
                 }
-
                 keys.sort().forEach(key => {
                     const keyItem = document.createElement('div');
                     keyItem.style.cssText = 'padding:2px; border-bottom:1px solid #eee; word-break:break-all;';
-
                     if (key.startsWith('AirCode_')) {
                         keyItem.style.color = '#28a745';
                     }
-
                     keyItem.textContent = key;
                     keyItem.title = 'Click to copy key to input field';
                     keyItem.style.cursor = 'pointer';
-
                     keyItem.addEventListener('click', () => {
                         keyInput.value = key;
                     });
-
                     keysList.appendChild(keyItem);
                 });
-
                 keysList.style.display = 'block';
                 toggleKeysButton.textContent = 'Hide Storage Keys';
             } else {
@@ -335,23 +314,20 @@ function addDiagnosticsPanel() {
                 toggleKeysButton.textContent = 'Show Storage Keys';
             }
         });
-
         storageSection.appendChild(toggleKeysButton);
         storageSection.appendChild(keysList);
 
-        // Add storage section to content
+        // Add storage section to content area
         content.appendChild(storageSection);
 
-        // Add initial diagnostics section
+        // Diagnostics Section for system info
         const diagnosticsSection = document.createElement('div');
         diagnosticsSection.id = 'system-diagnostics';
         diagnosticsSection.style.cssText = 'margin-top:10px;';
         content.insertBefore(diagnosticsSection, storageSection);
 
-        // Add the panel to the document
+        // Append the panel to the document body and initialize diagnostics
         document.body.appendChild(panel);
-
-        // Add initial diagnostics
         updateDiagnostics({
             baseHref: document.querySelector('base')?.href,
             path: window.location.pathname,
@@ -367,20 +343,16 @@ window.updateDiagnostics = function(info) {
     const diagnosticsSection = document.getElementById('system-diagnostics');
     if (diagnosticsSection) {
         diagnosticsSection.innerHTML = '';
-
         const title = document.createElement('div');
         title.textContent = 'System Diagnostics';
         title.style.cssText = 'font-weight:bold; margin-bottom:5px;';
         diagnosticsSection.appendChild(title);
-
         Object.entries(info).forEach(([key, value]) => {
             const line = document.createElement('div');
             line.style.cssText = 'padding:2px 0; font-size:11px;';
-
-            // Format the key for display
+            // Format key for better display
             const formattedKey = key.replace(/([A-Z])/g, ' $1')
                 .replace(/^./, str => str.toUpperCase());
-
             line.innerHTML = `<strong>${formattedKey}:</strong> ${value}`;
             diagnosticsSection.appendChild(line);
         });

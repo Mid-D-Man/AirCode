@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace AirCode.Services.Auth
 {
-    public class Auth0Service
+    public class Auth0Service : IAuth0Service
     {
         private readonly Auth0Settings _settings;
         private readonly NavigationManager _navigationManager;
@@ -22,14 +22,19 @@ namespace AirCode.Services.Auth
         public async Task LoginAsync()
         {
             var redirectUri = _navigationManager.BaseUri + _settings.RedirectUri;
-            var url = $"https://{_settings.Domain}/authorize" +
-                      $"?client_id={_settings.ClientId}" +
-                      $"&response_type=code" +
-                      $"&redirect_uri={Uri.EscapeDataString(redirectUri)}" +
-                      $"&scope=openid profile email" +
-                      $"&audience={Uri.EscapeDataString(_settings.Audience)}";
-
+            var url = GetLoginUrl();
             await _jsRuntime.InvokeVoidAsync("window.location.replace", url);
+        }
+
+        public string GetLoginUrl()
+        {
+            var redirectUri = _navigationManager.BaseUri + _settings.RedirectUri;
+            return $"https://{_settings.Domain}/authorize" +
+                   $"?client_id={_settings.ClientId}" +
+                   $"&response_type=code" +
+                   $"&redirect_uri={Uri.EscapeDataString(redirectUri)}" +
+                   $"&scope=openid profile email" +
+                   $"&audience={Uri.EscapeDataString(_settings.Audience)}";
         }
     }
 }

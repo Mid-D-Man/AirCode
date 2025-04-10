@@ -33,4 +33,8 @@
       <_ContentIncludedByDefault Remove="Components\SharedPrefabs\QrCode\npmBased\QrCodeCompo2.razor" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Folder Include="Server\Controllers\" />
+    </ItemGroup>
+
 </Project>
