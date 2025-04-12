@@ -7,46 +7,19 @@
 @using AirCode.Services.Storage
 @using AirCode.Utilities.HelperScripts
 
-<div class="container mt-5">
+<div class="auth-container">
     @if (processingAuth)
     {
-        <h3>Processing login...</h3>
-        <div class="spinner-border" role="status">
-            <span class="visually-hidden">Loading...</span>
-        </div>
-    }
-    else if (showProfileForm)
-    {
-        <div class="card">
-            <div class="card-header">
-                <h3>Complete Your Profile</h3>
-            </div>
-            <div class="card-body">
-                <div class="mb-3">
-                    <label for="studentId" class="form-label">Student ID</label>
-                    <input type="text" class="form-control" id="studentId" @bind="studentId" />
-                </div>
-                <div class="mb-3">
-                    <label for="nickname" class="form-label">Nickname</label>
-                    <input type="text" class="form-control" id="nickname" @bind="nickname" />
-                </div>
-                <button class="btn btn-primary" @onclick="UpdateUserMetadata" disabled="@isSaving">
-                    @if (isSaving)
-                    {
-                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                        <span> Saving...</span>
-                    }
-                    else
-                    {
-                        <span>Save Profile</span>
-                    }
-                </button>
+        <div class="auth-loading">
+            <h3>Processing login...</h3>
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
             </div>
         </div>
     }
     @if (!string.IsNullOrEmpty(errorMessage))
     {
-        <div class="alert alert-danger mt-3">
+        <div class="auth-error">
             @errorMessage
         </div>
     }
@@ -59,12 +32,6 @@
     [Inject] public IJSRuntime JSRuntime { get; set; }
 
     private bool processingAuth = true;
-    private bool showProfileForm = false;
-    private bool isSaving = false;
-    private string studentId = "";
-    private string nickname = "";
-    private string userId = "";
-    private string accessToken = "";
     private string errorMessage = "";
 
     protected override async Task OnInitializedAsync()
@@ -80,9 +47,8 @@
                 // Exchange code for token
                 await ExchangeCodeForToken(code);
                 
-                // Show the profile form after successful authentication
-                processingAuth = false;
-                showProfileForm = true;
+                // Redirect to home after successful authentication
+                NavigationManager.NavigateTo("/");
             }
             catch (Exception ex)
             {
@@ -121,10 +87,10 @@
         if (response.IsSuccessStatusCode)
         {
             var responseJson = await response.Content.ReadFromJsonAsync<TokenResponse>();
-            accessToken = responseJson.AccessToken;
+            var accessToken = responseJson.AccessToken;
             
             // Get user info using the access token
-            await GetUserInfo();
+            await GetUserInfo(accessToken);
         }
         else
         {
@@ -133,7 +99,7 @@
         }
     }
 
-    private async Task GetUserInfo()
+    private async Task GetUserInfo(string accessToken)
     {
         var domain = "dev-msf1vlcbx1a8wtg3.eu.auth0.com";
         var userInfoEndpoint = $"https://{domain}/userinfo";
@@ -146,103 +112,25 @@
         if (response.IsSuccessStatusCode)
         {
             var userInfo = await response.Content.ReadFromJsonAsync<UserInfoResponse>();
-            userId = userInfo.Sub;
+            var userId = userInfo.Sub;
             
             MID_HelperFunctions.DebugMessage($"Got The following user info from auth0 {userInfo}");
+            
             // Save the tokens and user info
             await LocalStorage.SetItemAsync("auth_access_token", accessToken);
             await LocalStorage.SetItemAsync("auth_user_id", userId);
+            
+            // Save user metadata if available
+            if (!string.IsNullOrEmpty(userInfo.Name))
+                await LocalStorage.SetItemAsync("user_name", userInfo.Name);
+            
+            if (!string.IsNullOrEmpty(userInfo.Email))
+                await LocalStorage.SetItemAsync("user_email", userInfo.Email);
         }
         else
         {
             var error = await response.Content.ReadAsStringAsync();
             throw new Exception($"Failed to get user info: {error}");
-        }
-    }
-
-    private async Task UpdateUserMetadata()
-    {
-        if (string.IsNullOrWhiteSpace(studentId) || string.IsNullOrWhiteSpace(nickname))
-        {
-            errorMessage = "Please fill in both fields";
-            return;
-        }
-
-        isSaving = true;
-        
-        try
-        {
-            // Get a management API token first
-            var managementToken = await GetManagementApiToken();
-            
-            // Update the user metadata
-            var domain = "dev-msf1vlcbx1a8wtg3.eu.auth0.com";
-            var updateUserEndpoint = $"https://{domain}/api/v2/users/{Uri.EscapeDataString(userId)}";
-            
-            var updateData = new
-            {
-                user_metadata = new
-                {
-                    student_id = studentId,
-                    nickname = nickname
-                }
-            };
-            
-            var request = new HttpRequestMessage(HttpMethod.Patch, updateUserEndpoint);
-            request.Headers.Add("Authorization", $"Bearer {managementToken}");
-            request.Content = JsonContent.Create(updateData);
-            
-            var response = await HttpClient.SendAsync(request);
-            
-            if (response.IsSuccessStatusCode)
-            {
-                // Store the metadata locally as well
-                await LocalStorage.SetItemAsync("user_student_id", studentId);
-                await LocalStorage.SetItemAsync("user_nickname", nickname);
-                
-                // Redirect to home or dashboard
-                NavigationManager.NavigateTo("/");
-            }
-            else
-            {
-                var error = await response.Content.ReadAsStringAsync();
-                errorMessage = $"Failed to update profile: {error}";
-            }
-        }
-        catch (Exception ex)
-        {
-            errorMessage = $"Error updating profile: {ex.Message}";
-        }
-        finally
-        {
-            isSaving = false;
-        }
-    }
-
-    private async Task<string> GetManagementApiToken()
-    {
-        var domain = "dev-msf1vlcbx1a8wtg3.eu.auth0.com";
-        var tokenEndpoint = $"https://{domain}/oauth/token";
-        
-        var requestContent = new FormUrlEncodedContent(new Dictionary<string, string>
-        {
-            { "grant_type", "client_credentials" },
-            { "client_id", "B8U5o6PVyTkowZ9qffByDb9cs6NhZpsx" },
-            { "client_secret", "C3JtLg5JtHhQsnCiT8F1h4IbFKdQgyUoag6HN6bffkRP_ztDVu4qQzhMbVm47dYY" }, // You'll need to get this from Auth0
-            { "audience", $"https://{domain}/api/v2/" }
-        });
-
-        var response = await HttpClient.PostAsync(tokenEndpoint, requestContent);
-        
-        if (response.IsSuccessStatusCode)
-        {
-            var responseJson = await response.Content.ReadFromJsonAsync<TokenResponse>();
-            return responseJson.AccessToken;
-        }
-        else
-        {
-            var error = await response.Content.ReadAsStringAsync();
-            throw new Exception($"Failed to get management API token: {error}");
         }
     }
 
