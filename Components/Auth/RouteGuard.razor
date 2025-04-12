@@ -1,0 +1,43 @@
+@namespace AirCode.Components.Auth
+
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+
+@inject NavigationManager NavigationManager
+
+<CascadingAuthenticationState>
+    <AuthorizeView Roles="@Roles">
+        <Authorized>
+            @ChildContent
+        </Authorized>
+        <NotAuthorized>
+            @if (context.User.Identity?.IsAuthenticated == true)
+            {
+                <div class="unauthorized-container">
+                    <div class="unauthorized-box">
+                        <h2>Unauthorized Access</h2>
+                        <p>You don't have permission to access this page.</p>
+                        <button class="btn btn-primary" @onclick="GoHome">Go to Home</button>
+                    </div>
+                </div>
+            }
+            else
+            {
+                @* Redirect to login if user is not authenticated *@
+                @{
+                    NavigationManager.NavigateTo("/login");
+                }
+            }
+        </NotAuthorized>
+    </AuthorizeView>
+</CascadingAuthenticationState>
+
+@code {
+    [Parameter] public RenderFragment ChildContent { get; set; }
+    [Parameter] public string Roles { get; set; }
+
+    private void GoHome()
+    {
+        NavigationManager.NavigateTo("/");
+    }
+}

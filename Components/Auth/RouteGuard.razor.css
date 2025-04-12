@@ -1,0 +1,28 @@
+.unauthorized-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 80vh;
+    padding: 2rem;
+    text-align: center;
+}
+
+.unauthorized-box {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    padding: 2rem;
+    max-width: 500px;
+    width: 100%;
+}
+
+.unauthorized-box h2 {
+    color: #e74c3c;
+    margin-bottom: 1.5rem;
+}
+
+.unauthorized-box p {
+    color: #555;
+    margin-bottom: 2rem;
+}

@@ -6,6 +6,7 @@
 @using System.Text.Json.Serialization
 @using AirCode.Services.Storage
 @using AirCode.Utilities.HelperScripts
+@using System.IdentityModel.Tokens.Jwt
 
 <div class="auth-container">
     @if (processingAuth)
@@ -39,6 +40,14 @@
         var uri = new Uri(NavigationManager.Uri);
         var query = HttpUtility.ParseQueryString(uri.Query);
         var code = query["code"];
+        var error = query["error"];
+
+        if (!string.IsNullOrEmpty(error))
+        {
+            var errorDescription = query["error_description"];
+            NavigationManager.NavigateTo($"/login?error={error}&error_description={errorDescription}");
+            return;
+        }
 
         if (!string.IsNullOrEmpty(code))
         {
@@ -47,8 +56,8 @@
                 // Exchange code for token
                 await ExchangeCodeForToken(code);
                 
-                // Redirect to home after successful authentication
-                NavigationManager.NavigateTo("/");
+                // Redirect based on user role
+                await RedirectBasedOnRole();
             }
             catch (Exception ex)
             {
@@ -88,8 +97,35 @@
         {
             var responseJson = await response.Content.ReadFromJsonAsync<TokenResponse>();
             var accessToken = responseJson.AccessToken;
+            var idToken = responseJson.IdToken;
             
-            // Get user info using the access token
+            // Store tokens
+            await LocalStorage.SetItemAsync("auth_access_token", accessToken);
+            await LocalStorage.SetItemAsync("auth_id_token", idToken);
+            
+            // Parse ID token to get roles
+            var handler = new JwtSecurityTokenHandler();
+            var jwtToken = handler.ReadJwtToken(idToken);
+
+            // The claim name for roles depends on your Auth0 configuration
+            // Common formats are roles, https://yourapp.com/roles, or https://yourauth0domain/roles
+            string roleClaim = "https://dev-msf1vlcbx1a8wtg3.eu.auth0.com/roles";
+            
+            if (jwtToken.Claims.Any(c => c.Type == roleClaim))
+            {
+                var roles = jwtToken.Claims
+                    .Where(c => c.Type == roleClaim)
+                    .Select(c => c.Value)
+                    .ToList();
+                
+                if (roles.Any())
+                {
+                    await LocalStorage.SetItemAsync("user_roles", System.Text.Json.JsonSerializer.Serialize(roles));
+                    MID_HelperFunctions.DebugMessage($"User roles: {string.Join(", ", roles)}");
+                }
+            }
+            
+            // Get additional user info
             await GetUserInfo(accessToken);
         }
         else
@@ -116,8 +152,7 @@
             
             MID_HelperFunctions.DebugMessage($"Got The following user info from auth0 {userInfo}");
             
-            // Save the tokens and user info
-            await LocalStorage.SetItemAsync("auth_access_token", accessToken);
+            // Save user info
             await LocalStorage.SetItemAsync("auth_user_id", userId);
             
             // Save user metadata if available
@@ -133,11 +168,48 @@
             throw new Exception($"Failed to get user info: {error}");
         }
     }
+    
+    private async Task RedirectBasedOnRole()
+    {
+        string rolesJson = await LocalStorage.GetItemAsync<string>("user_roles");
+        if (string.IsNullOrEmpty(rolesJson))
+        {
+            // Default route for users without specific roles
+            NavigationManager.NavigateTo("/ScanPage");
+            return;
+        }
+        
+        var roles = System.Text.Json.JsonSerializer.Deserialize<List<string>>(rolesJson);
+        
+        // Redirect based on role hierarchy
+        if (roles.Contains("SuperiorAdmin", StringComparer.OrdinalIgnoreCase))
+        {
+            NavigationManager.NavigateTo("/Admin/Dashboard");
+        }
+        else if (roles.Contains("Lecturer", StringComparer.OrdinalIgnoreCase) || 
+                 roles.Contains("CoursesRep", StringComparer.OrdinalIgnoreCase) ||
+                 roles.Contains("AssistantCoursesRep", StringComparer.OrdinalIgnoreCase))
+        {
+            NavigationManager.NavigateTo("/Admin/Dashboard");
+        }
+        else if (roles.Contains("Student", StringComparer.OrdinalIgnoreCase))
+        {
+            NavigationManager.NavigateTo("/ScanPage");
+        }
+        else
+        {
+            // Default route
+            NavigationManager.NavigateTo("/ScanPage");
+        }
+    }
 
     public class TokenResponse
     {
         [JsonPropertyName("access_token")]
         public string AccessToken { get; set; }
+        
+        [JsonPropertyName("id_token")]
+        public string IdToken { get; set; }
         
         [JsonPropertyName("token_type")]
         public string TokenType { get; set; }
@@ -156,7 +228,10 @@
         
         [JsonPropertyName("email")]
         public string Email { get; set; }
-
+        
+        [JsonPropertyName("email_verified")]
+        public bool EmailVerified { get; set; }
+        
         public override string ToString()
         {
             return MID_HelperFunctions.GetStructOrClassMemberValues(this);
