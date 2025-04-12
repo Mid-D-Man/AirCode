@@ -6,6 +6,7 @@
 @using AirCode.Components.SharedPrefabs
 @using AirCode.Utilities.DataStructures
 @using AirCode.Components.SharedPrefabs.QrCode
+@using AirCode.Components.SharedPrefabs.Buttons
 @inject IJSRuntime JS
 
 <div class="create-session-page">
@@ -90,7 +91,6 @@
     private DateTime sessionEndTime;
     private System.Threading.Timer countdownTimer;
     private QRCodeData generatedQRCode;
-    
     protected override void OnInitialized()
     {
         // Set default values if needed
@@ -128,12 +128,21 @@
     
     private string GenerateQrCodePayload()
     {
-        // Generate a unique session ID
-        var sessionId = Guid.NewGuid().ToString("N");
+       
+            // Generate a unique session ID
+            var sessionId = Guid.NewGuid().ToString("N");
+      
+            // Use the QRCodeDecoder to create a dual-purpose QR code
+            // External scanners will redirect to your website
+            // Your app can decode the full session data
+            return QRCodeDecoder.EncodeSessionData(
+                sessionId,
+                sessionModel.CourseId,
+                sessionModel.CourseName,
+                sessionModel.StartTime,
+                sessionModel.Duration);
         
-        // Create a more structured payload with proper delimiter
-        return $"{sessionId}|{sessionModel.CourseId}|{sessionModel.CourseName}|{sessionModel.StartTime:yyyy-MM-ddTHH:mm:ssZ}|{sessionModel.Duration}";
-    }
+      }
     
     private QRCodeTheme ConvertStringToTheme(string theme)
     {

@@ -207,3 +207,4 @@ using Newtonsoft.Json;
         /// </summary>
         public QRCodeTheme Theme { get; set; } = QRCodeTheme.Standard;
     }
+    
