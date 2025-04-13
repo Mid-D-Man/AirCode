@@ -10,6 +10,8 @@ using AirCode.Services.Storage;
 using AirCode.Services.VisualElements;
 
 using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
+using System.IdentityModel.Tokens.Jwt;
+using Microsoft.AspNetCore.Components.Authorization;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
@@ -27,6 +29,10 @@ builder.Services.AddOidcAuthentication(options =>
 
 // Add auth state provider
 builder.Services.AddAuthorizationCore();
+builder.Services.AddScoped<RoleAuthStateProvider>();
+builder.Services.AddScoped<AuthenticationStateProvider>(provider => provider.GetRequiredService<RoleAuthStateProvider>());
+// Add JWT token validation
+JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
 
 // Add HTTP client factory
 builder.Services.AddHttpClient("AirCodeAPI", client => 

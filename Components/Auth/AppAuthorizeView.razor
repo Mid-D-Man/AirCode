@@ -35,7 +35,7 @@
         if (string.IsNullOrWhiteSpace(Roles))
             return true;
 
-        var rolesList = Roles.Split(',').Select(r => r.Trim()).ToArray();
+        var rolesList = Roles.Split(',').Select(role => role.Trim()).ToArray();
 
         foreach (var role in rolesList)
         {

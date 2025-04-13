@@ -1,8 +1,5 @@
 @namespace AirCode.Components.Auth
-
 @using Microsoft.AspNetCore.Components.Authorization
-@using System.Security.Claims
-
 @inject NavigationManager NavigationManager
 
 <CascadingAuthenticationState>
@@ -24,9 +21,9 @@
             else
             {
                 @* Redirect to login if user is not authenticated *@
-                @{
+                
                     NavigationManager.NavigateTo("/login");
-                }
+                
             }
         </NotAuthorized>
     </AuthorizeView>

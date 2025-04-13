@@ -172,15 +172,26 @@
     private async Task RedirectBasedOnRole()
     {
         string rolesJson = await LocalStorage.GetItemAsync<string>("user_roles");
+        MID_HelperFunctions.DebugMessage("User role from local storage is" + rolesJson);
+        //supposed kick user out and show error if no role cause all users suppose hav role
+        // Handle users without roles
         if (string.IsNullOrEmpty(rolesJson))
         {
-            // Default route for users without specific roles
+            MID_HelperFunctions.DebugMessage("User has no roles, redirecting to default page");
             NavigationManager.NavigateTo("/ScanPage");
             return;
         }
-        
+    
         var roles = System.Text.Json.JsonSerializer.Deserialize<List<string>>(rolesJson);
-        
+    
+        // Check if roles list is empty
+        if (roles == null || roles.Count == 0)
+        {
+            MID_HelperFunctions.DebugMessage("User has empty roles list, redirecting to default page");
+            NavigationManager.NavigateTo("/ScanPage");
+            return;
+        }
+    
         // Redirect based on role hierarchy
         if (roles.Contains("SuperiorAdmin", StringComparer.OrdinalIgnoreCase))
         {
@@ -198,7 +209,8 @@
         }
         else
         {
-            // Default route
+            // Default route for users with roles that don't match any of our conditions
+            MID_HelperFunctions.DebugMessage($"User has roles but none match our conditions: {string.Join(", ", roles)}");
             NavigationManager.NavigateTo("/ScanPage");
         }
     }

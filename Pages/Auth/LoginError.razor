@@ -2,8 +2,6 @@
 @using System.Web
 @using AirCode.Services.Auth
 @using Microsoft.AspNetCore.Components
-@using Microsoft.AspNetCore.WebUtilities
-
 <div class="login-error-container">
     @if (!string.IsNullOrEmpty(ErrorMessage))
     {
@@ -38,12 +36,25 @@
     protected override void OnInitialized()
     {
         var uri = new Uri(NavigationManager.Uri);
-        var queryParams = QueryHelpers.ParseQuery(uri.Query);
-        
+        var query = uri.Query;
+    
+        if (query.StartsWith("?"))
+        {
+            query = query.Substring(1);
+        }
+    
+        var queryParams = query.Split('&')
+            .Where(p => !string.IsNullOrEmpty(p))
+            .Select(p => p.Split('='))
+            .ToDictionary(
+                p => p[0],
+                p => p.Length > 1 ? p[1] : string.Empty
+            );
+    
         if (queryParams.TryGetValue("error", out var error))
         {
             ErrorMessage = error;
-            
+        
             if (queryParams.TryGetValue("error_description", out var errorDesc))
             {
                 ErrorDescription = HttpUtility.UrlDecode(errorDesc);
