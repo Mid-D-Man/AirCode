@@ -136,3 +136,16 @@ window.cryptographyHandler = {
         return computedSignature === providedSignature;
     }
 };
+window.generateCodeChallenge = async function(codeVerifier) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(codeVerifier);
+    const hash = await crypto.subtle.digest('SHA-256', data);
+
+    return base64UrlEncode(hash);
+};
+
+function base64UrlEncode(buffer) {
+    var base64 = btoa(String.fromCharCode.apply(null, new Uint8Array(buffer)));
+    return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+

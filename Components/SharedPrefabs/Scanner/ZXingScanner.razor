@@ -8,6 +8,8 @@
 
 @code {
     private IJSObjectReference? scannerModule;
+    [Parameter]
+    public EventCallback<string> OnCodeDetected { get; set; }  // This is probably the correct name
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -30,7 +32,11 @@
         Console.WriteLine($"QR Code decoded: {result}");
         // You could raise an event or set a bound property here.
     }
-
+    [JSInvokable("OnQRCodeDetected")]
+    public async Task OnQRCodeDetected(string result)
+    {
+        await OnCodeDetected.InvokeAsync(result);
+    }
     public async ValueTask DisposeAsync()
     {
         if (scannerModule != null)

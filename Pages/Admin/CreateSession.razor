@@ -122,8 +122,9 @@
         countdownTimer?.Dispose();
         countdownTimer = null;
         
-        // Here you would typically save the session data to your database
+        // Here youna go  save the session data to your database
         // SaveSessionData();
+        //then other fefol connect and send stuff to the same db
     }
     
     private async Task<string> GenerateQrCodePayload()
@@ -134,7 +135,7 @@
       
             // Use the QRCodeDecoder to create a dual-purpose QR code
             // External scanners will redirect to your website
-            // Your app can decode the full session data
+            //  app can decode the full session data
             return await QRCodeDecoder.EncodeSessionDataAsync(
                 JS,
                 sessionId,

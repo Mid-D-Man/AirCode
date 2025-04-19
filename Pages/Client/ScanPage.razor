@@ -25,7 +25,8 @@
         }
         else
         {
-            <ZXingScanner OnScanResult="HandleZXingScanResult" />
+            <!-- Fix: Change OnScanResult to match the property name in ZXingScanner -->
+            <ZXingScanner OnCodeDetected="HandleZXingScanResult" />
         }
     </div>
     

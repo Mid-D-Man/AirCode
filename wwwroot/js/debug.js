@@ -3,7 +3,7 @@
  * This script helps diagnose asset load issues, service worker registration,
  * localStorage management, and overall system diagnostics.
  *
- * Ensure your <base href="/"> is set correctly so that relative paths resolve
+ * Ensure <base href="/"> is set correctly so that relative paths resolve
  * as expected.
  ****************************************************************************/
 
@@ -34,8 +34,7 @@ window.addEventListener('error', function(e) {
 
 // Function to check critical file accessibility using cache busting
 function checkFile(file) {
-    // Define base paths based on current deployment; note that we no longer
-    // include extraneous paths like '/AirCode/' since <base href="/"> is used.
+    // Define base paths based on current deployment
     const basePaths = [
         '',           // Relative to base href
         document.baseURI, // Absolute base URI
@@ -64,6 +63,196 @@ function checkFile(file) {
         }, index * 100);
     });
 }
+
+// Define updateStorageInfo in the global scope so it can be called from anywhere
+window.updateStorageInfo = function() {
+    const storageInfo = document.getElementById('storage-info');
+    if (!storageInfo) return;
+
+    let totalItems = localStorage.length;
+    let appItems = 0;
+    let appSize = 0;
+    let totalSize = 0;
+
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        const value = localStorage.getItem(key);
+        const itemSize = value ? value.length * 2 : 0; // 2 bytes per character (UTF-16)
+
+        totalSize += itemSize;
+        if (key && key.startsWith('AirCode_')) {
+            appItems++;
+            appSize += itemSize;
+        }
+    }
+
+    storageInfo.innerHTML = `
+        <div>Total localStorage items: ${totalItems}</div>
+        <div>Total size: ${(totalSize / 1024).toFixed(2)} KB</div>
+        <div>AirCode_ items: ${appItems}</div>
+        <div>AirCode_ size: ${(appSize / 1024).toFixed(2)} KB</div>
+        <div>Last updated: ${new Date().toLocaleTimeString()}</div>
+    `;
+};
+
+// Function to show the storage popup - moved to global scope
+window.showStoragePopup = function() {
+    // Create popup container
+    const popup = document.createElement('div');
+    popup.id = 'storage-popup';
+    popup.style.cssText = 'position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); ' +
+        'background:#fff; padding:15px; border-radius:5px; box-shadow:0 0 20px rgba(0,0,0,0.3); ' +
+        'z-index:10001; width:80%; max-width:800px; max-height:80vh; overflow-y:auto;';
+
+    // Popup header
+    const header = document.createElement('div');
+    header.style.cssText = 'display:flex; justify-content:space-between; align-items:center; ' +
+        'border-bottom:1px solid #ccc; padding-bottom:10px; margin-bottom:10px;';
+
+    const title = document.createElement('h3');
+    title.textContent = 'LocalStorage Keys & Values';
+    title.style.margin = '0';
+
+    const closeButton = document.createElement('button');
+    closeButton.textContent = '×';
+    closeButton.style.cssText = 'background:none; border:none; font-size:20px; cursor:pointer;';
+    closeButton.onclick = () => document.body.removeChild(popup);
+
+    header.appendChild(title);
+    header.appendChild(closeButton);
+    popup.appendChild(header);
+
+    // Filter input
+    const filterContainer = document.createElement('div');
+    filterContainer.style.cssText = 'margin-bottom:10px; display:flex; gap:5px;';
+
+    const filterInput = document.createElement('input');
+    filterInput.type = 'text';
+    filterInput.placeholder = 'Filter keys...';
+    filterInput.style.cssText = 'flex:1; padding:5px; border:1px solid #ccc; border-radius:3px;';
+
+    const filterButton = document.createElement('button');
+    filterButton.textContent = 'Filter';
+    filterButton.style.cssText = 'padding:5px 10px; background:#007bff; color:white; border:none; border-radius:3px; cursor:pointer;';
+
+    filterContainer.appendChild(filterInput);
+    filterContainer.appendChild(filterButton);
+    popup.appendChild(filterContainer);
+
+    // Storage items container
+    const itemsContainer = document.createElement('div');
+    itemsContainer.style.cssText = 'border:1px solid #eee; border-radius:3px;';
+    popup.appendChild(itemsContainer);
+
+    // Function to render storage items
+    function renderItems(filter = '') {
+        itemsContainer.innerHTML = '';
+        const keys = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && (!filter || key.toLowerCase().includes(filter.toLowerCase()))) {
+                keys.push(key);
+            }
+        }
+
+        if (keys.length === 0) {
+            const emptyMsg = document.createElement('div');
+            emptyMsg.textContent = filter ? 'No matching keys found' : 'No storage items found';
+            emptyMsg.style.cssText = 'padding:10px; text-align:center; color:#666;';
+            itemsContainer.appendChild(emptyMsg);
+            return;
+        }
+
+        keys.sort().forEach(key => {
+            const value = localStorage.getItem(key);
+            const size = value ? value.length * 2 : 0; // Add null check for value
+
+            const itemRow = document.createElement('div');
+            itemRow.style.cssText = 'padding:8px; border-bottom:1px solid #eee; display:flex; align-items:center; ' +
+                'gap:10px; background:' + (key.startsWith('AirCode_') ? '#f8fff8' : '#fff');
+
+            // Key column
+            const keyCol = document.createElement('div');
+            keyCol.style.cssText = 'flex:0 0 30%; overflow-wrap:break-word; font-weight:bold;';
+            keyCol.textContent = key;
+
+            // Value column
+            const valueCol = document.createElement('div');
+            valueCol.style.cssText = 'flex:1; overflow-wrap:break-word; max-height:100px; overflow-y:auto; font-family:monospace; font-size:12px;';
+
+            if (value) { // Add null check
+                try {
+                    // Try to parse JSON for pretty display
+                    const parsedValue = JSON.parse(value);
+                    valueCol.textContent = JSON.stringify(parsedValue, null, 2);
+                } catch {
+                    // If not JSON, display as is
+                    valueCol.textContent = value;
+                }
+            } else {
+                valueCol.textContent = "(null)";
+            }
+
+            // Metadata column
+            const metaCol = document.createElement('div');
+            metaCol.style.cssText = 'flex:0 0 80px; text-align:right; font-size:11px; color:#666;';
+            metaCol.innerHTML = `${(size / 1024).toFixed(2)} KB`;
+
+            // Delete button
+            const deleteBtn = document.createElement('button');
+            deleteBtn.textContent = 'Delete';
+            deleteBtn.style.cssText = 'background:#dc3545; color:white; border:none; border-radius:3px; padding:3px 6px; cursor:pointer;';
+            deleteBtn.onclick = () => {
+                if (confirm(`Delete key: ${key}?`)) {
+                    localStorage.removeItem(key);
+                    itemRow.remove();
+                    window.updateStorageInfo(); // Use global function
+                }
+            };
+
+            itemRow.appendChild(keyCol);
+            itemRow.appendChild(valueCol);
+            itemRow.appendChild(metaCol);
+            itemRow.appendChild(deleteBtn);
+            itemsContainer.appendChild(itemRow);
+        });
+    }
+
+    // Initialize with all items
+    renderItems();
+
+    // Set up filter functionality
+    filterButton.onclick = () => renderItems(filterInput.value);
+    filterInput.onkeyup = (e) => {
+        if (e.key === 'Enter') {
+            renderItems(filterInput.value);
+        }
+    };
+
+    // Append popup to body
+    document.body.appendChild(popup);
+};
+
+// Update diagnostics panel with new info - moved to global scope
+window.updateDiagnostics = function(info) {
+    const diagnosticsSection = document.getElementById('system-diagnostics');
+    if (diagnosticsSection) {
+        diagnosticsSection.innerHTML = '';
+        const title = document.createElement('div');
+        title.textContent = 'System Diagnostics';
+        title.style.cssText = 'font-weight:bold; margin-bottom:5px;';
+        diagnosticsSection.appendChild(title);
+        Object.entries(info).forEach(([key, value]) => {
+            const line = document.createElement('div');
+            line.style.cssText = 'padding:2px 0; font-size:11px;';
+            // Format key for better display
+            const formattedKey = key.replace(/([A-Z])/g, ' $1')
+                .replace(/^./, str => str.toUpperCase());
+            line.innerHTML = `<strong>${formattedKey}:</strong> ${value}`;
+            diagnosticsSection.appendChild(line);
+        });
+    }
+};
 
 window.addEventListener('DOMContentLoaded', function() {
     // Log current page and service worker details
@@ -167,7 +356,7 @@ function addDiagnosticsPanel() {
                 localStorage.clear();
                 console.log('🗑️ All localStorage cleared');
                 alert('All localStorage cleared');
-                updateStorageInfo();
+                window.updateStorageInfo(); // Use global function
             }
         });
         storageSection.appendChild(clearAllButton);
@@ -185,12 +374,20 @@ function addDiagnosticsPanel() {
                     keysToRemove.push(key);
                 }
             }
-            keysToRemove.forEach(key => {
-                localStorage.removeItem(key);
-            });
-            console.log(`🗑️ ${keysToRemove.length} AirCode storage items cleared`);
-            alert(`${keysToRemove.length} AirCode storage items cleared`);
-            updateStorageInfo();
+
+            if (keysToRemove.length === 0) {
+                alert('No AirCode storage items found');
+                return;
+            }
+
+            if (confirm(`Are you sure you want to clear ${keysToRemove.length} AirCode_ storage items?`)) {
+                keysToRemove.forEach(key => {
+                    localStorage.removeItem(key);
+                });
+                console.log(`🗑️ ${keysToRemove.length} AirCode storage items cleared`);
+                alert(`${keysToRemove.length} AirCode storage items cleared`);
+                window.updateStorageInfo(); // Use global function
+            }
         });
         storageSection.appendChild(clearAppButton);
 
@@ -221,7 +418,7 @@ function addDiagnosticsPanel() {
                 console.log(`🗑️ Removed item with key: ${fullKey}`);
                 alert(`Removed item with key: ${fullKey}`);
                 keyInput.value = '';
-                updateStorageInfo();
+                window.updateStorageInfo(); // Use global function
             } else {
                 alert(`Key not found: ${fullKey}`);
             }
@@ -257,64 +454,17 @@ function addDiagnosticsPanel() {
         storageInfo.style.cssText = 'margin-top:5px; font-size:11px; color:#666;';
         storageSection.appendChild(storageInfo);
 
-        // Function to update storage info
-        function updateStorageInfo() {
-            let totalItems = localStorage.length;
-            let appItems = 0;
-            let appSize = 0;
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                if (key && key.startsWith('AirCode_')) {
-                    appItems++;
-                    appSize += localStorage.getItem(key).length * 2; // 2 bytes per character (UTF-16)
-                }
-            }
-            storageInfo.innerHTML = `
-                <div>Total localStorage items: ${totalItems}</div>
-                <div>AirCode_ items: ${appItems}</div>
-                <div>AirCode_ size: ${(appSize / 1024).toFixed(2)} KB</div>
-                <div>Last updated: ${new Date().toLocaleTimeString()}</div>
-            `;
-        }
-        updateStorageInfo();
-
         // Storage keys list toggle
         const toggleKeysButton = document.createElement('button');
-        toggleKeysButton.textContent = 'Show Storage Keys';
+        toggleKeysButton.textContent = 'View Storage Keys & Values';
         toggleKeysButton.style.cssText = 'margin:5px 0; padding:3px 8px; cursor:pointer; width:100%; background:#6c757d; color:white; border:none; border-radius:3px;';
+        toggleKeysButton.addEventListener('click', window.showStoragePopup); // Use global function
+        storageSection.appendChild(toggleKeysButton);
+
+        // Create an empty div to replace keysList (for backward compatibility)
         const keysList = document.createElement('div');
         keysList.id = 'keys-list';
-        keysList.style.cssText = 'margin-top:5px; display:none; max-height:150px; overflow-y:auto; border:1px solid #ddd; padding:3px; font-size:10px;';
-        toggleKeysButton.addEventListener('click', () => {
-            if (keysList.style.display === 'none') {
-                keysList.innerHTML = '';
-                const keys = [];
-                for (let i = 0; i < localStorage.length; i++) {
-                    const key = localStorage.key(i);
-                    if (key) keys.push(key);
-                }
-                keys.sort().forEach(key => {
-                    const keyItem = document.createElement('div');
-                    keyItem.style.cssText = 'padding:2px; border-bottom:1px solid #eee; word-break:break-all;';
-                    if (key.startsWith('AirCode_')) {
-                        keyItem.style.color = '#28a745';
-                    }
-                    keyItem.textContent = key;
-                    keyItem.title = 'Click to copy key to input field';
-                    keyItem.style.cursor = 'pointer';
-                    keyItem.addEventListener('click', () => {
-                        keyInput.value = key;
-                    });
-                    keysList.appendChild(keyItem);
-                });
-                keysList.style.display = 'block';
-                toggleKeysButton.textContent = 'Hide Storage Keys';
-            } else {
-                keysList.style.display = 'none';
-                toggleKeysButton.textContent = 'Show Storage Keys';
-            }
-        });
-        storageSection.appendChild(toggleKeysButton);
+        keysList.style.display = 'none';
         storageSection.appendChild(keysList);
 
         // Add storage section to content area
@@ -328,33 +478,17 @@ function addDiagnosticsPanel() {
 
         // Append the panel to the document body and initialize diagnostics
         document.body.appendChild(panel);
-        updateDiagnostics({
+
+        // Call global functions
+        window.updateDiagnostics({
             baseHref: document.querySelector('base')?.href,
             path: window.location.pathname,
             blazorLoaded: !!window.Blazor,
-            serviceWorker: !!navigator.serviceWorker.controller,
+            serviceWorker: navigator.serviceWorker?.controller ? true : false,
             online: navigator.onLine
         });
+
+        // Initialize storage info
+        window.updateStorageInfo();
     }
 }
-
-// Update diagnostics panel with new info
-window.updateDiagnostics = function(info) {
-    const diagnosticsSection = document.getElementById('system-diagnostics');
-    if (diagnosticsSection) {
-        diagnosticsSection.innerHTML = '';
-        const title = document.createElement('div');
-        title.textContent = 'System Diagnostics';
-        title.style.cssText = 'font-weight:bold; margin-bottom:5px;';
-        diagnosticsSection.appendChild(title);
-        Object.entries(info).forEach(([key, value]) => {
-            const line = document.createElement('div');
-            line.style.cssText = 'padding:2px 0; font-size:11px;';
-            // Format key for better display
-            const formattedKey = key.replace(/([A-Z])/g, ' $1')
-                .replace(/^./, str => str.toUpperCase());
-            line.innerHTML = `<strong>${formattedKey}:</strong> ${value}`;
-            diagnosticsSection.appendChild(line);
-        });
-    }
-};

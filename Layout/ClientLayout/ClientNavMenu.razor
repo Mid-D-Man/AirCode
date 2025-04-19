@@ -17,7 +17,7 @@
         
         <div class="nav-button primary @(currentPage == "scan" ? "active" : "")" @onclick="@(() => NavigateTo("scan"))">
             <div class="button-circle">
-                <img src="/svgs/QRCode_Icon.svg" alt="Scan" class="button-icon" />
+                <img src="/svgs/ScanQrCode_Icon.svg" alt="Scan" class="button-icon" />
             </div>
             <span class="button-text">Scan</span>
             @if (currentPage == "scan")
@@ -28,7 +28,7 @@
         
         <div class="nav-button @(currentPage == "settings" ? "active" : "")" @onclick="@(() => NavigateTo("settings"))">
             <div class="button-circle">
-                <img src="/svgs/Admin_Icon.svg" alt="Settings" class="button-icon" />
+                <img src="/svgs/Settings_Icon.svg" alt="Settings" class="button-icon" />
             </div>
             <span class="button-text">Settings</span>
             @if (currentPage == "settings")

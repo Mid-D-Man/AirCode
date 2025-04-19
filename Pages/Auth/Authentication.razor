@@ -1,0 +1,47 @@
+@page "/authentication/{action}"
+@using AirCode.Services.Auth
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@using Microsoft.Extensions.Configuration
+
+@inject NavigationManager Navigation
+@inject IConfiguration Configuration
+@inject IOfflineCredentialService OfflineCredentialService
+
+<RemoteAuthenticatorView Action="@Action">
+    <LoggingIn>
+        <div class="auth-container">
+            <h2>Logging you in...</h2>
+            <div class="loading-spinner"></div>
+        </div>
+    </LoggingIn>
+    <CompletingLoggingIn>
+        <div class="auth-container">
+            <h2>Completing login...</h2>
+            <div class="loading-spinner"></div>
+        </div>
+    </CompletingLoggingIn>
+    <LogInFailed>
+        <div class="auth-container auth-error">
+            <h2>Login Failed</h2>
+            <p>We couldn't log you in. Please try again.</p>
+            <button class="btn btn-primary" @onclick="BackToLogin">Back to Login</button>
+        </div>
+    </LogInFailed>
+    <LogOut>
+        @{
+            var authority = Configuration["Auth0:Authority"];
+            var clientId = Configuration["Auth0:ClientId"];
+            
+            Navigation.NavigateTo($"{authority}/v2/logout?client_id={clientId}&returnTo={Uri.EscapeDataString(Navigation.BaseUri)}");
+        }
+    </LogOut>
+</RemoteAuthenticatorView>
+
+@code {
+    [Parameter] public string Action { get; set; }
+    
+    private void BackToLogin()
+    {
+        Navigation.NavigateTo("/");
+    }
+}

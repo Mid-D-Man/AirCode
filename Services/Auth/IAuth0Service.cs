@@ -14,6 +14,6 @@ namespace AirCode.Services.Auth
         /// Gets the Auth0 login URL
         /// </summary>
         /// <returns>The URL to the Auth0 Universal Login</returns>
-        string GetLoginUrl();
+        string GetLoginUrl(string codeChallenge);
     }
 }
