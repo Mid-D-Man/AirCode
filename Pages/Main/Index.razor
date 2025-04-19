@@ -1,12 +1,15 @@
+
 @page "/"
+@layout MainLayout
 @using AirCode.Services.Auth
 @using AirCode.Services.Storage
 @using AirCode.Components.SharedPrefabs.Others
 @using AirCode.Components.SharedPrefabs.Buttons
 @using AirCode.Domain.Enums
+@using AirCode.Layout.Main
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
 @using Microsoft.JSInterop
 @inject NavigationManager NavigationManager
-@inject IAuth0Service Auth0Service
 @inject IJSRuntime JSRuntime
 @inject IOfflineCredentialService OfflineCredentialService
 @implements IDisposable
@@ -28,10 +31,6 @@
 </div>
 
 @code {
-    private bool isOnlineLoading = false;
-    private bool isOfflineLoading = false;
-    private bool isOnline = true;
-    private DotNetObjectReference<Index> objRef;
     
 //ok from here here is what we gonna do from this page which is our starting page
 //remember u have to do the actual project words stuff too its annoying but such is life
@@ -57,6 +56,10 @@
 /// the council has decided we will go manual but but but for online make sure to cheack if player is online first init so spifi up the index page make it look good also use our blobs 
 /// </summary>
 /// 
+    private bool isOnlineLoading = false;
+    private bool isOfflineLoading = false;
+    private bool isOnline = true;
+    private DotNetObjectReference<Index> objRef;
     
     protected override async Task OnInitializedAsync()
     {
@@ -86,9 +89,9 @@
             return;
         }
 
-        // Proceed with Auth0 login
-        await Auth0Service.LoginAsync();
-
+        // Use the built-in authentication mechanism
+        NavigationManager.NavigateTo("authentication/login");
+        
         isOnlineLoading = false;
     }
 
@@ -145,4 +148,3 @@
         objRef?.Dispose();
     }
 }
-

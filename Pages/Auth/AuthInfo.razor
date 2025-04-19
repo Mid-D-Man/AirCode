@@ -1,0 +1,83 @@
+@page "/auth-info"
+@attribute [Authorize]
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Text.Json
+@using Microsoft.AspNetCore.Authorization
+
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<h1>Authentication Information</h1>
+
+<AuthorizeView>
+    <Authorized>
+        <div class="auth-info">
+            <h2>User Information</h2>
+            <p><strong>Name:</strong> @context.User.Identity.Name</p>
+            
+            <h3>Claims</h3>
+            <div class="claims-container">
+                @foreach (var claim in context.User.Claims)
+                {
+                    <div class="claim-item">
+                        <strong>@claim.Type:</strong> @claim.Value
+                    </div>
+                }
+            </div>
+            
+            <h3>Raw JWT</h3>
+            <div class="jwt-container">
+                <pre>@_jwt</pre>
+            </div>
+        </div>
+    </Authorized>
+    <NotAuthorized>
+        <p>You need to log in to view authentication information.</p>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private string _jwt = "Loading...";
+    
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        
+        if (user.Identity.IsAuthenticated)
+        {
+            // Try to get the JWT from claims
+            var jwtClaim = user.FindFirst("access_token") ?? user.FindFirst("id_token");
+            if (jwtClaim != null)
+            {
+                _jwt = jwtClaim.Value;
+                
+                // Pretty print if it's JSON
+                try
+                {
+                    var tokenParts = _jwt.Split('.');
+                    if (tokenParts.Length > 1)
+                    {
+                        var payload = tokenParts[1];
+                        var paddedPayload = payload.PadRight(payload.Length + (4 - payload.Length % 4) % 4, '=');
+                        var decodedBytes = Convert.FromBase64String(paddedPayload);
+                        var jsonString = System.Text.Encoding.UTF8.GetString(decodedBytes);
+                        var formattedJson =  System.Text.Json.JsonSerializer.Serialize(
+                           System.Text.Json. JsonSerializer.Deserialize<object>(jsonString), 
+                            new JsonSerializerOptions { WriteIndented = true }
+                        );
+                        _jwt = formattedJson;
+                    }
+                }
+                catch
+                {
+                    // If pretty print fails, just show the raw token
+                }
+            }
+            else
+            {
+                _jwt = "JWT not found in claims";
+            }
+        }
+    }
+}

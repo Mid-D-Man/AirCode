@@ -14,6 +14,12 @@ namespace AirCode.Services.Auth
         /// Gets the Auth0 login URL
         /// </summary>
         /// <returns>The URL to the Auth0 Universal Login</returns>
-        string GetLoginUrl(string codeChallenge);
+        string GetLoginUrl();
+        
+        /// <summary>
+        /// Gets the current access token
+        /// </summary>
+        /// <returns>The JWT access token or null if not available</returns>
+        Task<string> GetAccessTokenAsync();
     }
 }

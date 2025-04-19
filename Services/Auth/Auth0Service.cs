@@ -1,10 +1,8 @@
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Web;
+using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
 using AirCode.Models;
 using Microsoft.JSInterop;
 using System.Threading.Tasks;
-using System.Security.Cryptography;
-using System.Text;
 
 namespace AirCode.Services.Auth
 {
@@ -13,30 +11,27 @@ namespace AirCode.Services.Auth
         private readonly Auth0Settings _settings;
         private readonly NavigationManager _navigationManager;
         private readonly IJSRuntime _jsRuntime;
+        private readonly IAccessTokenProvider _tokenProvider;
 
-        public Auth0Service(Auth0Settings settings, NavigationManager navigationManager, IJSRuntime jsRuntime)
+        public Auth0Service(
+            Auth0Settings settings, 
+            NavigationManager navigationManager, 
+            IJSRuntime jsRuntime,
+            IAccessTokenProvider tokenProvider)
         {
             _settings = settings;
             _navigationManager = navigationManager;
             _jsRuntime = jsRuntime;
+            _tokenProvider = tokenProvider;
         }
 
         public async Task LoginAsync()
         {
-            // Generate PKCE code verifier and challenge
-            var codeVerifier = GenerateCodeVerifier();
-            var codeChallenge = await GenerateCodeChallengeAsync(codeVerifier);
-        
-            // Store code verifier in session storage (not local storage)
-            await _jsRuntime.InvokeVoidAsync("sessionStorage.setItem", "auth_code_verifier", codeVerifier);
-
-        
-            var redirectUri = _navigationManager.BaseUri + _settings.RedirectUri;
-            var url = GetLoginUrl(codeChallenge);
-            await _jsRuntime.InvokeVoidAsync("window.location.replace", url);
+            // Use the built-in OIDC authentication
+            _navigationManager.NavigateTo("authentication/login");
         }
 
-        public string GetLoginUrl(string codeChallenge)
+        public string GetLoginUrl()
         {
             var redirectUri = _navigationManager.BaseUri + _settings.RedirectUri;
             return $"https://{_settings.Domain}/authorize" +
@@ -44,28 +39,19 @@ namespace AirCode.Services.Auth
                    $"&response_type=code" +
                    $"&redirect_uri={Uri.EscapeDataString(redirectUri)}" +
                    $"&scope=openid profile email" +
-                   $"&audience={Uri.EscapeDataString(_settings.Audience)}" +
-                   $"&code_challenge={codeChallenge}" +
-                   $"&code_challenge_method=S256";
+                   $"&audience={Uri.EscapeDataString(_settings.Audience)}";
         }
-    
-        private string GenerateCodeVerifier()
+        
+        public async Task<string> GetAccessTokenAsync()
         {
-            var bytes = new byte[32];
-            using (var rng = RandomNumberGenerator.Create())
+            var tokenResult = await _tokenProvider.RequestAccessToken();
+            
+            if (tokenResult.TryGetToken(out var token))
             {
-                rng.GetBytes(bytes);
+                return token.Value;
             }
-            return Convert.ToBase64String(bytes)
-                .TrimEnd('=')
-                .Replace('+', '-')
-                .Replace('/', '_');
-        }
-    [JSInvokable]
-        public async Task<string> GenerateCodeChallengeAsync(string codeVerifier)
-        {
-            // Use JS interop to call browser's crypto API
-            return await _jsRuntime.InvokeAsync<string>("generateCodeChallenge", codeVerifier);
+            
+            return null;
         }
     }
 }
