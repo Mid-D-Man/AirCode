@@ -32,7 +32,7 @@
                     </div>
                 }
             </div>
-            
+
             <h3>JWT Token</h3>
             @if (_isLoading)
             {
@@ -40,6 +40,14 @@
             }
             else
             {
+                @if (!string.IsNullOrEmpty(_userId))
+                {
+                    <div class="user-id-container mb-3 p-2 border border-primary rounded">
+                        <h4>Auth0 User ID</h4>
+                        <p class="font-weight-bold">@_userId</p>
+                    </div>
+                }
+
                 <div class="jwt-container">
                     <pre>@_jwt</pre>
                 </div>
@@ -50,7 +58,6 @@
 
                 <button class="btn btn-secondary mt-3" @onclick="CopyJwtToClipboard">Copy JWT to Clipboard</button>
             }
-            
             <div class="mt-4">
                 <button class="btn btn-primary" @onclick="GoHome">Return to Home</button>
             </div>
@@ -66,6 +73,7 @@
     private string _jwt = "Loading...";
     private string _rawJwt = "";
     private bool _isLoading = true;
+    private string _userId = string.Empty;
     
     protected override async Task OnInitializedAsync()
     {
@@ -124,46 +132,62 @@
     }
     
     private async Task ProcessJwtToken(string token)
+{
+    try
     {
-        try
+        await AuthService.LogAuthenticationMessageAsync($"Processing JWT token, length: {token.Length}");
+        
+        // Pretty print if it's JSON
+        var tokenParts = token.Split('.');
+        if (tokenParts.Length > 1)
         {
-            await AuthService.LogAuthenticationMessageAsync($"Processing JWT token, length: {token.Length}");
+            var payload = tokenParts[1];
+            var paddedPayload = payload.PadRight(payload.Length + (4 - payload.Length % 4) % 4, '=');
+            var decodedBytes = Convert.FromBase64String(paddedPayload);
+            var jsonString = System.Text.Encoding.UTF8.GetString(decodedBytes);
             
-            // Pretty print if it's JSON
-            var tokenParts = token.Split('.');
-            if (tokenParts.Length > 1)
+            try 
             {
-                var payload = tokenParts[1];
-                var paddedPayload = payload.PadRight(payload.Length + (4 - payload.Length % 4) % 4, '=');
-                var decodedBytes = Convert.FromBase64String(paddedPayload);
-                var jsonString = System.Text.Encoding.UTF8.GetString(decodedBytes);
+                var jsonElement = System.Text.Json.JsonSerializer.Deserialize<JsonElement>(jsonString);
+                var formattedJson = System.Text.Json.JsonSerializer.Serialize(jsonElement, new JsonSerializerOptions { WriteIndented = true });
+                _jwt = formattedJson;
                 
-                try 
+                // Extract and log the Auth0 user ID specifically
+                if (jsonElement.TryGetProperty("sub", out var subProperty))
                 {
-                    var jsonElement =System.Text.Json. JsonSerializer.Deserialize<JsonElement>(jsonString);
-                    var formattedJson = System.Text.Json.JsonSerializer.Serialize(jsonElement, new JsonSerializerOptions { WriteIndented = true });
-                    _jwt = formattedJson;
-                    await AuthService.LogAuthenticationMessageAsync("Successfully decoded and formatted JWT payload");
+                    string userId = subProperty.GetString();
+                    await AuthService.LogAuthenticationMessageAsync($"Auth0 User ID: {userId}");
+                    // You can add a specific UI element to display this prominently
                 }
-                catch
-                {
-                    _jwt = jsonString;
-                    await AuthService.LogAuthenticationMessageAsync("Decoded JWT payload but couldn't format JSON");
-                }
+                
+                await AuthService.LogAuthenticationMessageAsync("Successfully decoded and formatted JWT payload");
             }
-            else
+            catch
             {
-                _jwt = "Invalid JWT format (doesn't contain expected segments)";
-                await AuthService.LogAuthenticationMessageAsync("Invalid JWT format");
+                _jwt = jsonString;
+                await AuthService.LogAuthenticationMessageAsync("Decoded JWT payload but couldn't format JSON");
             }
         }
-        catch (Exception ex)
+        else
         {
-            _jwt = $"Error processing JWT: {ex.Message}";
-            await AuthService.LogAuthenticationMessageAsync($"Error processing JWT: {ex.Message}");
+            _jwt = "Invalid JWT format (doesn't contain expected segments)";
+            await AuthService.LogAuthenticationMessageAsync("Invalid JWT format");
         }
     }
-    
+    catch (Exception ex)
+    {
+        _jwt = $"Error processing JWT: {ex.Message}";
+        await AuthService.LogAuthenticationMessageAsync($"Error processing JWT: {ex.Message}");
+    }
+}
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await AuthService.LogAuthenticationMessageAsync("AuthInfo page rendered successfully");
+            await JSRuntime.InvokeVoidAsync("console.log", "AuthInfo page rendered successfully");
+        }
+    }
     private async Task CopyJwtToClipboard()
     {
         try
