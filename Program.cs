@@ -37,7 +37,7 @@ builder.Services.AddOidcAuthentication(options =>
     options.ProviderOptions.DefaultScopes.Add("openid");
     options.ProviderOptions.DefaultScopes.Add("profile");
     options.ProviderOptions.DefaultScopes.Add("email");
-
+  
 });
 
 
@@ -58,6 +58,10 @@ JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
 
 // Add authorization services
 builder.Services.AddAuthorizationCore();
+
+// Add this line to your existing services registration in Program.cs
+builder.Services.AddScoped<IAuthService, AuthService>();
+
 
 // Local storage
 builder.Services.AddScoped<IBlazorAppLocalStorageService, BlazorAppLocalStorageService>();

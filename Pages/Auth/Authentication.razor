@@ -1,42 +1,70 @@
 @page "/authentication/{action}"
 @using Microsoft.AspNetCore.Components.WebAssembly.Authentication
 @using Microsoft.Extensions.Configuration
+@using Microsoft.JSInterop
+@using AirCode.Services.Auth
 
 @inject NavigationManager Navigation
 @inject IConfiguration Configuration
+@inject IJSRuntime JSRuntime
+@inject IAuthService AuthService
+@inject IAccessTokenProvider TokenProvider
 
-<RemoteAuthenticatorView Action="@Action">
+<RemoteAuthenticatorView Action="@Action" OnLogInSucceeded="HandleLoginSuccess">
     <LoggingIn>
-        <div class="auth-loading-container">
-            <h2>Logging you in...</h2>
-            <div class="spinner"></div>
-        </div>
+        <p>Redirecting to Auth0 login...</p>
+        @{
+            AuthService.LogAuthenticationMessage("Starting Auth0 login redirection");
+        }
     </LoggingIn>
     <CompletingLoggingIn>
-        <div class="auth-loading-container">
-            <h2>Completing login...</h2>
-            <div class="spinner"></div>
-        </div>
+        <p>Completing login process...</p>
+        @{
+            AuthService.LogAuthenticationMessage("Processing login callback");
+        }
     </CompletingLoggingIn>
-    <LogInFailed>
-        <div class="auth-error-container">
-            <h2>Login failed</h2>
-            <p>Sorry, there was an error logging you in. Please try again.</p>
-            <button class="btn btn-primary" @onclick="RetryLogin">Try Again</button>
-        </div>
-    </LogInFailed>
     <LogOut>
         @{
-            var authority = Configuration["Auth0:Authority"];
+            var authority = $"https://{Configuration["Auth0:Domain"]}";
             var clientId = Configuration["Auth0:ClientId"];
-            
-            Navigation.NavigateTo($"{authority}/v2/logout?client_id={clientId}&returnTo={Uri.EscapeDataString(Navigation.BaseUri)}");
+            AuthService.LogAuthenticationMessage("Logging out user");
+            Navigation.NavigateTo($"{authority}/v2/logout?client_id={clientId}");
         }
     </LogOut>
 </RemoteAuthenticatorView>
 
-@code {
+@code{
     [Parameter] public string Action { get; set; }
     
-    private void RetryLogin() => Navigation.NavigateTo("authentication/login");
+    private async Task HandleLoginSuccess(RemoteAuthenticationState state)
+    {
+        // Log successful authentication
+        await AuthService.LogAuthenticationMessageAsync("Authentication successful!");
+        
+        // Request the token and log its status
+        var result = await TokenProvider.RequestAccessToken();
+        
+        await AuthService.LogAuthenticationMessageAsync($"Access token status: {result.Status}");
+        
+        if (result.TryGetToken(out var token))
+        {
+            await AuthService.LogAuthenticationMessageAsync($"JWT retrieved successfully. Length: {token.Value.Length} chars");
+            
+            // Store token in session for debugging purposes
+            await JSRuntime.InvokeVoidAsync("authHelper.storeJwtLocally", token.Value);
+            
+            // Log the first few characters
+            if (token.Value.Length > 10)
+            {
+                await AuthService.LogAuthenticationMessageAsync($"JWT preview: {token.Value.Substring(0, 10)}...");
+            }
+        }
+        else
+        {
+            await AuthService.LogAuthenticationMessageAsync("Failed to retrieve JWT token");
+        }
+        
+        // Navigate to AuthInfo page to display token details
+        Navigation.NavigateTo("/auth-info");
+    }
 }

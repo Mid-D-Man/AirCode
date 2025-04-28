@@ -2,10 +2,17 @@
 @attribute [Authorize]
 @using System.Security.Claims
 @using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
 @using System.Text.Json
 @using Microsoft.AspNetCore.Authorization
+@using AirCode.Services.Auth
+@using Microsoft.JSInterop
 
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IAuthService AuthService
+@inject IJSRuntime JSRuntime
+@inject IAccessTokenProvider TokenProvider
+@inject NavigationManager Navigation
 
 <h1>Authentication Information</h1>
 
@@ -25,59 +32,155 @@
                 }
             </div>
             
-            <h3>Raw JWT</h3>
-            <div class="jwt-container">
-                <pre>@_jwt</pre>
+            <h3>JWT Token</h3>
+            @if (_isLoading)
+            {
+                <p>Loading token information...</p>
+            }
+            else
+            {
+                <div class="jwt-container">
+                    <pre>@_jwt</pre>
+                </div>
+                <div class="raw-token mt-3">
+                    <h4>Raw JWT Token</h4>
+                    <pre class="bg-dark text-light p-2" style="max-height: 100px; overflow: auto;">@_rawJwt</pre>
+                </div>
+
+                <button class="btn btn-secondary mt-3" @onclick="CopyJwtToClipboard">Copy JWT to Clipboard</button>
+            }
+            
+            <div class="mt-4">
+                <button class="btn btn-primary" @onclick="GoHome">Return to Home</button>
             </div>
         </div>
     </Authorized>
     <NotAuthorized>
         <p>You need to log in to view authentication information.</p>
+        <button class="btn btn-primary" @onclick="GoHome">Return to Home</button>
     </NotAuthorized>
 </AuthorizeView>
 
 @code {
     private string _jwt = "Loading...";
+    private string _rawJwt = "";
+    private bool _isLoading = true;
     
     protected override async Task OnInitializedAsync()
     {
-        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-        var user = authState.User;
+        await AuthService.LogAuthenticationMessageAsync("Loading AuthInfo page");
         
-        if (user.Identity.IsAuthenticated)
+        try
         {
-            // Try to get the JWT from claims
-            var jwtClaim = user.FindFirst("access_token") ?? user.FindFirst("id_token");
-            if (jwtClaim != null)
+            // First try to get token from session storage (if it was stored during login)
+            var storedToken = await JSRuntime.InvokeAsync<string>("authHelper.retrieveStoredJwt");
+            
+            if (!string.IsNullOrEmpty(storedToken))
             {
-                _jwt = jwtClaim.Value;
+                await AuthService.LogAuthenticationMessageAsync("Found JWT in session storage");
+                _rawJwt = storedToken;
+                await ProcessJwtToken(storedToken);
+            }
+            else
+            {
+                // Try to get token from TokenProvider
+                var tokenResult = await TokenProvider.RequestAccessToken();
                 
-                // Pretty print if it's JSON
-                try
+                if (tokenResult.TryGetToken(out var accessToken))
                 {
-                    var tokenParts = _jwt.Split('.');
-                    if (tokenParts.Length > 1)
+                    await AuthService.LogAuthenticationMessageAsync("Retrieved JWT from TokenProvider");
+                    _rawJwt = accessToken.Value;
+                    await ProcessJwtToken(accessToken.Value);
+                }
+                else
+                {
+                    // Fall back to AuthService
+                    await AuthService.LogAuthenticationMessageAsync("Trying to get JWT from AuthService");
+                    var token = await AuthService.GetJwtTokenAsync();
+                    
+                    if (token != "Token not found" && !token.StartsWith("Error:"))
                     {
-                        var payload = tokenParts[1];
-                        var paddedPayload = payload.PadRight(payload.Length + (4 - payload.Length % 4) % 4, '=');
-                        var decodedBytes = Convert.FromBase64String(paddedPayload);
-                        var jsonString = System.Text.Encoding.UTF8.GetString(decodedBytes);
-                        var formattedJson =  System.Text.Json.JsonSerializer.Serialize(
-                           System.Text.Json. JsonSerializer.Deserialize<object>(jsonString), 
-                            new JsonSerializerOptions { WriteIndented = true }
-                        );
-                        _jwt = formattedJson;
+                        _rawJwt = token;
+                        await ProcessJwtToken(token);
                     }
+                    else
+                    {
+                        _jwt = "JWT not found. Available claims are listed above.";
+                        await AuthService.LogAuthenticationMessageAsync("JWT not found through any method");
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _jwt = $"Error retrieving JWT: {ex.Message}";
+            await AuthService.LogAuthenticationMessageAsync($"Error in AuthInfo: {ex.Message}");
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+    
+    private async Task ProcessJwtToken(string token)
+    {
+        try
+        {
+            await AuthService.LogAuthenticationMessageAsync($"Processing JWT token, length: {token.Length}");
+            
+            // Pretty print if it's JSON
+            var tokenParts = token.Split('.');
+            if (tokenParts.Length > 1)
+            {
+                var payload = tokenParts[1];
+                var paddedPayload = payload.PadRight(payload.Length + (4 - payload.Length % 4) % 4, '=');
+                var decodedBytes = Convert.FromBase64String(paddedPayload);
+                var jsonString = System.Text.Encoding.UTF8.GetString(decodedBytes);
+                
+                try 
+                {
+                    var jsonElement =System.Text.Json. JsonSerializer.Deserialize<JsonElement>(jsonString);
+                    var formattedJson = System.Text.Json.JsonSerializer.Serialize(jsonElement, new JsonSerializerOptions { WriteIndented = true });
+                    _jwt = formattedJson;
+                    await AuthService.LogAuthenticationMessageAsync("Successfully decoded and formatted JWT payload");
                 }
                 catch
                 {
-                    // If pretty print fails, just show the raw token
+                    _jwt = jsonString;
+                    await AuthService.LogAuthenticationMessageAsync("Decoded JWT payload but couldn't format JSON");
                 }
             }
             else
             {
-                _jwt = "JWT not found in claims";
+                _jwt = "Invalid JWT format (doesn't contain expected segments)";
+                await AuthService.LogAuthenticationMessageAsync("Invalid JWT format");
             }
         }
+        catch (Exception ex)
+        {
+            _jwt = $"Error processing JWT: {ex.Message}";
+            await AuthService.LogAuthenticationMessageAsync($"Error processing JWT: {ex.Message}");
+        }
+    }
+    
+    private async Task CopyJwtToClipboard()
+    {
+        try
+        {
+            if (!string.IsNullOrEmpty(_rawJwt))
+            {
+                await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", _rawJwt);
+                await AuthService.LogAuthenticationMessageAsync("JWT copied to clipboard");
+            }
+        }
+        catch (Exception ex)
+        {
+            await AuthService.LogAuthenticationMessageAsync($"Error copying JWT: {ex.Message}");
+        }
+    }
+    
+    private void GoHome()
+    {
+        Navigation.NavigateTo("/");
     }
 }
