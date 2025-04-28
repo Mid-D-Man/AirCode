@@ -23,6 +23,17 @@
             <h2>User Information</h2>
             <p><strong>Name:</strong> @context.User.Identity.Name</p>
             
+            <!-- Add Role Display Section -->
+            <h3>User Role</h3>
+            @{
+                var roleClaim = context.User.Claims.FirstOrDefault(c => c.Type == "https://air-code/roles");
+                var role = roleClaim?.Value ?? "No role assigned";
+            }
+            <div class="role-container mb-3 p-2 border border-success rounded">
+                <h4>Role</h4>
+                <p class="font-weight-bold">@role</p>
+            </div>
+            
             <h3>Claims</h3>
             <div class="claims-container">
                 @foreach (var claim in context.User.Claims)
@@ -74,6 +85,7 @@
     private string _rawJwt = "";
     private bool _isLoading = true;
     private string _userId = string.Empty;
+    private string _userRole = string.Empty;
     
     protected override async Task OnInitializedAsync()
     {
@@ -132,62 +144,79 @@
     }
     
     private async Task ProcessJwtToken(string token)
-{
-    try
     {
-        await AuthService.LogAuthenticationMessageAsync($"Processing JWT token, length: {token.Length}");
-        
-        // Pretty print if it's JSON
-        var tokenParts = token.Split('.');
-        if (tokenParts.Length > 1)
+        try
         {
-            var payload = tokenParts[1];
-            var paddedPayload = payload.PadRight(payload.Length + (4 - payload.Length % 4) % 4, '=');
-            var decodedBytes = Convert.FromBase64String(paddedPayload);
-            var jsonString = System.Text.Encoding.UTF8.GetString(decodedBytes);
+            await AuthService.LogAuthenticationMessageAsync($"Processing JWT token, length: {token.Length}");
             
-            try 
+            // Pretty print if it's JSON
+            var tokenParts = token.Split('.');
+            if (tokenParts.Length > 1)
             {
-                var jsonElement = System.Text.Json.JsonSerializer.Deserialize<JsonElement>(jsonString);
-                var formattedJson = System.Text.Json.JsonSerializer.Serialize(jsonElement, new JsonSerializerOptions { WriteIndented = true });
-                _jwt = formattedJson;
+                var payload = tokenParts[1];
+                var paddedPayload = payload.PadRight(payload.Length + (4 - payload.Length % 4) % 4, '=');
+                var decodedBytes = Convert.FromBase64String(paddedPayload);
+                var jsonString = System.Text.Encoding.UTF8.GetString(decodedBytes);
                 
-                // Extract and log the Auth0 user ID specifically
-                if (jsonElement.TryGetProperty("sub", out var subProperty))
+                try 
                 {
-                    string userId = subProperty.GetString();
-                    await AuthService.LogAuthenticationMessageAsync($"Auth0 User ID: {userId}");
-                    // You can add a specific UI element to display this prominently
+                    var jsonElement = System.Text.Json.JsonSerializer.Deserialize<JsonElement>(jsonString);
+                    var formattedJson = System.Text.Json.JsonSerializer.Serialize(jsonElement, new JsonSerializerOptions { WriteIndented = true });
+                    _jwt = formattedJson;
+                    
+                    // Extract and log the Auth0 user ID specifically
+                    if (jsonElement.TryGetProperty("sub", out var subProperty))
+                    {
+                        _userId = subProperty.GetString();
+                        await AuthService.LogAuthenticationMessageAsync($"Auth0 User ID: {_userId}");
+                    }
+                    
+                    // Extract and log the user role
+                    if (jsonElement.TryGetProperty("https://air-code/roles", out var roleProperty))
+                    {
+                        _userRole = roleProperty.ValueKind == JsonValueKind.Array 
+                            ? string.Join(", ", roleProperty.EnumerateArray().Select(r => r.GetString())) 
+                            : roleProperty.GetString();
+                        await AuthService.LogAuthenticationMessageAsync($"User Role: {_userRole}");
+                    }
+                    
+                    await AuthService.LogAuthenticationMessageAsync("Successfully decoded and formatted JWT payload");
                 }
-                
-                await AuthService.LogAuthenticationMessageAsync("Successfully decoded and formatted JWT payload");
+                catch (Exception ex)
+                {
+                    _jwt = jsonString;
+                    await AuthService.LogAuthenticationMessageAsync($"Decoded JWT payload but couldn't format JSON: {ex.Message}");
+                }
             }
-            catch
+            else
             {
-                _jwt = jsonString;
-                await AuthService.LogAuthenticationMessageAsync("Decoded JWT payload but couldn't format JSON");
+                _jwt = "Invalid JWT format (doesn't contain expected segments)";
+                await AuthService.LogAuthenticationMessageAsync("Invalid JWT format");
             }
         }
-        else
+        catch (Exception ex)
         {
-            _jwt = "Invalid JWT format (doesn't contain expected segments)";
-            await AuthService.LogAuthenticationMessageAsync("Invalid JWT format");
+            _jwt = $"Error processing JWT: {ex.Message}";
+            await AuthService.LogAuthenticationMessageAsync($"Error processing JWT: {ex.Message}");
         }
     }
-    catch (Exception ex)
-    {
-        _jwt = $"Error processing JWT: {ex.Message}";
-        await AuthService.LogAuthenticationMessageAsync($"Error processing JWT: {ex.Message}");
-    }
-}
+    
+    // Add a longer delay to fix the navigation issue
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
             await AuthService.LogAuthenticationMessageAsync("AuthInfo page rendered successfully");
             await JSRuntime.InvokeVoidAsync("console.log", "AuthInfo page rendered successfully");
+            
+            // Log if we have role information
+            if (!string.IsNullOrEmpty(_userRole))
+            {
+                await JSRuntime.InvokeVoidAsync("console.log", $"User role extracted: {_userRole}");
+            }
         }
     }
+
     private async Task CopyJwtToClipboard()
     {
         try
