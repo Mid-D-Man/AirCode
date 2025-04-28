@@ -6,16 +6,37 @@
 @inject IConfiguration Configuration
 
 <RemoteAuthenticatorView Action="@Action">
+    <LoggingIn>
+        <div class="auth-loading-container">
+            <h2>Logging you in...</h2>
+            <div class="spinner"></div>
+        </div>
+    </LoggingIn>
+    <CompletingLoggingIn>
+        <div class="auth-loading-container">
+            <h2>Completing login...</h2>
+            <div class="spinner"></div>
+        </div>
+    </CompletingLoggingIn>
+    <LogInFailed>
+        <div class="auth-error-container">
+            <h2>Login failed</h2>
+            <p>Sorry, there was an error logging you in. Please try again.</p>
+            <button class="btn btn-primary" @onclick="RetryLogin">Try Again</button>
+        </div>
+    </LogInFailed>
     <LogOut>
         @{
-            var authority = $"https://{Configuration["Auth0:Domain"]}";
+            var authority = Configuration["Auth0:Authority"];
             var clientId = Configuration["Auth0:ClientId"];
-
-            Navigation.NavigateTo($"{authority}/v2/logout?client_id={clientId}");
+            
+            Navigation.NavigateTo($"{authority}/v2/logout?client_id={clientId}&returnTo={Uri.EscapeDataString(Navigation.BaseUri)}");
         }
     </LogOut>
 </RemoteAuthenticatorView>
 
-@code{
+@code {
     [Parameter] public string Action { get; set; }
+    
+    private void RetryLogin() => Navigation.NavigateTo("authentication/login");
 }

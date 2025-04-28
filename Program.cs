@@ -17,38 +17,47 @@ var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
-builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
-
-// Add auth services
+// Configure Auth0 authentication
 builder.Services.AddOidcAuthentication(options =>
 {
-    // Bind Auth0 configuration
+    // Bind standard Auth0 configuration values.
     builder.Configuration.Bind("Auth0", options.ProviderOptions);
     
-    // Set required options
+    // Use Code Flow with PKCE for improved security.
     options.ProviderOptions.ResponseType = "code";
+
+    // Specify the intended API in the additional parameters.
     options.ProviderOptions.AdditionalProviderParameters.Add("audience", builder.Configuration["Auth0:Audience"]);
-    
-    // Configure Auth0 specific settings
-    options.ProviderOptions.Authority = $"https://{builder.Configuration["Auth0:Domain"]}";
-    options.ProviderOptions.MetadataUrl = $"https://{builder.Configuration["Auth0:Domain"]}/.well-known/openid-configuration";
-    options.ProviderOptions.ClientId = builder.Configuration["Auth0:ClientId"];
+
+    // Tell the user options which claim holds the roles.
+    // This should match the namespaced claim from your Auth0 action.
+    options.UserOptions.RoleClaim = "https://air-code/roles";
+
+    // Optional: Add default scopes if needed.
+    options.ProviderOptions.DefaultScopes.Add("openid");
+    options.ProviderOptions.DefaultScopes.Add("profile");
+    options.ProviderOptions.DefaultScopes.Add("email");
+
 });
 
-// Add auth state provider
-builder.Services.AddAuthorizationCore();
 
-// Add JWT token validation - clear default mappings to preserve original claim names
-JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
+// HTTP clients setup
+// Base client without auth
+builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 
-// Add HTTP client factory
-builder.Services.AddHttpClient("AirCodeAPI", client => 
-        client.BaseAddress = new Uri(builder.HostEnvironment.BaseAddress))
+// HTTP client with Auth0 token
+builder.Services.AddHttpClient("AirCodeAPI", 
+        client => client.BaseAddress = new Uri(builder.HostEnvironment.BaseAddress))
     .AddHttpMessageHandler<BaseAddressAuthorizationMessageHandler>();
 
-// Add scoped HTTP client for authorized requests
 builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>()
     .CreateClient("AirCodeAPI"));
+
+// Clear default JWT claim mappings to preserve original claim names from Auth0
+JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
+
+// Add authorization services
+builder.Services.AddAuthorizationCore();
 
 // Local storage
 builder.Services.AddScoped<IBlazorAppLocalStorageService, BlazorAppLocalStorageService>();
@@ -70,18 +79,5 @@ builder.Services.AddScoped<ISearchContextService, SearchContextService>();
 
 // Firebase Services
 builder.Services.AddScoped<AirCode.Services.Firebase.IFirestoreService, AirCode.Services.Firebase.FirestoreService>();
-
-// Register Auth0 settings
-var auth0Settings = new Auth0Settings
-{
-    Domain = builder.Configuration["Auth0:Domain"],
-    ClientId = builder.Configuration["Auth0:ClientId"],
-    Audience = builder.Configuration["Auth0:Audience"],
-    RedirectUri = "authentication/login-callback"
-};
-builder.Services.AddSingleton(auth0Settings);
-
-// Register Auth0 service (keep for backward compatibility if needed)
-builder.Services.AddScoped<IAuth0Service, Auth0Service>();
 
 await builder.Build().RunAsync();
