@@ -7,6 +7,7 @@
 @using Microsoft.AspNetCore.Authorization
 @using AirCode.Services.Auth
 @using Microsoft.JSInterop
+@using AirCode.Components.Auth
 
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject IAuthService AuthService
@@ -15,7 +16,7 @@
 @inject NavigationManager Navigation
 
 <h1>Authentication Information</h1>
-
+<TokenDebugger />
 <AuthorizeView>
     <Authorized>
         <div class="auth-info">
