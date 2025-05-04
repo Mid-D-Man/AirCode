@@ -1,17 +1,14 @@
 
 @page "/"
 @layout MainLayout
-@using AirCode.Services.Auth
-@using AirCode.Services.Storage
 @using AirCode.Components.SharedPrefabs.Others
 @using AirCode.Components.SharedPrefabs.Buttons
 @using AirCode.Domain.Enums
 @using AirCode.Layout.Main
-@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
-@using Microsoft.JSInterop
+@using AirCode.Services.Auth.Offline
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
-@inject IOfflineCredentialService OfflineCredentialService
+@inject IOfflineCredentialsService OfflineCredentialService
 @implements IDisposable
 
 <BlobBackground />
@@ -100,11 +97,12 @@
         isOfflineLoading = true;
 
         // Check if offline credentials exist
-        bool hasCredentials = await JSRuntime.InvokeAsync<bool>("offlineManager.hasStoredCredentials");
+        var offlineCredentials = await OfflineCredentialService.GetCredentialsAsync();
 
-        if (!hasCredentials)
+        if (offlineCredentials == null)
         {
-            await JSRuntime.InvokeVoidAsync("offlineManager.showNoCredentialsMessage");
+            //has credentials
+            await JSRuntime.InvokeVoidAsync("connectivityChecker.showNoCredentialsMessage");
             isOfflineLoading = false;
             return;
         }
