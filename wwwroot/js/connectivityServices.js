@@ -1,5 +1,5 @@
 // wwwroot/js/connectivityServices.js
-
+//only for connetivity check
 // Connectivity checker service
 console.log("connectivityServices.js loaded");
 
@@ -80,90 +80,3 @@ window.connectivityChecker = {
 
 };
 
-// Offline manager for showing prompts and managing offline state
-window.offlineManager = {
-    showOfflinePrompt: function () {
-        return new Promise(resolve => {
-            if (!confirm("You appear to be offline. Would you like to continue in offline mode?")) {
-                resolve(false);
-                return;
-            }
-            resolve(true);
-        });
-    },
-
-    showOnlinePrompt: function () {
-        return new Promise(resolve => {
-            if (!confirm("You're back online! Would you like to switch to online mode?")) {
-                resolve(false);
-                return;
-            }
-            resolve(true);
-        });
-    },
-
-    showNoCredentialsMessage: function () {
-        alert("Offline mode requires that you have previously logged in on this device. Please connect to the internet and login at least once.");
-    },
-
-    hasStoredCredentials: function () {
-        const credentials = localStorage.getItem('AirCode_credentials');
-        return credentials !== null && credentials !== undefined;
-    }
-};
-
-// Credential manager for securely storing and retrieving credentials
-// Device fingerprinting and credential management
-window.credentialManager = {
-    // Store credentials securely
-    storeCredentials: function (username, password, isAdmin, adminId) {
-        try {
-            // We'll use the C# side for actual encryption, but we can add 
-            // additional fingerprinting here
-            const fingerprint = this.getDeviceFingerprint();
-
-            // Return success
-            return true;
-        } catch (error) {
-            console.error("Error storing credentials", error);
-            return false;
-        }
-    },
-
-    // Generate a simple fingerprint based on browser and device data
-    getDeviceFingerprint: function () {
-        const nav = window.navigator;
-        const screen = window.screen;
-
-        // Collect various device properties
-        const fingerprint = {
-            userAgent: nav.userAgent,
-            language: nav.language,
-            platform: nav.platform,
-            cores: nav.hardwareConcurrency || 'unknown',
-            screenWidth: screen.width,
-            screenHeight: screen.height,
-            colorDepth: screen.colorDepth,
-            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-            touchPoints: nav.maxTouchPoints || 0
-        };
-
-        // Convert to string and hash (simple algorithm for demo)
-        const fingerprintStr = JSON.stringify(fingerprint);
-        return this.simpleHash(fingerprintStr);
-    },
-
-    clearCredentials: function () {
-        localStorage.removeItem('AirCode_credentials');
-    },
-    // Simple hash function for demonstration
-    simpleHash: function (str) {
-        let hash = 0;
-        for (let i = 0; i < str.length; i++) {
-            const char = str.charCodeAt(i);
-            hash = ((hash << 5) - hash) + char;
-            hash = hash & hash; // Convert to 32bit integer
-        }
-        return hash.toString(36); // Convert to base-36 for readability
-    }
-};
