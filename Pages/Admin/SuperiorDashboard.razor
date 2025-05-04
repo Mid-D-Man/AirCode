@@ -5,7 +5,7 @@
 @using Microsoft.AspNetCore.Authorization
 @using AirCode.Components.Admin.Shared
 @using AirCode.Layout.AdminLayout.Superior
-@attribute [Authorize(Roles = "SuperiorAdmin")]
+@attribute [Authorize(Roles = "SuperiorAdmin,LecturerAdmin")]
 
 <div class="dashboard-grid">
     <AdminCard Title="System Overview">

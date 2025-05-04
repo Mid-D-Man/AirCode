@@ -4,7 +4,7 @@
 window.offlineCredentialsHandler = {
     // Storage keys
     STORAGE_KEYS: {
-        CREDENTIALS: "aircode_offline_credentials",
+        CREDENTIALS: "AirCode_offline_credentials",
         AUTH_KEY: "aircode_auth_key",
         AUTH_IV: "aircode_auth_iv"
     },

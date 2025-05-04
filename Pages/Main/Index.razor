@@ -96,26 +96,30 @@
     {
         isOfflineLoading = true;
 
-        // Check if offline credentials exist
-        var offlineCredentials = await OfflineCredentialService.GetCredentialsAsync();
+        try {
+            // Check if offline credentials exist
+            var offlineCredentials = await OfflineCredentialService.GetCredentialsAsync();
 
-        if (offlineCredentials == null)
-        {
-            //has credentials
-            await JSRuntime.InvokeVoidAsync("connectivityChecker.showNoCredentialsMessage");
-            isOfflineLoading = false;
-            return;
-        }
+            if (offlineCredentials == null)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "No offline credentials found. Please login online atleast once for credentials to be created ok bub.");
+                isOfflineLoading = false;
+                return;
+            }
 
-        // Validate offline credentials
-        bool isValid = true;
+            // Get user ID and role from credentials
+            string userId = await OfflineCredentialService.GetUserIdAsync();
+            string userRole = await OfflineCredentialService.GetUserRoleAsync();
 
-        if (isValid)
-        {
-            // Redirect based on stored role
-            var userRole = UserRole.SuperiorAdmin;
+            if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(userRole))
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Invalid offline credentials. Please login online.");
+                isOfflineLoading = false;
+                return;
+            }
 
-            switch (userRole.ToString()?.ToLower())
+            // Navigate based on role
+            switch (userRole.ToLower())
             {
                 case "superioradmin":
                     NavigationManager.NavigateTo("/Admin/Dashboard");
@@ -131,12 +135,13 @@
                     break;
             }
         }
-        else
+        catch (Exception ex)
         {
-            await JSRuntime.InvokeVoidAsync("alert", "Your offline credentials are invalid or expired. Please login online.");
+            await JSRuntime.InvokeVoidAsync("alert", $"Error accessing offline credentials: {ex.Message}");
         }
-
-        isOfflineLoading = false;
+        finally {
+            isOfflineLoading = false;
+        }
     }
 
     public void Dispose()
