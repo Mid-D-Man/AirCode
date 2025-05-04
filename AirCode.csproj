@@ -36,6 +36,7 @@
 
     <ItemGroup>
       <Folder Include="Server\Controllers\" />
+      <Folder Include="Services\Auth\Online\" />
     </ItemGroup>
 
 </Project>

@@ -11,7 +11,8 @@ using AirCode.Services.VisualElements;
 
 using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
 using System.IdentityModel.Tokens.Jwt;
-using Microsoft.AspNetCore.Components.Authorization;
+using AirCode.Services.Auth.Offline;
+using AirCode.Services.Cryptography;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
@@ -23,14 +24,13 @@ builder.Services.AddOidcAuthentication(options =>
     // Bind standard Auth0 configuration values.
     builder.Configuration.Bind("Auth0", options.ProviderOptions);
     
-    // Use Code Flow with PKCE for improved security.
+    //  Code Flow with PKCE for improved security.
     options.ProviderOptions.ResponseType = "code";
 
     // Specify the intended API in the additional parameters.
     options.ProviderOptions.AdditionalProviderParameters.Add("audience", builder.Configuration["Auth0:Audience"]);
 
-    // Tell the user options which claim holds the roles.
-    // This should match the namespaced claim from your Auth0 action.
+   //Our role claim namespace inserted during the whole post login flow
     options.UserOptions.RoleClaim = "https://air-code/roles";
 
     // Optional: Add default scopes if needed.
@@ -59,13 +59,16 @@ JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
 // Add authorization services
 builder.Services.AddAuthorizationCore();
 
-// Add this line to your existing services registration in Program.cs
+//Auth(auth0 ish) service
 builder.Services.AddScoped<IAuthService, AuthService>();
 
 
 // Local storage
 builder.Services.AddScoped<IBlazorAppLocalStorageService, BlazorAppLocalStorageService>();
-builder.Services.AddScoped<IOfflineCredentialService, OfflineCredentialService>();
+//local crypto
+builder.Services.AddScoped<ICryptographyService, CryptographyService>();
+//offline crendentials
+builder.Services.AddScoped<IOfflineCredentialsService, OfflineCredentialsService>();
 
 // Scanner
 builder.Services.AddScoped<IZxingScannerService, ZxingScannerService>();

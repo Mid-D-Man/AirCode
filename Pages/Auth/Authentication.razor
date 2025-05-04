@@ -59,7 +59,7 @@
                 await AuthService.LogAuthenticationMessageAsync($"JWT preview: {token.Value.Substring(0, 10)}...");
             }
     
-            // Add a LONGER delay before navigation to ensure state updates are complete
+            // Testing a LONGER delay before navigation to ensure state updates are complete
             await Task.Delay(1000); // Increased from 100ms to 1000ms (1 second)
     
             // Use NavigateTo with forceLoad: false to preserve state

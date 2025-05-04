@@ -94,7 +94,7 @@ namespace AirCode.Services.Auth
         {
             Console.WriteLine($"[Authentication] -> {message}");
         }
-
+//i think we can use our unity debug method with the [class name] - - - [function name] -> log. method here to
         public async Task LogAuthenticationMessageAsync(string message)
         {
             LogAuthenticationMessage(message);

@@ -149,7 +149,7 @@
         {
             await AuthService.LogAuthenticationMessageAsync($"Processing JWT token, length: {token.Length}");
             
-            // Pretty print if it's JSON
+            // Pretty print if it's JSON wait we could add this as function to our json helper later
             var tokenParts = token.Split('.');
             if (tokenParts.Length > 1)
             {
@@ -171,7 +171,8 @@
                         await AuthService.LogAuthenticationMessageAsync($"Auth0 User ID: {_userId}");
                     }
                     
-                    // Extract and log the user role
+                    // Extract and log the user role (works but info page dsapears instantly and we get sent
+                    //back to / page get help)
                     if (jsonElement.TryGetProperty("https://air-code/roles", out var roleProperty))
                     {
                         _userRole = roleProperty.ValueKind == JsonValueKind.Array 
@@ -201,7 +202,7 @@
         }
     }
     
-    // Add a longer delay to fix the navigation issue
+    // Added a longer delay to fix the navigation issue
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)

@@ -1,4 +1,5 @@
-// File: wwwroot/js/cryptographyHandler.js handles offline crypto , signin stuff
+// File: wwwroot/js/cryptographyHandler.js handles offline crypto and signin stuff
+//could add one for online stuff but currently not necessary
 window.cryptographyHandler = {
     // Helper: Convert an ArrayBuffer to a Base64 string.
     arrayBufferToBase64: function (buffer) {
@@ -31,12 +32,40 @@ window.cryptographyHandler = {
         return hexCodes.join('');
     },
 
-    // Encrypts data using AES-CBC.
+    // Generate AES key with specific bit length (128, 192, or 256)
+    generateAesKey: async function (bitLength = 256) {
+        // Validate bit length
+        if (![128, 192, 256].includes(bitLength)) {
+            throw new Error("Invalid bit length. Must be 128, 192, or 256.");
+        }
+
+        // Generate a random key
+        const key = await crypto.subtle.generateKey(
+            {
+                name: "AES-CBC",
+                length: bitLength
+            },
+            true, // extractable
+            ["encrypt", "decrypt"]
+        );
+
+        // Export the key to raw format
+        const rawKey = await crypto.subtle.exportKey("raw", key);
+        return window.cryptographyHandler.arrayBufferToBase64(rawKey);
+    },
+
+    // Generate random IV for AES encryption
+    generateIv: function () {
+        const iv = crypto.getRandomValues(new Uint8Array(16));
+        return window.cryptographyHandler.arrayBufferToBase64(iv);
+    },
+
+    // Encrypts data using AES-CBC with specified key size
     encryptData: async function (data, keyString, ivString) {
         const encoder = new TextEncoder();
         const dataBuffer = encoder.encode(data);
-        const keyBuffer = encoder.encode(keyString);
-        const ivBuffer = encoder.encode(ivString);
+        const keyBuffer = window.cryptographyHandler.base64ToArrayBuffer(keyString);
+        const ivBuffer = window.cryptographyHandler.base64ToArrayBuffer(ivString);
 
         const cryptoKey = await crypto.subtle.importKey(
             "raw",
@@ -59,11 +88,10 @@ window.cryptographyHandler = {
         }
     },
 
-    // Decrypts Base64-encoded data using AES-CBC.
+    // Decrypts Base64-encoded data using AES-CBC
     decryptData: async function (base64Data, keyString, ivString) {
-        const encoder = new TextEncoder();
-        const keyBuffer = encoder.encode(keyString);
-        const ivBuffer = encoder.encode(ivString);
+        const keyBuffer = window.cryptographyHandler.base64ToArrayBuffer(keyString);
+        const ivBuffer = window.cryptographyHandler.base64ToArrayBuffer(ivString);
 
         const cryptoKey = await crypto.subtle.importKey(
             "raw",
@@ -101,14 +129,13 @@ window.cryptographyHandler = {
         }
     },
 
-    // Computes an HMAC signature (using SHA-256 by default) for the given data.
-    // Returns a hexadecimal string containing the first 8 bytes (16 hex characters) of the signature.
+    // Computes an HMAC signature for the given data
     signData: async function (data, keyString, algorithm = "SHA-256") {
         const encoder = new TextEncoder();
         const keyBuffer = encoder.encode(keyString);
         const dataBuffer = encoder.encode(data);
 
-        // Import the key material into a CryptoKey object for HMAC.
+        // Import the key material into a CryptoKey object for HMAC
         const cryptoKey = await crypto.subtle.importKey(
             "raw",
             keyBuffer,
@@ -117,25 +144,26 @@ window.cryptographyHandler = {
             ["sign"]
         );
 
-        // Compute the HMAC signature.
+        // Compute the HMAC signature
         const signatureBuffer = await crypto.subtle.sign("HMAC", cryptoKey, dataBuffer);
 
-        // Convert the ArrayBuffer to a hex string.
+        // Convert the ArrayBuffer to a hex string
         const hexSignature = window.cryptographyHandler.arrayBufferToHex(signatureBuffer);
 
-        // Return only the first 8 bytes (16 hex characters) for brevity.
+        // Return only the first 8 bytes (16 hex characters) for brevity
         return hexSignature.substring(0, 16);
     },
 
-    // Verifies an HMAC signature for the given data.
-    // Returns true if the provided signature matches the computed one.
+    // Verifies an HMAC signature for the given data
     verifyHmac: async function (data, providedSignature, keyString, algorithm = "SHA-256") {
-        // Compute the signature using the signData method.
+        // Compute the signature using the signData method
         const computedSignature = await window.cryptographyHandler.signData(data, keyString, algorithm);
-        // Compare signatures. For extra security, consider using a constant-time comparison.
+        // Compare signatures
         return computedSignature === providedSignature;
     }
 };
+
+// Helper function for PKCE OAuth flow
 window.generateCodeChallenge = async function(codeVerifier) {
     const encoder = new TextEncoder();
     const data = encoder.encode(codeVerifier);
@@ -148,4 +176,3 @@ function base64UrlEncode(buffer) {
     var base64 = btoa(String.fromCharCode.apply(null, new Uint8Array(buffer)));
     return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
-
