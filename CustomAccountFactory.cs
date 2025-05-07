@@ -2,12 +2,11 @@ using AirCode.Utilities.HelperScripts;
 
 namespace AirCode;
 
-//CustomAccountFactory.cs
-
 using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
 using Microsoft.AspNetCore.Components.WebAssembly.Authentication.Internal;
 using System.Security.Claims;
 using System.Text.Json;
+using System.Diagnostics;
 
 public class CustomAccountFactory : AccountClaimsPrincipalFactory<RemoteUserAccount>
 {
@@ -25,24 +24,75 @@ public class CustomAccountFactory : AccountClaimsPrincipalFactory<RemoteUserAcco
 
         if (userIdentity.IsAuthenticated)
         {
-            // Step 2: get the associated roles
-            var roles = account.AdditionalProperties[userIdentity.RoleClaimType] as JsonElement?;
-
-            if (roles?.ValueKind == JsonValueKind.Array)
+            try
             {
-                // Step 3: remove the existing role claim with the serialized array
-                userIdentity.TryRemoveClaim(userIdentity.Claims.FirstOrDefault(c => c.Type == userIdentity.RoleClaimType));
-
-                // Step 4: add each role separately
-                foreach (JsonElement element in roles.Value.EnumerateArray())
+                Console.WriteLine("Creating authenticated user in CustomAccountFactory");
+                
+                // Check for standard role claim type first
+                var roleClaim = "http://schemas.microsoft.com/ws/2008/06/identity/claims/role";
+                
+                // Step 2: Look for the roles in different possible locations
+                JsonElement? roles = null;
+                
+                // Try the normal role claim
+                if (account.AdditionalProperties.TryGetValue(roleClaim, out var roleValue))
                 {
-                    userIdentity.AddClaim(new Claim(userIdentity.RoleClaimType, element.GetString()));
+                    roles = roleValue as JsonElement?;
+                    Console.WriteLine($"Found roles in standard claim: {roleClaim}");
+                }
+                // Try Auth0 custom namespace
+                else if (account.AdditionalProperties.TryGetValue("https://air-code/roles", out var auth0RoleValue))
+                {
+                    roles = auth0RoleValue as JsonElement?;
+                    Console.WriteLine("Found roles in Auth0 custom namespace");
+                }
+                
+                // Process roles if found
+                if (roles?.ValueKind == JsonValueKind.Array)
+                {
+                    // Step 3: remove the existing role claim with the serialized array
+                    var existingRoleClaim = userIdentity.Claims.FirstOrDefault(c => c.Type == options.RoleClaim);
+                    if (existingRoleClaim != null)
+                    {
+                        userIdentity.RemoveClaim(existingRoleClaim);
+                        Console.WriteLine("Removed serialized array role claim");
+                    }
+
+                    // Step 4: add each role separately
+                    foreach (JsonElement element in roles.Value.EnumerateArray())
+                    {
+                        var role = element.GetString();
+                        userIdentity.AddClaim(new Claim(options.RoleClaim, role));
+                        Console.WriteLine($"Added role claim: {role}");
+                    }
+                }
+                else if (roles?.ValueKind == JsonValueKind.String)
+                {
+                    // Handle case where the role is a single string
+                    var role = roles.Value.GetString();
+                    
+                    // Remove existing claim if it exists
+                    var existingRoleClaim = userIdentity.Claims.FirstOrDefault(c => c.Type == options.RoleClaim);
+                    if (existingRoleClaim != null)
+                    {
+                        userIdentity.RemoveClaim(existingRoleClaim);
+                    }
+                    
+                    // Add the role
+                    userIdentity.AddClaim(new Claim(options.RoleClaim, role));
+                    Console.WriteLine($"Added single role claim: {role}");
                 }
 
-                foreach (var stuff in userIdentity.Claims)
+                // Debug output of all claims
+                Console.WriteLine("All claims after processing:");
+                foreach (var claim in userIdentity.Claims)
                 {
-                    MID_HelperFunctions.DebugMessage(stuff.Value + "(current)-custom factory - - - From user claims we got");
+                    Console.WriteLine($"Claim: {claim.Type} = {claim.Value}");
                 }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in CustomAccountFactory: {ex.Message}");
             }
         }
 
