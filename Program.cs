@@ -8,7 +8,6 @@ using AirCode.Services.Permissions;
 using AirCode.Services.Search;
 using AirCode.Services.Storage;
 using AirCode.Services.VisualElements;
-
 using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
 using System.IdentityModel.Tokens.Jwt;
 using AirCode.Services.Auth.Offline;
@@ -59,6 +58,7 @@ builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>()
 JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
 
 // Add authorization services
+
 builder.Services.AddAuthorizationCore();
 
 //Auth(auth0 ish) service
@@ -92,5 +92,6 @@ builder.Services.AddScoped<AirCode.Services.Firebase.IFirestoreService, AirCode.
 //factory issue not leaving /
 builder.Services.AddScoped(typeof(AccountClaimsPrincipalFactory<RemoteUserAccount>),
     typeof(CustomAccountFactory));
+
 
 await builder.Build().RunAsync();

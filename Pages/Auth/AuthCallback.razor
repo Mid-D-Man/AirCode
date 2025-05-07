@@ -14,7 +14,7 @@
 @inject IAccessTokenProvider TokenProvider
 @inject NavigationManager Navigation
 
-<RemoteAuthenticatorView Action="callback">
+<RemoteAuthenticatorView Action="login-callback">
     <LogOutSucceeded>
         <p>You have been logged out.</p>
         <button class="btn btn-primary" @onclick="GoHome">Return to Home</button>
@@ -241,5 +241,4 @@ private void GoToDashboard()
 {
     Navigation.NavigateTo("/Admin/SuperiorDashboard");
 }
-
 }
