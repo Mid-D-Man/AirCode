@@ -41,7 +41,28 @@ builder.Services.AddOidcAuthentication(options =>
   
 });
 
+// Clear default JWT claim mappings to preserve original claim names from Auth0
+JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
 
+// Add authorization services
+builder.Services.AddAuthorizationCore(options => 
+{
+    // Define policies for different roles
+    options.AddPolicy("SuperiorAdmin", policy => 
+        policy.RequireRole("superioradmin"));
+        
+    options.AddPolicy("LecturerAdmin", policy => 
+        policy.RequireRole("lectureradmin"));
+        
+    options.AddPolicy("CourseAdmin", policy => 
+        policy.RequireRole("courseadmin"));
+        
+    options.AddPolicy("Student", policy => 
+        policy.RequireRole("student"));
+        
+    options.AddPolicy("AnyAdmin", policy => 
+        policy.RequireRole("superioradmin", "lectureradmin", "courseadmin"));
+});
 // HTTP clients setup
 // Base client without auth
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
@@ -53,13 +74,6 @@ builder.Services.AddHttpClient("AirCodeAPI",
 
 builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>()
     .CreateClient("AirCodeAPI"));
-
-// Clear default JWT claim mappings to preserve original claim names from Auth0
-JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
-
-// Add authorization services
-
-builder.Services.AddAuthorizationCore();
 
 //Auth(auth0 ish) service
 builder.Services.AddScoped<IAuthService, AuthService>();

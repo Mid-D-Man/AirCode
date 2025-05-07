@@ -1,5 +1,7 @@
 @* Pages/Admin/SuperiorDashboard.razor *@
 @page "/Admin/SuperiorDashboard"
+
+@attribute [Authorize(Roles = "LecturerAdmin")]
 @layout SuperiorAdminLayout
 @using AirCode.Layout.AdminLayout
 @using Microsoft.AspNetCore.Authorization

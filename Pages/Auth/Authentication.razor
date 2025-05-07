@@ -1,39 +1,23 @@
 @page "/authentication/{action}"
 @using Microsoft.AspNetCore.Components.WebAssembly.Authentication
 @using Microsoft.Extensions.Configuration
-@using Microsoft.JSInterop
 @using AirCode.Services.Auth
-@using AirCode.Services.Auth.Offline
-@using System.Text.Json
-@using System.Security.Claims
-@using AirCode.Services.Cryptography
-@using AirCode.Utilities.HelperScripts
-@using JsonSerializer = System.Text.Json.JsonSerializer
+
 @inject NavigationManager Navigation
 @inject IConfiguration Configuration
-@inject IJSRuntime JSRuntime
 @inject IAuthService AuthService
-@inject IAccessTokenProvider TokenProvider
-@inject IOfflineCredentialsService OfflineCredentialsService
-@inject ICryptographyService CryptoService
+
 <RemoteAuthenticatorView Action="@Action" OnLogInSucceeded="HandleLoginSuccess">
     <LoggingIn>
         <p>Redirecting to Auth0 login...</p>
-        @{
-            AuthService.LogAuthenticationMessage("Starting Auth0 login redirection");
-        }
     </LoggingIn>
     <CompletingLoggingIn>
         <p>Completing login process...</p>
-        @{
-            AuthService.LogAuthenticationMessage("Processing login callback");
-        }
     </CompletingLoggingIn>
     <LogOut>
         @{
             var authority = $"https://{Configuration["Auth0:Domain"]}";
             var clientId = Configuration["Auth0:ClientId"];
-            AuthService.LogAuthenticationMessage("Logging out user");
             Navigation.NavigateTo($"{authority}/v2/logout?client_id={clientId}");
         }
     </LogOut>
@@ -42,173 +26,20 @@
 @code{
     [Parameter] public string Action { get; set; }
     
-     private async Task HandleLoginSuccess(RemoteAuthenticationState state)
+    private async Task HandleLoginSuccess(RemoteAuthenticationState state)
     {
         try
         {
             // Log successful authentication
             await AuthService.LogAuthenticationMessageAsync("Authentication successful!");
             
-            // Ensure authentication state is established before proceeding
-            await Task.Delay(500); // Small delay to ensure auth state is established
-            
-            // Request the token
-            var result = await TokenProvider.RequestAccessToken();
-            await AuthService.LogAuthenticationMessageAsync($"Access token status: {result.Status}");
-
-            if (result.TryGetToken(out var token))
-            {
-                await AuthService.LogAuthenticationMessageAsync($"JWT retrieved successfully. Length: {token.Value.Length} chars");
-        
-                // Store token in session for debugging purposes
-                await JSRuntime.InvokeVoidAsync("authHelper.storeJwtLocally", token.Value);
-                
-                try
-                {
-                    // Extract user information from JWT
-                    string userId = string.Empty;
-                    string userRole = string.Empty;
-
-                    // Parse the JWT to extract the user ID and role
-                    var tokenParts = token.Value.Split('.');
-                    if (tokenParts.Length > 1)
-                    {
-                        var payload = tokenParts[1];
-                        // Ensure proper padding for Base64Url decoding
-                        var paddedPayload = payload;
-                        switch (payload.Length % 4)
-                        {
-                            case 2: paddedPayload += "=="; break;
-                            case 3: paddedPayload += "="; break;
-                        }
-                        paddedPayload = paddedPayload.Replace('-', '+').Replace('_', '/');
-                        
-                        var decodedBytes = Convert.FromBase64String(paddedPayload);
-                        var jsonString = System.Text.Encoding.UTF8.GetString(decodedBytes);
-                        
-                        var jsonElement = JsonSerializer.Deserialize<JsonElement>(jsonString);
-                        
-                        // Debug the JWT payload
-                        await AuthService.LogAuthenticationMessageAsync($"JWT Payload: {JsonSerializer.Serialize(jsonElement, new JsonSerializerOptions { WriteIndented = true })}");
-                        
-                        // Extract user ID (sub claim)
-                        if (jsonElement.TryGetProperty("sub", out var subProperty))
-                        {
-                            userId = subProperty.GetString();
-                            await AuthService.LogAuthenticationMessageAsync($"Auth0 User ID: {userId}");
-                        }
-                        
-                        // Try multiple possible role claim names
-                        var roleClaims = new[] {
-                            "http://schemas.microsoft.com/ws/2008/06/identity/claims/role",
-                            "https://air-code/roles",
-                            "roles"
-                        };
-                        
-                        foreach (var roleClaim in roleClaims)
-                        {
-                            if (jsonElement.TryGetProperty(roleClaim, out var roleProperty))
-                            {
-                                if (roleProperty.ValueKind == JsonValueKind.Array)
-                                {
-                                    userRole = roleProperty.EnumerateArray().FirstOrDefault().GetString();
-                                }
-                                else if (roleProperty.ValueKind == JsonValueKind.String)
-                                {
-                                    userRole = roleProperty.GetString();
-                                }
-                                
-                                if (!string.IsNullOrEmpty(userRole))
-                                {
-                                    await AuthService.LogAuthenticationMessageAsync($"Found user role '{userRole}' in claim '{roleClaim}'");
-                                    break;
-                                }
-                            }
-                        }
-                        
-                        // If no role found, check all claims
-                        if (string.IsNullOrEmpty(userRole))
-                        {
-                            await AuthService.LogAuthenticationMessageAsync("No role found in standard claims, logging all claims:");
-                            foreach (var prop in jsonElement.EnumerateObject())
-                            {
-                                await AuthService.LogAuthenticationMessageAsync($"Claim: {prop.Name}");
-                            }
-                        }
-                    }
-                    
-                    // Generate and store offline credentials
-                    if (!string.IsNullOrEmpty(userId))
-                    {
-                        // Default to "user" role if none was found
-                        userRole = string.IsNullOrEmpty(userRole) ? "user" : userRole;
-                        
-                        var key = await CryptoService.GenerateAesKey();
-                        var iv = await CryptoService.GenerateIv();
-                        int expiration = 12;
-                        
-                        await AuthService.LogAuthenticationMessageAsync($"Storing offline credentials for user {userId} with role {userRole}");
-                        var credentialsResult = await OfflineCredentialsService.StoreCredentialsAsync(userId, userRole, key, iv, expiration);
-                        
-                        if (credentialsResult)
-                        {
-                            await AuthService.LogAuthenticationMessageAsync("Offline credentials stored successfully");
-                        }
-                        else
-                        {
-                            await AuthService.LogAuthenticationMessageAsync("Failed to store offline credentials");
-                        }
-                    }
-                    else
-                    {
-                        await AuthService.LogAuthenticationMessageAsync("Failed to store offline credentials: userId is empty");
-                    }
-
-                    // Navigate to the appropriate page based on user role
-                    await AuthService.LogAuthenticationMessageAsync($"Navigating based on role: {userRole}");
-                    
-                    switch (userRole?.ToLower())
-                    {
-                        case "superioradmin":
-                            await AuthService.LogAuthenticationMessageAsync("Redirecting to Superior Admin Dashboard");
-                            Navigation.NavigateTo("/Admin/SuperiorDashboard", forceLoad: false);
-                            break;
-                        case "lectureradmin":
-                            await AuthService.LogAuthenticationMessageAsync("Redirecting to Lecturer Admin Dashboard");
-                            Navigation.NavigateTo("/Admin/SuperiorDashboard", forceLoad: false);
-                            break;
-                        case "courseadmin":
-                            await AuthService.LogAuthenticationMessageAsync("Redirecting to Course Admin Dashboard");
-                            Navigation.NavigateTo("/Admin/SuperiorDashboard", forceLoad: false);
-                            break;
-                        case "student":
-                            await AuthService.LogAuthenticationMessageAsync("Redirecting to Student Dashboard");
-                            Navigation.NavigateTo("/Client/Dashboard", forceLoad: false);
-                            break;
-                        default:
-                            // If we can't determine the role, go to auth-info for debugging
-                            await AuthService.LogAuthenticationMessageAsync($"Unknown role '{userRole}', redirecting to auth-info");
-                            Navigation.NavigateTo("/auth-info", forceLoad: false);
-                            break;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    await AuthService.LogAuthenticationMessageAsync($"Error processing JWT: {ex.Message}");
-                    await AuthService.LogAuthenticationMessageAsync($"Stack trace: {ex.StackTrace}");
-                    Navigation.NavigateTo("/auth-info", forceLoad: false);
-                }
-            }
-            else
-            {
-                await AuthService.LogAuthenticationMessageAsync("Failed to retrieve JWT token");
-                Navigation.NavigateTo("/auth-info", forceLoad: false);
-            }
+            // Process the login and navigate to appropriate page based on role
+            // This is delegated to the AuthService to keep this component clean
+            await AuthService.ProcessSuccessfulLoginAsync();
         }
         catch (Exception ex)
         {
             await AuthService.LogAuthenticationMessageAsync($"Unhandled exception: {ex.Message}");
-            await AuthService.LogAuthenticationMessageAsync($"Stack trace: {ex.StackTrace}");
             Navigation.NavigateTo("/", forceLoad: false);
         }
     }
