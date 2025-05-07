@@ -99,7 +99,7 @@
         {
             // Get the user's role
             string userRole = await AuthService.GetUserRoleAsync();
-            MID_HelperFunctions.DebugMessage($"[Auth] Login in user with role {userRole} auto ");
+            MID_HelperFunctions.DebugMessage($"[auth] Login in user with role {userRole} auto ");
             // Navigate based on the role
             switch (userRole?.ToLower())
             {

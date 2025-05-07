@@ -11,6 +11,10 @@ namespace AirCode.Services.Auth.Offline;
         private readonly IJSRuntime _jsRuntime;
         private readonly ICryptographyService _cryptoService;
 
+        // Test constants - DO NOT use in production!
+        private const string TEST_KEY = "VGhpcyBpcyBhIHRlc3Qga2V5IGZvciBBaXJDb2RlIHRlc3Rpbmc="; // 32 bytes when decoded
+        private const string TEST_IV = "UmFuZG9tSVZmb3JUZXN0"; // 16 bytes when decoded
+
         public OfflineCredentialsService(IJSRuntime jsRuntime, ICryptographyService cryptoService)
         {
             _jsRuntime = jsRuntime;
@@ -31,6 +35,23 @@ namespace AirCode.Services.Auth.Offline;
             catch (Exception ex)
             {
                 Console.Error.WriteLine($"Failed to store offline credentials: {ex.Message}");
+                return false;
+            }
+        }
+        
+        /// <summary>
+        /// Stores offline credentials using test key and IV (for development only)
+        /// </summary>
+        public async Task<bool> StoreCredentialsWithTestKeyAsync(string userId, string role, int expirationDays = 14)
+        {
+            try
+            {
+                Console.WriteLine($"Storing test credentials for user {userId} with role {role}");
+                return await StoreCredentialsAsync(userId, role, TEST_KEY, TEST_IV, expirationDays);
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Failed to store test credentials: {ex.Message}");
                 return false;
             }
         }

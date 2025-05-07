@@ -135,12 +135,13 @@ window.offlineCredentialsHandler = {
                 return null;
             }
 
-            return {
+            // Return as JSON string instead of object
+            return JSON.stringify({
                 userId: signedCredentials.userId,
                 role: signedCredentials.role,
                 issuedAt: signedCredentials.issuedAt,
                 expiresAt: signedCredentials.expiresAt
-            };
+            });
         } catch (error) {
             console.error("Failed to retrieve offline credentials:", error);
             return null;
@@ -149,14 +150,30 @@ window.offlineCredentialsHandler = {
 
     // Get user's role from stored credentials
     getUserRole: async function() {
-        const credentials = await this.getCredentials();
-        return credentials ? credentials.role : null;
+        try {
+            const credentials = await this.getCredentials();
+            if (!credentials) return null;
+
+            const parsedCredentials = JSON.parse(credentials);
+            return parsedCredentials.role;
+        } catch (error) {
+            console.error("Failed to get user role:", error);
+            return null;
+        }
     },
 
     // Get user's ID from stored credentials
     getUserId: async function() {
-        const credentials = await this.getCredentials();
-        return credentials ? credentials.userId : null;
+        try {
+            const credentials = await this.getCredentials();
+            if (!credentials) return null;
+
+            const parsedCredentials = JSON.parse(credentials);
+            return parsedCredentials.userId;
+        } catch (error) {
+            console.error("Failed to get user ID:", error);
+            return null;
+        }
     },
 
     // Clear stored credentials

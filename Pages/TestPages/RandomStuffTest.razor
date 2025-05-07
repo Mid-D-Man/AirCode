@@ -1,20 +1,32 @@
 @page "/cat"
 @using AirCode.Services.SupaBase
-@inject CatService CatService
+@inject ICatService CatService
 
 <h3>Random Cat Image</h3>
-<button @onclick="FetchCatImage">Get Random Cat</button>
+<button class="btn btn-primary" @onclick="FetchCatImage">Get Random Cat</button>
 
 @if (!string.IsNullOrEmpty(catImageUrl))
 {
-    <img src="@catImageUrl" alt="Random Cat" />
+    @if (catImageUrl.StartsWith("Failed") || catImageUrl.StartsWith("An error"))
+    {
+        <div class="alert alert-danger mt-3">
+            @catImageUrl
+        </div>
+    }
+    else
+    {
+        <div class="mt-3">
+            <img src="@catImageUrl" alt="Random Cat" class="img-fluid" />
+        </div>
+    }
 }
 
 @code {
-    private string catImageUrl;
+    private string catImageUrl = string.Empty;
 
     private async Task FetchCatImage()
     {
         catImageUrl = await CatService.GetRandomCatImageAsync();
+        StateHasChanged();
     }
 }
