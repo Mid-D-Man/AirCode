@@ -1,4 +1,4 @@
-@page "/auth-info"
+@page "/authentication/login-callback"
 @using System.Security.Claims
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.WebAssembly.Authentication
@@ -25,7 +25,7 @@
             <!-- Add Role Display Section -->
             <h3>User Role</h3>
             @{
-                var roleClaim = context.User.Claims.FirstOrDefault(c => c.Type == "https://air-code/roles");
+                var roleClaim = context.User.Claims.FirstOrDefault(c => c.Type == "http://schemas.microsoft.com/ws/2008/06/identity/claims/role");
                 var role = roleClaim?.Value ?? "No role assigned";
             }
             <div class="role-container mb-3 p-2 border border-success rounded">

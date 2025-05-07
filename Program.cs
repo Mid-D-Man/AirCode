@@ -31,14 +31,14 @@ builder.Services.AddOidcAuthentication(options =>
     options.ProviderOptions.AdditionalProviderParameters.Add("audience", builder.Configuration["Auth0:Audience"]);
 
    //Our role claim namespace inserted during the whole post login flow
-    options.UserOptions.RoleClaim = "https://air-code/roles";
+    options.UserOptions.RoleClaim = "http://schemas.microsoft.com/ws/2008/06/identity/claims/role";
 
     // Optional: Add default scopes if needed.
     options.ProviderOptions.DefaultScopes.Add("openid");
     options.ProviderOptions.DefaultScopes.Add("profile");
     options.ProviderOptions.DefaultScopes.Add("email");
     
-    
+   
   
 });
 
@@ -88,5 +88,9 @@ builder.Services.AddScoped<ISearchContextService, SearchContextService>();
 
 // Firebase Services
 builder.Services.AddScoped<AirCode.Services.Firebase.IFirestoreService, AirCode.Services.Firebase.FirestoreService>();
+
+//factory issue not leaving /
+builder.Services.AddScoped(typeof(AccountClaimsPrincipalFactory<RemoteUserAccount>),
+    typeof(CustomAccountFactory));
 
 await builder.Build().RunAsync();

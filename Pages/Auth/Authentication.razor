@@ -59,7 +59,8 @@
             // Store token in session for debugging purposes
             await JSRuntime.InvokeVoidAsync("authHelper.storeJwtLocally", token.Value);
             
-         
+          //  Navigation.NavigateTo("/auth-info", forceLoad: false);
+            //return;
             try
             {
                 // Extract user information from JWT
@@ -85,7 +86,7 @@
                     }
                     
                     // Extract user role
-                    if (jsonElement.TryGetProperty("https://air-code/roles", out var roleProperty))
+                    if (jsonElement.TryGetProperty("http://schemas.microsoft.com/ws/2008/06/identity/claims/role", out var roleProperty))
                     {
                         userRole = roleProperty.ValueKind == JsonValueKind.Array 
                             ? roleProperty.EnumerateArray().First().GetString() 
@@ -154,7 +155,7 @@
         else
         {
             await AuthService.LogAuthenticationMessageAsync("Failed to retrieve JWT token");
-            Navigation.NavigateTo("/"); // Fall back to homepage if token retrieval fails
+            //Navigation.NavigateTo("/"); // Fall back to homepage if token retrieval fails
         }
     }
 }

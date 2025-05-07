@@ -7,7 +7,7 @@ window.connectivityChecker = {
     dotNetReference: null,
     isOnline: navigator.onLine,
     checkIntervalId: null,
-    // Add a method to get the online status
+    // Add a method to get the online status .
     getOnlineStatus: function() {
         console.log("connectivityChecker.getOnlineStatus called, isOnline:", this.isOnline);
         return this.isOnline;
