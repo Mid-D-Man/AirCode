@@ -3,7 +3,8 @@ using AirCode.Domain.Enums;
 
 namespace AirCode.Domain.ValueObjects
 {
-    // Implemented as a record for immutability
+    //note this is the students own record
+    // Implemented as a record for immutability.
     public record AttendanceRecord
     {
         public string StudentId { get; init; }

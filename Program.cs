@@ -19,6 +19,8 @@ var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
+//please for the love of go enough with the scope creep 
+
 // Configure Auth0 authentication
 builder.Services.AddOidcAuthentication(options =>
 {

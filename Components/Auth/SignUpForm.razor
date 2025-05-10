@@ -341,8 +341,7 @@
     
     private bool IsLecturerRole()
     {
-        return signUpModel.Role == AirCode.Domain.Enums.UserRole.LecturerAdmin ||
-               signUpModel.Role == AirCode.Domain.Enums.UserRole.AssistantLecturer;
+        return signUpModel.Role == AirCode.Domain.Enums.UserRole.LecturerAdmin ;
     }
 
     private void ValidateFirstName(FormField.ValidationEventArgs args)

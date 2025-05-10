@@ -6,6 +6,14 @@ using AirCode.Domain.Interfaces;
 
 namespace AirCode.Domain.Entities
 {
+    /*
+     note we start creation from top level down
+     i.e Academic Session -> Department -> Courses -> Admins -> Lecturers -> Course Reps -> Students 
+     -> Attendance Event -> Studdent Attendance -> Attendance Record -> Report...
+     */
+    
+    
+    //start fix here
     public record AttendanceEvent : ISecureEntity
     {
         [Required]

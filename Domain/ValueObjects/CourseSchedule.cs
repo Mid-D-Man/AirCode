@@ -3,10 +3,11 @@ using System.Collections.Generic;
 
 namespace AirCode.Domain.ValueObjects
 {
+    //implment as a struct because scedule can indeed change
     // Implemented as a record for immutability and value-based equality
-    public record CourseSchedule
+    public struct CourseSchedule
     {
-        public List<TimeSlot> TimeSlots { get; init; } = new List<TimeSlot>();
+        public List<TimeSlot> TimeSlots { get; }
         
         // Helper method to create a formatted string representation
         public string FormatSchedule()

@@ -1,5 +1,4 @@
-using System;
-using System.Collections.Generic;
+
 using System.ComponentModel.DataAnnotations;
 using AirCode.Domain.Enums;
 using AirCode.Domain.Interfaces;
@@ -7,15 +6,19 @@ using AirCode.Utilities.HelperScripts;
 
 namespace AirCode.Domain.Entities
 {
-    public record Session : ISecureEntity
+    //hmm for this should we leave it as record or sturct
+    //should it be possible to edit academic session  or not
+    //cause something might happen we dont know that
+    //ok leave it as record but make it copyable,deletable just incase of incasities
+    public record AcademicSession : ISecureEntity
     {
         [Required]
         public string SessionId { get; init; }
-        public int YearStart { get; init; }
-        public int YearEnd { get; init; }
+        public short YearStart { get; init; }
+        public short YearEnd { get; init; }
         public List<Semester> Semesters { get; init; }
         
-        // Security attributes
+        // Security attributes from [ISecureEntity]
         public string SecurityToken { get; init; }
         public DateTime LastModified { get; init; }
         public string ModifiedBy { get; init; }

@@ -12,7 +12,8 @@ public enum LevelType
     Level100,
     Level200,
     Level300,
-    Level400
+    Level400,
+    LevelExtra
 }
 
 public enum CourseEnrollmentStatus

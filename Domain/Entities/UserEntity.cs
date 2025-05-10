@@ -6,6 +6,9 @@ using AirCode.Domain.Interfaces;
 
 namespace AirCode.Domain.Entities
 {
+    //and start off with courses please or semester , idon no any one ,flip the coin
+    //no need for this  but keep for ref if needed,or even u can create this as offline credentials
+    //but far less detailed
     public record UserEntity : ISecureEntity
     {
         public string Id { get; init; } = Guid.NewGuid().ToString();
@@ -27,7 +30,7 @@ namespace AirCode.Domain.Entities
         public string? AssociatedAdminId { get; init; } // For assistant roles
         public LevelType? Level { get; init; } // For students
         public ClassRepStatus? RepStatus { get; init; } // For course reps
-        public LecturerStatus? LecturerStatus { get; init; } // For lecturers
+      
         public List<string> AssignedCourseIds { get; init; } = new List<string>();
         
         // Security attributes
