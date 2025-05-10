@@ -11,7 +11,7 @@
     <div class="nav-middle">
         @foreach (var item in NavigationItems)
         {
-            <NavLink href="@item.Path" class="nav-item">
+            <NavLink href="@item.Path" class="nav-item" data-tooltip="@item.Label">
                 <NavMenuButton
                     IconName="@item.IconName"
                     Label="@item.Label"
@@ -25,7 +25,7 @@
     <div class="nav-bottom">
         @foreach (var item in BottomItems)
         {
-            <div class="nav-item">
+            <div class="nav-item" data-tooltip="@item.Label">
                 <NavMenuButton
                     IconName="@item.IconName"
                     Label="@item.Label"
