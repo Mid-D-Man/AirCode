@@ -128,15 +128,15 @@ namespace AirCode.Services.Courses
            }
            
            return new Course
-           {
-               CourseId = courseDto.Id,
-               Name = courseDto.Name,
-               DepartmentId = courseDto.Department,
-               Level = courseDto.Level,
-               Semester = courseDto.Semester,
-               Schedule = courseSchedule,
-               LecturerIds = lecturerIds
-           };
+           (
+               courseDto.Id,
+              courseDto.Name,
+              courseDto.Department,
+               courseDto.Level,
+                courseDto.Semester,
+              courseSchedule,
+               lecturerIds
+           );
        }
 
        private CourseDto MapEntityToDto(Course course)

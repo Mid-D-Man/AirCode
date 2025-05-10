@@ -22,13 +22,27 @@ namespace AirCode.Domain.Entities
         public LevelType Level { get; init; }
         public SemesterType Semester { get; init; }
         public CourseSchedule Schedule { get; init; }
-        public List<string> LecturerIds { get; init; } = new List<string>();
-        
+        public IReadOnlyList<string> LecturerIds { get; init; }
+
+        // Constructor to ensure immutability
+        public Course(string courseId, string name, string departmentId, 
+            LevelType level, SemesterType semester, 
+            CourseSchedule schedule, List<string> lecturerIds)
+        {
+            CourseId = courseId;
+            Name = name;
+            DepartmentId = departmentId;
+            Level = level;
+            Semester = semester;
+            Schedule = schedule;
+            LecturerIds = lecturerIds?.AsReadOnly() ?? new List<string>().AsReadOnly();
+        }
         // Security attributes
-        public string SecurityToken { get; internal set; }
-        public DateTime LastModified { get; internal set; }
-        public string ModifiedBy { get; internal set; }
-        public void SetModificationDetails(string securityToken, DateTime lastModified, string modifiedBy = "")
+        public string SecurityToken { get; private set; }
+        public DateTime LastModified { get; private set; }
+        public string ModifiedBy { get; private set; }
+    
+        void IModifiableSecurityEntity.SetModificationDetails(string securityToken, DateTime lastModified, string modifiedBy)
         {
             SecurityToken = securityToken;
             LastModified = lastModified;

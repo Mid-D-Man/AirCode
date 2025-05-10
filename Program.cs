@@ -10,6 +10,7 @@ using AirCode.Services.VisualElements;
 using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
 using System.IdentityModel.Tokens.Jwt;
 using AirCode.Services.Auth.Offline;
+using AirCode.Services.Courses;
 using AirCode.Services.Cryptography;
 using AirCode.Services.Department;
 using AirCode.Services.SupaBase;
@@ -103,6 +104,7 @@ builder.Services.AddScoped<ISvgIconService, SvgIconService>();
 // Services
 builder.Services.AddScoped<IPermissionService, PermissionService>();
 builder.Services.AddScoped<IDepartmentService, DepartmentService>();
+builder.Services.AddScoped<ICourseService, CourseService>();
 builder.Services.AddScoped<ISearchContextService, SearchContextService>();
 // Register CatService with its interface
 builder.Services.AddScoped<ICatService, CatService>();

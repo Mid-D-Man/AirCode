@@ -184,16 +184,19 @@
 
                             <div class="form-group col">
                                 <label>Start Time:</label>
-                                <InputText class="form-control" type="time" 
-                                           @bind-Value="FormModel.ScheduleItems[index].StartTime" />
+                                <input class="form-control" type="time"
+                                       @bind="FormModel.ScheduleItems[index].StartTime" @bind:format="hh\\:mm"
+                                       @bind:event="oninput"
+                                       @onchange="@(e => UpdateStartTime(index, e))" />
                             </div>
 
                             <div class="form-group col">
                                 <label>End Time:</label>
-                                <InputText class="form-control" type="time" 
-                                           @bind-Value=  "FormModel.ScheduleItems[index].EndTime" />
+                                <input class="form-control" type="time"
+                                       @bind="FormModel.ScheduleItems[index].EndTime" @bind:format="hh\\:mm"
+                                       @bind:event="oninput"
+                                       @onchange="@(e => UpdateEndTime(index, e))" />
                             </div>
-
                             <div class="form-group col">
                                 <label>Location:</label>
                                 <InputText class="form-control" 
@@ -220,4 +223,22 @@
             </EditForm>
         </div>
     </div>
+}
+
+@code{
+
+    private TimeOnly? GetEndTime(int index)
+    {
+        return FormModel.ScheduleItems[index].EndTime == TimeSpan.Zero
+            ? null
+            : TimeOnly.FromTimeSpan(FormModel.ScheduleItems[index].EndTime);
+    }
+
+    private void UpdateEndTime(int index, ChangeEventArgs e)
+    {
+        if (TimeOnly.TryParse((string)e.Value, out var time))
+        {
+            FormModel.ScheduleItems[index].EndTime = time.ToTimeSpan();
+        }
+    }
 }

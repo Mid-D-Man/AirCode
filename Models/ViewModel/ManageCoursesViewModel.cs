@@ -236,4 +236,11 @@ using Microsoft.AspNetCore.Components;
                 ScheduleItems.RemoveAt(index);
             }
         }
+        private void UpdateStartTime(int index, ChangeEventArgs e)
+        {
+            if (TimeSpan.TryParse((string)e.Value, out var time))
+            {
+                ScheduleItems[index].StartTime = time;
+            }
+        }
     }
