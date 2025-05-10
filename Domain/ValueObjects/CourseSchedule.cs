@@ -7,7 +7,7 @@ namespace AirCode.Domain.ValueObjects
     // Implemented as a record for immutability and value-based equality
     public struct CourseSchedule
     {
-        public List<TimeSlot> TimeSlots { get; }
+        public List<TimeSlot> TimeSlots { get; internal set; }
         
         // Helper method to create a formatted string representation
         public string FormatSchedule()

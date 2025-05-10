@@ -1,4 +1,223 @@
 @page "/Admin/ManageCourses"
 @using AirCode.Layout.AdminLayout.Superior
+@using AirCode.Models.Core
+@using AirCode.Domain.Enums
+@using AirCode.Models.ViewModel
+@using System.ComponentModel.DataAnnotations
+@using AirCode.Utilities.HelperScripts
+@using Microsoft.AspNetCore.Components.Forms
+@inherits ManageCoursesViewModel
 
 @layout SuperiorAdminLayout
+
+<div class="page-container bg-primary">
+    <div class="page-header">
+        <h1 class="text-primary">Manage Courses</h1>
+        <button class="btn btn-primary" @onclick="ShowAddCourse">Add New Course</button>
+    </div>
+
+    <div class="filter-section bg-secondary border-theme">
+        <div class="filter-container">
+            <div class="filter-item">
+                <label for="departmentFilter">Department:</label>
+                <input id="departmentFilter" class="form-control" @bind="DepartmentFilter" @bind:event="oninput" />
+            </div>
+
+            <div class="filter-item">
+                <label for="levelFilter">Level:</label>
+                <select id="levelFilter" class="form-control" @bind="LevelFilter">
+                    <option value="">All Levels</option>
+                    @foreach (var level in Enum.GetValues(typeof(LevelType)))
+                    {
+                        <option value="@level">@level</option>
+                    }
+                </select>
+            </div>
+
+            <div class="filter-item">
+                <label for="semesterFilter">Semester:</label>
+                <select id="semesterFilter" class="form-control" @bind="SemesterFilter">
+                    <option value="">All Semesters</option>
+                    @foreach (var semester in Enum.GetValues(typeof(SemesterType)))
+                    {
+                        <option value="@semester">@semester</option>
+                    }
+                </select>
+            </div>
+
+            <button class="btn btn-secondary" @onclick="ApplyFilters">Apply Filters</button>
+            <button class="btn btn-outline-secondary" @onclick="LoadCoursesAsync">Reset</button>
+        </div>
+    </div>
+
+    @if (IsLoading)
+    {
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p>Loading...</p>
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(ErrorMessage))
+    {
+        <div class="alert alert-danger">
+            @ErrorMessage
+        </div>
+    }
+    else if (Courses.Count == 0)
+    {
+        <div class="empty-state bg-secondary border-theme">
+            <p>No courses found. Please add a new course or adjust your filters.</p>
+        </div>
+    }
+    else
+    {
+        <div class="card-grid">
+            @foreach (var course in Courses)
+            {
+                <div class="course-card bg-secondary border-theme">
+                    <div class="course-header">
+                        <h3 class="course-title">@course.Name</h3>
+                        <span class="course-code">@course.Id</span>
+                    </div>
+                    <div class="course-info">
+                        <p><strong>Department:</strong> @course.Department</p>
+                        <p><strong>Level:</strong> @course.Level</p>
+                        <p><strong>Semester:</strong> @course.Semester</p>
+                    </div>
+                    <div class="course-schedule">
+                        <h4>Schedule</h4>
+                        <ul>
+                            @foreach (var slot in course.Schedule)
+                            {
+                                <li>@slot.Day: @slot.StartTime.ToString("hh\\:mm") - @slot.EndTime.ToString("hh\\:mm")  @slot.Location</li>
+                            }
+                        </ul>
+                    </div>
+                    <div class="course-lecturers">
+                        <h4>Lecturers</h4>
+                        @if (course.Lecturers.Count > 0)
+                        {
+                            <ul>
+                                @foreach (var lecturer in course.Lecturers)
+                                {
+                                    <li>@lecturer.Name</li>
+                                }
+                            </ul>
+                        }
+                        else
+                        {
+                            <p>No lecturers assigned</p>
+                        }
+                    </div>
+                    <div class="course-actions">
+                        <button class="btn btn-primary" @onclick="() => ShowEditCourse(course)">Edit</button>
+                        <button class="btn btn-danger" @onclick="() => DeleteCourseAsync(course.Id)">Delete</button>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@if (ShowAddEditModal)
+{
+    <div class="modal-backdrop" @onclick="CloseModal"></div>
+    <div class="modal" @onclick:stopPropagation="true">
+        <div class="modal-header">
+            <h2>@(IsEditing ? "Edit Course" : "Add New Course")</h2>
+            <button class="close-btn" @onclick="CloseModal">&times;</button>
+        </div>
+        <div class="modal-body">
+            <EditForm Model="FormModel" OnValidSubmit="SaveCourseAsync">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                <div class="form-group">
+                    <label for="courseName">Course Name:</label>
+                    <InputText id="courseName" class="form-control" @bind-Value="FormModel.Name" />
+                    <ValidationMessage For="@(() => FormModel.Name)" />
+                </div>
+
+                <div class="form-group">
+                    <label for="department">Department:</label>
+                    <InputText id="department" class="form-control" @bind-Value="FormModel.Department" />
+                    <ValidationMessage For="@(() => FormModel.Department)" />
+                </div>
+
+                <div class="form-group">
+                    <label for="level">Level:</label>
+                    <InputSelect id="level" class="form-control" @bind-Value="FormModel.Level">
+                        @foreach (var level in Enum.GetValues(typeof(LevelType)))
+                        {
+                            <option value="@level">@level</option>
+                        }
+                    </InputSelect>
+                    <ValidationMessage For="@(() => FormModel.Level)" />
+                </div>
+
+                <div class="form-group">
+                    <label for="semester">Semester:</label>
+                    <InputSelect id="semester" class="form-control" @bind-Value="FormModel.Semester">
+                        @foreach (var semester in Enum.GetValues(typeof(SemesterType)))
+                        {
+                            <option value="@semester">@semester</option>
+                        }
+                    </InputSelect>
+                    <ValidationMessage For="@(() => FormModel.Semester)" />
+                </div>
+
+                <h3>Schedule</h3>
+                @for (int i = 0; i < FormModel.ScheduleItems.Count; i++)
+                {
+                    var index = i;
+                    <div class="schedule-item">
+                        <div class="form-row">
+                            <div class="form-group col">
+                                <label>Day:</label>
+                                <InputSelect class="form-control" @bind-Value="FormModel.ScheduleItems[index].Day">
+                                    @foreach (var day in Enum.GetValues(typeof(DayOfWeek)))
+                                    {
+                                        <option value="@day">@day</option>
+                                    }
+                                </InputSelect>
+                            </div>
+
+                            <div class="form-group col">
+                                <label>Start Time:</label>
+                                <InputText class="form-control" type="time" 
+                                           @bind-Value="FormModel.ScheduleItems[index].StartTime" />
+                            </div>
+
+                            <div class="form-group col">
+                                <label>End Time:</label>
+                                <InputText class="form-control" type="time" 
+                                           @bind-Value=  "FormModel.ScheduleItems[index].EndTime" />
+                            </div>
+
+                            <div class="form-group col">
+                                <label>Location:</label>
+                                <InputText class="form-control" 
+                                           @bind-Value="FormModel.ScheduleItems[index].Location" />
+                            </div>
+
+                            <div class="form-group col-auto">
+                                <label>&nbsp;</label>
+                                <button type="button" class="btn btn-danger form-control" 
+                                        @onclick="() => FormModel.RemoveScheduleItem(index)">Remove</button>
+                            </div>
+                        </div>
+                    </div>
+                }
+
+                <button type="button" class="btn btn-secondary" @onclick="() => FormModel.AddScheduleItem()">
+                    Add Schedule Item
+                </button>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseModal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+}
