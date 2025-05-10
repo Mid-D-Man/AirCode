@@ -436,108 +436,107 @@
     }
     
     private async Task SaveModal()
+{
+    try
     {
-        try
+        if (activeModal == ModalType.CreateSession)
         {
-            if (activeModal == ModalType.CreateSession)
+            // Create new academic session
+            var newSession = new AcademicSession
             {
-                // Create new academic session
-                var newSession = new AcademicSession
-                {
-                    SessionId = Guid.NewGuid().ToString(),
-                    YearStart = sessionForm.YearStart,
-                    YearEnd = sessionForm.YearEnd,
-                    SecurityToken = Guid.NewGuid().ToString(),
-                    LastModified = DateTime.Now,
-                    ModifiedBy = "System", // Replace with actual user
-                    Semesters = new List<Semester>()
-                };
-                
-                // Add first semester if selected
-                if (includeFirstSemester)
-                {
-                    var newSemester = new Semester
-                    {
-                        SemesterId = Guid.NewGuid().ToString(),
-                        Type = SemesterType.FirstSemester,
-                        SessionId = newSession.SessionId,
-                        StartDate = firstSemesterForm.StartDate,
-                        EndDate = firstSemesterForm.EndDate,
-                        SecurityToken = Guid.NewGuid().ToString(),
-                        LastModified = DateTime.Now,
-                        ModifiedBy = "System" // Replace with actual user
-                    };
-                    
-                    newSession.Semesters.Add(newSemester);
-                }
-                
-                // Determine if this is current or next session
-                DateTime startDate = GetStartDate(newSession);
-                if (startDate <= DateTime.Now)
-                {
-                    // Move current to archived if it exists
-                    if (currentSession != null)
-                    {
-                        archivedSessions.Add(currentSession);
-                    }
-                    currentSession = newSession;
-                }
-                else
-                {
-                    nextSession = newSession;
-                }
-                
-                await SaveToFirebase(newSession);
-            }
-            else if (activeModal == ModalType.CreateSemester)
+                SessionId = Guid.NewGuid().ToString(),
+                YearStart = sessionForm.YearStart,
+                YearEnd = sessionForm.YearEnd,
+                SecurityToken = Guid.NewGuid().ToString(),
+                LastModified = DateTime.Now,
+                ModifiedBy = "System", // Replace with actual user
+                Semesters = new List<Semester>()
+            };
+            
+            // Add first semester if selected
+            if (includeFirstSemester)
             {
-                // Create new semester
                 var newSemester = new Semester
                 {
                     SemesterId = Guid.NewGuid().ToString(),
-                    Type = semesterForm.Type,
-                    StartDate = semesterForm.StartDate,
-                    EndDate = semesterForm.EndDate,
+                    Type = SemesterType.FirstSemester,
+                    SessionId = newSession.SessionId, // Set SessionId during initialization
+                    StartDate = firstSemesterForm.StartDate,
+                    EndDate = firstSemesterForm.EndDate,
                     SecurityToken = Guid.NewGuid().ToString(),
                     LastModified = DateTime.Now,
                     ModifiedBy = "System" // Replace with actual user
                 };
                 
-                // Add to appropriate session
-                AcademicSession targetSession = targetSessionId != null
-                    ? nextSession?.SessionId == targetSessionId ? nextSession : currentSession
-                    : currentSession;
-                    
-                newSemester.SessionId = targetSession.SessionId;
-                
-                // Create a new instance of the session with updated semesters
-                var updatedSemesters = new List<Semester>(targetSession.Semesters) { newSemester };
-                
-                AcademicSession updatedSession = targetSession with { Semesters = updatedSemesters };
-                
-                // Update the appropriate reference
-                if (targetSession == currentSession)
-                {
-                    currentSession = updatedSession;
-                }
-                else if (targetSession == nextSession)
-                {
-                    nextSession = updatedSession;
-                }
-                
-                await SaveToFirebase(updatedSession);
+                newSession.Semesters.Add(newSemester);
             }
             
-            // Close modal and check warnings
-            CloseModal();
-            CheckForWarnings();
+            // Determine if this is current or next session
+            DateTime startDate = GetStartDate(newSession);
+            if (startDate <= DateTime.Now)
+            {
+                // Move current to archived if it exists
+                if (currentSession != null)
+                {
+                    archivedSessions.Add(currentSession);
+                }
+                currentSession = newSession;
+            }
+            else
+            {
+                nextSession = newSession;
+            }
+            
+            await SaveToFirebase(newSession);
         }
-        catch (Exception ex)
+        else if (activeModal == ModalType.CreateSemester)
         {
-            Console.WriteLine($"Error saving: {ex.Message}");
-            // Handle error appropriately
+            // Identify target session
+            AcademicSession targetSession = targetSessionId != null
+                ? nextSession?.SessionId == targetSessionId ? nextSession : currentSession
+                : currentSession;
+                
+            // Create new semester - ensure SessionId is set during initialization
+            var newSemester = new Semester
+            {
+                SemesterId = Guid.NewGuid().ToString(),
+                Type = semesterForm.Type,
+                SessionId = targetSession.SessionId, // Set SessionId during initialization
+                StartDate = semesterForm.StartDate,
+                EndDate = semesterForm.EndDate,
+                SecurityToken = Guid.NewGuid().ToString(),
+                LastModified = DateTime.Now,
+                ModifiedBy = "System" // Replace with actual user
+            };
+            
+            // Create a new instance of the session with updated semesters
+            var updatedSemesters = new List<Semester>(targetSession.Semesters) { newSemester };
+            
+            AcademicSession updatedSession = targetSession with { Semesters = updatedSemesters };
+            
+            // Update the appropriate reference
+            if (targetSession == currentSession)
+            {
+                currentSession = updatedSession;
+            }
+            else if (targetSession == nextSession)
+            {
+                nextSession = updatedSession;
+            }
+            
+            await SaveToFirebase(updatedSession);
         }
+        
+        // Close modal and check warnings
+        CloseModal();
+        CheckForWarnings();
     }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error saving: {ex.Message}");
+        // Handle error appropriately
+    }
+}
     
     private void CheckForWarnings()
     {
