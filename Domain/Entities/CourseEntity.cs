@@ -7,7 +7,12 @@ using AirCode.Domain.ValueObjects;
 
 namespace AirCode.Domain.Entities
 {
-    public record Course : ISecureEntity
+    /// <summary>
+    /// yap courses should not be modifiable, only the lecturer id part(which isint modified
+    /// in the courses area rather when lecturer adds it to the list of courses he is taking
+    /// so do make it a class
+    /// </summary>
+    public class Course : IModifiableSecurityEntity
     {
         [Required]
         public string CourseId { get; init; }
@@ -20,8 +25,14 @@ namespace AirCode.Domain.Entities
         public List<string> LecturerIds { get; init; } = new List<string>();
         
         // Security attributes
-        public string SecurityToken { get; init; }
-        public DateTime LastModified { get; init; }
-        public string ModifiedBy { get; init; }
+        public string SecurityToken { get; internal set; }
+        public DateTime LastModified { get; internal set; }
+        public string ModifiedBy { get; internal set; }
+        public void SetModificationDetails(string securityToken, DateTime lastModified, string modifiedBy = "")
+        {
+            SecurityToken = securityToken;
+            LastModified = lastModified;
+            ModifiedBy = modifiedBy;
+        }
     }
 }

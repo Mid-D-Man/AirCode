@@ -1,3 +1,5 @@
+using AirCode.Utilities.HelperScripts;
+
 namespace AirCode.Services.Department;
 
 
@@ -19,6 +21,7 @@ using AirCode.Domain.Enums;
             return new List<Department>();
         }
 
+        //ok this why we cant add level need to actually implemt this
         public async Task<Department> GetDepartmentByIdAsync(string departmentId)
         {
             // TODO: Implement Firebase retrieval for specific department
@@ -71,8 +74,9 @@ using AirCode.Domain.Enums;
                 // TODO: Update department in Firebase
                 return true;
             }
-            catch (Exception)
+            catch (Exception e)
             {
+                MID_HelperFunctions.DebugMessage("Error trying to add level to department : " + e,DebugClass.Exception);
                 return false;
             }
         }
