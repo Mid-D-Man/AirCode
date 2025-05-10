@@ -52,6 +52,8 @@
     --twitter: #1DA1F2;
     --google: #DB4437;
 
+    --surface-color : #1DA1F2;
+    
     /* Component Specific */
     --cube-side: 2.75rem;
     --cube-side-half: calc(var(--cube-side) / 2);
