@@ -8,7 +8,7 @@ using AirCode.Domain.ValueObjects;
 using AirCode.Models.Core;
 using AirCode.Services.Permissions;
 using AirCode.Services.Storage;
-
+/*
 namespace AirCode.Services.Courses
 {
     public class CourseService : ICourseService
@@ -343,3 +343,4 @@ namespace AirCode.Services.Courses
         }
     }
 }
+*/

@@ -46,6 +46,6 @@ namespace AirCode.Models.Core
     
         public string Name { get; set; }
         
-        public LecturerStatus Status { get; set; }
+       
     }
 }

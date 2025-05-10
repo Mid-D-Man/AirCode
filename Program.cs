@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using AirCode;
 using AirCode.Services.Scanner;
 using AirCode.Services.Auth;
-using AirCode.Services.Courses;
 using AirCode.Services.Permissions;
 using AirCode.Services.Search;
 using AirCode.Services.Storage;
@@ -101,7 +100,7 @@ builder.Services.AddScoped<ISvgIconService, SvgIconService>();
 
 // Services
 builder.Services.AddScoped<IPermissionService, PermissionService>();
-builder.Services.AddScoped<ICourseService, CourseService>();
+//builder.Services.AddScoped<ICourseService, CourseService>();
 builder.Services.AddScoped<ISearchContextService, SearchContextService>();
 // Register CatService with its interface
 builder.Services.AddScoped<ICatService, CatService>();

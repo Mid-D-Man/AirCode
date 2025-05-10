@@ -42,7 +42,7 @@ namespace AirCode.Services.Permissions
                 return false;
                 
             // Check if user is associated with the course
-            if (user.Role == UserRole.LecturerAdmin || user.Role == UserRole.AssistantLecturer)
+            if (user.Role == UserRole.LecturerAdmin )
                 return user.AssignedCourseIds.Contains(courseId);
                 
             if (user.Role == UserRole.CourseRepAdmin || user.Role == UserRole.AssistantCourseRep)
@@ -62,7 +62,7 @@ namespace AirCode.Services.Permissions
                 return true;
                 
             // Lecturers can view attendance for their assigned courses
-            if ((user.Role == UserRole.LecturerAdmin || user.Role == UserRole.AssistantLecturer) && 
+            if ((user.Role == UserRole.LecturerAdmin ) && 
                 user.AssignedCourseIds.Contains(courseId))
                 return true;
                 

@@ -1,5 +1,4 @@
 
-using AirCode.Services.Courses;
 using AirCode.Services.Auth;
 using Microsoft.AspNetCore.Components;
 namespace AirCode.Services.Search;
@@ -7,7 +6,7 @@ namespace AirCode.Services.Search;
 public class SearchContextService : ISearchContextService
 {
     private readonly NavigationManager _navigationManager;
-    private readonly ICourseService _courseService;
+  //  private readonly ICourseService _courseService;
     private readonly IUserStorageService _userService;
     private readonly Dictionary<string, ISearchContextProvider> _contextProviders = new();
 
@@ -15,11 +14,11 @@ public class SearchContextService : ISearchContextService
 
     public SearchContextService(
         NavigationManager navigationManager,
-        ICourseService courseService,
+     //   ICourseService courseService,
         IUserStorageService userService)
     {
         _navigationManager = navigationManager;
-        _courseService = courseService;
+       // _courseService = courseService;
         _userService = userService;
 
         // Register built-in context providers

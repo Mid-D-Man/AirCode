@@ -4,7 +4,7 @@ using AirCode.Domain.Entities;
 using AirCode.Domain.Enums;
 using AirCode.Domain.ValueObjects;
 using AirCode.Models.Core;
-
+/*
 namespace AirCode.Services.Courses
 {
     public interface ICourseService
@@ -30,3 +30,4 @@ namespace AirCode.Services.Courses
         Course MapFromDto(CourseDto courseDto);
     }
 }
+*/
