@@ -16,6 +16,12 @@ window.firestoreModule = (function () {
 
             db = firebase.firestore();
 
+            // Firebase timestamps setting
+            db.settings({
+                ignoreUndefinedProperties: true,
+                timestampsInSnapshots: true
+            });
+
             // Enable offline persistence
             db.enablePersistence({ synchronizeTabs: true })
                 .catch((err) => {
@@ -53,7 +59,10 @@ window.firestoreModule = (function () {
 
             if (doc.exists) {
                 const data = doc.data();
-                data.id = doc.id; // Add ID to the data
+                // Add ID to the data but prevent overriding existing id property
+                if (data && typeof data === 'object') {
+                    data.id = doc.id;
+                }
                 return JSON.stringify(data);
             } else {
                 console.log(`Document not found: ${collection}/${id}`);
@@ -70,7 +79,17 @@ window.firestoreModule = (function () {
         try {
             if (!isInitialized) await initializeFirestore();
 
-            const data = JSON.parse(jsonData);
+            // Parse the data, handling potential errors
+            let data;
+            try {
+                data = JSON.parse(jsonData);
+                // Fix for Firebase - remove undefined values which Firebase doesn't support
+                data = JSON.parse(JSON.stringify(data));
+            } catch (parseError) {
+                console.error("Error parsing JSON data:", parseError);
+                return null;
+            }
+
             let docRef;
 
             if (customId) {
@@ -106,7 +125,17 @@ window.firestoreModule = (function () {
         try {
             if (!isInitialized) await initializeFirestore();
 
-            const data = JSON.parse(jsonData);
+            // Parse the data, handling potential errors
+            let data;
+            try {
+                data = JSON.parse(jsonData);
+                // Fix for Firebase - remove undefined values which Firebase doesn't support
+                data = JSON.parse(JSON.stringify(data));
+            } catch (parseError) {
+                console.error("Error parsing JSON data:", parseError);
+                return false;
+            }
+
             await db.collection(collection).doc(id).update(data);
             return true;
         } catch (error) {
@@ -163,7 +192,10 @@ window.firestoreModule = (function () {
 
             querySnapshot.forEach((doc) => {
                 const item = doc.data();
-                item.id = doc.id; // Add ID to each document
+                // Add ID to the data but prevent overriding existing id property
+                if (item && typeof item === 'object') {
+                    item.id = doc.id;
+                }
                 data.push(item);
             });
 
@@ -179,13 +211,23 @@ window.firestoreModule = (function () {
         try {
             if (!isInitialized) await initializeFirestore();
 
-            const value = JSON.parse(jsonValue);
+            let value;
+            try {
+                value = JSON.parse(jsonValue);
+            } catch (parseError) {
+                console.error("Error parsing JSON value:", parseError);
+                return JSON.stringify([]);
+            }
+
             const querySnapshot = await db.collection(collection).where(field, "==", value).get();
             const data = [];
 
             querySnapshot.forEach((doc) => {
                 const item = doc.data();
-                item.id = doc.id;
+                // Add ID to the data but prevent overriding existing id property
+                if (item && typeof item === 'object') {
+                    item.id = doc.id;
+                }
                 data.push(item);
             });
 
@@ -201,7 +243,16 @@ window.firestoreModule = (function () {
         try {
             if (!isInitialized) await initializeFirestore();
 
-            const items = JSON.parse(jsonItems);
+            let items;
+            try {
+                items = JSON.parse(jsonItems);
+                // Fix for Firebase - remove undefined values which Firebase doesn't support
+                items = JSON.parse(JSON.stringify(items));
+            } catch (parseError) {
+                console.error("Error parsing JSON items:", parseError);
+                return false;
+            }
+
             const batch = db.batch();
 
             items.forEach((item) => {
@@ -209,13 +260,15 @@ window.firestoreModule = (function () {
                 const docId = item.id || db.collection(collection).doc().id;
                 const docRef = db.collection(collection).doc(docId);
 
+                // Create a copy of the item to avoid modifying the original
+                const itemCopy = {...item};
+
                 // Remove the id field before setting the document
-                if (item.id) {
-                    const { id, ...dataWithoutId } = item;
-                    batch.set(docRef, dataWithoutId);
-                } else {
-                    batch.set(docRef, item);
+                if ('id' in itemCopy) {
+                    delete itemCopy.id;
                 }
+
+                batch.set(docRef, itemCopy);
             });
 
             await batch.commit();
@@ -316,7 +369,16 @@ window.firestoreModule = (function () {
         try {
             if (!isInitialized) await initializeFirestore();
 
-            const localItems = JSON.parse(jsonItems);
+            let localItems;
+            try {
+                localItems = JSON.parse(jsonItems);
+                // Fix for Firebase - remove undefined values which Firebase doesn't support
+                localItems = JSON.parse(JSON.stringify(localItems));
+            } catch (parseError) {
+                console.error("Error parsing JSON items:", parseError);
+                return false;
+            }
+
             const batch = db.batch();
 
             // Get existing items to compare
@@ -329,19 +391,22 @@ window.firestoreModule = (function () {
 
             // Update or add items based on a unique field
             for (const item of localItems) {
+                // Create a copy to avoid modifying the original
+                const itemCopy = {...item};
+
                 // If the item has an ID, update it directly
-                if (item.id && existingDocs[item.id]) {
+                if (itemCopy.id && existingDocs[itemCopy.id]) {
                     // Remove the id field before updating
-                    const { id, ...dataWithoutId } = item;
-                    batch.update(db.collection(collection).doc(item.id), dataWithoutId);
+                    delete itemCopy.id;
+                    batch.update(db.collection(collection).doc(item.id), itemCopy);
                 } else {
                     // Otherwise query to find if it exists by a unique field
                     let docToUpdate = null;
 
                     // For users, check by matriculationNumber
-                    if (item.matriculationNumber) {
+                    if (itemCopy.matriculationNumber) {
                         const matchQuery = await db.collection(collection)
-                            .where("matriculationNumber", "==", item.matriculationNumber)
+                            .where("matriculationNumber", "==", itemCopy.matriculationNumber)
                             .limit(1)
                             .get();
 
@@ -352,21 +417,21 @@ window.firestoreModule = (function () {
 
                     if (docToUpdate) {
                         // Remove the id field if it exists
-                        const { id, ...dataWithoutId } = item;
-                        batch.update(docToUpdate.ref, dataWithoutId);
+                        if ('id' in itemCopy) {
+                            delete itemCopy.id;
+                        }
+                        batch.update(docToUpdate.ref, itemCopy);
                     } else {
                         // Create new document with custom ID if provided
-                        const docRef = item.id ?
-                            db.collection(collection).doc(item.id) :
+                        const docRef = itemCopy.id ?
+                            db.collection(collection).doc(itemCopy.id) :
                             db.collection(collection).doc();
 
                         // Remove the id field before setting
-                        if (item.id) {
-                            const { id, ...dataWithoutId } = item;
-                            batch.set(docRef, dataWithoutId);
-                        } else {
-                            batch.set(docRef, item);
+                        if ('id' in itemCopy) {
+                            delete itemCopy.id;
                         }
+                        batch.set(docRef, itemCopy);
                     }
                 }
             }

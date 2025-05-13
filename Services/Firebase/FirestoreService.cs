@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.JSInterop;
 using AirCode.Utilities.HelperScripts;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace AirCode.Services.Firebase
 {
@@ -54,8 +55,15 @@ namespace AirCode.Services.Firebase
                 
                 if (string.IsNullOrEmpty(jsonResult))
                     return null;
-                    
-                return JsonConvert.DeserializeObject<T>(jsonResult);
+                
+                // Preserve original JSON structure and convert to strongly typed object
+                var settings = new JsonSerializerSettings 
+                { 
+                    TypeNameHandling = TypeNameHandling.None,
+                    NullValueHandling = NullValueHandling.Ignore,
+                    ObjectCreationHandling = ObjectCreationHandling.Replace
+                };
+                return JsonConvert.DeserializeObject<T>(jsonResult, settings);
             }
             catch (Exception ex)
             {
@@ -64,13 +72,25 @@ namespace AirCode.Services.Firebase
             }
         }
 
-        public async Task<string> AddDocumentAsync<T>(string collection, T data) where T : class
+      
+
+        public async Task<string> AddDocumentAsync<T>(string collection, T data, string customId = null) where T : class
         {
             try
             {
                 if (!_isInitialized) await InitializeAsync();
-                var json = JsonConvert.SerializeObject(data);
-                return await _jsRuntime.InvokeAsync<string>("firestoreModule.addDocument", collection, json);
+                
+                // Use consistent JSON serialization settings
+                var settings = new JsonSerializerSettings
+                {
+                    TypeNameHandling = TypeNameHandling.None,
+                    NullValueHandling = NullValueHandling.Ignore,
+                    ReferenceLoopHandling = ReferenceLoopHandling.Ignore
+                };
+                var json = JsonConvert.SerializeObject(data, settings);
+                
+                // Pass customId to JavaScript function
+                return await _jsRuntime.InvokeAsync<string>("firestoreModule.addDocument", collection, json, customId);
             }
             catch (Exception ex)
             {
@@ -84,7 +104,16 @@ namespace AirCode.Services.Firebase
             try
             {
                 if (!_isInitialized) await InitializeAsync();
-                var json = JsonConvert.SerializeObject(data);
+                
+                // Use consistent JSON serialization settings
+                var settings = new JsonSerializerSettings
+                {
+                    TypeNameHandling = TypeNameHandling.None,
+                    NullValueHandling = NullValueHandling.Ignore,
+                    ReferenceLoopHandling = ReferenceLoopHandling.Ignore
+                };
+                var json = JsonConvert.SerializeObject(data, settings);
+                
                 return await _jsRuntime.InvokeAsync<bool>("firestoreModule.updateDocument", collection, id, json);
             }
             catch (Exception ex)
@@ -117,8 +146,15 @@ namespace AirCode.Services.Firebase
                 
                 if (string.IsNullOrEmpty(jsonResult))
                     return new List<T>();
-                    
-                return JsonConvert.DeserializeObject<List<T>>(jsonResult);
+                
+                // Preserve original JSON structure and convert to strongly typed list
+                var settings = new JsonSerializerSettings 
+                { 
+                    TypeNameHandling = TypeNameHandling.None,
+                    NullValueHandling = NullValueHandling.Ignore,
+                    ObjectCreationHandling = ObjectCreationHandling.Replace
+                };
+                return JsonConvert.DeserializeObject<List<T>>(jsonResult, settings);
             }
             catch (Exception ex)
             {
@@ -132,14 +168,23 @@ namespace AirCode.Services.Firebase
             try
             {
                 if (!_isInitialized) await InitializeAsync();
-                var jsonValue = JsonConvert.SerializeObject(value);
+                
+                // Serialize value with consistent settings
+                var settings = new JsonSerializerSettings 
+                { 
+                    TypeNameHandling = TypeNameHandling.None,
+                    NullValueHandling = NullValueHandling.Ignore
+                };
+                var jsonValue = JsonConvert.SerializeObject(value, settings);
+                
                 var jsonResult = await _jsRuntime.InvokeAsync<string>(
                     "firestoreModule.queryCollection", collection, field, jsonValue);
                 
                 if (string.IsNullOrEmpty(jsonResult))
                     return new List<T>();
-                    
-                return JsonConvert.DeserializeObject<List<T>>(jsonResult);
+                
+                // Deserialize with same settings
+                return JsonConvert.DeserializeObject<List<T>>(jsonResult, settings);
             }
             catch (Exception ex)
             {
@@ -153,7 +198,16 @@ namespace AirCode.Services.Firebase
             try
             {
                 if (!_isInitialized) await InitializeAsync();
-                var json = JsonConvert.SerializeObject(items);
+                
+                // Use consistent JSON serialization settings
+                var settings = new JsonSerializerSettings
+                {
+                    TypeNameHandling = TypeNameHandling.None,
+                    NullValueHandling = NullValueHandling.Ignore,
+                    ReferenceLoopHandling = ReferenceLoopHandling.Ignore
+                };
+                var json = JsonConvert.SerializeObject(items, settings);
+                
                 return await _jsRuntime.InvokeAsync<bool>("firestoreModule.addBatch", collection, json);
             }
             catch (Exception ex)
@@ -168,7 +222,16 @@ namespace AirCode.Services.Firebase
             try
             {
                 if (!_isInitialized) await InitializeAsync();
-                var json = JsonConvert.SerializeObject(localData);
+                
+                // Use consistent JSON serialization settings
+                var settings = new JsonSerializerSettings
+                {
+                    TypeNameHandling = TypeNameHandling.None,
+                    NullValueHandling = NullValueHandling.Ignore,
+                    ReferenceLoopHandling = ReferenceLoopHandling.Ignore
+                };
+                var json = JsonConvert.SerializeObject(localData, settings);
+                
                 return await _jsRuntime.InvokeAsync<bool>("firestoreModule.syncCollectionWithLocal", collection, json);
             }
             catch (Exception ex)
