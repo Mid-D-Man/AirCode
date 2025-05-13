@@ -38,6 +38,7 @@
 </div>
 
 @code {
+    //this needs mahour ui fixes later on
     private bool IsExpanded { get; set; } = true;
     [Inject]
     private NavigationManager NavigationManager { get; set; }
@@ -58,6 +59,7 @@
         new("users", "Session Management", "/Admin/ManageAcademicSession"),
         new("admin", "Manage Departments", "/Admin/ManageDepartments"),
         new("courses", "Manage Courses", "/Admin/ManageCourses"),
+        new("courses", "Manage Admins", "/Admin/ManageAdmins"),
         new("report", "Reports", "/FirebaseTest"),
         new("stats", "Statistics", "/cat")
     };
