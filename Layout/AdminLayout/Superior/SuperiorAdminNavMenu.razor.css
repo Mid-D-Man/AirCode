@@ -1,5 +1,7 @@
+/* Update for Layout/AdminLayout/Superior/SuperiorAdminNavMenu.razor.css */
+
 .nav-menu {
-    width: 250px; /* Fixed expanded width */
+    width: 30%; /* Change from fixed 250px to 30% of viewport */
     background-color: var(--primary);
     display: flex;
     flex-direction: column;
@@ -13,7 +15,7 @@
 }
 
 .nav-menu.collapsed {
-    width: 60px; /* Consistent collapsed width across all devices */
+    width: 10%; /* Change from fixed 60px to 10% of viewport */
 }
 
 .nav-top {
@@ -41,6 +43,13 @@
     align-items: center;
     gap: 0.5rem;
     padding: 1rem 0.5rem;
+}
+
+/* Fix alignment between nav-middle and nav-bottom items */
+.nav-bottom .nav-item {
+    width: 100%;
+    display: flex;
+    justify-content: center; /* Center the button within nav-item */
 }
 
 .nav-item {
@@ -77,15 +86,26 @@
     }
 }
 
-/* Ensure appropriate menu width on different screen sizes */
+/* Min width for when menu is collapsed to ensure nav buttons remain usable */
 @media (max-width: 768px) {
     .nav-menu {
-        width: 240px;
+        width: 30%;
+        min-width: 200px; /* Ensure minimum usable width on smaller screens */
+    }
+
+    .nav-menu.collapsed {
+        width: 10%;
+        min-width: 60px; /* Ensure minimum usable width when collapsed */
     }
 }
 
 @media (max-width: 480px) {
     .nav-menu {
-        width: 220px;
+        width: 75%;
+        max-width: 280px;
+    }
+
+    .nav-menu.collapsed {
+        width: 60px; /* Fixed width for very small screens */
     }
 }

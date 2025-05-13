@@ -1,4 +1,4 @@
-/* NavMenuButton.razor.css */
+/* Update for Components/Admin/Shared/NavMenuButton.razor.css */
 .nav-button {
     display: flex;
     align-items: center;
@@ -8,7 +8,7 @@
     transition: all 0.3s ease;
     border-radius: 6px;
     background: transparent;
-    width: fit-content;
+    width: 100%; /* Changed from fit-content to full width */
     min-width: 36px;
     height: 36px;
 }

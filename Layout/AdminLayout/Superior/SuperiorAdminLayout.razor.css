@@ -83,11 +83,25 @@
 /* Responsive adjustments for collapsed menu */
 @media (min-width: 769px) {
     .nav-menu.collapsed ~ .main-content {
-        margin-left: calc(60px + 1rem); /* Adjust to match collapsed menu width plus spacing */
+        margin-left: calc(10% + 1rem); /* Adjust to match collapsed menu width (10%) plus spacing */
+    }
+
+    /* Default state - expanded menu */
+    .main-content {
+        margin-left: calc(30% + 1rem); /* Match expanded menu width (30%) plus spacing */
     }
 }
 
 @media (max-width: 768px) {
+    .nav-menu.collapsed ~ .main-content {
+        margin-left: calc(10% + 1rem); /* Adjust to match collapsed menu width on tablet */
+    }
+
+    .main-content {
+        margin-left: calc(30% + 1rem); /* Match expanded menu width on tablet */
+        min-width: 60px; /* Ensure minimum usable width */
+    }
+
     .content-top {
         flex-direction: column;
         height: auto;
@@ -107,7 +121,7 @@
     }
 
     .nav-menu.collapsed ~ .main-content {
-        margin-left: 0;
+        margin-left: 60px; /* Fixed width on mobile */
     }
 
     .content-top,
