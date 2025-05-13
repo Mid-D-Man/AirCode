@@ -25,20 +25,19 @@
     <div class="nav-bottom">
         @foreach (var item in BottomItems)
         {
-            <div class="nav-item" data-tooltip="@item.Label">
+            <NavLink href="@(item.Path ?? "#")" class="nav-item" data-tooltip="@item.Label">
                 <NavMenuButton
                     IconName="@item.IconName"
                     Label="@item.Label"
                     IsExpanded="IsExpanded"
-                    OnClick="@item.Action"
+                    OnClick="@(item.Action ?? (() => {}))"
                 />
-            </div>
+            </NavLink>
         }
     </div>
 </div>
 
 @code {
-    //this needs mahour ui fixes later on
     private bool IsExpanded { get; set; } = true;
     [Inject]
     private NavigationManager NavigationManager { get; set; }
@@ -64,10 +63,11 @@
         new("stats", "Statistics", "/cat")
     };
 
+    // Modified to use the same structure as NavigationItems
     private List<NavItem> BottomItems => new()
     {
-        new("settings", "Settings", HandleSettings),
-        new("contact", "Contact", HandleContact),
-        new("logout", "Logout", HandleLogout)
+        new("settings", "Settings", "/Admin/Settings"),
+        new("contact", "Contact", "/Admin/Contact"),
+        new("logout", "Logout", "/auth")
     };
 }

@@ -1,7 +1,7 @@
-/* Update for Layout/AdminLayout/Superior/SuperiorAdminNavMenu.razor.css */
+/* Updated Layout/AdminLayout/Superior/SuperiorAdminNavMenu.razor.css */
 
 .nav-menu {
-    width: 30%; /* Change from fixed 250px to 30% of viewport */
+    width: 24%; /* Change from 30% to 24% as requested */
     background-color: var(--primary);
     display: flex;
     flex-direction: column;
@@ -15,11 +15,11 @@
 }
 
 .nav-menu.collapsed {
-    width: 10%; /* Change from fixed 60px to 10% of viewport */
+    width: 8%; /* Change from 10% to 8% as requested */
 }
 
 .nav-top {
-    height: 80px; /* Fixed height instead of percentage */
+    height: 80px; /* Fixed height */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -30,28 +30,24 @@
     flex: 1; /* Use flex instead of fixed height */
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: flex-start; /* Align items to the left */
     gap: 0.5rem;
     padding: 0.5rem;
     overflow-y: auto; /* Allow scrolling if many menu items */
+    width: 100%;
 }
 
 .nav-bottom {
     margin-top: auto; /* Push to bottom */
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: flex-start; /* Match nav-middle alignment */
     gap: 0.5rem;
     padding: 1rem 0.5rem;
-}
-
-/* Fix alignment between nav-middle and nav-bottom items */
-.nav-bottom .nav-item {
     width: 100%;
-    display: flex;
-    justify-content: center; /* Center the button within nav-item */
 }
 
+/* Common styling for both nav-middle and nav-bottom items */
 .nav-item {
     width: 100%;
     text-decoration: none;
@@ -86,16 +82,28 @@
     }
 }
 
-/* Min width for when menu is collapsed to ensure nav buttons remain usable */
-@media (max-width: 768px) {
+/* Responsive breakpoints */
+@media (max-width: 1024px) {
     .nav-menu {
-        width: 30%;
-        min-width: 200px; /* Ensure minimum usable width on smaller screens */
+        width: 25%;
+        min-width: 220px;
     }
 
     .nav-menu.collapsed {
         width: 10%;
-        min-width: 60px; /* Ensure minimum usable width when collapsed */
+        min-width: 60px;
+    }
+}
+
+@media (max-width: 768px) {
+    .nav-menu {
+        width: 30%;
+        min-width: 200px;
+    }
+
+    .nav-menu.collapsed {
+        width: 12%;
+        min-width: 60px;
     }
 }
 
@@ -103,6 +111,10 @@
     .nav-menu {
         width: 75%;
         max-width: 280px;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
     }
 
     .nav-menu.collapsed {

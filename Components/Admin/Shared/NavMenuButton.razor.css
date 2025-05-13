@@ -1,4 +1,4 @@
-/* Update for Components/Admin/Shared/NavMenuButton.razor.css */
+/* Updated Components/Admin/Shared/NavMenuButton.razor.css */
 .nav-button {
     display: flex;
     align-items: center;
@@ -8,7 +8,7 @@
     transition: all 0.3s ease;
     border-radius: 6px;
     background: transparent;
-    width: 100%; /* Changed from fit-content to full width */
+    width: 100%; /* Full width to match parent */
     min-width: 36px;
     height: 36px;
 }
@@ -23,6 +23,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0; /* Prevent icon from shrinking */
 }
 
 .nav-button .text {
@@ -30,6 +31,9 @@
     white-space: nowrap;
     transition: opacity 0.3s ease;
     color: var(--white);
+    flex-grow: 1; /* Allow text to take up remaining space */
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 :global(.collapsed) .nav-button {
