@@ -6,7 +6,9 @@
 @inject IJSRuntime JSRuntime
 @inject NavigationManager NavigationManager
 @using AirCode.Layout.AdminLayout.Superior
-
+@using AirCode.Services.Firebase
+@using AirCode.Utilities.HelperScripts
+@inject IFirestoreService FirestoreService
 @layout SuperiorAdminLayout
 
 <div class="academic-session-container">
@@ -252,9 +254,13 @@
     
     // Timer for countdown
     private System.Threading.Timer timer;
+    // Connection status
+    private bool IsInitialized;
+    private bool IsConnected;
 
     protected override async Task OnInitializedAsync()
     {
+        await CheckConnectionStatus();
         // Load sessions from local storage or call LoadFromFirebase
         await LoadSessions();
         
@@ -267,7 +273,14 @@
         // Check if warning needs to be shown
         CheckForWarnings();
     }
-
+   
+    
+    private async Task CheckConnectionStatus()
+    {
+        IsInitialized = FirestoreService.IsInitialized;
+        IsConnected = await FirestoreService.IsConnectedAsync();
+        StateHasChanged();
+    }
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
@@ -280,6 +293,18 @@
     {
         try
         {
+            //this should theoritically work unless your dumbass forgets to add sessions in
+            string academicSessionsJson = await GetDocument();
+           
+            if(MID_HelperFunctions.IsValidString(academicSessionsJson))
+            {
+                List<AcademicSession> allSessions = JsonConvert.DeserializeObject<List<AcademicSession>>(academicSessionsJson);
+
+                if (allSessions != null && allSessions.Count > 0)
+                {
+                    archivedSessions.AddRange(allSessions);
+                }
+            }
             // For demo, create sample data
             // In production, this would be loaded from Firebase
             
@@ -648,6 +673,38 @@
     {
         timer?.Dispose();
     }
+    
+    #region FireBaseStore
+    
+    private async Task<string> GetDocument()
+    {
+        try
+        {
+            var result = await FirestoreService.GetDocumentAsync<object>("ACADEMIC_SESSIONS", "AcademicSessions");
+            if (result != null)
+            {
+                // Use consistent JSON settings like FirestoreService
+                var settings = new JsonSerializerSettings
+                {
+                    TypeNameHandling = TypeNameHandling.None,
+                    NullValueHandling = NullValueHandling.Ignore,
+                    Formatting = Formatting.Indented
+                };
+                var resultsString = JsonConvert.SerializeObject(result, settings);
+                return resultsString;
+            }
+            else
+            {
+                return "Document not found";
+            }
+        }
+        catch (Exception ex)
+        {
+            return  $"Error: {ex.Message}";
+        }
+    }
+    
+    #endregion
     
     // Form models
     private class SessionFormModel

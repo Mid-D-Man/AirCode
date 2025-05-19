@@ -1,4 +1,3 @@
-/* Updated Layout/AdminLayout/Superior/SuperiorAdminLayout.razor.css */
 .superior-admin-layout {
     display: flex;
     height: 100vh;
@@ -15,12 +14,12 @@
     display: flex;
     flex-direction: column;
     height: 100vh;
-    margin-left: 2%; /* Add spacing between nav and content (5-10% as requested) */
+    margin-left: 1rem; /* Add spacing between nav and content */
     transition: margin-left 0.3s ease; /* Match nav menu transition timing */
 }
 
 .content-top {
-    height: 40px;
+    height: 80px;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -30,6 +29,8 @@
     margin: 1rem 1rem 0 0; /* Add margin to match nav menu curve */
     border-radius: 15px;
 }
+
+/* Remove the old search-bar styles as we're using DynamicSearch */
 
 .quick-stats {
     display: flex;
@@ -82,42 +83,13 @@
 }
 
 /* Responsive adjustments for collapsed menu */
-/* When nav menu is expanded (default state) */
-.main-content {
-    margin-left: 2%; /* Spacing between nav and content */
-    width: calc(74% - 2%); /* Total - nav menu (24%) - spacing (2%) */
-}
-
-/* When nav menu is collapsed */
-.nav-menu.collapsed ~ .main-content {
-    margin-left: 2%;
-    width: calc(90% - 2%); /* Total - collapsed nav menu (8%) - spacing (2%) */
-}
-
-/* Responsive behavior */
-@media (max-width: 1024px) {
-    .main-content {
-        margin-left: 1.5%;
-        width: calc(73.5% - 1.5%);
-    }
-
+@media (min-width: 769px) {
     .nav-menu.collapsed ~ .main-content {
-        margin-left: 1.5%;
-        width: calc(88.5% - 1.5%);
+        margin-left: calc(60px + 1rem); /* Adjust to match collapsed menu width plus spacing */
     }
 }
 
 @media (max-width: 768px) {
-    .main-content {
-        margin-left: 1%;
-        width: calc(69% - 1%);
-    }
-
-    .nav-menu.collapsed ~ .main-content {
-        margin-left: 1%;
-        width: calc(87% - 1%);
-    }
-
     .content-top {
         flex-direction: column;
         height: auto;
@@ -134,29 +106,9 @@
 @media (max-width: 480px) {
     .main-content {
         margin-left: 0;
-        width: 100%;
-        padding-left: calc(60px + 1%); /* Adjust for fixed collapsed menu width */
-    }
-
-    /* When menu is expanded on mobile, add overlay */
-    .nav-menu:not(.collapsed) ~ .main-content {
-        position: relative;
-    }
-
-    .nav-menu:not(.collapsed) ~ .main-content::before {
-        content: "";
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.5);
-        z-index: 500;
     }
 
     .nav-menu.collapsed ~ .main-content {
-        padding-left: calc(60px + 1%);
-        width: 100%;
         margin-left: 0;
     }
 
@@ -164,5 +116,6 @@
     .content-bottom {
         margin-left: 0;
         margin-right: 0;
+        border-radius: 0;
     }
 }

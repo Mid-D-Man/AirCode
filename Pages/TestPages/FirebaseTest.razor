@@ -1,7 +1,7 @@
 @page "/FirebaseTest"
 @using AirCode.Services.Firebase
-@using System.Text.Json
-@using JsonSerializer = System.Text.Json.JsonSerializer
+@using Newtonsoft.Json
+@using Newtonsoft.Json.Linq
 @inject IFirestoreService FirestoreService
 
 <h3 class="page-title">Firebase Firestore Test</h3>
@@ -274,14 +274,23 @@
         StateHasChanged();
     }
     
-    private async Task AddDocument()
+     private async Task AddDocument()
     {
         try
         {
             // Validate JSON
-            JsonDocument.Parse(AddDocData);
+            JObject.Parse(AddDocData);
             
-            var result = await FirestoreService.AddDocumentAsync<object>(AddDocCollection, JsonSerializer.Deserialize<object>(AddDocData));
+            // Use consistent JSON settings like FirestoreService
+            var settings = new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.None,
+                NullValueHandling = NullValueHandling.Ignore,
+                ReferenceLoopHandling = ReferenceLoopHandling.Ignore
+            };
+            var data = JsonConvert.DeserializeObject<object>(AddDocData, settings);
+            
+            var result = await FirestoreService.AddDocumentAsync<object>(AddDocCollection, data);
             AddDocResult = result ?? "Failed to add document";
         }
         catch (Exception ex)
@@ -297,7 +306,14 @@
             var result = await FirestoreService.GetDocumentAsync<object>(GetDocCollection, GetDocId);
             if (result != null)
             {
-                GetDocResult = JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+                // Use consistent JSON settings like FirestoreService
+                var settings = new JsonSerializerSettings
+                {
+                    TypeNameHandling = TypeNameHandling.None,
+                    NullValueHandling = NullValueHandling.Ignore,
+                    Formatting = Formatting.Indented
+                };
+                GetDocResult = JsonConvert.SerializeObject(result, settings);
             }
             else
             {
@@ -315,12 +331,21 @@
         try
         {
             // Validate JSON
-            JsonDocument.Parse(UpdateDocData);
+            JObject.Parse(UpdateDocData);
+            
+            // Use consistent JSON settings like FirestoreService
+            var settings = new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.None,
+                NullValueHandling = NullValueHandling.Ignore,
+                ReferenceLoopHandling = ReferenceLoopHandling.Ignore
+            };
+            var data = JsonConvert.DeserializeObject<object>(UpdateDocData, settings);
             
             UpdateDocResult = await FirestoreService.UpdateDocumentAsync<object>(
                 UpdateDocCollection, 
                 UpdateDocId, 
-                JsonSerializer.Deserialize<object>(UpdateDocData));
+                data);
         }
         catch (Exception ex)
         {
@@ -347,7 +372,14 @@
         try
         {
             var result = await FirestoreService.GetCollectionAsync<object>(GetCollectionName);
-            GetCollectionResult = JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+            // Use consistent JSON settings like FirestoreService
+            var settings = new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.None,
+                NullValueHandling = NullValueHandling.Ignore,
+                Formatting = Formatting.Indented
+            };
+            GetCollectionResult = JsonConvert.SerializeObject(result, settings);
         }
         catch (Exception ex)
         {
@@ -359,11 +391,18 @@
     {
         try
         {
-            // Parse the value
-            var value = JsonSerializer.Deserialize<object>(QueryValue);
+            // Parse the value using Newtonsoft.Json
+            var settings = new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.None,
+                NullValueHandling = NullValueHandling.Ignore
+            };
+            var value = JsonConvert.DeserializeObject<object>(QueryValue, settings);
             
             var result = await FirestoreService.QueryCollectionAsync<object>(QueryCollectionName, QueryField, value);
-            QueryCollectionResult = JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+            // Use consistent JSON settings for output
+            settings.Formatting = Formatting.Indented;
+            QueryCollectionResult = JsonConvert.SerializeObject(result, settings);
         }
         catch (Exception ex)
         {
@@ -376,9 +415,16 @@
         try
         {
             // Validate JSON array
-            JsonDocument.Parse(BatchData);
+            JArray.Parse(BatchData);
             
-            var items = JsonSerializer.Deserialize<List<object>>(BatchData);
+            // Use consistent JSON settings like FirestoreService
+            var settings = new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.None,
+                NullValueHandling = NullValueHandling.Ignore,
+                ReferenceLoopHandling = ReferenceLoopHandling.Ignore
+            };
+            var items = JsonConvert.DeserializeObject<List<object>>(BatchData, settings);
             BatchResult = await FirestoreService.AddBatchAsync(BatchCollection, items);
         }
         catch (Exception ex)
@@ -393,9 +439,16 @@
         try
         {
             // Validate JSON array
-            JsonDocument.Parse(SyncData);
+            JArray.Parse(SyncData);
             
-            var items = JsonSerializer.Deserialize<List<object>>(SyncData);
+            // Use consistent JSON settings like FirestoreService
+            var settings = new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.None,
+                NullValueHandling = NullValueHandling.Ignore,
+                ReferenceLoopHandling = ReferenceLoopHandling.Ignore
+            };
+            var items = JsonConvert.DeserializeObject<List<object>>(SyncData, settings);
             SyncResult = await FirestoreService.SyncCollectionWithLocalAsync(SyncCollection, items);
         }
         catch (Exception ex)
@@ -410,7 +463,14 @@
         try
         {
             var result = await FirestoreService.GetCollectionAsync<object>(ExploreCollection);
-            ExploreResult = JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+            // Use consistent JSON settings like FirestoreService
+            var settings = new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.None,
+                NullValueHandling = NullValueHandling.Ignore,
+                Formatting = Formatting.Indented
+            };
+            ExploreResult = JsonConvert.SerializeObject(result, settings);
         }
         catch (Exception ex)
         {

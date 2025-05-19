@@ -1,7 +1,6 @@
-/* Updated Layout/AdminLayout/Superior/SuperiorAdminNavMenu.razor.css */
-
 .nav-menu {
-    width: 24%; /* Change from 30% to 24% as requested */
+    width: 30%;
+    width: 250px; /* Fixed expanded width */
     background-color: var(--primary);
     display: flex;
     flex-direction: column;
@@ -15,11 +14,13 @@
 }
 
 .nav-menu.collapsed {
-    width: 8%; /* Change from 10% to 8% as requested */
+    width: 80px;
+    width: 60px; /* Consistent collapsed width across all devices */
 }
 
 .nav-top {
-    height: 80px; /* Fixed height */
+    height: 20%;
+    height: 80px; /* Fixed height instead of percentage */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -27,28 +28,31 @@
 }
 
 .nav-middle {
+    height: 50%;
     flex: 1; /* Use flex instead of fixed height */
     display: flex;
     flex-direction: column;
-    align-items: flex-start; /* Align items to the left */
+    align-items: center;
+    justify-content: center;
     gap: 0.5rem;
     padding: 0.5rem;
     overflow-y: auto; /* Allow scrolling if many menu items */
-    width: 100%;
 }
 
 .nav-bottom {
+    height: 30%;
     margin-top: auto; /* Push to bottom */
     display: flex;
     flex-direction: column;
-    align-items: flex-start; /* Match nav-middle alignment */
+    align-items: center;
+    justify-content: center;
     gap: 0.5rem;
+    padding: 0.5rem;
     padding: 1rem 0.5rem;
-    width: 100%;
 }
 
-/* Common styling for both nav-middle and nav-bottom items */
 .nav-item {
+    width: fit-content;
     width: 100%;
     text-decoration: none;
     color: inherit;
@@ -82,42 +86,15 @@
     }
 }
 
-/* Responsive breakpoints */
-@media (max-width: 1024px) {
-    .nav-menu {
-        width: 25%;
-        min-width: 220px;
-    }
-
-    .nav-menu.collapsed {
-        width: 10%;
-        min-width: 10px;
-    }
-}
-
+/* Ensure appropriate menu width on different screen sizes */
 @media (max-width: 768px) {
     .nav-menu {
-        width: 30%;
-        min-width: 200px;
-    }
-
-    .nav-menu.collapsed {
-        width: 12%;
-        min-width: 60px;
+        width: 240px;
     }
 }
 
 @media (max-width: 480px) {
     .nav-menu {
-        width: 75%;
-        max-width: 280px;
-        position: fixed;
-        z-index: 1000;
-        left: 0;
-        top: 0;
-    }
-
-    .nav-menu.collapsed {
-        width: 60px; /* Fixed width for very small screens */
+        width: 220px;
     }
 }
