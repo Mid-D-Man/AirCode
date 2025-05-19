@@ -1,109 +1,56 @@
 @page "/SupaTest"
 @using AirCode.Services.SupaBase
 @using System.Collections.Generic
+@using AirCode.Models.Supabase
 @using Newtonsoft.Json
 @inject ISupabaseDatabaseService SupabaseDb
 @inject IJSRuntime JSRuntime
 @implements IDisposable
 
-<h3>Courses Management</h3>
+<h3>Supabase Test</h3>
 
-<div class="offline-status @(_isOnline ? "online" : "offline")">
-    @if (_isOnline)
-    {
-        <span>Online</span>
-    }
-    else
-    {
-        <span>Offline (Changes will sync when connection is restored)</span>
-        @if (_pendingOperations > 0)
-        {
-            <button class="btn btn-warning" @onclick="SyncOfflineData">
-                Sync (@_pendingOperations pending changes)
-            </button>
-        }
-    }
-</div>
-
-@if (!string.IsNullOrEmpty(_errorMessage))
-{
-    <div class="alert alert-danger">
-        @_errorMessage
-    </div>
-}
-
-@if (_isLoading)
+@if (_loading)
 {
     <div class="spinner-border" role="status">
         <span class="visually-hidden">Loading...</span>
     </div>
 }
+else if (_error != null)
+{
+    <div class="alert alert-danger" role="alert">
+        @_error
+    </div>
+}
 else
 {
-    <div class="row mb-3">
-        <div class="col">
-            <button class="btn btn-primary" @onclick="() => _showAddForm = true">Add New Course</button>
-        </div>
+    <div class="mb-4">
+        <button class="btn btn-primary" @onclick="LoadData">Refresh Data</button>
+        <button class="btn btn-success ms-2" @onclick="() => _showAddModal = true">Add New Item</button>
     </div>
 
-    @if (_showAddForm)
+    @if (_items?.Count > 0)
     {
-        <div class="card mb-3">
-            <div class="card-header">
-                <h5>Add New Course</h5>
-            </div>
-            <div class="card-body">
-                <EditForm Model="@_newCourse" OnValidSubmit="AddCourse">
-                    <DataAnnotationsValidator />
-                    <div class="mb-3">
-                        <label for="courseCode" class="form-label">Course Code</label>
-                        <InputText id="courseCode" class="form-control" @bind-Value="_newCourse.CourseCode" />
-                        <ValidationMessage For="@(() => _newCourse.CourseCode)" />
-                    </div>
-                    <div class="mb-3">
-                        <label for="courseName" class="form-label">Course Name</label>
-                        <InputText id="courseName" class="form-control" @bind-Value="_newCourse.CourseName" />
-                        <ValidationMessage For="@(() => _newCourse.CourseName)" />
-                    </div>
-                    <div class="mb-3">
-                        <label for="courseDescription" class="form-label">Description</label>
-                        <InputTextArea id="courseDescription" class="form-control" @bind-Value="_newCourse.Description" />
-                    </div>
-                    <div class="mb-3">
-                        <label for="creditHours" class="form-label">Credit Hours</label>
-                        <InputNumber id="creditHours" class="form-control" @bind-Value="_newCourse.CreditHours" />
-                        <ValidationMessage For="@(() => _newCourse.CreditHours)" />
-                    </div>
-                    <button type="submit" class="btn btn-success">Save</button>
-                    <button type="button" class="btn btn-secondary" @onclick="() => _showAddForm = false">Cancel</button>
-                </EditForm>
-            </div>
-        </div>
-    }
-
-    @if (_courses != null && _courses.Any())
-    {
-        <table class="table table-bordered table-striped">
+        <table class="table table-striped">
             <thead>
                 <tr>
-                    <th>Course Code</th>
-                    <th>Course Name</th>
+                    <th>ID</th>
+                    <th>Name</th>
                     <th>Description</th>
-                    <th>Credit Hours</th>
+                    <th>Created At</th>
                     <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
-                @foreach (var course in _courses)
+                @foreach (var item in _items)
                 {
                     <tr>
-                        <td>@course.CourseCode</td>
-                        <td>@course.CourseName</td>
-                        <td>@course.Description</td>
-                        <td>@course.CreditHours</td>
+                        <td>@item.Id</td>
+                        <td>@item.Name</td>
+                        <td>@item.Description</td>
+                        <td>@item.CreatedAt.ToLocalTime().ToString("g")</td>
                         <td>
-                            <button class="btn btn-sm btn-primary" @onclick="() => EditCourse(course)">Edit</button>
-                            <button class="btn btn-sm btn-danger" @onclick="() => DeleteCourse(course.Id)">Delete</button>
+                            <button class="btn btn-sm btn-warning" @onclick="() => EditItem(item)">Edit</button>
+                            <button class="btn btn-sm btn-danger ms-1" @onclick="() => DeleteItem(item.Id)">Delete</button>
                         </td>
                     </tr>
                 }
@@ -112,267 +59,143 @@ else
     }
     else
     {
-        <div class="alert alert-info">
-            No courses found. Add a new course to get started.
-        </div>
-    }
-
-    @if (_currentEditCourse != null)
-    {
-        <div class="modal" tabindex="-1" style="display: block; background-color: rgba(0,0,0,0.5);">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Edit Course</h5>
-                        <button type="button" class="btn-close" @onclick="CloseEditModal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <EditForm Model="@_currentEditCourse" OnValidSubmit="UpdateCourse">
-                            <DataAnnotationsValidator />
-                            <div class="mb-3">
-                                <label for="editCourseCode" class="form-label">Course Code</label>
-                                <InputText id="editCourseCode" class="form-control" @bind-Value="_currentEditCourse.CourseCode" />
-                                <ValidationMessage For="@(() => _currentEditCourse.CourseCode)" />
-                            </div>
-                            <div class="mb-3">
-                                <label for="editCourseName" class="form-label">Course Name</label>
-                                <InputText id="editCourseName" class="form-control" @bind-Value="_currentEditCourse.CourseName" />
-                                <ValidationMessage For="@(() => _currentEditCourse.CourseName)" />
-                            </div>
-                            <div class="mb-3">
-                                <label for="editCourseDescription" class="form-label">Description</label>
-                                <InputTextArea id="editCourseDescription" class="form-control" @bind-Value="_currentEditCourse.Description" />
-                            </div>
-                            <div class="mb-3">
-                                <label for="editCreditHours" class="form-label">Credit Hours</label>
-                                <InputNumber id="editCreditHours" class="form-control" @bind-Value="_currentEditCourse.CreditHours" />
-                                <ValidationMessage For="@(() => _currentEditCourse.CreditHours)" />
-                            </div>
-                            <button type="submit" class="btn btn-success">Update</button>
-                            <button type="button" class="btn btn-secondary" @onclick="CloseEditModal">Cancel</button>
-                        </EditForm>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <div class="alert alert-info">No items found. Add some items to get started.</div>
     }
 }
 
+@if (_showAddModal)
+{
+    <div class="modal fade show" style="display: block;" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(_editItem.Id == 0 ? "Add New Item" : "Edit Item")</h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Name</label>
+                        <input type="text" class="form-control" @bind="_editItem.Name" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" @bind="_editItem.Description"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseModal">Cancel</button>
+                    <button type="button" class="btn btn-primary" @onclick="SaveItem">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
 @code {
-    private List<CourseModel> _courses = new();
-    private CourseModel _newCourse = new();
-    private CourseModel? _currentEditCourse;
-    private bool _isLoading = true;
-    private bool _showAddForm = false;
-    private string _errorMessage = string.Empty;
-    private bool _isOnline = true;
-    private int _pendingOperations = 0;
-    private DotNetObjectReference<SupabaseTest>? _dotNetRef;
+    private List<TestItem> _items;
+    private bool _loading = true;
+    private string _error;
+    private bool _showAddModal = false;
+    private TestItem _editItem = new();
 
     protected override async Task OnInitializedAsync()
     {
-        _dotNetRef = DotNetObjectReference.Create(this);
-        await JSRuntime.InvokeVoidAsync("window.addEventListener", "online", _dotNetRef, "OnConnectionChange");
-        await JSRuntime.InvokeVoidAsync("window.addEventListener", "offline", _dotNetRef, "OnConnectionChange");
-        
-        _isOnline = await JSRuntime.InvokeAsync<bool>("navigator.onLine");
-        await CheckPendingOperations();
-        await LoadCourses();
+        await LoadData();
     }
 
-    [JSInvokable]
-    public async Task OnConnectionChange(bool isOnline)
+    private async Task LoadData()
     {
-        _isOnline = isOnline;
-        if (isOnline)
-        {
-            await LoadCourses();
-        }
-        await CheckPendingOperations();
-        StateHasChanged();
-    }
+        _loading = true;
+        _error = null;
 
-    private async Task CheckPendingOperations()
-    {
         try
         {
-            var offlineOps = await JSRuntime.InvokeAsync<string>("eval", "localStorage.getItem('supabase_offline_operations') || '[]'");
-            var operations = JsonConvert.DeserializeObject<List<object>>(offlineOps);
-            _pendingOperations = operations?.Count ?? 0;
+            _items = await SupabaseService.GetTestItemsAsync();
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error checking pending operations: {ex.Message}");
-            _pendingOperations = 0;
-        }
-    }
-
-    private async Task LoadCourses()
-    {
-        _isLoading = true;
-        _errorMessage = string.Empty;
-        
-        try
-        {
-            var result = await SupabaseDb.GetAsync<List<CourseModel>>("courses");
-            _courses = result ?? new List<CourseModel>();
-        }
-        catch (Exception ex)
-        {
-            _errorMessage = $"Failed to load courses: {ex.Message}";
-            Console.WriteLine(ex);
+            _error = $"Error loading data: {ex.Message}";
+            Logger.LogError(ex, "Error loading data from Supabase");
         }
         finally
         {
-            _isLoading = false;
+            _loading = false;
         }
     }
 
-    private async Task AddCourse()
+    private void EditItem(TestItem item)
     {
-        _isLoading = true;
-        _errorMessage = string.Empty;
-        
-        try
+        _editItem = new TestItem
         {
-            await SupabaseDb.InsertAsync<CourseModel>("courses", _newCourse);
-            _newCourse = new CourseModel();
-            _showAddForm = false;
-            await LoadCourses();
-        }
-        catch (Exception ex)
-        {
-            _errorMessage = $"Failed to add course: {ex.Message}";
-            Console.WriteLine(ex);
-        }
-        finally
-        {
-            _isLoading = false;
-        }
-    }
-
-    private void EditCourse(CourseModel course)
-    {
-        _currentEditCourse = new CourseModel
-        {
-            Id = course.Id,
-            CourseCode = course.CourseCode,
-            CourseName = course.CourseName,
-            Description = course.Description,
-            CreditHours = course.CreditHours
+            Id = item.Id,
+            Name = item.Name,
+            Description = item.Description,
+            CreatedAt = item.CreatedAt
         };
+        _showAddModal = true;
     }
 
-    private void CloseEditModal()
+    private async Task DeleteItem(int id)
     {
-        _currentEditCourse = null;
-    }
-
-    private async Task UpdateCourse()
-    {
-        if (_currentEditCourse == null) return;
-        
-        _isLoading = true;
-        _errorMessage = string.Empty;
-        
-        try
-        {
-            await SupabaseDb.UpdateAsync<CourseModel>("courses", _currentEditCourse.Id, _currentEditCourse);
-            _currentEditCourse = null;
-            await LoadCourses();
-        }
-        catch (Exception ex)
-        {
-            _errorMessage = $"Failed to update course: {ex.Message}";
-            Console.WriteLine(ex);
-        }
-        finally
-        {
-            _isLoading = false;
-        }
-    }
-
-    private async Task DeleteCourse(string id)
-    {
-        if (!await JSRuntime.InvokeAsync<bool>("confirm", "Are you sure you want to delete this course?"))
-        {
+        if (!await JSRuntime.InvokeAsync<bool>("confirm", "Are you sure you want to delete this item?"))
             return;
-        }
-        
-        _isLoading = true;
-        _errorMessage = string.Empty;
-        
+
+        _loading = true;
         try
         {
-            await SupabaseDb.DeleteAsync<object>("courses", id);
-            await LoadCourses();
+            await SupabaseService.DeleteTestItemAsync(id);
+            await LoadData();
         }
         catch (Exception ex)
         {
-            _errorMessage = $"Failed to delete course: {ex.Message}";
-            Console.WriteLine(ex);
+            _error = $"Error deleting item: {ex.Message}";
+            Logger.LogError(ex, "Error deleting item from Supabase");
         }
         finally
         {
-            _isLoading = false;
+            _loading = false;
         }
     }
 
-    private async Task SyncOfflineData()
+    private async Task SaveItem()
     {
-        _isLoading = true;
-        _errorMessage = string.Empty;
-        
+        _loading = true;
         try
         {
-            var results = await SupabaseDb.SyncOfflineOperationsAsync();
-            var successCount = results.Count(r => r.Success);
-            var failCount = results.Count - successCount;
-            
-            if (failCount > 0)
+            if (_editItem.Id == 0)
             {
-                _errorMessage = $"Sync completed with {failCount} errors. Please check the console for details.";
+                _editItem.CreatedAt = DateTime.UtcNow;
+                await SupabaseService.AddTestItemAsync(_editItem);
+            }
+            else
+            {
+                await SupabaseService.UpdateTestItemAsync(_editItem);
             }
             
-            await CheckPendingOperations();
-            await LoadCourses();
+            CloseModal();
+            await LoadData();
         }
         catch (Exception ex)
         {
-            _errorMessage = $"Failed to sync offline data: {ex.Message}";
-            Console.WriteLine(ex);
+            _error = $"Error saving item: {ex.Message}";
+            Logger.LogError(ex, "Error saving item to Supabase");
         }
         finally
         {
-            _isLoading = false;
+            _loading = false;
         }
+    }
+
+    private void CloseModal()
+    {
+        _showAddModal = false;
+        _editItem = new TestItem();
     }
 
     public void Dispose()
     {
-        if (_dotNetRef != null)
-        {
-            JSRuntime.InvokeVoidAsync("window.removeEventListener", "online", _dotNetRef, "OnConnectionChange");
-            JSRuntime.InvokeVoidAsync("window.removeEventListener", "offline", _dotNetRef, "OnConnectionChange");
-            _dotNetRef.Dispose();
-        }
+        // TODO release managed resources here
     }
 
-    public class CourseModel
-    {
-        [JsonProperty("id")]
-        public string Id { get; set; } = Guid.NewGuid().ToString();
-        
-        [JsonProperty("course_code")]
-        public string CourseCode { get; set; } = string.Empty;
-        
-        [JsonProperty("course_name")]
-        public string CourseName { get; set; } = string.Empty;
-        
-        [JsonProperty("description")]
-        public string Description { get; set; } = string.Empty;
-        
-        [JsonProperty("credit_hours")]
-        public int CreditHours { get; set; } = 3;
-    }
 }
