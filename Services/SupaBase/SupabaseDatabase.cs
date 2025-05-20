@@ -1,10 +1,7 @@
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Configuration;
+
 using Supabase;
-using Postgrest.Constants;
 using Supabase.Postgrest;
+using Supabase.Postgrest.Models;
 using Client = Supabase.Client;
 
 namespace AirCode.Services.SupaBase
@@ -39,7 +36,7 @@ namespace AirCode.Services.SupaBase
             }
         }
 
-        public async Task<T?> GetByIdAsync<T>(int id) where T : class, new()
+        public async Task<T?> GetByIdAsync<T>(int id) where T : BaseModel, new()
         {
             await EnsureInitializedAsync();
             
@@ -47,7 +44,7 @@ namespace AirCode.Services.SupaBase
             {
                 return await _supabaseClient
                     .From<T>()
-                    .Where("id", Constants.Operator.Equals, id)
+                    .Filter("id", Constants.Operator.Equals, id)
                     .Single();
             }
             catch (Exception ex)
@@ -57,7 +54,7 @@ namespace AirCode.Services.SupaBase
             }
         }
 
-        public async Task<List<T>> GetAllAsync<T>() where T : class, new()
+        public async Task<List<T>> GetAllAsync<T>() where T : BaseModel, new()
         {
             await EnsureInitializedAsync();
             
@@ -76,7 +73,7 @@ namespace AirCode.Services.SupaBase
             }
         }
 
-        public async Task<T> InsertAsync<T>(T item) where T : class, new()
+        public async Task<T> InsertAsync<T>(T item) where T : BaseModel, new()
         {
             await EnsureInitializedAsync();
             
@@ -95,7 +92,7 @@ namespace AirCode.Services.SupaBase
             }
         }
 
-        public async Task<T> UpdateAsync<T>(T item) where T : class, new()
+        public async Task<T> UpdateAsync<T>(T item) where T : BaseModel, new()
         {
             await EnsureInitializedAsync();
             
@@ -114,7 +111,7 @@ namespace AirCode.Services.SupaBase
             }
         }
 
-        public async Task DeleteAsync<T>(int id) where T : class, new()
+        public async Task DeleteAsync<T>(int id) where T : BaseModel, new()
         {
             await EnsureInitializedAsync();
             
@@ -122,7 +119,7 @@ namespace AirCode.Services.SupaBase
             {
                 await _supabaseClient
                     .From<T>()
-                    .Where("id", Operator.Equals, id)
+                    .Filter("id", Constants.Operator.Equals, id)
                     .Delete();
             }
             catch (Exception ex)
@@ -132,7 +129,7 @@ namespace AirCode.Services.SupaBase
             }
         }
 
-        public async Task<List<T>> GetWithFilterAsync<T>(string columnName, string filterOperator, object value) where T : class, new()
+        public async Task<List<T>> GetWithFilterAsync<T>(string columnName, string filterOperator, object value) where T : BaseModel, new()
         {
             await EnsureInitializedAsync();
             
@@ -177,23 +174,23 @@ namespace AirCode.Services.SupaBase
             }
         }
 
-        private Operator ParseOperator(string op)
+        private Constants.Operator ParseOperator(string op)
         {
             return op.ToLower() switch
             {
-                "eq" => Operator.Equals,
-                "neq" => Operator.NotEqual,
-                "gt" => Operator.GreaterThan,
-                "gte" => Operator.GreaterThanOrEqual,
-                "lt" => Operator.LessThan,
-                "lte" => Operator.LessThanOrEqual,
-                "like" => Operator.Like,
-                "ilike" => Operator.ILike,
-                "in" => Operator.In,
-                "contains" => Operator.Contains,
-                "containedin" => Operator.ContainedIn,
-                "fts" => Operator.FTS,
-                _ => Operator.Equals
+                "eq" => Constants.Operator.Equals,
+                "neq" => Constants.Operator.NotEqual,
+                "gt" => Constants.Operator.GreaterThan,
+                "gte" => Constants.Operator.GreaterThanOrEqual,
+                "lt" => Constants.Operator.LessThan,
+                "lte" => Constants.Operator.LessThanOrEqual,
+                "like" => Constants.Operator.Like,
+                "ilike" => Constants.Operator.ILike,
+                "in" => Constants.Operator.In,
+                "contains" => Constants.Operator.Contains,
+                "containedin" => Constants.Operator.ContainedIn,
+                "fts" => Constants.Operator.FTS,
+                _ => Constants.Operator.Equals
             };
         }
     }

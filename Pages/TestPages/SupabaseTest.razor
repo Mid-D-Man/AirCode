@@ -1,122 +1,166 @@
 @page "/SupaTest"
 @using AirCode.Services.SupaBase
-@using System.Collections.Generic
 @using AirCode.Models.Supabase
-@using Newtonsoft.Json
-@inject ISupabaseDatabaseService SupabaseDb
+@inject ISupabaseDatabase SupabaseDb
+
+@inject ICatService CatService
+
 @inject IJSRuntime JSRuntime
 @implements IDisposable
 
-<h3>Supabase Test</h3>
+<h3>Supabase Database Test</h3>
 
-@if (_loading)
-{
-    <div class="spinner-border" role="status">
-        <span class="visually-hidden">Loading...</span>
-    </div>
-}
-else if (_error != null)
-{
-    <div class="alert alert-danger" role="alert">
-        @_error
-    </div>
-}
-else
-{
-    <div class="mb-4">
-        <button class="btn btn-primary" @onclick="LoadData">Refresh Data</button>
-        <button class="btn btn-success ms-2" @onclick="() => _showAddModal = true">Add New Item</button>
-    </div>
-
-    @if (_items?.Count > 0)
-    {
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Name</th>
-                    <th>Description</th>
-                    <th>Created At</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var item in _items)
-                {
-                    <tr>
-                        <td>@item.Id</td>
-                        <td>@item.Name</td>
-                        <td>@item.Description</td>
-                        <td>@item.CreatedAt.ToLocalTime().ToString("g")</td>
-                        <td>
-                            <button class="btn btn-sm btn-warning" @onclick="() => EditItem(item)">Edit</button>
-                            <button class="btn btn-sm btn-danger ms-1" @onclick="() => DeleteItem(item.Id)">Delete</button>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    }
-    else
-    {
-        <div class="alert alert-info">No items found. Add some items to get started.</div>
-    }
-}
-
-@if (_showAddModal)
-{
-    <div class="modal fade show" style="display: block;" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">@(_editItem.Id == 0 ? "Add New Item" : "Edit Item")</h5>
-                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Courses</h4>
                 </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Name</label>
-                        <input type="text" class="form-control" @bind="_editItem.Name" />
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Description</label>
-                        <textarea class="form-control" @bind="_editItem.Description"></textarea>
-                    </div>
+                <div class="card-body">
+                    @if (_loading)
+                    {
+                        <div class="d-flex justify-content-center">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    }
+                    else if (_courses.Any())
+                    {
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Code</th>
+                                    <th>Title</th>
+                                    <th>Credits</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var course in _courses)
+                                {
+                                    <tr>
+                                        <td>@course.Id</td>
+                                        <td>@course.Code</td>
+                                        <td>@course.Title</td>
+                                        <td>@course.CreditUnits</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-primary" @onclick="() => SelectCourse(course)">Edit</button>
+                                            <button class="btn btn-sm btn-danger" @onclick="() => DeleteCourse(course.Id)">Delete</button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                    else
+                    {
+                        <div class="alert alert-info">
+                            No courses found. Add a new course to get started.
+                        </div>
+                    }
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @onclick="CloseModal">Cancel</button>
-                    <button type="button" class="btn btn-primary" @onclick="SaveItem">Save</button>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h4>@(_editMode ? "Edit Course" : "Add New Course")</h4>
+                </div>
+                <div class="card-body">
+                    <EditForm Model="@_currentCourse" OnValidSubmit="HandleSubmit">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary />
+                        
+                        <div class="mb-3">
+                            <label for="code" class="form-label">Course Code</label>
+                            <InputText id="code" @bind-Value="_currentCourse.Code" class="form-control" />
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="title" class="form-label">Course Title</label>
+                            <InputText id="title" @bind-Value="_currentCourse.Title" class="form-control" />
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description</label>
+                            <InputTextArea id="description" @bind-Value="_currentCourse.Description" class="form-control" rows="3" />
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="credits" class="form-label">Credit Units</label>
+                            <InputNumber id="credits" @bind-Value="_currentCourse.CreditUnits" class="form-control" />
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <button type="submit" class="btn btn-primary">@(_editMode ? "Update" : "Add") Course</button>
+                            @if (_editMode)
+                            {
+                                <button type="button" class="btn btn-secondary" @onclick="ResetForm">Cancel</button>
+                            }
+                        </div>
+                    </EditForm>
                 </div>
             </div>
         </div>
     </div>
-    <div class="modal-backdrop fade show"></div>
-}
+    
+    <div class="row">
+        <div class="col-md-6 offset-md-3">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Cat Service Test</h4>
+                </div>
+                <div class="card-body text-center">
+                    @if (string.IsNullOrEmpty(_catImageUrl))
+                    {
+                        <button class="btn btn-info" @onclick="GetRandomCat">Get Random Cat</button>
+                    }
+                    else
+                    {
+                        <img src="@_catImageUrl" alt="Random Cat" class="img-fluid mb-3" style="max-height: 300px;" />
+                        <div>
+                            <button class="btn btn-info" @onclick="GetRandomCat">Get Another Cat</button>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="row mt-3">
+            <div class="col-12">
+                <div class="alert alert-danger">
+                    @_errorMessage
+                </div>
+            </div>
+        </div>
+    }
+</div>
 
 @code {
-    private List<TestItem> _items;
+    private List<Course> _courses = new();
+    private Course _currentCourse = new();
+    private bool _editMode = false;
     private bool _loading = true;
-    private string _error;
-    private bool _showAddModal = false;
-    private TestItem _editItem = new();
+    private string _errorMessage = string.Empty;
+    private string _catImageUrl = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadData();
-    }
-
-    private async Task LoadData()
-    {
-        _loading = true;
-        _error = null;
-
         try
         {
-            _items = await SupabaseService.GetTestItemsAsync();
+            await SupabaseDb.InitializeAsync();
+            await LoadCourses();
         }
         catch (Exception ex)
         {
-            _error = $"Error loading data: {ex.Message}";
-            Logger.LogError(ex, "Error loading data from Supabase");
+            _errorMessage = $"Error initializing: {ex.Message}";
         }
         finally
         {
@@ -124,62 +168,61 @@ else
         }
     }
 
-    private void EditItem(TestItem item)
+    private async Task LoadCourses()
     {
-        _editItem = new TestItem
+        try
         {
-            Id = item.Id,
-            Name = item.Name,
-            Description = item.Description,
-            CreatedAt = item.CreatedAt
+            _loading = true;
+            _courses = await SupabaseDb.GetAllAsync<Course>();
+            _errorMessage = string.Empty;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error loading courses: {ex.Message}";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void SelectCourse(Course course)
+    {
+        _currentCourse = new Course
+        {
+            Id = course.Id,
+            Code = course.Code,
+            Title = course.Title,
+            Description = course.Description,
+            CreditUnits = course.CreditUnits,
+            CreatedAt = course.CreatedAt,
+            UpdatedAt = DateTime.UtcNow
         };
-        _showAddModal = true;
+        _editMode = true;
     }
 
-    private async Task DeleteItem(int id)
+    private async Task HandleSubmit()
     {
-        if (!await JSRuntime.InvokeAsync<bool>("confirm", "Are you sure you want to delete this item?"))
-            return;
-
-        _loading = true;
         try
         {
-            await SupabaseService.DeleteTestItemAsync(id);
-            await LoadData();
-        }
-        catch (Exception ex)
-        {
-            _error = $"Error deleting item: {ex.Message}";
-            Logger.LogError(ex, "Error deleting item from Supabase");
-        }
-        finally
-        {
-            _loading = false;
-        }
-    }
-
-    private async Task SaveItem()
-    {
-        _loading = true;
-        try
-        {
-            if (_editItem.Id == 0)
+            _loading = true;
+            
+            if (_editMode)
             {
-                _editItem.CreatedAt = DateTime.UtcNow;
-                await SupabaseService.AddTestItemAsync(_editItem);
+                await SupabaseDb.UpdateAsync(_currentCourse);
             }
             else
             {
-                await SupabaseService.UpdateTestItemAsync(_editItem);
+                _currentCourse.CreatedAt = DateTime.UtcNow;
+                await SupabaseDb.InsertAsync(_currentCourse);
             }
             
-            CloseModal();
-            await LoadData();
+            await LoadCourses();
+            ResetForm();
         }
         catch (Exception ex)
         {
-            _error = $"Error saving item: {ex.Message}";
-            Logger.LogError(ex, "Error saving item to Supabase");
+            _errorMessage = $"Error saving course: {ex.Message}";
         }
         finally
         {
@@ -187,10 +230,51 @@ else
         }
     }
 
-    private void CloseModal()
+    private async Task DeleteCourse(int id)
     {
-        _showAddModal = false;
-        _editItem = new TestItem();
+        if (!await JSRuntime.InvokeAsync<bool>("confirm", "Are you sure you want to delete this course?"))
+            return;
+            
+        try
+        {
+            _loading = true;
+            await SupabaseDb.DeleteAsync<Course>(id);
+            await LoadCourses();
+            
+            if (_currentCourse.Id == id)
+                ResetForm();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error deleting course: {ex.Message}";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void ResetForm()
+    {
+        _currentCourse = new Course();
+        _editMode = false;
+    }
+
+    private async Task GetRandomCat()
+    {
+        try
+        {
+            _catImageUrl = await CatService.GetRandomCatImageAsync();
+            if (_catImageUrl.StartsWith("Failed") || _catImageUrl.StartsWith("An error"))
+            {
+                _errorMessage = _catImageUrl;
+                _catImageUrl = string.Empty;
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error getting cat image: {ex.Message}";
+        }
     }
 
     public void Dispose()
