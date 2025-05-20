@@ -28,5 +28,9 @@ namespace AirCode.Services.Firebase
         // Connection status
         Task<bool> IsConnectedAsync();
         bool IsInitialized { get; }
+        
+        // Connection state management
+        Task<bool> SetConnectionStateAsync(bool enableConnection);
+        Task<bool> GetManualConnectionStateAsync();
     }
 }

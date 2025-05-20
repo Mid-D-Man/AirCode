@@ -252,5 +252,44 @@ namespace AirCode.Services.Firebase
                 return false;
             }
         }
+        // Add these methods to your FirestoreService.cs class
+
+        /// <summary>
+        /// Manually enables or disables Firebase Firestore network connectivity
+        /// </summary>
+        /// <param name="enableConnection">True to enable connection, false to disable</param>
+        /// <returns>True if the operation was successful</returns>
+        public async Task<bool> SetConnectionStateAsync(bool enableConnection)
+        {
+            try
+            {
+                if (!_isInitialized) await InitializeAsync();
+                return await _jsRuntime.InvokeAsync<bool>("firestoreModule.setConnectionState", enableConnection);
+            }
+            catch (Exception ex)
+            {
+                MID_HelperFunctions.DebugMessage($"Error setting connection state: {ex.Message}", DebugClass.Exception);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Gets the current manual connection state of Firestore
+        /// </summary>
+        /// <returns>True if connection is enabled, false if manually disabled</returns>
+        public async Task<bool> GetManualConnectionStateAsync()
+        {
+            try
+            {
+                if (!_isInitialized) await InitializeAsync();
+                return await _jsRuntime.InvokeAsync<bool>("firestoreModule.getManualConnectionState");
+            }
+            catch (Exception ex)
+            {
+                MID_HelperFunctions.DebugMessage($"Error getting manual connection state: {ex.Message}", DebugClass.Exception);
+                // Default to enabled if we can't determine the state
+                return true;
+            }
+        }
     }
 }

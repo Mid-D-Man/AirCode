@@ -5,6 +5,7 @@ window.firestoreModule = (function () {
     let db = null;
     let isInitialized = false;
     let isOffline = false;
+    let manuallyDisconnected = false;
 
     // Initialize Firestore with better error handling
     async function initializeFirestore() {
@@ -36,8 +37,11 @@ window.firestoreModule = (function () {
 
             // Monitor connection state
             firebase.database().ref(".info/connected").on("value", (snapshot) => {
-                isOffline = !snapshot.val();
-                console.log("Connection state:", isOffline ? "Offline" : "Online");
+                // Only update offline status if not manually disconnected
+                if (!manuallyDisconnected) {
+                    isOffline = !snapshot.val();
+                    console.log("Connection state:", isOffline ? "Offline" : "Online");
+                }
             });
 
             isInitialized = true;
@@ -45,6 +49,32 @@ window.firestoreModule = (function () {
             return true;
         } catch (error) {
             console.error("Error initializing Firestore:", error);
+            return false;
+        }
+    }
+
+    // Set connection state manually
+    async function setConnectionState(connect) {
+        try {
+            if (!isInitialized) await initializeFirestore();
+
+            manuallyDisconnected = !connect;
+
+            if (connect) {
+                // Re-enable network connections
+                await firebase.firestore().enableNetwork();
+                isOffline = !navigator.onLine; // Respect actual network state
+                console.log("Firebase connection manually enabled");
+            } else {
+                // Disable network connections
+                await firebase.firestore().disableNetwork();
+                isOffline = true;
+                console.log("Firebase connection manually disabled");
+            }
+
+            return true;
+        } catch (error) {
+            console.error("Error setting connection state:", error);
             return false;
         }
     }
@@ -306,7 +336,7 @@ window.firestoreModule = (function () {
 
     // Process any pending offline operations when back online
     async function processPendingOperations() {
-        if (!navigator.onLine || !isInitialized) return;
+        if (!navigator.onLine || !isInitialized || manuallyDisconnected) return;
 
         const storageKey = 'firestore_offline_operations';
         try {
@@ -447,6 +477,11 @@ window.firestoreModule = (function () {
     // Check if Firestore is connected
     async function isConnected() {
         try {
+            // Return false if manually disconnected
+            if (manuallyDisconnected) {
+                return false;
+            }
+
             // Get Firestore connection state
             if (!isInitialized) {
                 const initResult = await initializeFirestore();
@@ -467,10 +502,17 @@ window.firestoreModule = (function () {
         }
     }
 
+    // Get manual connection state
+    function getManualConnectionState() {
+        return !manuallyDisconnected;
+    }
+
     // Process pending operations when online
     window.addEventListener('online', () => {
-        console.log('Back online, processing pending operations');
-        processPendingOperations();
+        if (!manuallyDisconnected) {
+            console.log('Back online, processing pending operations');
+            processPendingOperations();
+        }
     });
 
     return {
@@ -484,6 +526,8 @@ window.firestoreModule = (function () {
         addBatch,
         syncCollectionWithLocal,
         isConnected,
-        processPendingOperations
+        processPendingOperations,
+        setConnectionState,
+        getManualConnectionState
     };
 })();
