@@ -2,30 +2,64 @@
 @using AirCode.Layout.AdminLayout.Superior
 @using AirCode.Models.Core
 @using AirCode.Domain.Enums
-@using AirCode.Models.ViewModel
 @using System.ComponentModel.DataAnnotations
-@using AirCode.Utilities.HelperScripts
 @using Microsoft.AspNetCore.Components.Forms
-@inherits ManageCoursesViewModel
 
 @layout SuperiorAdminLayout
 
 <div class="page-container bg-primary">
     <div class="page-header">
         <h1 class="text-primary">Manage Courses</h1>
-        <button class="btn btn-primary" @onclick="ShowAddCourse">Add New Course</button>
+        <button class="btn btn-primary" @onclick="ShowAddCourse" disabled="@(!IsFirebaseConnected)">
+            Add New Course
+        </button>
     </div>
 
+    <!-- Firebase Connection Status -->
+    @if (!IsFirebaseConnected)
+    {
+        <div class="alert alert-warning">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <strong>Firebase Connection Issue</strong><br />
+                    @if (!string.IsNullOrEmpty(FirebaseConnectionError))
+                    {
+                        <span>@FirebaseConnectionError</span>
+                    }
+                    else
+                    {
+                        <span>Not connected to Firebase database.</span>
+                    }
+                </div>
+                <button class="btn btn-warning" @onclick="RetryFirebaseConnection" disabled="@IsLoading">
+                    @if (IsLoading)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2"></span>
+                    }
+                    Retry Connection
+                </button>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-success">
+            <strong>Firebase Connected</strong> - Database is ready for operations.
+        </div>
+    }
+
+    <!-- Filters Section -->
     <div class="filter-section bg-secondary border-theme">
         <div class="filter-container">
             <div class="filter-item">
                 <label for="departmentFilter">Department:</label>
-                <input id="departmentFilter" class="form-control" @bind="DepartmentFilter" @bind:event="oninput" />
+                <input id="departmentFilter" class="form-control" @bind="DepartmentFilter" @bind:event="oninput" 
+                       disabled="@(!IsFirebaseConnected)" />
             </div>
 
             <div class="filter-item">
                 <label for="levelFilter">Level:</label>
-                <select id="levelFilter" class="form-control" @bind="LevelFilter">
+                <select id="levelFilter" class="form-control" @bind="LevelFilter" disabled="@(!IsFirebaseConnected)">
                     <option value="">All Levels</option>
                     @foreach (var level in Enum.GetValues(typeof(LevelType)))
                     {
@@ -36,7 +70,7 @@
 
             <div class="filter-item">
                 <label for="semesterFilter">Semester:</label>
-                <select id="semesterFilter" class="form-control" @bind="SemesterFilter">
+                <select id="semesterFilter" class="form-control" @bind="SemesterFilter" disabled="@(!IsFirebaseConnected)">
                     <option value="">All Semesters</option>
                     @foreach (var semester in Enum.GetValues(typeof(SemesterType)))
                     {
@@ -45,11 +79,16 @@
                 </select>
             </div>
 
-            <button class="btn btn-secondary" @onclick="ApplyFilters">Apply Filters</button>
-            <button class="btn btn-outline-secondary" @onclick="LoadCoursesAsync">Reset</button>
+            <button class="btn btn-secondary" @onclick="ApplyFilters" disabled="@(!IsFirebaseConnected)">
+                Apply Filters
+            </button>
+            <button class="btn btn-outline-secondary" @onclick="ResetFilters" disabled="@(!IsFirebaseConnected)">
+                Reset
+            </button>
         </div>
     </div>
 
+    <!-- Loading and Error States -->
     @if (IsLoading)
     {
         <div class="loading-spinner">
@@ -63,7 +102,13 @@
             @ErrorMessage
         </div>
     }
-    else if (Courses.Count == 0)
+    else if (!IsFirebaseConnected)
+    {
+        <div class="empty-state bg-secondary border-theme">
+            <p>Please establish Firebase connection to manage courses.</p>
+        </div>
+    }
+    else if (FilteredCourses.Count == 0)
     {
         <div class="empty-state bg-secondary border-theme">
             <p>No courses found. Please add a new course or adjust your filters.</p>
@@ -71,8 +116,9 @@
     }
     else
     {
+        <!-- Courses Grid -->
         <div class="card-grid">
-            @foreach (var course in Courses)
+            @foreach (var course in FilteredCourses)
             {
                 <div class="course-card bg-secondary border-theme">
                     <div class="course-header">
@@ -83,19 +129,27 @@
                         <p><strong>Department:</strong> @course.Department</p>
                         <p><strong>Level:</strong> @course.Level</p>
                         <p><strong>Semester:</strong> @course.Semester</p>
+                        <p><strong>Credit Units:</strong> @course.CreditUnits</p>
                     </div>
                     <div class="course-schedule">
                         <h4>Schedule</h4>
-                        <ul>
-                            @foreach (var slot in course.Schedule)
-                            {
-                                <li>@slot.Day: @slot.StartTime.ToString("hh\\:mm") - @slot.EndTime.ToString("hh\\:mm")  @slot.Location</li>
-                            }
-                        </ul>
+                        @if (course.Schedule?.Count > 0)
+                        {
+                            <ul>
+                                @foreach (var slot in course.Schedule)
+                                {
+                                    <li>@slot.Day: @slot.StartTime.ToString("hh\\:mm") - @slot.EndTime.ToString("hh\\:mm")  @slot.Location</li>
+                                }
+                            </ul>
+                        }
+                        else
+                        {
+                            <p>No schedule set</p>
+                        }
                     </div>
                     <div class="course-lecturers">
                         <h4>Lecturers</h4>
-                        @if (course.Lecturers.Count > 0)
+                        @if (course.Lecturers?.Count > 0)
                         {
                             <ul>
                                 @foreach (var lecturer in course.Lecturers)
@@ -119,6 +173,7 @@
     }
 </div>
 
+<!-- Add/Edit Modal -->
 @if (ShowAddEditModal)
 {
     <div class="modal-backdrop" @onclick="CloseModal"></div>
@@ -144,106 +199,102 @@
                     <ValidationMessage For="@(() => FormModel.Department)" />
                 </div>
 
-                <div class="form-group">
-                    <label for="level">Level:</label>
-                    <InputSelect id="level" class="form-control" @bind-Value="FormModel.Level">
-                        @foreach (var level in Enum.GetValues(typeof(LevelType)))
-                        {
-                            <option value="@level">@level</option>
-                        }
-                    </InputSelect>
-                    <ValidationMessage For="@(() => FormModel.Level)" />
-                </div>
+                <div class="form-row">
+                    <div class="form-group col">
+                        <label for="level">Level:</label>
+                        <InputSelect id="level" class="form-control" @bind-Value="FormModel.Level">
+                            @foreach (var level in Enum.GetValues(typeof(LevelType)))
+                            {
+                                <option value="@level">@level</option>
+                            }
+                        </InputSelect>
+                        <ValidationMessage For="@(() => FormModel.Level)" />
+                    </div>
 
-                <div class="form-group">
-                    <label for="semester">Semester:</label>
-                    <InputSelect id="semester" class="form-control" @bind-Value="FormModel.Semester">
-                        @foreach (var semester in Enum.GetValues(typeof(SemesterType)))
-                        {
-                            <option value="@semester">@semester</option>
-                        }
-                    </InputSelect>
-                    <ValidationMessage For="@(() => FormModel.Semester)" />
+                    <div class="form-group col">
+                        <label for="semester">Semester:</label>
+                        <InputSelect id="semester" class="form-control" @bind-Value="FormModel.Semester">
+                            @foreach (var semester in Enum.GetValues(typeof(SemesterType)))
+                            {
+                                <option value="@semester">@semester</option>
+                            }
+                        </InputSelect>
+                        <ValidationMessage For="@(() => FormModel.Semester)" />
+                    </div>
+
+                    <div class="form-group col">
+                        <label for="creditUnits">Credit Units:</label>
+                        <InputNumber id="creditUnits" class="form-control" @bind-Value="FormModel.CreditUnits" />
+                        <ValidationMessage For="@(() => FormModel.CreditUnits)" />
+                    </div>
                 </div>
 
                 <h3>Schedule</h3>
-                @for (int i = 0; i < FormModel.ScheduleItems.Count; i++)
+                @if (FormModel.ScheduleItems.Count == 0)
                 {
-                    var index = i;
-                    <div class="schedule-item">
-                        <div class="form-row">
-                            <div class="form-group col">
-                                <label>Day:</label>
-                                <InputSelect class="form-control" @bind-Value="FormModel.ScheduleItems[index].Day">
-                                    @foreach (var day in Enum.GetValues(typeof(DayOfWeek)))
-                                    {
-                                        <option value="@day">@day</option>
-                                    }
-                                </InputSelect>
-                            </div>
+                    <p>No schedule items. <button type="button" class="btn btn-link p-0" @onclick="() => FormModel.AddScheduleItem()">Add one</button></p>
+                }
+                else
+                {
+                    @for (int i = 0; i < FormModel.ScheduleItems.Count; i++)
+                    {
+                        var index = i;
+                        <div class="schedule-item border p-3 mb-3">
+                            <div class="form-row">
+                                <div class="form-group col">
+                                    <label>Day:</label>
+                                    <InputSelect class="form-control" @bind-Value="FormModel.ScheduleItems[index].Day">
+                                        @foreach (var day in Enum.GetValues(typeof(DayOfWeek)))
+                                        {
+                                            <option value="@day">@day</option>
+                                        }
+                                    </InputSelect>
+                                </div>
 
-                            <div class="form-group col">
-                                <label>Start Time:</label>
-                                <input class="form-control" type="time"
-                                       value="@FormModel.ScheduleItems[index].StartTime.ToString(@"hh\:mm")"
-                                       @onchange="@(e => UpdateStartTime(index, e))" />
-                            </div>
+                                <div class="form-group col">
+                                    <label>Start Time:</label>
+                                    <input class="form-control" type="time"
+                                           value="@FormModel.ScheduleItems[index].StartTime.ToString(@"hh\:mm")"
+                                           @onchange="@(e => UpdateStartTime(index, e))" />
+                                </div>
 
-                            <div class="form-group col">
-                                <label>End Time:</label>
-                                <input class="form-control" type="time"
-                                       value="@FormModel.ScheduleItems[index].EndTime.ToString(@"hh\:mm")"
-                                       @onchange="@(e => UpdateEndTime(index, e))" />
-                            </div>
-                            
-                            <div class="form-group col">
-                                <label>Location:</label>
-                                <InputText class="form-control" 
-                                           @bind-Value="FormModel.ScheduleItems[index].Location" />
-                            </div>
+                                <div class="form-group col">
+                                    <label>End Time:</label>
+                                    <input class="form-control" type="time"
+                                           value="@FormModel.ScheduleItems[index].EndTime.ToString(@"hh\:mm")"
+                                           @onchange="@(e => UpdateEndTime(index, e))" />
+                                </div>
+                                
+                                <div class="form-group col">
+                                    <label>Location:</label>
+                                    <InputText class="form-control" 
+                                               @bind-Value="FormModel.ScheduleItems[index].Location" />
+                                </div>
 
-                            <div class="form-group col-auto">
-                                <label>&nbsp;</label>
-                                <button type="button" class="btn btn-danger form-control" 
-                                        @onclick="() => FormModel.RemoveScheduleItem(index)">Remove</button>
+                                <div class="form-group col-auto align-self-end">
+                                    <button type="button" class="btn btn-danger" 
+                                            @onclick="() => FormModel.RemoveScheduleItem(index)">Remove</button>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    }
                 }
 
-                <button type="button" class="btn btn-secondary" @onclick="() => FormModel.AddScheduleItem()">
+                <button type="button" class="btn btn-secondary mb-3" @onclick="() => FormModel.AddScheduleItem()">
                     Add Schedule Item
                 </button>
 
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" @onclick="CloseModal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Save</button>
+                    <button type="submit" class="btn btn-primary" disabled="@IsLoading">
+                        @if (IsLoading)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        Save
+                    </button>
                 </div>
             </EditForm>
         </div>
     </div>
-}
-
-@code{
-    private void UpdateStartTime(int index, ChangeEventArgs e)
-    {
-        if (TimeSpan.TryParse((string)e.Value, out var time))
-        {
-            FormModel.ScheduleItems[index].StartTime = time;
-        }
-    }
-    private TimeOnly? GetEndTime(int index)
-    {
-        return FormModel.ScheduleItems[index].EndTime == TimeSpan.Zero
-            ? null
-            : TimeOnly.FromTimeSpan(FormModel.ScheduleItems[index].EndTime);
-    }
-
-    private void UpdateEndTime(int index, ChangeEventArgs e)
-    {
-        if (TimeOnly.TryParse((string)e.Value, out var time))
-        {
-            FormModel.ScheduleItems[index].EndTime = time.ToTimeSpan();
-        }
-    }
 }

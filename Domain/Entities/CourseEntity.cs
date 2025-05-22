@@ -17,9 +17,15 @@ namespace AirCode.Domain.Entities
         [Required]
         public string CourseId { get; init; }
         [Required]
+        [StringLength(100, ErrorMessage = "Course name cannot exceed 100 characters")]
         public string Name { get; init; }
+
         public string DepartmentId { get; init; }
         public LevelType Level { get; init; }
+        [Required]
+        [Range(1, 10, ErrorMessage = "Credit units must be between 1 and 10")]
+        public byte CreditUnits { get; init; }
+
         public SemesterType Semester { get; init; }
         public CourseSchedule Schedule { get; init; }
         public IReadOnlyList<string> LecturerIds { get; init; }
