@@ -26,9 +26,8 @@ public partial class ManageCourses : ComponentBase
     private string _filterDepartment = string.Empty;
 
     // Form fields for new/edit course
-    private string _courseId = string.Empty;
-    private string _courseName = string.Empty;
     private string _courseCode = string.Empty;
+    private string _courseName = string.Empty;
     private string _departmentId = string.Empty;
     private LevelType _level = LevelType.Level100;
     private SemesterType _semester = SemesterType.FirstSemester;
@@ -81,7 +80,7 @@ public partial class ManageCourses : ComponentBase
             {
                 filtered = filtered.Where(c => 
                     c.Name.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase) ||
-                    c.CoursesCode.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase));
+                    c.CourseCode.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase));
             }
 
             if (!string.IsNullOrWhiteSpace(_filterDepartment))
@@ -144,9 +143,8 @@ public partial class ManageCourses : ComponentBase
 
     private void LoadCourseToForm(Course course)
     {
-        _courseId = course.CourseId;
         _courseName = course.Name;
-        _courseCode = course.CoursesCode;
+        _courseCode = course.CourseCode;
         _departmentId = course.DepartmentId;
         _level = course.Level;
         _semester = course.Semester;
@@ -157,7 +155,6 @@ public partial class ManageCourses : ComponentBase
 
     private void ResetForm()
     {
-        _courseId = string.Empty;
         _courseName = string.Empty;
         _courseCode = string.Empty;
         _departmentId = string.Empty;
@@ -202,7 +199,7 @@ public partial class ManageCourses : ComponentBase
         try
         {
             // Check if course ID already exists
-            if (_courses.Any(c => c.CourseId == _courseId))
+            if (_courses.Any(c => c.CourseCode == _courseCode))
             {
                 await JSRuntime.InvokeVoidAsync("alert", "Course ID already exists!");
                 return;
@@ -210,9 +207,8 @@ public partial class ManageCourses : ComponentBase
 
             var schedule = new CourseSchedule(_timeSlots);
             var course = Course.Create(
-                _courseId,
-                _courseName,
                 _courseCode,
+                _courseName,
                 _departmentId,
                 _level,
                 _semester,
@@ -247,9 +243,8 @@ public partial class ManageCourses : ComponentBase
 
             var schedule = new CourseSchedule(_timeSlots);
             var updatedCourse = new Course(
-                _courseId,
-                _courseName,
                 _courseCode,
+                _courseName,
                 _departmentId,
                 _level,
                 _semester,
@@ -296,7 +291,7 @@ public partial class ManageCourses : ComponentBase
         {
             if (_courseToDelete == null) return;
 
-            var success = await CourseService.DeleteCourseAsync(_courseToDelete.CourseId);
+            var success = await CourseService.DeleteCourseAsync(_courseToDelete.CourseCode);
             if (success)
             {
                 await LoadCourses();

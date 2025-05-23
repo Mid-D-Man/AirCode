@@ -90,11 +90,13 @@
 @media (max-width: 768px) {
     .nav-menu {
         width: 240px;
+        min-width: 64px;
     }
 }
 
 @media (max-width: 480px) {
     .nav-menu {
         width: 220px;
+        min-width: 64px;
     }
 }

@@ -6,6 +6,7 @@ using AirCode.Domain.Entities;
 using AirCode.Domain.Enums;
 using AirCode.Domain.ValueObjects;
 using AirCode.Services.Firebase;
+using AirCode.Utilities.HelperScripts;
 using AirCode.Utilities.ObjectPooling;
 using Newtonsoft.Json;
 
@@ -63,15 +64,27 @@ namespace AirCode.Services.Courses
                 
                 foreach (var kvp in levelCourses)
                 {
-                    // Skip document metadata (keys that don't represent courses)
-                    if (kvp.Key.StartsWith("Courses_") || kvp.Value == null) continue;
+                    // Skip document metadata and validate key format
+                    if (!MID_HelperFunctions.IsValidString(kvp.Key) || 
+                        kvp.Key.StartsWith("Courses_") || 
+                        kvp.Value == null) 
+                        continue;
                     
                     try
                     {
                         var courseJson = JsonConvert.SerializeObject(kvp.Value);
+                        
+                        // Additional validation before deserialization
+                        if (!MID_HelperFunctions.IsValidString(courseJson) || 
+                            courseJson.Length < 10) // Minimum viable course JSON
+                            continue;
+                            
                         var courseData = JsonConvert.DeserializeObject<CourseFirestoreModel>(courseJson);
                         
-                        if (courseData != null)
+                        // Validate critical course properties
+                        if (courseData != null && 
+                            MID_HelperFunctions.IsValidString(courseData.CourseCode) &&
+                            MID_HelperFunctions.IsValidString(courseData.Name))
                         {
                             var course = MapFirestoreModelToEntity(courseData, GetLevelFromDocument(levelDoc));
                             allCourses.Add(course);
@@ -94,32 +107,35 @@ namespace AirCode.Services.Courses
     }
 }
 
-        public async Task<Course> GetCourseByIdAsync(string courseId)
+        public async Task<Course> GetCourseByIdAsync(string courseCode)
         {
             if (_disposed) throw new ObjectDisposedException(nameof(CourseService));
-            if (string.IsNullOrEmpty(courseId)) return null;
-            
+            if (!MID_HelperFunctions.IsValidString(courseCode)) return null;
+    
             try
             {
                 var levels = new[] { "Courses_100Level", "Courses_200Level", "Courses_300Level", "Courses_400Level", "Courses_500Level" };
-                
+        
                 foreach (var levelDoc in levels)
                 {
                     var levelCourses = await _firestoreService.GetDocumentAsync<Dictionary<string, CourseFirestoreModel>>(_courseCollection, levelDoc);
-                    
-                    if (levelCourses != null && levelCourses.ContainsKey(courseId))
+            
+                    if (levelCourses != null && levelCourses.ContainsKey(courseCode))
                     {
-                        var courseData = levelCourses[courseId];
-                        return MapFirestoreModelToEntity(courseData, GetLevelFromDocument(levelDoc));
+                        var courseData = levelCourses[courseCode];
+                        if (MID_HelperFunctions.IsValidString(courseData.CourseCode))
+                        {
+                            return MapFirestoreModelToEntity(courseData, GetLevelFromDocument(levelDoc));
+                        }
                     }
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error getting course by ID {courseId}: {ex.Message}");
+                Console.WriteLine($"Error getting course by code {courseCode}: {ex.Message}");
                 throw;
             }
-            
+    
             return null;
         }
 
@@ -189,7 +205,7 @@ namespace AirCode.Services.Courses
                                   ?? new Dictionary<string, CourseFirestoreModel>();
                 
                 var firestoreModel = MapEntityToFirestoreModel(course);
-                levelCourses[course.CourseId] = firestoreModel;
+                levelCourses[course.CourseCode] = firestoreModel;
                 
                 return await _firestoreService.UpdateDocumentAsync(_courseCollection, levelDoc, levelCourses);
             }
@@ -203,21 +219,21 @@ namespace AirCode.Services.Courses
         public async Task<bool> UpdateCourseAsync(Course course)
         {
             if (_disposed) throw new ObjectDisposedException(nameof(CourseService));
-            if (course == null || string.IsNullOrEmpty(course.CourseId)) return false;
+            if (course == null || string.IsNullOrEmpty(course.CourseCode)) return false;
             
             try
             {
                 var levelDoc = GetDocumentFromLevel(course.Level);
                 var levelCourses = await _firestoreService.GetDocumentAsync<Dictionary<string, CourseFirestoreModel>>(_courseCollection, levelDoc);
                 
-                if (levelCourses == null || !levelCourses.ContainsKey(course.CourseId))
+                if (levelCourses == null || !levelCourses.ContainsKey(course.CourseCode))
                 {
                     return false;
                 }
                 
                 var updatedCourse = course.WithModification("System");
                 var firestoreModel = MapEntityToFirestoreModel(updatedCourse);
-                levelCourses[course.CourseId] = firestoreModel;
+                levelCourses[course.CourseCode] = firestoreModel;
                 
                 return await _firestoreService.UpdateDocumentAsync(_courseCollection, levelDoc, levelCourses);
             }
@@ -271,7 +287,7 @@ namespace AirCode.Services.Courses
                 {
                     lecturerIds.Add(lecturerId);
                     var updatedCourse = new Course(
-                        course.CourseId, course.Name, course.CoursesCode, course.DepartmentId,
+                        course.CourseCode, course.Name,  course.DepartmentId,
                         course.Level, course.Semester, course.CreditUnits, course.Schedule,
                         lecturerIds, DateTime.UtcNow, "System"
                     );
@@ -301,7 +317,7 @@ namespace AirCode.Services.Courses
                 if (lecturerIds.Remove(lecturerId))
                 {
                     var updatedCourse = new Course(
-                        course.CourseId, course.Name, course.CoursesCode, course.DepartmentId,
+                        course.CourseCode, course.Name,  course.DepartmentId,
                         course.Level, course.Semester, course.CreditUnits, course.Schedule,
                         lecturerIds, DateTime.UtcNow, "System"
                     );
@@ -328,7 +344,7 @@ namespace AirCode.Services.Courses
                 LevelType.Level200 => "Courses_200Level",
                 LevelType.Level300 => "Courses_300Level",
                 LevelType.Level400 => "Courses_400Level",
-                LevelType.LevelExtra => "Courses_500Level",
+                LevelType.Level500 => "Courses_500Level",
                 _ => "Courses_100Level"
             };
         }
@@ -341,7 +357,7 @@ namespace AirCode.Services.Courses
                 "Courses_200Level" => LevelType.Level200,
                 "Courses_300Level" => LevelType.Level300,
                 "Courses_400Level" => LevelType.Level400,
-                "Courses_500Level" => LevelType.LevelExtra,
+                "Courses_500Level" => LevelType.Level500,
                 _ => LevelType.Level100
             };
         }
@@ -359,24 +375,22 @@ namespace AirCode.Services.Courses
                     Location = s.Location ?? "TBA"
                 }));
             }
-            
+    
             var schedule = new CourseSchedule(timeSlots);
-            
+    
             return new Course(
-                model.Id ?? Guid.NewGuid().ToString(),
-                model.Name ?? "",
                 model.CourseCode ?? "",
+                model.Name ?? "",
                 model.DepartmentId ?? "",
                 level,
                 model.Semester,
                 model.CreditUnits,
                 schedule,
                 model.LecturerIds?.ToList() ?? new List<string>(),
-                model.LastModified = DateTime.UtcNow,
+                model.LastModified,
                 model.ModifiedBy ?? "System"
             );
         }
-        
         private CourseFirestoreModel MapEntityToFirestoreModel(Course course)
         {
             var scheduleList = new List<CourseScheduleFirestoreModel>();
@@ -390,12 +404,11 @@ namespace AirCode.Services.Courses
                     Location = slot.Location
                 }));
             }
-            
+    
             return new CourseFirestoreModel
             {
-                Id = course.CourseId,
+                CourseCode = course.CourseCode,
                 Name = course.Name,
-                CourseCode = course.CoursesCode,
                 DepartmentId = course.DepartmentId,
                 Semester = course.Semester,
                 CreditUnits = course.CreditUnits,
@@ -422,9 +435,8 @@ namespace AirCode.Services.Courses
     // Firestore model for serialization
     public class CourseFirestoreModel
     {
-        public string Id { get; set; }
+        public string CourseCode { get; set; } // Changed from Id to CourseCode
         public string Name { get; set; }
-        public string CourseCode { get; set; }
         public string DepartmentId { get; set; }
         public SemesterType Semester { get; set; }
         public byte CreditUnits { get; set; }
