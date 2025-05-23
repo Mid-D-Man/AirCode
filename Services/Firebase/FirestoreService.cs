@@ -126,7 +126,7 @@ namespace AirCode.Services.Firebase
                 return false;
             }
         }
-
+       
         public async Task<bool> DeleteDocumentAsync(string collection, string id)
         {
             try

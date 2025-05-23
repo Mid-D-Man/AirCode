@@ -9,6 +9,7 @@ using AirCode.Services.Firebase;
 using AirCode.Utilities.HelperScripts;
 using AirCode.Utilities.ObjectPooling;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 
 namespace AirCode.Services.Courses
 {
@@ -220,30 +221,37 @@ namespace AirCode.Services.Courses
         {
             if (_disposed) throw new ObjectDisposedException(nameof(CourseService));
             if (course == null || string.IsNullOrEmpty(course.CourseCode)) return false;
-            
+    
             try
             {
                 var levelDoc = GetDocumentFromLevel(course.Level);
-                var levelCourses = await _firestoreService.GetDocumentAsync<Dictionary<string, CourseFirestoreModel>>(_courseCollection, levelDoc);
-                
-                if (levelCourses == null || !levelCourses.ContainsKey(course.CourseCode))
-                {
-                    return false;
-                }
-                
+        
+                // Get current document as generic object to preserve structure
+                var documentData = await _firestoreService.GetDocumentAsync<object>(_courseCollection, levelDoc);
+        
+                if (documentData == null) return false;
+        
+                // Convert to dictionary for manipulation
+                var jsonString = JsonConvert.SerializeObject(documentData);
+                var levelCourses = JsonConvert.DeserializeObject<Dictionary<string, object>>(jsonString);
+        
+                if (!levelCourses.ContainsKey(course.CourseCode)) return false;
+        
+                // Create updated course with proper timestamp
                 var updatedCourse = course.WithModification("System");
                 var firestoreModel = MapEntityToFirestoreModel(updatedCourse);
+        
+                // Update only the specific course in the dictionary
                 levelCourses[course.CourseCode] = firestoreModel;
-                
+        
                 return await _firestoreService.UpdateDocumentAsync(_courseCollection, levelDoc, levelCourses);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error updating course: {ex.Message}");
+                Console.WriteLine($"Error updating course {course.CourseCode}: {ex.Message}");
                 return false;
             }
         }
-
         public async Task<bool> DeleteCourseAsync(string courseId)
         {
             if (_disposed) throw new ObjectDisposedException(nameof(CourseService));
@@ -370,14 +378,14 @@ namespace AirCode.Services.Courses
                 timeSlots.AddRange(model.Schedule.Select(s => new TimeSlot
                 {
                     Day = s.Day,
-                    StartTime = s.StartTime,
-                    EndTime = s.EndTime,
+                    StartTime = TimeSpan.TryParse(s.StartTime, out var start) ? start : TimeSpan.Zero,
+                    EndTime = TimeSpan.TryParse(s.EndTime, out var end) ? end : TimeSpan.Zero,
                     Location = s.Location ?? "TBA"
                 }));
             }
-    
+
             var schedule = new CourseSchedule(timeSlots);
-    
+
             return new Course(
                 model.CourseCode ?? "",
                 model.Name ?? "",
@@ -399,12 +407,12 @@ namespace AirCode.Services.Courses
                 scheduleList.AddRange(course.Schedule.TimeSlots.Select(slot => new CourseScheduleFirestoreModel
                 {
                     Day = slot.Day,
-                    StartTime = slot.StartTime,
-                    EndTime = slot.EndTime,
-                    Location = slot.Location
+                    StartTime = slot.StartTime.ToString(@"hh\:mm"), // Consistent format
+                    EndTime = slot.EndTime.ToString(@"hh\:mm"),     // Consistent format
+                    Location = slot.Location ?? "TBA"
                 }));
             }
-    
+
             return new CourseFirestoreModel
             {
                 CourseCode = course.CourseCode,
@@ -435,22 +443,50 @@ namespace AirCode.Services.Courses
     // Firestore model for serialization
     public class CourseFirestoreModel
     {
-        public string CourseCode { get; set; } // Changed from Id to CourseCode
+        [JsonProperty("courseCode")]
+        public string CourseCode { get; set; }
+    
+        [JsonProperty("name")]
         public string Name { get; set; }
+    
+        [JsonProperty("departmentId")]
         public string DepartmentId { get; set; }
+    
+        [JsonProperty("semester")]
+        [JsonConverter(typeof(StringEnumConverter))]
         public SemesterType Semester { get; set; }
+    
+        [JsonProperty("creditUnits")]
         public byte CreditUnits { get; set; }
+    
+        [JsonProperty("schedule")]
         public List<CourseScheduleFirestoreModel> Schedule { get; set; }
+    
+        [JsonProperty("lecturerIds")]
         public List<string> LecturerIds { get; set; }
+    
+        [JsonProperty("lastModified")]
+        [JsonConverter(typeof(IsoDateTimeConverter))]
         public DateTime LastModified { get; set; }
+    
+        [JsonProperty("modifiedBy")]
         public string ModifiedBy { get; set; }
     }
 
     public class CourseScheduleFirestoreModel
     {
+        [JsonProperty("day")]
+        [JsonConverter(typeof(StringEnumConverter))]
         public DayOfWeek Day { get; set; }
-        public TimeSpan StartTime { get; set; }
-        public TimeSpan EndTime { get; set; }
+    
+        [JsonProperty("startTime")]
+        public string StartTime { get; set; } // Format: "HH:mm"
+    
+        [JsonProperty("endTime")]
+        public string EndTime { get; set; } // Format: "HH:mm"
+    
+        [JsonProperty("location")]
         public string Location { get; set; }
     }
+
 }

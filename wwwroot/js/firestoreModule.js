@@ -157,21 +157,28 @@ window.firestoreModule = (function () {
         try {
             if (!isInitialized) await initializeFirestore();
 
-            // Parse the data, handling potential errors
+            // Parse the data with proper error handling
             let data;
             try {
                 data = JSON.parse(jsonData);
-                // Fix for Firebase - remove undefined values which Firebase doesn't support
-                data = JSON.parse(JSON.stringify(data));
+                console.log("Parsed data:", data); // Debug log
+
+                // Proper undefined removal without data corruption
+                data = removeUndefined(data);
+                console.log("Cleaned data:", data); // Debug log
+
             } catch (parseError) {
                 console.error("Error parsing JSON data:", parseError);
+                console.error("Raw JSON:", jsonData); // Debug log
                 return false;
             }
 
             await db.collection(collection).doc(id).update(data);
+            console.log(`Document ${collection}/${id} updated successfully`);
             return true;
         } catch (error) {
             console.error(`Error updating document ${collection}/${id}:`, error);
+            console.error("Update data:", data); // Debug log
 
             // Store locally if offline
             if (isOffline) {
@@ -187,6 +194,23 @@ window.firestoreModule = (function () {
 
             return false;
         }
+    }
+
+// Helper function for proper undefined removal
+    function removeUndefined(obj) {
+        if (obj === null || typeof obj !== 'object') return obj;
+
+        if (Array.isArray(obj)) {
+            return obj.map(removeUndefined).filter(item => item !== undefined);
+        }
+
+        const cleaned = {};
+        for (const [key, value] of Object.entries(obj)) {
+            if (value !== undefined) {
+                cleaned[key] = removeUndefined(value);
+            }
+        }
+        return cleaned;
     }
 
     // Delete a document with better error handling
