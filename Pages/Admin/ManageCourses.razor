@@ -1,7 +1,8 @@
 @page "/Admin/ManageCourses"
 @using AirCode.Layout.AdminLayout.Superior
-@using AirCode.Models.Core
+@using AirCode.Domain.Entities
 @using AirCode.Domain.Enums
+@using AirCode.Domain.ValueObjects
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Components.Forms
 
@@ -10,56 +11,29 @@
 <div class="page-container bg-primary">
     <div class="page-header">
         <h1 class="text-primary">Manage Courses</h1>
-        <button class="btn btn-primary" @onclick="ShowAddCourse" disabled="@(!IsFirebaseConnected)">
+        <button class="btn btn-primary" @onclick="ShowAddForm" disabled="@_isLoading">
             Add New Course
         </button>
     </div>
-
-    <!-- Firebase Connection Status -->
-    @if (!IsFirebaseConnected)
-    {
-        <div class="alert alert-warning">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <strong>Firebase Connection Issue</strong><br />
-                    @if (!string.IsNullOrEmpty(FirebaseConnectionError))
-                    {
-                        <span>@FirebaseConnectionError</span>
-                    }
-                    else
-                    {
-                        <span>Not connected to Firebase database.</span>
-                    }
-                </div>
-                <button class="btn btn-warning" @onclick="RetryFirebaseConnection" disabled="@IsLoading">
-                    @if (IsLoading)
-                    {
-                        <span class="spinner-border spinner-border-sm me-2"></span>
-                    }
-                    Retry Connection
-                </button>
-            </div>
-        </div>
-    }
-    else
-    {
-        <div class="alert alert-success">
-            <strong>Firebase Connected</strong> - Database is ready for operations.
-        </div>
-    }
 
     <!-- Filters Section -->
     <div class="filter-section bg-secondary border-theme">
         <div class="filter-container">
             <div class="filter-item">
+                <label for="searchTerm">Search:</label>
+                <input id="searchTerm" class="form-control" @bind="_searchTerm" @bind:event="oninput" 
+                       placeholder="Search by name or code..." />
+            </div>
+
+            <div class="filter-item">
                 <label for="departmentFilter">Department:</label>
-                <input id="departmentFilter" class="form-control" @bind="DepartmentFilter" @bind:event="oninput" 
-                       disabled="@(!IsFirebaseConnected)" />
+                <input id="departmentFilter" class="form-control" @bind="_filterDepartment" @bind:event="oninput" 
+                       placeholder="Enter department code..." />
             </div>
 
             <div class="filter-item">
                 <label for="levelFilter">Level:</label>
-                <select id="levelFilter" class="form-control" @bind="LevelFilter" disabled="@(!IsFirebaseConnected)">
+                <select id="levelFilter" class="form-control" @bind="_filterLevel" @onchange="OnFilterChanged">
                     <option value="">All Levels</option>
                     @foreach (var level in Enum.GetValues(typeof(LevelType)))
                     {
@@ -70,7 +44,7 @@
 
             <div class="filter-item">
                 <label for="semesterFilter">Semester:</label>
-                <select id="semesterFilter" class="form-control" @bind="SemesterFilter" disabled="@(!IsFirebaseConnected)">
+                <select id="semesterFilter" class="form-control" @bind="_filterSemester" @onchange="OnFilterChanged">
                     <option value="">All Semesters</option>
                     @foreach (var semester in Enum.GetValues(typeof(SemesterType)))
                     {
@@ -79,33 +53,21 @@
                 </select>
             </div>
 
-            <button class="btn btn-secondary" @onclick="ApplyFilters" disabled="@(!IsFirebaseConnected)">
+            <button class="btn btn-secondary" @onclick="ApplyFilters">
                 Apply Filters
             </button>
-            <button class="btn btn-outline-secondary" @onclick="ResetFilters" disabled="@(!IsFirebaseConnected)">
+            <button class="btn btn-outline-secondary" @onclick="ResetFilters">
                 Reset
             </button>
         </div>
     </div>
 
     <!-- Loading and Error States -->
-    @if (IsLoading)
+    @if (_isLoading)
     {
         <div class="loading-spinner">
             <div class="spinner"></div>
             <p>Loading...</p>
-        </div>
-    }
-    else if (!string.IsNullOrEmpty(ErrorMessage))
-    {
-        <div class="alert alert-danger">
-            @ErrorMessage
-        </div>
-    }
-    else if (!IsFirebaseConnected)
-    {
-        <div class="empty-state bg-secondary border-theme">
-            <p>Please establish Firebase connection to manage courses.</p>
         </div>
     }
     else if (FilteredCourses.Count == 0)
@@ -118,27 +80,28 @@
     {
         <!-- Courses Grid -->
         <div class="card-grid">
-            @foreach (var course in FilteredCourses)
+            @foreach (var course in PaginatedCourses)
             {
                 <div class="course-card bg-secondary border-theme">
                     <div class="course-header">
                         <h3 class="course-title">@course.Name</h3>
-                        <span class="course-code">@course.Id</span>
+                        <span class="course-code">@course.CoursesCode</span>
                     </div>
                     <div class="course-info">
-                        <p><strong>Department:</strong> @course.Department</p>
+                        <p><strong>Course ID:</strong> @course.CourseId</p>
+                        <p><strong>Department:</strong> @course.DepartmentId</p>
                         <p><strong>Level:</strong> @course.Level</p>
                         <p><strong>Semester:</strong> @course.Semester</p>
                         <p><strong>Credit Units:</strong> @course.CreditUnits</p>
                     </div>
                     <div class="course-schedule">
                         <h4>Schedule</h4>
-                        @if (course.Schedule?.Count > 0)
+                        @if (course.Schedule.TimeSlots.Count > 0)
                         {
                             <ul>
-                                @foreach (var slot in course.Schedule)
+                                @foreach (var slot in course.Schedule.TimeSlots)
                                 {
-                                    <li>@slot.Day: @slot.StartTime.ToString("hh\\:mm") - @slot.EndTime.ToString("hh\\:mm")  @slot.Location</li>
+                                    <li>@slot.Day: @slot.StartTime.ToString(@"hh\:mm") - @slot.EndTime.ToString(@"hh\:mm") @slot.Location</li>
                                 }
                             </ul>
                         }
@@ -149,12 +112,12 @@
                     </div>
                     <div class="course-lecturers">
                         <h4>Lecturers</h4>
-                        @if (course.Lecturers?.Count > 0)
+                        @if (course.LecturerIds?.Count > 0)
                         {
                             <ul>
-                                @foreach (var lecturer in course.Lecturers)
+                                @foreach (var lecturerId in course.LecturerIds)
                                 {
-                                    <li>@lecturer.Name</li>
+                                    <li>@lecturerId</li>
                                 }
                             </ul>
                         }
@@ -164,130 +127,184 @@
                         }
                     </div>
                     <div class="course-actions">
-                        <button class="btn btn-primary" @onclick="() => ShowEditCourse(course)">Edit</button>
-                        <button class="btn btn-danger" @onclick="() => DeleteCourseAsync(course.Id)">Delete</button>
+                        <button class="btn btn-primary" @onclick="() => ShowEditForm(course)">Edit</button>
+                        <button class="btn btn-danger" @onclick="() => ConfirmDelete(course)">Delete</button>
                     </div>
                 </div>
             }
         </div>
+
+        <!-- Pagination -->
+        @if (TotalPages > 1)
+        {
+            <div class="pagination-container">
+                <div class="pagination">
+                    <button class="pagination-btn" @onclick="() => ChangePage(1)" disabled="@(CurrentPage == 1)">
+                        &laquo;
+                    </button>
+                    <button class="pagination-btn" @onclick="() => ChangePage(CurrentPage - 1)" disabled="@(CurrentPage == 1)">
+                        &lsaquo;
+                    </button>
+
+                    @for (int i = StartPage; i <= EndPage; i++)
+                    {
+                        var pageNumber = i;
+                        <button class="pagination-btn @(pageNumber == CurrentPage ? "active" : "")" 
+                                @onclick="() => ChangePage(pageNumber)">
+                            @pageNumber
+                        </button>
+                    }
+
+                    <button class="pagination-btn" @onclick="() => ChangePage(CurrentPage + 1)" disabled="@(CurrentPage == TotalPages)">
+                        &rsaquo;
+                    </button>
+                    <button class="pagination-btn" @onclick="() => ChangePage(TotalPages)" disabled="@(CurrentPage == TotalPages)">
+                        &raquo;
+                    </button>
+                </div>
+                <div class="pagination-info">
+                    Page @CurrentPage of @TotalPages (@FilteredCourses.Count total courses)
+                </div>
+            </div>
+        }
     }
 </div>
 
 <!-- Add/Edit Modal -->
-@if (ShowAddEditModal)
+@if (_showAddForm || _showEditForm)
 {
-    <div class="modal-backdrop" @onclick="CloseModal"></div>
+    <div class="modal-backdrop" @onclick="CancelForm"></div>
     <div class="modal" @onclick:stopPropagation="true">
         <div class="modal-header">
-            <h2>@(IsEditing ? "Edit Course" : "Add New Course")</h2>
-            <button class="close-btn" @onclick="CloseModal">&times;</button>
+            <h2>@(_showEditForm ? "Edit Course" : "Add New Course")</h2>
+            <button class="close-btn" @onclick="CancelForm">&times;</button>
         </div>
         <div class="modal-body">
-            <EditForm Model="FormModel" OnValidSubmit="SaveCourseAsync">
+            <EditForm Model="this" OnValidSubmit="HandleValidSubmit">
                 <DataAnnotationsValidator />
-                <ValidationSummary />
 
                 <div class="form-group">
-                    <label for="courseName">Course Name:</label>
-                    <InputText id="courseName" class="form-control" @bind-Value="FormModel.Name" />
-                    <ValidationMessage For="@(() => FormModel.Name)" />
+                    <label for="courseId">Course ID:</label>
+                    <input id="courseId" class="form-control" @bind="_courseId" disabled="@_showEditForm" />
                 </div>
 
                 <div class="form-group">
-                    <label for="department">Department:</label>
-                    <InputText id="department" class="form-control" @bind-Value="FormModel.Department" />
-                    <ValidationMessage For="@(() => FormModel.Department)" />
+                    <label for="courseName">Course Name:</label>
+                    <input id="courseName" class="form-control" @bind="_courseName" />
+                </div>
+
+                <div class="form-group">
+                    <label for="courseCode">Course Code:</label>
+                    <input id="courseCode" class="form-control" @bind="_courseCode" />
+                </div>
+
+                <div class="form-group">
+                    <label for="department">Department ID:</label>
+                    <input id="department" class="form-control" @bind="_departmentId" />
                 </div>
 
                 <div class="form-row">
                     <div class="form-group col">
                         <label for="level">Level:</label>
-                        <InputSelect id="level" class="form-control" @bind-Value="FormModel.Level">
+                        <select id="level" class="form-control" @bind="_level">
                             @foreach (var level in Enum.GetValues(typeof(LevelType)))
                             {
                                 <option value="@level">@level</option>
                             }
-                        </InputSelect>
-                        <ValidationMessage For="@(() => FormModel.Level)" />
+                        </select>
                     </div>
 
                     <div class="form-group col">
                         <label for="semester">Semester:</label>
-                        <InputSelect id="semester" class="form-control" @bind-Value="FormModel.Semester">
+                        <select id="semester" class="form-control" @bind="_semester">
                             @foreach (var semester in Enum.GetValues(typeof(SemesterType)))
                             {
                                 <option value="@semester">@semester</option>
                             }
-                        </InputSelect>
-                        <ValidationMessage For="@(() => FormModel.Semester)" />
+                        </select>
                     </div>
 
                     <div class="form-group col">
                         <label for="creditUnits">Credit Units:</label>
-                        <InputNumber id="creditUnits" class="form-control" @bind-Value="FormModel.CreditUnits" />
-                        <ValidationMessage For="@(() => FormModel.CreditUnits)" />
+                        <input id="creditUnits" type="number" class="form-control" @bind="_creditUnits" min="1" max="10" />
                     </div>
                 </div>
 
-                <h3>Schedule</h3>
-                @if (FormModel.ScheduleItems.Count == 0)
-                {
-                    <p>No schedule items. <button type="button" class="btn btn-link p-0" @onclick="() => FormModel.AddScheduleItem()">Add one</button></p>
-                }
-                else
-                {
-                    @for (int i = 0; i < FormModel.ScheduleItems.Count; i++)
+                <h3>Lecturers</h3>
+                <div class="lecturer-section">
+                    <div class="form-row">
+                        <div class="form-group col">
+                            <input class="form-control" @bind="_newLecturerId" placeholder="Lecturer ID" />
+                        </div>
+                        <div class="form-group col-auto">
+                            <button type="button" class="btn btn-secondary" @onclick="AddLecturer">Add</button>
+                        </div>
+                    </div>
+                    @if (_lecturerIds.Count > 0)
                     {
-                        var index = i;
-                        <div class="schedule-item border p-3 mb-3">
-                            <div class="form-row">
-                                <div class="form-group col">
-                                    <label>Day:</label>
-                                    <InputSelect class="form-control" @bind-Value="FormModel.ScheduleItems[index].Day">
-                                        @foreach (var day in Enum.GetValues(typeof(DayOfWeek)))
-                                        {
-                                            <option value="@day">@day</option>
-                                        }
-                                    </InputSelect>
-                                </div>
+                        <ul class="lecturer-list">
+                            @foreach (var lecturerId in _lecturerIds)
+                            {
+                                <li>
+                                    @lecturerId
+                                    <button type="button" class="btn btn-sm btn-danger" @onclick="() => RemoveLecturer(lecturerId)">Remove</button>
+                                </li>
+                            }
+                        </ul>
+                    }
+                </div>
 
-                                <div class="form-group col">
-                                    <label>Start Time:</label>
-                                    <input class="form-control" type="time"
-                                           value="@FormModel.ScheduleItems[index].StartTime.ToString(@"hh\:mm")"
-                                           @onchange="@(e => UpdateStartTime(index, e))" />
-                                </div>
+                <h3>Schedule</h3>
+                <div class="schedule-section">
+                    <div class="form-row">
+                        <div class="form-group col">
+                            <label>Day:</label>
+                            <select class="form-control" @bind="_newDay">
+                                @foreach (var day in Enum.GetValues(typeof(DayOfWeek)))
+                                {
+                                    <option value="@day">@day</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="form-group col">
+                            <label>Start Time:</label>
+                            <input class="form-control" type="time"
+                                   value="@_newStartTime.ToString(@"hh\:mm")"
+                                   @onchange="@(e => UpdateStartTime(e))" />
+                        </div>
+                        <div class="form-group col">
+                            <label>End Time:</label>
+                            <input class="form-control" type="time"
+                                   value="@_newEndTime.ToString(@"hh\:mm")"
+                                   @onchange="@(e => UpdateEndTime(e))" />
+                        </div>
+                        <div class="form-group col">
+                            <label>Location:</label>
+                            <input class="form-control" @bind="_newLocation" placeholder="Room/Location" />
+                        </div>
+                        <div class="form-group col-auto align-self-end">
+                            <button type="button" class="btn btn-secondary" @onclick="AddTimeSlot">Add</button>
+                        </div>
+                    </div>
 
-                                <div class="form-group col">
-                                    <label>End Time:</label>
-                                    <input class="form-control" type="time"
-                                           value="@FormModel.ScheduleItems[index].EndTime.ToString(@"hh\:mm")"
-                                           @onchange="@(e => UpdateEndTime(index, e))" />
+                    @if (_timeSlots.Count > 0)
+                    {
+                        <div class="schedule-list">
+                            @foreach (var slot in _timeSlots)
+                            {
+                                <div class="schedule-item">
+                                    <span>@slot.Day: @slot.StartTime.ToString(@"hh\:mm") - @slot.EndTime.ToString(@"hh\:mm") @slot.Location</span>
+                                    <button type="button" class="btn btn-sm btn-danger" @onclick="() => RemoveTimeSlot(slot)">Remove</button>
                                 </div>
-                                
-                                <div class="form-group col">
-                                    <label>Location:</label>
-                                    <InputText class="form-control" 
-                                               @bind-Value="FormModel.ScheduleItems[index].Location" />
-                                </div>
-
-                                <div class="form-group col-auto align-self-end">
-                                    <button type="button" class="btn btn-danger" 
-                                            @onclick="() => FormModel.RemoveScheduleItem(index)">Remove</button>
-                                </div>
-                            </div>
+                            }
                         </div>
                     }
-                }
-
-                <button type="button" class="btn btn-secondary mb-3" @onclick="() => FormModel.AddScheduleItem()">
-                    Add Schedule Item
-                </button>
+                </div>
 
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @onclick="CloseModal">Cancel</button>
-                    <button type="submit" class="btn btn-primary" disabled="@IsLoading">
-                        @if (IsLoading)
+                    <button type="button" class="btn btn-secondary" @onclick="CancelForm">Cancel</button>
+                    <button type="submit" class="btn btn-primary" disabled="@_isLoading">
+                        @if (_isLoading)
                         {
                             <span class="spinner-border spinner-border-sm me-2"></span>
                         }
@@ -295,6 +312,26 @@
                     </button>
                 </div>
             </EditForm>
+        </div>
+    </div>
+}
+
+<!-- Delete Confirmation Modal -->
+@if (_showDeleteConfirmation)
+{
+    <div class="modal-backdrop" @onclick="CancelDelete"></div>
+    <div class="modal" @onclick:stopPropagation="true">
+        <div class="modal-header">
+            <h2>Confirm Delete</h2>
+            <button class="close-btn" @onclick="CancelDelete">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p>Are you sure you want to delete the course <strong>@_courseToDelete?.Name</strong>?</p>
+            <p>This action cannot be undone.</p>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" @onclick="CancelDelete">Cancel</button>
+            <button type="button" class="btn btn-danger" @onclick="DeleteCourse">Delete</button>
         </div>
     </div>
 }

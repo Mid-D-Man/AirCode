@@ -43,6 +43,11 @@ public partial class ManageCourses : ComponentBase
     private TimeSpan _newEndTime = new(10, 0, 0);
     private string _newLocation = string.Empty;
 
+    
+// Pagination properties
+    private int _currentPage = 1;
+    private int _pageSize = 10;
+
     protected override async Task OnInitializedAsync()
     {
         await LoadCourses();
@@ -393,6 +398,92 @@ public partial class ManageCourses : ComponentBase
         catch (Exception ex)
         {
             await JSRuntime.InvokeVoidAsync("alert", $"Error removing lecturer: {ex.Message}");
+        }
+    }
+    private List<Course> PaginatedCourses
+    {
+        get
+        {
+            var filtered = FilteredCourses;
+            var skip = (_currentPage - 1) * _pageSize;
+            return filtered.Skip(skip).Take(_pageSize).ToList();
+        }
+    }
+
+    private int TotalPages => (int)Math.Ceiling((double)FilteredCourses.Count / _pageSize);
+
+    private int StartPage
+    {
+        get
+        {
+            var start = Math.Max(1, _currentPage - 2);
+            return Math.Min(start, Math.Max(1, TotalPages - 4));
+        }
+    }
+
+    private int EndPage
+    {
+        get
+        {
+            var end = Math.Min(TotalPages, StartPage + 4);
+            return end;
+        }
+    }
+
+    private int CurrentPage => _currentPage;
+
+// Add these methods
+    private void ChangePage(int page)
+    {
+        if (page >= 1 && page <= TotalPages)
+        {
+            _currentPage = page;
+            StateHasChanged();
+        }
+    }
+
+    private void ResetPagination()
+    {
+        _currentPage = 1;
+    }
+
+// Update existing methods to reset pagination when filters change
+    private async Task ApplyFilters()
+    {
+        ResetPagination();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ResetFilters()
+    {
+        _searchTerm = string.Empty;
+        _filterDepartment = string.Empty;
+        _filterLevel = LevelType.Level100;
+        _filterSemester = SemesterType.FirstSemester;
+        ResetPagination();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task OnFilterChanged()
+    {
+        ResetPagination();
+        await InvokeAsync(StateHasChanged);
+    }
+
+// Add these helper methods for time handling in the modal
+    private void UpdateStartTime(ChangeEventArgs e)
+    {
+        if (TimeSpan.TryParse(e.Value?.ToString(), out var time))
+        {
+            _newStartTime = time;
+        }
+    }
+
+    private void UpdateEndTime(ChangeEventArgs e)
+    {
+        if (TimeSpan.TryParse(e.Value?.ToString(), out var time))
+        {
+            _newEndTime = time;
         }
     }
 }
