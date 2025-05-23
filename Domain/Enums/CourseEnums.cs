@@ -13,6 +13,7 @@ public enum LevelType
     Level200,
     Level300,
     Level400,
+    Level500,
     LevelExtra
 }
 

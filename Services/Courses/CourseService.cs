@@ -5,72 +5,91 @@ using System.Threading.Tasks;
 using AirCode.Domain.Entities;
 using AirCode.Domain.Enums;
 using AirCode.Domain.ValueObjects;
-using AirCode.Models.Core;
 using AirCode.Services.Firebase;
-using AirCode.Services.Permissions;
-using AirCode.Services.Storage;
+using AirCode.Utilities.ObjectPooling;
 
 namespace AirCode.Services.Courses
 {
-    public class CourseService : ICourseService
+    public class CourseService : ICourseService, IDisposable
     {
         private readonly IFirestoreService _firestoreService;
+        private readonly MID_ComponentObjectPool<List<Course>> _courseListPool;
+        private readonly MID_ComponentObjectPool<Dictionary<string, Course>> _courseDictPool;
         private readonly string _courseCollection = "COURSES";
+        private bool _disposed;
         
         public CourseService(IFirestoreService firestoreService)
         {
             _firestoreService = firestoreService ?? throw new ArgumentNullException(nameof(firestoreService));
+            
+            // Initialize object pools
+            _courseListPool = new MID_ComponentObjectPool<List<Course>>(
+                () => new List<Course>(),
+                list => list.Clear(),
+                maxPoolSize: 50,
+                cleanupInterval: TimeSpan.FromMinutes(10)
+            );
+            
+            _courseDictPool = new MID_ComponentObjectPool<Dictionary<string, Course>>(
+                () => new Dictionary<string, Course>(),
+                dict => dict.Clear(),
+                maxPoolSize: 30,
+                cleanupInterval: TimeSpan.FromMinutes(10)
+            );
         }
 
-        public async Task<List<CourseDto>> GetAllCoursesAsync()
+        public async Task<List<Course>> GetAllCoursesAsync()
         {
-            var allCourses = new List<CourseDto>();
+            if (_disposed) throw new ObjectDisposedException(nameof(CourseService));
+            
+            using var pooledList = _courseListPool.GetPooled();
+            var allCourses = pooledList.Object;
             
             try
             {
-                // Get courses from all level documents
                 var levels = new[] { "Courses_100Level", "Courses_200Level", "Courses_300Level", "Courses_400Level", "Courses_500Level" };
                 
                 foreach (var levelDoc in levels)
                 {
-                    var levelCourses = await _firestoreService.GetDocumentAsync<Dictionary<string, CourseDto>>(_courseCollection, levelDoc);
+                    var levelCourses = await _firestoreService.GetDocumentAsync<Dictionary<string, CourseFirestoreModel>>(_courseCollection, levelDoc);
                     
                     if (levelCourses != null)
                     {
-                        foreach (var course in levelCourses.Values)
+                        foreach (var courseData in levelCourses.Values)
                         {
-                            // Ensure the course has the correct level based on the document
-                            course.Level = GetLevelFromDocument(levelDoc);
+                            var course = MapFirestoreModelToEntity(courseData, GetLevelFromDocument(levelDoc));
                             allCourses.Add(course);
                         }
                     }
                 }
+                
+                // Return a new list to avoid pool contamination
+                return new List<Course>(allCourses);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Error getting all courses: {ex.Message}");
                 throw;
             }
-            
-            return allCourses;
         }
 
-        public async Task<CourseDto> GetCourseByIdAsync(string courseId)
+        public async Task<Course> GetCourseByIdAsync(string courseId)
         {
+            if (_disposed) throw new ObjectDisposedException(nameof(CourseService));
+            if (string.IsNullOrEmpty(courseId)) return null;
+            
             try
             {
-                // We need to search through all level documents to find the course
                 var levels = new[] { "Courses_100Level", "Courses_200Level", "Courses_300Level", "Courses_400Level", "Courses_500Level" };
                 
                 foreach (var levelDoc in levels)
                 {
-                    var levelCourses = await _firestoreService.GetDocumentAsync<Dictionary<string, CourseDto>>(_courseCollection, levelDoc);
+                    var levelCourses = await _firestoreService.GetDocumentAsync<Dictionary<string, CourseFirestoreModel>>(_courseCollection, levelDoc);
                     
                     if (levelCourses != null && levelCourses.ContainsKey(courseId))
                     {
-                        var course = levelCourses[courseId];
-                        course.Level = GetLevelFromDocument(levelDoc);
-                        return course;
+                        var courseData = levelCourses[courseId];
+                        return MapFirestoreModelToEntity(courseData, GetLevelFromDocument(levelDoc));
                     }
                 }
             }
@@ -83,76 +102,74 @@ namespace AirCode.Services.Courses
             return null;
         }
 
-        public async Task<List<CourseDto>> GetCoursesByDepartmentAsync(string departmentId)
+        public async Task<List<Course>> GetCoursesByDepartmentAsync(string departmentId)
         {
+            if (_disposed) throw new ObjectDisposedException(nameof(CourseService));
+            
             var allCourses = await GetAllCoursesAsync();
-            return allCourses.Where(c => c.Department?.Equals(departmentId, StringComparison.OrdinalIgnoreCase) == true).ToList();
+            return allCourses.Where(c => c.DepartmentId?.Equals(departmentId, StringComparison.OrdinalIgnoreCase) == true).ToList();
         }
 
-        public async Task<List<CourseDto>> GetCoursesByLevelAsync(LevelType level)
+        public async Task<List<Course>> GetCoursesByLevelAsync(LevelType level)
         {
+            if (_disposed) throw new ObjectDisposedException(nameof(CourseService));
+            
+            using var pooledList = _courseListPool.GetPooled();
+            var courses = pooledList.Object;
+            
             try
             {
                 var levelDoc = GetDocumentFromLevel(level);
-                var levelCourses = await _firestoreService.GetDocumentAsync<Dictionary<string, CourseDto>>(_courseCollection, levelDoc);
+                var levelCourses = await _firestoreService.GetDocumentAsync<Dictionary<string, CourseFirestoreModel>>(_courseCollection, levelDoc);
                 
                 if (levelCourses != null)
                 {
-                    var courses = levelCourses.Values.ToList();
-                    // Ensure all courses have the correct level
-                    foreach (var course in courses)
+                    foreach (var courseData in levelCourses.Values)
                     {
-                        course.Level = level;
+                        var course = MapFirestoreModelToEntity(courseData, level);
+                        courses.Add(course);
                     }
-                    return courses;
                 }
+                
+                return new List<Course>(courses);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Error getting courses by level {level}: {ex.Message}");
                 throw;
             }
+        }
+
+        public async Task<List<Course>> GetCoursesByLecturerAsync(string lecturerId)
+        {
+            if (_disposed) throw new ObjectDisposedException(nameof(CourseService));
             
-            return new List<CourseDto>();
-        }
-
-        public async Task<List<CourseDto>> GetCoursesByLecturerAsync(string lecturerId)
-        {
             var allCourses = await GetAllCoursesAsync();
-            return allCourses.Where(c => c.Lecturers?.Any(l => l.Id == lecturerId) == true).ToList();
+            return allCourses.Where(c => c.LecturerIds?.Contains(lecturerId) == true).ToList();
         }
 
-        public async Task<List<CourseDto>> GetCoursesBySemesterAsync(SemesterType semester)
+        public async Task<List<Course>> GetCoursesBySemesterAsync(SemesterType semester)
         {
+            if (_disposed) throw new ObjectDisposedException(nameof(CourseService));
+            
             var allCourses = await GetAllCoursesAsync();
             return allCourses.Where(c => c.Semester == semester).ToList();
         }
 
-        public async Task<bool> AddCourseAsync(CourseDto courseDto)
+        public async Task<bool> AddCourseAsync(Course course)
         {
+            if (_disposed) throw new ObjectDisposedException(nameof(CourseService));
+            if (course == null) return false;
+            
             try
             {
-                // Generate ID if not provided
-                if (string.IsNullOrEmpty(courseDto.Id))
-                {
-                    courseDto.Id = Guid.NewGuid().ToString();
-                }
+                var levelDoc = GetDocumentFromLevel(course.Level);
+                var levelCourses = await _firestoreService.GetDocumentAsync<Dictionary<string, CourseFirestoreModel>>(_courseCollection, levelDoc)
+                                  ?? new Dictionary<string, CourseFirestoreModel>();
                 
-                // Set timestamps
-                courseDto.CreatedAt = DateTime.Now;
-                courseDto.UpdatedAt = DateTime.Now;
+                var firestoreModel = MapEntityToFirestoreModel(course);
+                levelCourses[course.CourseId] = firestoreModel;
                 
-                // Get the appropriate document based on level
-                var levelDoc = GetDocumentFromLevel(courseDto.Level);
-                
-                // Get existing courses for this level
-                var levelCourses = await _firestoreService.GetDocumentAsync<Dictionary<string, CourseDto>>(_courseCollection, levelDoc)
-                                  ?? new Dictionary<string, CourseDto>();
-                
-                // Add the new course
-                levelCourses[courseDto.Id] = courseDto;
-                
-                // Update the document
                 return await _firestoreService.UpdateDocumentAsync(_courseCollection, levelDoc, levelCourses);
             }
             catch (Exception ex)
@@ -162,33 +179,25 @@ namespace AirCode.Services.Courses
             }
         }
 
-        public async Task<bool> UpdateCourseAsync(CourseDto courseDto)
+        public async Task<bool> UpdateCourseAsync(Course course)
         {
+            if (_disposed) throw new ObjectDisposedException(nameof(CourseService));
+            if (course == null || string.IsNullOrEmpty(course.CourseId)) return false;
+            
             try
             {
-                if (string.IsNullOrEmpty(courseDto.Id))
+                var levelDoc = GetDocumentFromLevel(course.Level);
+                var levelCourses = await _firestoreService.GetDocumentAsync<Dictionary<string, CourseFirestoreModel>>(_courseCollection, levelDoc);
+                
+                if (levelCourses == null || !levelCourses.ContainsKey(course.CourseId))
                 {
                     return false;
                 }
                 
-                // Update timestamp
-                courseDto.UpdatedAt = DateTime.Now;
+                var updatedCourse = course.WithModification("System");
+                var firestoreModel = MapEntityToFirestoreModel(updatedCourse);
+                levelCourses[course.CourseId] = firestoreModel;
                 
-                // Get the appropriate document based on level
-                var levelDoc = GetDocumentFromLevel(courseDto.Level);
-                
-                // Get existing courses for this level
-                var levelCourses = await _firestoreService.GetDocumentAsync<Dictionary<string, CourseDto>>(_courseCollection, levelDoc);
-                
-                if (levelCourses == null || !levelCourses.ContainsKey(courseDto.Id))
-                {
-                    return false; // Course not found
-                }
-                
-                // Update the course
-                levelCourses[courseDto.Id] = courseDto;
-                
-                // Update the document
                 return await _firestoreService.UpdateDocumentAsync(_courseCollection, levelDoc, levelCourses);
             }
             catch (Exception ex)
@@ -200,31 +209,25 @@ namespace AirCode.Services.Courses
 
         public async Task<bool> DeleteCourseAsync(string courseId)
         {
+            if (_disposed) throw new ObjectDisposedException(nameof(CourseService));
+            if (string.IsNullOrEmpty(courseId)) return false;
+            
             try
             {
-                if (string.IsNullOrEmpty(courseId))
-                {
-                    return false;
-                }
-                
-                // We need to find which level document contains this course
                 var levels = new[] { "Courses_100Level", "Courses_200Level", "Courses_300Level", "Courses_400Level", "Courses_500Level" };
                 
                 foreach (var levelDoc in levels)
                 {
-                    var levelCourses = await _firestoreService.GetDocumentAsync<Dictionary<string, CourseDto>>(_courseCollection, levelDoc);
+                    var levelCourses = await _firestoreService.GetDocumentAsync<Dictionary<string, CourseFirestoreModel>>(_courseCollection, levelDoc);
                     
                     if (levelCourses != null && levelCourses.ContainsKey(courseId))
                     {
-                        // Remove the course
                         levelCourses.Remove(courseId);
-                        
-                        // Update the document
                         return await _firestoreService.UpdateDocumentAsync(_courseCollection, levelDoc, levelCourses);
                     }
                 }
                 
-                return false; // Course not found
+                return false;
             }
             catch (Exception ex)
             {
@@ -235,34 +238,27 @@ namespace AirCode.Services.Courses
 
         public async Task<bool> AssignLecturerToCourseAsync(string courseId, string lecturerId)
         {
+            if (_disposed) throw new ObjectDisposedException(nameof(CourseService));
+            
             try
             {
                 var course = await GetCourseByIdAsync(courseId);
-                if (course == null)
+                if (course == null) return false;
+                
+                var lecturerIds = course.LecturerIds?.ToList() ?? new List<string>();
+                if (!lecturerIds.Contains(lecturerId))
                 {
-                    return false;
+                    lecturerIds.Add(lecturerId);
+                    var updatedCourse = new Course(
+                        course.CourseId, course.Name, course.CoursesCode, course.DepartmentId,
+                        course.Level, course.Semester, course.CreditUnits, course.Schedule,
+                        lecturerIds, DateTime.UtcNow, "System"
+                    );
+                    
+                    return await UpdateCourseAsync(updatedCourse);
                 }
                 
-                // Initialize lecturers list if null
-                if (course.Lecturers == null)
-                {
-                    course.Lecturers = new List<SimpleLecturerDto>();
-                }
-                
-                // Check if lecturer is already assigned
-                if (course.Lecturers.Any(l => l.Id == lecturerId))
-                {
-                    return true; // Already assigned
-                }
-                
-                // Add lecturer (in a real implementation, you'd fetch lecturer details from user service)
-                course.Lecturers.Add(new SimpleLecturerDto
-                {
-                    Id = lecturerId,
-                    Name = "Lecturer Name" // This would be fetched from a user service
-                });
-                
-                return await UpdateCourseAsync(course);
+                return true;
             }
             catch (Exception ex)
             {
@@ -273,23 +269,26 @@ namespace AirCode.Services.Courses
 
         public async Task<bool> RemoveLecturerFromCourseAsync(string courseId, string lecturerId)
         {
+            if (_disposed) throw new ObjectDisposedException(nameof(CourseService));
+            
             try
             {
                 var course = await GetCourseByIdAsync(courseId);
-                if (course == null || course.Lecturers == null)
+                if (course == null) return false;
+                
+                var lecturerIds = course.LecturerIds?.ToList() ?? new List<string>();
+                if (lecturerIds.Remove(lecturerId))
                 {
-                    return false;
+                    var updatedCourse = new Course(
+                        course.CourseId, course.Name, course.CoursesCode, course.DepartmentId,
+                        course.Level, course.Semester, course.CreditUnits, course.Schedule,
+                        lecturerIds, DateTime.UtcNow, "System"
+                    );
+                    
+                    return await UpdateCourseAsync(updatedCourse);
                 }
                 
-                // Remove lecturer
-                var lecturerToRemove = course.Lecturers.FirstOrDefault(l => l.Id == lecturerId);
-                if (lecturerToRemove != null)
-                {
-                    course.Lecturers.Remove(lecturerToRemove);
-                    return await UpdateCourseAsync(course);
-                }
-                
-                return true; // Lecturer wasn't assigned anyway
+                return true;
             }
             catch (Exception ex)
             {
@@ -308,7 +307,8 @@ namespace AirCode.Services.Courses
                 LevelType.Level200 => "Courses_200Level",
                 LevelType.Level300 => "Courses_300Level",
                 LevelType.Level400 => "Courses_400Level",
-                _ => "Courses_100Level" // Default fallback
+                LevelType.LevelExtra => "Courses_500Level",
+                _ => "Courses_100Level"
             };
         }
         
@@ -320,109 +320,104 @@ namespace AirCode.Services.Courses
                 "Courses_200Level" => LevelType.Level200,
                 "Courses_300Level" => LevelType.Level300,
                 "Courses_400Level" => LevelType.Level400,
-                _ => LevelType.Level100 // Default fallback
+                "Courses_500Level" => LevelType.LevelExtra,
+                _ => LevelType.Level100
             };
         }
         
-        private Course MapDtoToEntity(CourseDto courseDto)
+        private Course MapFirestoreModelToEntity(CourseFirestoreModel model, LevelType level)
         {
-            // Map CourseScheduleDto to CourseSchedule and other properties
             var timeSlots = new List<TimeSlot>();
-            
-            if (courseDto.Schedule != null)
+            if (model.Schedule != null)
             {
-                foreach (var scheduleDto in courseDto.Schedule)
+                timeSlots.AddRange(model.Schedule.Select(s => new TimeSlot
                 {
-                    timeSlots.Add(new TimeSlot
-                    {
-                        Day = scheduleDto.Day,
-                        StartTime = scheduleDto.StartTime,
-                        EndTime = scheduleDto.EndTime,
-                        Location = scheduleDto.Location
-                    });
-                }
+                    Day = s.Day,
+                    StartTime = s.StartTime,
+                    EndTime = s.EndTime,
+                    Location = s.Location ?? "TBA"
+                }));
             }
             
-            var courseSchedule = new CourseSchedule
-            {
-                TimeSlots = timeSlots
-            };
+            var schedule = new CourseSchedule(timeSlots);
             
-            var lecturerIds = new List<string>();
-            if (courseDto.Lecturers != null)
-            {
-                foreach (var lecturer in courseDto.Lecturers)
-                {
-                    lecturerIds.Add(lecturer.Id);
-                }
-            }
-            
-            return new Course
-            (
-                courseDto.Id,
-                courseDto.Name,
-                courseDto.Department,
-                courseDto.Level,
-                courseDto.Semester,
-                courseSchedule,
-                lecturerIds
+            return new Course(
+                model.Id ?? Guid.NewGuid().ToString(),
+                model.Name ?? "",
+                model.CourseCode ?? "",
+                model.DepartmentId ?? "",
+                level,
+                model.Semester,
+                model.CreditUnits,
+                schedule,
+                model.LecturerIds?.ToList() ?? new List<string>(),
+                model.LastModified = DateTime.UtcNow,
+                model.ModifiedBy ?? "System"
             );
         }
-
-        private CourseDto MapEntityToDto(Course course)
+        
+        private CourseFirestoreModel MapEntityToFirestoreModel(Course course)
         {
-            // Map Course entity to CourseDto
-            var scheduleList = new List<CourseScheduleDto>();
-            
-            if (course.Schedule.TimeSlots.Count >0)
+            var scheduleList = new List<CourseScheduleFirestoreModel>();
+            if (course.Schedule.TimeSlots?.Count > 0)
             {
-                foreach (var slot in course.Schedule.TimeSlots)
+                scheduleList.AddRange(course.Schedule.TimeSlots.Select(slot => new CourseScheduleFirestoreModel
                 {
-                    scheduleList.Add(new CourseScheduleDto
-                    {
-                        Day = slot.Day,
-                        StartTime = slot.StartTime,
-                        EndTime = slot.EndTime,
-                        Location = slot.Location
-                    });
-                }
+                    Day = slot.Day,
+                    StartTime = slot.StartTime,
+                    EndTime = slot.EndTime,
+                    Location = slot.Location
+                }));
             }
             
-            // In a real implementation, you would fetch lecturer details
-            var lecturersList = new List<SimpleLecturerDto>();
-            if (course.LecturerIds != null)
-            {
-                foreach (var id in course.LecturerIds)
-                {
-                    lecturersList.Add(new SimpleLecturerDto
-                    {
-                        Id = id,
-                        Name = "Lecturer Name" // This would be fetched from a user service
-                    });
-                }
-            }
-            
-            return new CourseDto
+            return new CourseFirestoreModel
             {
                 Id = course.CourseId,
                 Name = course.Name,
-                Department = course.DepartmentId,
-                Level = course.Level,
+                CourseCode = course.CoursesCode,
+                DepartmentId = course.DepartmentId,
                 Semester = course.Semester,
-                CreditUnits = 3, // Default or from course entity
+                CreditUnits = course.CreditUnits,
                 Schedule = scheduleList,
-                Lecturers = lecturersList,
-                CreatedAt = DateTime.Now, // Would be from course entity
-                UpdatedAt = course.LastModified
+                LecturerIds = course.LecturerIds?.ToList() ?? new List<string>(),
+                LastModified = course.LastModified,
+                ModifiedBy = course.ModifiedBy
             };
         }
         
-        private string GenerateSecurityToken()
-        {
-            // Generate a unique security token
-            return Guid.NewGuid().ToString();
-        }
-        
         #endregion
+
+        public void Dispose()
+        {
+            if (!_disposed)
+            {
+                _courseListPool?.Dispose();
+                _courseDictPool?.Dispose();
+                _disposed = true;
+            }
+        }
+    }
+
+    // Firestore model for serialization
+    public class CourseFirestoreModel
+    {
+        public string Id { get; set; }
+        public string Name { get; set; }
+        public string CourseCode { get; set; }
+        public string DepartmentId { get; set; }
+        public SemesterType Semester { get; set; }
+        public byte CreditUnits { get; set; }
+        public List<CourseScheduleFirestoreModel> Schedule { get; set; }
+        public List<string> LecturerIds { get; set; }
+        public DateTime LastModified { get; set; }
+        public string ModifiedBy { get; set; }
+    }
+
+    public class CourseScheduleFirestoreModel
+    {
+        public DayOfWeek Day { get; set; }
+        public TimeSpan StartTime { get; set; }
+        public TimeSpan EndTime { get; set; }
+        public string Location { get; set; }
     }
 }
