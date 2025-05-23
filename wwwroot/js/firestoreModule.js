@@ -157,19 +157,19 @@ window.firestoreModule = (function () {
         try {
             if (!isInitialized) await initializeFirestore();
 
-            // Parse the data with proper error handling
             let data;
             try {
                 data = JSON.parse(jsonData);
-                console.log("Parsed data:", data); // Debug log
 
-                // Proper undefined removal without data corruption
-                data = removeUndefined(data);
-                console.log("Cleaned data:", data); // Debug log
+                if (!validateUpdateData(data, 'update')) {
+                    return false;
+                }
+
+                // More conservative undefined removal
+                data = removeUndefinedConservative(data);
 
             } catch (parseError) {
                 console.error("Error parsing JSON data:", parseError);
-                console.error("Raw JSON:", jsonData); // Debug log
                 return false;
             }
 
@@ -178,22 +178,47 @@ window.firestoreModule = (function () {
             return true;
         } catch (error) {
             console.error(`Error updating document ${collection}/${id}:`, error);
-            console.error("Update data:", data); // Debug log
-
-            // Store locally if offline
-            if (isOffline) {
-                const offlineData = {
-                    collection,
-                    id,
-                    data: jsonData,
-                    operation: 'update',
-                    timestamp: new Date().getTime()
-                };
-                storeOfflineOperation(offlineData);
-            }
-
             return false;
         }
+    }
+
+// Conservative undefined removal that preserves structure
+    function removeUndefinedConservative(obj) {
+        if (obj === null || typeof obj !== 'object') return obj;
+
+        if (Array.isArray(obj)) {
+            return obj.map(removeUndefinedConservative);
+        }
+
+        const cleaned = {};
+        for (const [key, value] of Object.entries(obj)) {
+            if (value !== undefined) {
+                if (typeof value === 'object' && value !== null) {
+                    const cleanedValue = removeUndefinedConservative(value);
+                    // Only add if the cleaned value has content
+                    if (Array.isArray(cleanedValue) || Object.keys(cleanedValue).length > 0) {
+                        cleaned[key] = cleanedValue;
+                    }
+                } else {
+                    cleaned[key] = value;
+                }
+            }
+        }
+        return cleaned;
+    }
+    function validateUpdateData(data, operation) {
+        if (!data || typeof data !== 'object') {
+            console.error(`Invalid data for ${operation}:`, data);
+            return false;
+        }
+
+        // Ensure we're not sending empty objects for delete operations
+        if (operation === 'delete' && Object.keys(data).length === 0) {
+            console.error('Cannot delete with empty data object');
+            return false;
+        }
+
+        return true;
     }
 
 // Helper function for proper undefined removal
@@ -237,7 +262,21 @@ window.firestoreModule = (function () {
             return false;
         }
     }
+    async function removeFieldFromDocument(collection, docId, fieldPath) {
+        try {
+            if (!isInitialized) await initializeFirestore();
 
+            const docRef = db.collection(collection).doc(docId);
+            const updateData = {};
+            updateData[fieldPath] = firebase.firestore.FieldValue.delete();
+
+            await docRef.update(updateData);
+            return true;
+        } catch (error) {
+            console.error(`Error removing field ${fieldPath}:`, error);
+            return false;
+        }
+    }
     // Get all documents in a collection with better error handling
     async function getCollection(collection) {
         try {

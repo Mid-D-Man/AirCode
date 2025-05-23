@@ -68,6 +68,7 @@ namespace AirCode.Services.Courses
                     // Skip document metadata and validate key format
                     if (!MID_HelperFunctions.IsValidString(kvp.Key) || 
                         kvp.Key.StartsWith("Courses_") || 
+                        kvp.Key.Equals("id", StringComparison.OrdinalIgnoreCase) ||
                         kvp.Value == null) 
                         continue;
                     
@@ -256,22 +257,30 @@ namespace AirCode.Services.Courses
         {
             if (_disposed) throw new ObjectDisposedException(nameof(CourseService));
             if (string.IsNullOrEmpty(courseId)) return false;
-            
+    
             try
             {
                 var levels = new[] { "Courses_100Level", "Courses_200Level", "Courses_300Level", "Courses_400Level", "Courses_500Level" };
-                
+        
                 foreach (var levelDoc in levels)
                 {
-                    var levelCourses = await _firestoreService.GetDocumentAsync<Dictionary<string, CourseFirestoreModel>>(_courseCollection, levelDoc);
-                    
+                    // Get document as generic object to preserve structure
+                    var documentData = await _firestoreService.GetDocumentAsync<object>(_courseCollection, levelDoc);
+            
+                    if (documentData == null) continue;
+            
+                    // Convert to dictionary for manipulation
+                    var jsonString = JsonConvert.SerializeObject(documentData);
+                    var levelCourses = JsonConvert.DeserializeObject<Dictionary<string, object>>(jsonString);
+            
                     if (levelCourses != null && levelCourses.ContainsKey(courseId))
                     {
                         levelCourses.Remove(courseId);
+                        // Use updateDocument instead of deleteDocument
                         return await _firestoreService.UpdateDocumentAsync(_courseCollection, levelDoc, levelCourses);
                     }
                 }
-                
+        
                 return false;
             }
             catch (Exception ex)
@@ -280,7 +289,45 @@ namespace AirCode.Services.Courses
                 return false;
             }
         }
-
+        public async Task<bool> DeleteCourseWithLogging(string courseId)
+        {
+            Console.WriteLine($"Attempting to delete course: {courseId}");
+    
+            var levels = new[] { "Courses_100Level", "Courses_200Level", "Courses_300Level", "Courses_400Level", "Courses_500Level" };
+    
+            foreach (var levelDoc in levels)
+            {
+                Console.WriteLine($"Checking level document: {levelDoc}");
+        
+                var documentData = await _firestoreService.GetDocumentAsync<object>(_courseCollection, levelDoc);
+        
+                if (documentData != null)
+                {
+                    var jsonString = JsonConvert.SerializeObject(documentData);
+                    Console.WriteLine($"Document structure: {jsonString.Substring(0, Math.Min(200, jsonString.Length))}...");
+            
+                    var levelCourses = JsonConvert.DeserializeObject<Dictionary<string, object>>(jsonString);
+            
+                    if (levelCourses != null)
+                    {
+                        Console.WriteLine($"Available course keys: {string.Join(", ", levelCourses.Keys.Take(5))}");
+                
+                        if (levelCourses.ContainsKey(courseId))
+                        {
+                            Console.WriteLine($"Found course {courseId} in {levelDoc}");
+                            levelCourses.Remove(courseId);
+                    
+                            var updateResult = await _firestoreService.UpdateDocumentAsync(_courseCollection, levelDoc, levelCourses);
+                            Console.WriteLine($"Update result: {updateResult}");
+                            return updateResult;
+                        }
+                    }
+                }
+            }
+    
+            Console.WriteLine($"Course {courseId} not found in any level document");
+            return false;
+        }
         public async Task<bool> AssignLecturerToCourseAsync(string courseId, string lecturerId)
         {
             if (_disposed) throw new ObjectDisposedException(nameof(CourseService));
