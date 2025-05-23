@@ -2,7 +2,6 @@ using System;
 using System.Threading.Tasks;
 using AirCode.Domain.Entities;
 using AirCode.Domain.Enums;
-using AirCode.Models.Core;
 using AirCode.Services.Storage;
 
 namespace AirCode.Services.Permissions
