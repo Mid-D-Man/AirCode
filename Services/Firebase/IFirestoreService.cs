@@ -13,7 +13,8 @@ namespace AirCode.Services.Firebase
         Task<T> GetDocumentAsync<T>(string collection, string id) where T : class;
         Task<string> AddDocumentAsync<T>(string collection, T data, string customId = null) where T : class;
         Task<bool> UpdateDocumentAsync<T>(string collection, string id, T data) where T : class;
-        Task<bool> DeleteDocumentAsync(string collection, string id);
+      
+        Task<bool> FindAndDeleteCourseAsync(string courseCode);
         
         // Collection operations
         Task<List<T>> GetCollectionAsync<T>(string collection) where T : class;

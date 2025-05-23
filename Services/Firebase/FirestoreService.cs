@@ -127,16 +127,30 @@ namespace AirCode.Services.Firebase
             }
         }
        
-        public async Task<bool> DeleteDocumentAsync(string collection, string id)
+        public async Task<bool> FindAndDeleteCourseAsync(string courseCode)
         {
             try
             {
                 if (!_isInitialized) await InitializeAsync();
-                return await _jsRuntime.InvokeAsync<bool>("firestoreModule.deleteDocument", collection, id);
+                return await _jsRuntime.InvokeAsync<bool>("firestoreModule.findAndDeleteCourse", courseCode);
             }
             catch (Exception ex)
             {
-                MID_HelperFunctions.DebugMessage($"Error deleting document: {ex.Message}", DebugClass.Exception);
+                MID_HelperFunctions.DebugMessage($"Error finding and deleting course {courseCode}: {ex.Message}", DebugClass.Exception);
+                return false;
+            }
+        }
+
+        public async Task<bool> DeleteFromSpecificCollectionAsync(string collection, string courseCode)
+        {
+            try
+            {
+                if (!_isInitialized) await InitializeAsync();
+                return await _jsRuntime.InvokeAsync<bool>("firestoreModule.deleteFromSpecificCollection", collection, courseCode);
+            }
+            catch (Exception ex)
+            {
+                MID_HelperFunctions.DebugMessage($"Error deleting course {courseCode} from {collection}: {ex.Message}", DebugClass.Exception);
                 return false;
             }
         }

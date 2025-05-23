@@ -277,6 +277,78 @@ window.firestoreModule = (function () {
             return false;
         }
     }
+
+    async function findAndDeleteCourse(courseCode) {
+        try {
+            if (!isInitialized) await initializeFirestore();
+
+            console.log(`Starting search for course: ${courseCode}`);
+
+            // Define all course level collections
+            const courseLevelCollections = [
+                'Courses_100Level',
+                'Courses_200Level',
+                'Courses_300Level',
+                'Courses_400Level',
+                'Courses_500Level'
+            ];
+
+            // Search through each collection
+            for (const collection of courseLevelCollections) {
+                try {
+                    console.log(`Searching in collection: ${collection}`);
+
+                    // Query for documents where courseCode matches
+                    const querySnapshot = await db.collection(collection)
+                        .where("courseCode", "==", courseCode)
+                        .get();
+
+                    if (!querySnapshot.empty) {
+                        // Found the course, delete it
+                        const docToDelete = querySnapshot.docs[0];
+                        console.log(`Found course ${courseCode} in ${collection} with doc ID: ${docToDelete.id}`);
+
+                        await docToDelete.ref.delete();
+                        console.log(`Successfully deleted course ${courseCode} from ${collection}`);
+                        return true;
+                    }
+                } catch (error) {
+                    console.error(`Error searching in ${collection}:`, error);
+                    // Continue to next collection even if this one fails
+                }
+            }
+
+            console.log(`Course ${courseCode} not found in any collection`);
+            return false;
+
+        } catch (error) {
+            console.error("Error in findAndDeleteCourse:", error);
+            return false;
+        }
+    }
+
+// Alternative: If you know the exact collection, use direct deletion
+    async function deleteFromSpecificCollection(collection, courseCode) {
+        try {
+            if (!isInitialized) await initializeFirestore();
+
+            const querySnapshot = await db.collection(collection)
+                .where("courseCode", "==", courseCode)
+                .get();
+
+            if (!querySnapshot.empty) {
+                const docToDelete = querySnapshot.docs[0];
+                await docToDelete.ref.delete();
+                console.log(`Deleted ${courseCode} from ${collection}`);
+                return true;
+            }
+
+            return false;
+        } catch (error) {
+            console.error(`Error deleting from ${collection}:`, error);
+            return false;
+        }
+    }
     // Get all documents in a collection with better error handling
     async function getCollection(collection) {
         try {

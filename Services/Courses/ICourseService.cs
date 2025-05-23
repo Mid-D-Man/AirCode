@@ -15,8 +15,9 @@ namespace AirCode.Services.Courses
         Task<List<Course>> GetCoursesBySemesterAsync(SemesterType semester);
         Task<bool> AddCourseAsync(Course course);
         Task<bool> UpdateCourseAsync(Course course);
-        Task<bool> DeleteCourseAsync(string courseId);
-        Task<bool> DeleteCourseWithLogging(string courseId);
+        
+        Task<bool> DeleteCourseByUpdateAsync(string courseId);
+        Task<bool> DeleteCourseDirectAsync(string courseId);
         Task<bool> AssignLecturerToCourseAsync(string courseId, string lecturerId);
         Task<bool> RemoveLecturerFromCourseAsync(string courseId, string lecturerId);
     }

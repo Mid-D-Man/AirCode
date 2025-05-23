@@ -253,81 +253,143 @@ namespace AirCode.Services.Courses
                 return false;
             }
         }
-        public async Task<bool> DeleteCourseAsync(string courseId)
+     public async Task<bool> DeleteCourseByUpdateAsync(string courseId)
+{
+    if (_disposed) throw new ObjectDisposedException(nameof(CourseService));
+    if (!MID_HelperFunctions.IsValidString(courseId)) 
+    {
+        Console.WriteLine($"DeleteCourseByUpdate: Invalid courseId provided: '{courseId}'");
+        return false;
+    }
+
+    try
+    {
+        Console.WriteLine($"DeleteCourseByUpdate: Starting deletion process for course: '{courseId}'");
+        
+        var levels = new[] { "Courses_100Level", "Courses_200Level", "Courses_300Level", "Courses_400Level", "Courses_500Level" };
+
+        foreach (var levelDoc in levels)
         {
-            if (_disposed) throw new ObjectDisposedException(nameof(CourseService));
-            if (string.IsNullOrEmpty(courseId)) return false;
-    
-            try
+            Console.WriteLine($"DeleteCourseByUpdate: Checking document: '{levelDoc}'");
+            
+            var documentData = await _firestoreService.GetDocumentAsync<object>(_courseCollection, levelDoc);
+
+            if (documentData == null) 
             {
-                var levels = new[] { "Courses_100Level", "Courses_200Level", "Courses_300Level", "Courses_400Level", "Courses_500Level" };
-        
-                foreach (var levelDoc in levels)
-                {
-                    // Get document as generic object to preserve structure
-                    var documentData = await _firestoreService.GetDocumentAsync<object>(_courseCollection, levelDoc);
-            
-                    if (documentData == null) continue;
-            
-                    // Convert to dictionary for manipulation
-                    var jsonString = JsonConvert.SerializeObject(documentData);
-                    var levelCourses = JsonConvert.DeserializeObject<Dictionary<string, object>>(jsonString);
-            
-                    if (levelCourses != null && levelCourses.ContainsKey(courseId))
-                    {
-                        levelCourses.Remove(courseId);
-                        // Use updateDocument instead of deleteDocument
-                        return await _firestoreService.UpdateDocumentAsync(_courseCollection, levelDoc, levelCourses);
-                    }
-                }
-        
-                return false;
+                Console.WriteLine($"DeleteCourseByUpdate: Document '{levelDoc}' not found or empty");
+                continue;
             }
-            catch (Exception ex)
+
+            var jsonString = JsonConvert.SerializeObject(documentData);
+            var levelCourses = JsonConvert.DeserializeObject<Dictionary<string, object>>(jsonString);
+
+            if (levelCourses == null)
             {
-                Console.WriteLine($"Error deleting course: {ex.Message}");
-                return false;
+                Console.WriteLine($"DeleteCourseByUpdate: Failed to deserialize document '{levelDoc}'");
+                continue;
+            }
+
+            Console.WriteLine($"DeleteCourseByUpdate: Document '{levelDoc}' contains {levelCourses.Count} items");
+            Console.WriteLine($"DeleteCourseByUpdate: Available keys: [{string.Join(", ", levelCourses.Keys.Take(10))}]");
+
+            if (levelCourses.ContainsKey(courseId))
+            {
+                Console.WriteLine($"DeleteCourseByUpdate: Found course '{courseId}' in document '{levelDoc}'");
+                
+                levelCourses.Remove(courseId);
+                Console.WriteLine($"DeleteCourseByUpdate: Removed course from dictionary. Remaining count: {levelCourses.Count}");
+                
+                var updateResult = await _firestoreService.UpdateDocumentAsync(_courseCollection, levelDoc, levelCourses);
+                
+                if (updateResult)
+                {
+                    Console.WriteLine($"DeleteCourseByUpdate: Successfully deleted course '{courseId}' from '{levelDoc}'");
+                    return true;
+                }
+                else
+                {
+                    Console.WriteLine($"DeleteCourseByUpdate: Failed to update document '{levelDoc}' after removing course '{courseId}'");
+                    return false;
+                }
             }
         }
-        public async Task<bool> DeleteCourseWithLogging(string courseId)
+
+        Console.WriteLine($"DeleteCourseByUpdate: Course '{courseId}' not found in any level document");
+        return false;
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"DeleteCourseByUpdate: Exception occurred while deleting course '{courseId}': {ex.Message}");
+        Console.WriteLine($"DeleteCourseByUpdate: Stack trace: {ex.StackTrace}");
+        return false;
+    }
+}
+
+public async Task<bool> DeleteCourseDirectAsync(string courseId)
+{
+    if (_disposed) throw new ObjectDisposedException(nameof(CourseService));
+    if (!MID_HelperFunctions.IsValidString(courseId)) 
+    {
+        Console.WriteLine($"DeleteCourseDirect: Invalid courseId provided: '{courseId}'");
+        return false;
+    }
+
+    try
+    {
+        Console.WriteLine($"DeleteCourseDirect: Starting direct deletion process for course: '{courseId}'");
+        
+        // First, verify the course exists and get its location
+        var course = await GetCourseByIdAsync(courseId);
+        if (course == null)
         {
-            Console.WriteLine($"Attempting to delete course: {courseId}");
-    
-            var levels = new[] { "Courses_100Level", "Courses_200Level", "Courses_300Level", "Courses_400Level", "Courses_500Level" };
-    
-            foreach (var levelDoc in levels)
-            {
-                Console.WriteLine($"Checking level document: {levelDoc}");
-        
-                var documentData = await _firestoreService.GetDocumentAsync<object>(_courseCollection, levelDoc);
-        
-                if (documentData != null)
-                {
-                    var jsonString = JsonConvert.SerializeObject(documentData);
-                    Console.WriteLine($"Document structure: {jsonString.Substring(0, Math.Min(200, jsonString.Length))}...");
-            
-                    var levelCourses = JsonConvert.DeserializeObject<Dictionary<string, object>>(jsonString);
-            
-                    if (levelCourses != null)
-                    {
-                        Console.WriteLine($"Available course keys: {string.Join(", ", levelCourses.Keys.Take(5))}");
-                
-                        if (levelCourses.ContainsKey(courseId))
-                        {
-                            Console.WriteLine($"Found course {courseId} in {levelDoc}");
-                            levelCourses.Remove(courseId);
-                    
-                            var updateResult = await _firestoreService.UpdateDocumentAsync(_courseCollection, levelDoc, levelCourses);
-                            Console.WriteLine($"Update result: {updateResult}");
-                            return updateResult;
-                        }
-                    }
-                }
-            }
-    
-            Console.WriteLine($"Course {courseId} not found in any level document");
+            Console.WriteLine($"DeleteCourseDirect: Course '{courseId}' not found in any document");
             return false;
         }
+
+        var levelDoc = GetDocumentFromLevel(course.Level);
+        Console.WriteLine($"DeleteCourseDirect: Located course '{courseId}' in document '{levelDoc}'");
+
+        // Attempt direct document field deletion (if supported by Firestore service)
+        // Note: This would require adding a DeleteFieldAsync method to IFirestoreService
+        var deleteResult = await _firestoreService.FindAndDeleteCourseAsync(courseId);
+        
+        if (deleteResult)
+        {
+            Console.WriteLine($"DeleteCourseDirect: Successfully performed direct deletion of course '{courseId}' from '{levelDoc}'");
+            return true;
+        }
+        else
+        {
+            Console.WriteLine($"DeleteCourseDirect: Direct deletion failed for course '{courseId}', falling back to update method");
+            
+            // Fallback to update method
+            return await DeleteCourseByUpdateAsync(courseId);
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"DeleteCourseDirect: Exception occurred during direct deletion of course '{courseId}': {ex.Message}");
+        Console.WriteLine($"DeleteCourseDirect: Stack trace: {ex.StackTrace}");
+        Console.WriteLine($"DeleteCourseDirect: Attempting fallback to update method");
+        
+        try
+        {
+            return await DeleteCourseByUpdateAsync(courseId);
+        }
+        catch (Exception fallbackEx)
+        {
+            Console.WriteLine($"DeleteCourseDirect: Fallback method also failed: {fallbackEx.Message}");
+            return false;
+        }
+    }
+}
+
+// Keep the original method as a wrapper for backward compatibility
+public async Task<bool> DeleteCourseAsync(string courseId)
+{
+    Console.WriteLine($"DeleteCourse: Delegating to DeleteCourseByUpdateAsync for course '{courseId}'");
+    return await DeleteCourseByUpdateAsync(courseId);
+}
         public async Task<bool> AssignLecturerToCourseAsync(string courseId, string lecturerId)
         {
             if (_disposed) throw new ObjectDisposedException(nameof(CourseService));
