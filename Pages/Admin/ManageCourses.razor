@@ -33,8 +33,7 @@
 
             <div class="filter-item">
                 <label for="levelFilter">Level:</label>
-                <select id="levelFilter" class="form-control" @bind="_filterLevel" @onchange="OnFilterChanged">
-                    <option value="">All Levels</option>
+                <select id = "levelFilter" class="form-select" @bind="_filterLevel" @bind:after="OnFilterChanged">
                     @foreach (var level in Enum.GetValues(typeof(LevelType)))
                     {
                         <option value="@level">@level</option>
@@ -44,7 +43,7 @@
 
             <div class="filter-item">
                 <label for="semesterFilter">Semester:</label>
-                <select id="semesterFilter" class="form-control" @bind="_filterSemester" @onchange="OnFilterChanged">
+                <select id="semesterFilter" class="form-control" @bind="_filterSemester" @bind:after="OnFilterChanged">
                     <option value="">All Semesters</option>
                     @foreach (var semester in Enum.GetValues(typeof(SemesterType)))
                     {

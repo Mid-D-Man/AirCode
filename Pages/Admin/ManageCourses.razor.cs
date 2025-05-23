@@ -446,7 +446,14 @@ public partial class ManageCourses : ComponentBase
     {
         _currentPage = 1;
     }
-
+    private async Task OnLevelFilterChanged(ChangeEventArgs e)
+    {
+        if (Enum.TryParse<LevelType>(e.Value?.ToString(), out var level))
+        {
+            _filterLevel = level;
+            await OnFilterChanged();
+        }
+    }
 // Update existing methods to reset pagination when filters change
     private async Task ApplyFilters()
     {
