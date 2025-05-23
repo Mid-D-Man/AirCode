@@ -15,7 +15,7 @@
 
 .nav-menu.collapsed {
     width: 80px;
-    width: 60px; /* Consistent collapsed width across all devices */
+    min-width: 64px;
 }
 
 .nav-top {
