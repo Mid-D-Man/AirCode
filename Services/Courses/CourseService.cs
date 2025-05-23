@@ -7,6 +7,7 @@ using AirCode.Domain.Enums;
 using AirCode.Domain.ValueObjects;
 using AirCode.Services.Firebase;
 using AirCode.Utilities.ObjectPooling;
+using Newtonsoft.Json;
 
 namespace AirCode.Services.Courses
 {
@@ -39,39 +40,59 @@ namespace AirCode.Services.Courses
         }
 
         public async Task<List<Course>> GetAllCoursesAsync()
+{
+    if (_disposed) throw new ObjectDisposedException(nameof(CourseService));
+    
+    using var pooledList = _courseListPool.GetPooled();
+    var allCourses = pooledList.Object;
+    
+    try
+    {
+        var levels = new[] { "Courses_100Level", "Courses_200Level", "Courses_300Level", "Courses_400Level", "Courses_500Level" };
+        
+        foreach (var levelDoc in levels)
         {
-            if (_disposed) throw new ObjectDisposedException(nameof(CourseService));
+            // Get the document as a generic object first
+            var documentData = await _firestoreService.GetDocumentAsync<object>(_courseCollection, levelDoc);
             
-            using var pooledList = _courseListPool.GetPooled();
-            var allCourses = pooledList.Object;
-            
-            try
+            if (documentData != null)
             {
-                var levels = new[] { "Courses_100Level", "Courses_200Level", "Courses_300Level", "Courses_400Level", "Courses_500Level" };
+                // Parse as JSON and filter out metadata fields
+                var jsonString = JsonConvert.SerializeObject(documentData);
+                var levelCourses = JsonConvert.DeserializeObject<Dictionary<string, object>>(jsonString);
                 
-                foreach (var levelDoc in levels)
+                foreach (var kvp in levelCourses)
                 {
-                    var levelCourses = await _firestoreService.GetDocumentAsync<Dictionary<string, CourseFirestoreModel>>(_courseCollection, levelDoc);
+                    // Skip document metadata (keys that don't represent courses)
+                    if (kvp.Key.StartsWith("Courses_") || kvp.Value == null) continue;
                     
-                    if (levelCourses != null)
+                    try
                     {
-                        foreach (var courseData in levelCourses.Values)
+                        var courseJson = JsonConvert.SerializeObject(kvp.Value);
+                        var courseData = JsonConvert.DeserializeObject<CourseFirestoreModel>(courseJson);
+                        
+                        if (courseData != null)
                         {
                             var course = MapFirestoreModelToEntity(courseData, GetLevelFromDocument(levelDoc));
                             allCourses.Add(course);
                         }
                     }
+                    catch (JsonException ex)
+                    {
+                        Console.WriteLine($"Skipping invalid course data for key {kvp.Key}: {ex.Message}");
+                    }
                 }
-                
-                // Return a new list to avoid pool contamination
-                return new List<Course>(allCourses);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error getting all courses: {ex.Message}");
-                throw;
             }
         }
+        
+        return new List<Course>(allCourses);
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error getting all courses: {ex.Message}");
+        throw;
+    }
+}
 
         public async Task<Course> GetCourseByIdAsync(string courseId)
         {

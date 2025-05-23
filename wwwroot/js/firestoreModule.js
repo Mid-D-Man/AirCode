@@ -15,36 +15,38 @@ window.firestoreModule = (function () {
                 return false;
             }
 
-            db = firebase.firestore();
+            // Configure settings BEFORE getting instance
+            if (!isInitialized) {
+                db = firebase.firestore();
 
-            // Firebase timestamps setting
-            db.settings({
-                ignoreUndefinedProperties: true,
-                timestampsInSnapshots: true
-            });
-
-            // Enable offline persistence
-            db.enablePersistence({ synchronizeTabs: true })
-                .catch((err) => {
-                    if (err.code === 'failed-precondition') {
-                        // Multiple tabs open, persistence can only be enabled in one tab
-                        console.warn("Persistence failed: Multiple tabs open");
-                    } else if (err.code === 'unimplemented') {
-                        // Current browser doesn't support persistence
-                        console.warn("Persistence not supported in this browser");
-                    }
+                // Only set settings on first initialization
+                db.settings({
+                    ignoreUndefinedProperties: true,
+                    timestampsInSnapshots: true
                 });
 
-            // Monitor connection state
+                // Enable persistence only once
+                try {
+                    await db.enablePersistence({ synchronizeTabs: true });
+                } catch (err) {
+                    if (err.code === 'failed-precondition') {
+                        console.warn("Persistence failed: Multiple tabs open");
+                    } else if (err.code === 'unimplemented') {
+                        console.warn("Persistence not supported in this browser");
+                    }
+                }
+
+                isInitialized = true;
+            }
+
+            // Connection monitoring (can be called multiple times)
             firebase.database().ref(".info/connected").on("value", (snapshot) => {
-                // Only update offline status if not manually disconnected
                 if (!manuallyDisconnected) {
                     isOffline = !snapshot.val();
                     console.log("Connection state:", isOffline ? "Offline" : "Online");
                 }
             });
 
-            isInitialized = true;
             console.log("Firestore initialized successfully");
             return true;
         } catch (error) {

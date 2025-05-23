@@ -19,18 +19,22 @@ namespace AirCode.Services.Firebase
         private bool _isInitialized = false;
 
         public bool IsInitialized => _isInitialized;
+        public bool IsConfigured { get; private set; }
 
-        public FirestoreService(IJSRuntime jsRuntime)
+        public  FirestoreService(IJSRuntime jsRuntime)
         {
             _jsRuntime = jsRuntime;
-            InitializeAsync();
+           InitializeAsync();
         }
 
         private async Task InitializeAsync()
         {
             try
             {
+                if (IsConfigured) return ;
+
                 _isInitialized = await _jsRuntime.InvokeAsync<bool>("firestoreModule.initializeFirestore");
+                IsConfigured = _isInitialized;
                 if (_isInitialized)
                 {
                     MID_HelperFunctions.DebugMessage("Firestore initialized successfully", DebugClass.Info);
