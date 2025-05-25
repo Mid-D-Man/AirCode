@@ -1,0 +1,184 @@
+@* Components/Shared/CourseManagementComponent.razor *@
+@using AirCode.Domain.Entities
+@using AirCode.Services.Courses
+@inject ICourseService CourseService
+
+<div class="course-management-container">
+    <!-- Assigned Courses List -->
+    <div class="assigned-courses-section">
+        <h3>@SectionTitle</h3>
+
+        @if (AssignedCourses?.Any() == true)
+        {
+            @foreach (var course in AssignedCourses)
+            {
+                <div class="course-item">
+                    <div class="course-info">
+                        <span class="course-code">@course.CourseCode</span>
+                        <span class="course-name">@course.Name</span>
+                        <span class="course-details">@course.DepartmentId | @course.CreditUnits units</span>
+                    </div>
+                    <button class="btn-remove" @onclick="() => OnRemoveCourse(course.CourseCode)" disabled="@IsLoading">
+                        Remove
+                    </button>
+                </div>
+            }
+        }
+        else
+        {
+            <p class="no-courses">No courses assigned yet.</p>
+        }
+    </div>
+
+    <!-- Add Course Button and Modal -->
+    <div class="add-course-section">
+        <button class="btn-add-course" @onclick="ShowAddCourseModal" disabled="@IsLoading">
+            @AddButtonText
+        </button>
+    </div>
+
+    @if (ShowModal)
+    {
+        <div class="modal-overlay" @onclick="HideAddCourseModal">
+            <div class="modal-content" @onclick:stopPropagation="true">
+                <div class="modal-header">
+                    <h4>Select Course to Add</h4>
+                    <button class="btn-close" @onclick="HideAddCourseModal">&times;</button>
+                </div>
+
+                <div class="modal-body">
+                    @if (IsLoadingCourses)
+                    {
+                        <p>Loading available courses...</p>
+                    }
+                    else if (AvailableCourses?.Any() == true)
+                    {
+                        <div class="search-box">
+                            <input type="text" @bind="SearchTerm" @oninput="FilterCourses"
+                                   placeholder="Search courses..." class="search-input" />
+                        </div>
+
+                        <div class="course-list">
+                            @foreach (var course in FilteredCourses)
+                            {
+                                <div class="selectable-course-item" @onclick="() => OnAddCourse(course.CourseCode)">
+                                    <div class="course-info">
+                                        <span class="course-code">@course.CourseCode</span>
+                                        <span class="course-name">@course.Name</span>
+                                        <span class="course-details">@course.DepartmentId | Level @((int)course.Level + 100) | @course.CreditUnits units</span>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <p>No available courses found.</p>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public List<Course> AssignedCourses { get; set; } = new();
+    [Parameter] public string UserId { get; set; } = "";
+    [Parameter] public string SectionTitle { get; set; } = "Assigned Courses";
+    [Parameter] public string AddButtonText { get; set; } = "Add Course";
+    [Parameter] public EventCallback<string> OnCourseAdded { get; set; }
+    [Parameter] public EventCallback<string> OnCourseRemoved { get; set; }
+
+    private List<Course> AvailableCourses = new();
+    private List<Course> FilteredCourses = new();
+    private bool ShowModal = false;
+    private bool IsLoading = false;
+    private bool IsLoadingCourses = false;
+    private string SearchTerm = "";
+
+    private async Task ShowAddCourseModal()
+    {
+        ShowModal = true;
+        IsLoadingCourses = true;
+        StateHasChanged();
+
+        try
+        {
+            var allCourses = await CourseService.GetAllCoursesAsync();
+            var assignedCourseIds = AssignedCourses?.Select(c => c.CourseCode).ToHashSet() ?? new HashSet<string>();
+
+            AvailableCourses = allCourses?.Where(c => !assignedCourseIds.Contains(c.CourseCode)).ToList() ?? new();
+            FilteredCourses = new List<Course>(AvailableCourses);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading available courses: {ex.Message}");
+            AvailableCourses = new();
+            FilteredCourses = new();
+        }
+        finally
+        {
+            IsLoadingCourses = false;
+            StateHasChanged();
+        }
+    }
+
+    private void HideAddCourseModal()
+    {
+        ShowModal = false;
+        SearchTerm = "";
+        FilteredCourses.Clear();
+        AvailableCourses.Clear();
+    }
+
+    private void FilterCourses(ChangeEventArgs e)
+    {
+        SearchTerm = e.Value?.ToString() ?? "";
+
+        if (string.IsNullOrWhiteSpace(SearchTerm))
+        {
+            FilteredCourses = new List<Course>(AvailableCourses);
+        }
+        else
+        {
+            FilteredCourses = AvailableCourses.Where(c =>
+                c.CourseCode.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase) ||
+                c.Name.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase) ||
+                c.DepartmentId.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase)
+            ).ToList();
+        }
+    }
+
+    private async Task OnAddCourse(string courseCode)
+    {
+        IsLoading = true;
+        HideAddCourseModal();
+        StateHasChanged();
+
+        try
+        {
+            await OnCourseAdded.InvokeAsync(courseCode);
+        }
+        finally
+        {
+            IsLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnRemoveCourse(string courseCode)
+    {
+        IsLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            await OnCourseRemoved.InvokeAsync(courseCode);
+        }
+        finally
+        {
+            IsLoading = false;
+            StateHasChanged();
+        }
+    }
+}
