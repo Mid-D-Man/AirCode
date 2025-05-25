@@ -42,72 +42,67 @@ namespace AirCode.Services.Courses
         }
 
         public async Task<List<Course>> GetAllCoursesAsync()
-{
-    if (_disposed) throw new ObjectDisposedException(nameof(CourseService));
-    
-    using var pooledList = _courseListPool.GetPooled();
-    var allCourses = pooledList.Object;
-    
-    try
-    {
-        var levels = new[] { "Courses_100Level", "Courses_200Level", "Courses_300Level", "Courses_400Level", "Courses_500Level" };
-        
-        foreach (var levelDoc in levels)
         {
-            // Get the document as a generic object first
-            var documentData = await _firestoreService.GetDocumentAsync<object>(_courseCollection, levelDoc);
+            if (_disposed) throw new ObjectDisposedException(nameof(CourseService));
             
-            if (documentData != null)
+            using var pooledList = _courseListPool.GetPooled();
+            var allCourses = pooledList.Object;
+            
+            try
             {
-                // Parse as JSON and filter out metadata fields
-                var jsonString = JsonConvert.SerializeObject(documentData);
-                var levelCourses = JsonConvert.DeserializeObject<Dictionary<string, object>>(jsonString);
+                var levels = new[] { "Courses_100Level", "Courses_200Level", "Courses_300Level", "Courses_400Level", "Courses_500Level" };
                 
-                foreach (var kvp in levelCourses)
+                foreach (var levelDoc in levels)
                 {
-                    // Skip document metadata and validate key format
-                    if (!MID_HelperFunctions.IsValidString(kvp.Key) || 
-                        kvp.Key.StartsWith("Courses_") || 
-                        kvp.Key.Equals("id", StringComparison.OrdinalIgnoreCase) ||
-                        kvp.Value == null) 
-                        continue;
+                    var documentData = await _firestoreService.GetDocumentAsync<object>(_courseCollection, levelDoc);
                     
-                    try
+                    if (documentData != null)
                     {
-                        var courseJson = JsonConvert.SerializeObject(kvp.Value);
+                        var jsonString = JsonConvert.SerializeObject(documentData);
+                        var levelCourses = JsonConvert.DeserializeObject<Dictionary<string, object>>(jsonString);
                         
-                        // Additional validation before deserialization
-                        if (!MID_HelperFunctions.IsValidString(courseJson) || 
-                            courseJson.Length < 10) // Minimum viable course JSON
-                            continue;
-                            
-                        var courseData = JsonConvert.DeserializeObject<CourseFirestoreModel>(courseJson);
-                        
-                        // Validate critical course properties
-                        if (courseData != null && 
-                            MID_HelperFunctions.IsValidString(courseData.CourseCode) &&
-                            MID_HelperFunctions.IsValidString(courseData.Name))
+                        foreach (var kvp in levelCourses)
                         {
-                            var course = MapFirestoreModelToEntity(courseData, GetLevelFromDocument(levelDoc));
-                            allCourses.Add(course);
+                            if (!MID_HelperFunctions.IsValidString(kvp.Key) || 
+                                kvp.Key.StartsWith("Courses_") || 
+                                kvp.Key.Equals("id", StringComparison.OrdinalIgnoreCase) ||
+                                kvp.Value == null) 
+                                continue;
+                            
+                            try
+                            {
+                                var courseJson = JsonConvert.SerializeObject(kvp.Value);
+                                
+                                if (!MID_HelperFunctions.IsValidString(courseJson) || 
+                                    courseJson.Length < 10)
+                                    continue;
+                                    
+                                var courseData = JsonConvert.DeserializeObject<CourseFirestoreModel>(courseJson);
+                                
+                                if (courseData != null && 
+                                    MID_HelperFunctions.IsValidString(courseData.CourseCode) &&
+                                    MID_HelperFunctions.IsValidString(courseData.Name))
+                                {
+                                    var course = MapFirestoreModelToEntity(courseData, GetLevelFromDocument(levelDoc));
+                                    allCourses.Add(course);
+                                }
+                            }
+                            catch (JsonException ex)
+                            {
+                                Console.WriteLine($"Skipping invalid course data for key {kvp.Key}: {ex.Message}");
+                            }
                         }
                     }
-                    catch (JsonException ex)
-                    {
-                        Console.WriteLine($"Skipping invalid course data for key {kvp.Key}: {ex.Message}");
-                    }
                 }
+                
+                return new List<Course>(allCourses);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting all courses: {ex.Message}");
+                throw;
             }
         }
-        
-        return new List<Course>(allCourses);
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"Error getting all courses: {ex.Message}");
-        throw;
-    }
-}
 
         public async Task<Course> GetCourseByIdAsync(string courseCode)
         {
@@ -120,15 +115,11 @@ namespace AirCode.Services.Courses
         
                 foreach (var levelDoc in levels)
                 {
-                    var levelCourses = await _firestoreService.GetDocumentAsync<Dictionary<string, CourseFirestoreModel>>(_courseCollection, levelDoc);
-            
-                    if (levelCourses != null && levelCourses.ContainsKey(courseCode))
+                    var courseData = await _firestoreService.GetFieldAsync<CourseFirestoreModel>(_courseCollection, levelDoc, courseCode);
+                    
+                    if (courseData != null && MID_HelperFunctions.IsValidString(courseData.CourseCode))
                     {
-                        var courseData = levelCourses[courseCode];
-                        if (MID_HelperFunctions.IsValidString(courseData.CourseCode))
-                        {
-                            return MapFirestoreModelToEntity(courseData, GetLevelFromDocument(levelDoc));
-                        }
+                        return MapFirestoreModelToEntity(courseData, GetLevelFromDocument(levelDoc));
                     }
                 }
             }
@@ -159,14 +150,36 @@ namespace AirCode.Services.Courses
             try
             {
                 var levelDoc = GetDocumentFromLevel(level);
-                var levelCourses = await _firestoreService.GetDocumentAsync<Dictionary<string, CourseFirestoreModel>>(_courseCollection, levelDoc);
+                var documentData = await _firestoreService.GetDocumentAsync<object>(_courseCollection, levelDoc);
                 
-                if (levelCourses != null)
+                if (documentData != null)
                 {
-                    foreach (var courseData in levelCourses.Values)
+                    var jsonString = JsonConvert.SerializeObject(documentData);
+                    var levelCourses = JsonConvert.DeserializeObject<Dictionary<string, object>>(jsonString);
+                    
+                    foreach (var kvp in levelCourses)
                     {
-                        var course = MapFirestoreModelToEntity(courseData, level);
-                        courses.Add(course);
+                        if (!MID_HelperFunctions.IsValidString(kvp.Key) || 
+                            kvp.Key.StartsWith("Courses_") || 
+                            kvp.Key.Equals("id", StringComparison.OrdinalIgnoreCase) ||
+                            kvp.Value == null) 
+                            continue;
+                        
+                        try
+                        {
+                            var courseJson = JsonConvert.SerializeObject(kvp.Value);
+                            var courseData = JsonConvert.DeserializeObject<CourseFirestoreModel>(courseJson);
+                            
+                            if (courseData != null && MID_HelperFunctions.IsValidString(courseData.CourseCode))
+                            {
+                                var course = MapFirestoreModelToEntity(courseData, level);
+                                courses.Add(course);
+                            }
+                        }
+                        catch (JsonException ex)
+                        {
+                            Console.WriteLine($"Skipping invalid course data for key {kvp.Key}: {ex.Message}");
+                        }
                     }
                 }
                 
@@ -203,13 +216,9 @@ namespace AirCode.Services.Courses
             try
             {
                 var levelDoc = GetDocumentFromLevel(course.Level);
-                var levelCourses = await _firestoreService.GetDocumentAsync<Dictionary<string, CourseFirestoreModel>>(_courseCollection, levelDoc)
-                                  ?? new Dictionary<string, CourseFirestoreModel>();
-                
                 var firestoreModel = MapEntityToFirestoreModel(course);
-                levelCourses[course.CourseCode] = firestoreModel;
                 
-                return await _firestoreService.UpdateDocumentAsync(_courseCollection, levelDoc, levelCourses);
+                return await _firestoreService.AddOrUpdateFieldAsync(_courseCollection, levelDoc, course.CourseCode, firestoreModel);
             }
             catch (Exception ex)
             {
@@ -226,26 +235,16 @@ namespace AirCode.Services.Courses
             try
             {
                 var levelDoc = GetDocumentFromLevel(course.Level);
-        
-                // Get current document as generic object to preserve structure
-                var documentData = await _firestoreService.GetDocumentAsync<object>(_courseCollection, levelDoc);
-        
-                if (documentData == null) return false;
-        
-                // Convert to dictionary for manipulation
-                var jsonString = JsonConvert.SerializeObject(documentData);
-                var levelCourses = JsonConvert.DeserializeObject<Dictionary<string, object>>(jsonString);
-        
-                if (!levelCourses.ContainsKey(course.CourseCode)) return false;
-        
+                
+                // Check if course exists
+                var existingCourse = await _firestoreService.GetFieldAsync<CourseFirestoreModel>(_courseCollection, levelDoc, course.CourseCode);
+                if (existingCourse == null) return false;
+                
                 // Create updated course with proper timestamp
                 var updatedCourse = course.WithModification("System");
                 var firestoreModel = MapEntityToFirestoreModel(updatedCourse);
         
-                // Update only the specific course in the dictionary
-                levelCourses[course.CourseCode] = firestoreModel;
-        
-                return await _firestoreService.UpdateDocumentAsync(_courseCollection, levelDoc, levelCourses);
+                return await _firestoreService.AddOrUpdateFieldAsync(_courseCollection, levelDoc, course.CourseCode, firestoreModel);
             }
             catch (Exception ex)
             {
@@ -253,143 +252,60 @@ namespace AirCode.Services.Courses
                 return false;
             }
         }
-     public async Task<bool> DeleteCourseByUpdateAsync(string courseId)
-{
-    if (_disposed) throw new ObjectDisposedException(nameof(CourseService));
-    if (!MID_HelperFunctions.IsValidString(courseId)) 
-    {
-        Console.WriteLine($"DeleteCourseByUpdate: Invalid courseId provided: '{courseId}'");
-        return false;
-    }
 
-    try
-    {
-        Console.WriteLine($"DeleteCourseByUpdate: Starting deletion process for course: '{courseId}'");
-        
-        var levels = new[] { "Courses_100Level", "Courses_200Level", "Courses_300Level", "Courses_400Level", "Courses_500Level" };
-
-        foreach (var levelDoc in levels)
+        public async Task<bool> DeleteCourseAsync(string courseId)
         {
-            Console.WriteLine($"DeleteCourseByUpdate: Checking document: '{levelDoc}'");
-            
-            var documentData = await _firestoreService.GetDocumentAsync<object>(_courseCollection, levelDoc);
-
-            if (documentData == null) 
+            if (_disposed) throw new ObjectDisposedException(nameof(CourseService));
+            if (!MID_HelperFunctions.IsValidString(courseId)) 
             {
-                Console.WriteLine($"DeleteCourseByUpdate: Document '{levelDoc}' not found or empty");
-                continue;
+                Console.WriteLine($"DeleteCourse: Invalid courseId provided: '{courseId}'");
+                return false;
             }
 
-            var jsonString = JsonConvert.SerializeObject(documentData);
-            var levelCourses = JsonConvert.DeserializeObject<Dictionary<string, object>>(jsonString);
-
-            if (levelCourses == null)
+            try
             {
-                Console.WriteLine($"DeleteCourseByUpdate: Failed to deserialize document '{levelDoc}'");
-                continue;
-            }
+                Console.WriteLine($"DeleteCourse: Starting deletion process for course: '{courseId}'");
+                
+                var levels = new[] { "Courses_100Level", "Courses_200Level", "Courses_300Level", "Courses_400Level", "Courses_500Level" };
 
-            Console.WriteLine($"DeleteCourseByUpdate: Document '{levelDoc}' contains {levelCourses.Count} items");
-            Console.WriteLine($"DeleteCourseByUpdate: Available keys: [{string.Join(", ", levelCourses.Keys.Take(10))}]");
-
-            if (levelCourses.ContainsKey(courseId))
-            {
-                Console.WriteLine($"DeleteCourseByUpdate: Found course '{courseId}' in document '{levelDoc}'");
-                
-                levelCourses.Remove(courseId);
-                Console.WriteLine($"DeleteCourseByUpdate: Removed course from dictionary. Remaining count: {levelCourses.Count}");
-                
-                var updateResult = await _firestoreService.UpdateDocumentAsync(_courseCollection, levelDoc, levelCourses);
-                
-                if (updateResult)
+                foreach (var levelDoc in levels)
                 {
-                    Console.WriteLine($"DeleteCourseByUpdate: Successfully deleted course '{courseId}' from '{levelDoc}'");
-                    return true;
+                    Console.WriteLine($"DeleteCourse: Checking document: '{levelDoc}' for field: '{courseId}'");
+                    
+                    // Check if the field exists in this document
+                    var existingCourse = await _firestoreService.GetFieldAsync<CourseFirestoreModel>(_courseCollection, levelDoc, courseId);
+                    
+                    if (existingCourse != null)
+                    {
+                        Console.WriteLine($"DeleteCourse: Found course '{courseId}' in document '{levelDoc}', attempting field removal");
+                        
+                        var deleteResult = await _firestoreService.RemoveFieldAsync(_courseCollection, levelDoc, courseId);
+                        
+                        if (deleteResult)
+                        {
+                            Console.WriteLine($"DeleteCourse: Successfully deleted course field '{courseId}' from '{levelDoc}'");
+                            return true;
+                        }
+                        else
+                        {
+                            Console.WriteLine($"DeleteCourse: Failed to delete course field '{courseId}' from '{levelDoc}'");
+                            return false;
+                        }
+                    }
                 }
-                else
-                {
-                    Console.WriteLine($"DeleteCourseByUpdate: Failed to update document '{levelDoc}' after removing course '{courseId}'");
-                    return false;
-                }
+
+                Console.WriteLine($"DeleteCourse: Course '{courseId}' not found in any level document");
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"DeleteCourse: Exception occurred while deleting course '{courseId}': {ex.Message}");
+                Console.WriteLine($"DeleteCourse: Stack trace: {ex.StackTrace}");
+                return false;
             }
         }
 
-        Console.WriteLine($"DeleteCourseByUpdate: Course '{courseId}' not found in any level document");
-        return false;
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"DeleteCourseByUpdate: Exception occurred while deleting course '{courseId}': {ex.Message}");
-        Console.WriteLine($"DeleteCourseByUpdate: Stack trace: {ex.StackTrace}");
-        return false;
-    }
-}
-
-public async Task<bool> DeleteCourseDirectAsync(string courseId)
-{
-    if (_disposed) throw new ObjectDisposedException(nameof(CourseService));
-    if (!MID_HelperFunctions.IsValidString(courseId)) 
-    {
-        Console.WriteLine($"DeleteCourseDirect: Invalid courseId provided: '{courseId}'");
-        return false;
-    }
-
-    try
-    {
-        Console.WriteLine($"DeleteCourseDirect: Starting direct deletion process for course: '{courseId}'");
-        
-        // First, verify the course exists and get its location
-        var course = await GetCourseByIdAsync(courseId);
-        if (course == null)
-        {
-            Console.WriteLine($"DeleteCourseDirect: Course '{courseId}' not found in any document");
-            return false;
-        }
-
-        var levelDoc = GetDocumentFromLevel(course.Level);
-        Console.WriteLine($"DeleteCourseDirect: Located course '{courseId}' in document '{levelDoc}'");
-
-        // Attempt direct document field deletion (if supported by Firestore service)
-        // Note: This would require adding a DeleteFieldAsync method to IFirestoreService
-        var deleteResult = await _firestoreService.FindAndDeleteCourseAsync(courseId);
-        
-        if (deleteResult)
-        {
-            Console.WriteLine($"DeleteCourseDirect: Successfully performed direct deletion of course '{courseId}' from '{levelDoc}'");
-            return true;
-        }
-        else
-        {
-            Console.WriteLine($"DeleteCourseDirect: Direct deletion failed for course '{courseId}', falling back to update method");
-            
-            // Fallback to update method
-            return await DeleteCourseByUpdateAsync(courseId);
-        }
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"DeleteCourseDirect: Exception occurred during direct deletion of course '{courseId}': {ex.Message}");
-        Console.WriteLine($"DeleteCourseDirect: Stack trace: {ex.StackTrace}");
-        Console.WriteLine($"DeleteCourseDirect: Attempting fallback to update method");
-        
-        try
-        {
-            return await DeleteCourseByUpdateAsync(courseId);
-        }
-        catch (Exception fallbackEx)
-        {
-            Console.WriteLine($"DeleteCourseDirect: Fallback method also failed: {fallbackEx.Message}");
-            return false;
-        }
-    }
-}
-
-// Keep the original method as a wrapper for backward compatibility
-public async Task<bool> DeleteCourseAsync(string courseId)
-{
-    Console.WriteLine($"DeleteCourse: Delegating to DeleteCourseByUpdateAsync for course '{courseId}'");
-    return await DeleteCourseByUpdateAsync(courseId);
-}
+        // Remove the other delete methods as they're no longer needed
         public async Task<bool> AssignLecturerToCourseAsync(string courseId, string lecturerId)
         {
             if (_disposed) throw new ObjectDisposedException(nameof(CourseService));
@@ -404,7 +320,7 @@ public async Task<bool> DeleteCourseAsync(string courseId)
                 {
                     lecturerIds.Add(lecturerId);
                     var updatedCourse = new Course(
-                        course.CourseCode, course.Name,  course.DepartmentId,
+                        course.CourseCode, course.Name, course.DepartmentId,
                         course.Level, course.Semester, course.CreditUnits, course.Schedule,
                         lecturerIds, DateTime.UtcNow, "System"
                     );
@@ -434,7 +350,7 @@ public async Task<bool> DeleteCourseAsync(string courseId)
                 if (lecturerIds.Remove(lecturerId))
                 {
                     var updatedCourse = new Course(
-                        course.CourseCode, course.Name,  course.DepartmentId,
+                        course.CourseCode, course.Name, course.DepartmentId,
                         course.Level, course.Semester, course.CreditUnits, course.Schedule,
                         lecturerIds, DateTime.UtcNow, "System"
                     );
@@ -508,6 +424,7 @@ public async Task<bool> DeleteCourseAsync(string courseId)
                 model.ModifiedBy ?? "System"
             );
         }
+        
         private CourseFirestoreModel MapEntityToFirestoreModel(Course course)
         {
             var scheduleList = new List<CourseScheduleFirestoreModel>();
@@ -516,8 +433,8 @@ public async Task<bool> DeleteCourseAsync(string courseId)
                 scheduleList.AddRange(course.Schedule.TimeSlots.Select(slot => new CourseScheduleFirestoreModel
                 {
                     Day = slot.Day,
-                    StartTime = slot.StartTime.ToString(@"hh\:mm"), // Consistent format
-                    EndTime = slot.EndTime.ToString(@"hh\:mm"),     // Consistent format
+                    StartTime = slot.StartTime.ToString(@"hh\:mm"),
+                    EndTime = slot.EndTime.ToString(@"hh\:mm"),
                     Location = slot.Location ?? "TBA"
                 }));
             }
@@ -589,13 +506,12 @@ public async Task<bool> DeleteCourseAsync(string courseId)
         public DayOfWeek Day { get; set; }
     
         [JsonProperty("startTime")]
-        public string StartTime { get; set; } // Format: "HH:mm"
+        public string StartTime { get; set; }
     
         [JsonProperty("endTime")]
-        public string EndTime { get; set; } // Format: "HH:mm"
+        public string EndTime { get; set; }
     
         [JsonProperty("location")]
         public string Location { get; set; }
     }
-
 }

@@ -291,7 +291,7 @@ public partial class ManageCourses : ComponentBase
         {
             if (_courseToDelete == null) return;
 
-            var success = await CourseService.DeleteCourseDirectAsync(_courseToDelete.CourseCode);
+            var success = await CourseService.DeleteCourseAsync(_courseToDelete.CourseCode);
             if (success)
             {
                 await LoadCourses();
