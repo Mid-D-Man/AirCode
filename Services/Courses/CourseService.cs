@@ -19,6 +19,8 @@ namespace AirCode.Services.Courses
         private readonly MID_ComponentObjectPool<List<Course>> _courseListPool;
         private readonly MID_ComponentObjectPool<Dictionary<string, Course>> _courseDictPool;
         private readonly string _courseCollection = "COURSES";
+        private readonly string _studentCourseCollection = "STUDENT_COURSES";
+
         private bool _disposed;
         
         public CourseService(IFirestoreService firestoreService)
@@ -367,6 +369,8 @@ namespace AirCode.Services.Courses
             }
         }
 
+      
+        
         #region Private Helper Methods
         
         private string GetDocumentFromLevel(LevelType level)
@@ -514,4 +518,5 @@ namespace AirCode.Services.Courses
         [JsonProperty("location")]
         public string Location { get; set; }
     }
+   
 }

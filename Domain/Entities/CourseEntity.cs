@@ -81,7 +81,7 @@ namespace AirCode.Domain.Entities
         [Required]
         public LevelType StudentLevel { get; init; }
         
-        public IReadOnlyList<CourseReference> StudentCoursesRefs { get; init; } // Course references list
+        public IReadOnlyList<CourseRefrence> StudentCoursesRefs { get; init; } // Course references list
         
         // Tracking fields
         public DateTime LastModified { get; init; }
@@ -89,24 +89,24 @@ namespace AirCode.Domain.Entities
 
         // Constructor for immutability
         public StudentCourse(string studentMatricNumber, LevelType studentLevel, 
-            List<CourseReference> courseReferences, DateTime? lastModified = null, string modifiedBy = "")
+            List<CourseRefrence> courseReferences, DateTime? lastModified = null, string modifiedBy = "")
         {
             StudentMatricNumber = studentMatricNumber ?? throw new ArgumentNullException(nameof(studentMatricNumber));
             StudentLevel = studentLevel;
-            StudentCoursesRefs = courseReferences?.AsReadOnly() ?? new List<CourseReference>().AsReadOnly();
+            StudentCoursesRefs = courseReferences?.AsReadOnly() ?? new List<CourseRefrence>().AsReadOnly();
             LastModified = lastModified ?? DateTime.UtcNow;
             ModifiedBy = modifiedBy ?? "System";
         }
 
         // Factory method for creating new student course records
         public static StudentCourse Create(string studentMatricNumber, LevelType studentLevel, 
-            List<CourseReference> courseReferences = null)
+            List<CourseRefrence> courseReferences = null)
         {
             return new StudentCourse(studentMatricNumber, studentLevel, courseReferences, DateTime.UtcNow, "System");
         }
 
         // Method to add a course reference
-        public StudentCourse WithAddedCourse(CourseReference courseReference, string modifiedBy = "System")
+        public StudentCourse WithAddedCourse(CourseRefrence courseReference, string modifiedBy = "System")
         {
             if (courseReference == null) throw new ArgumentNullException(nameof(courseReference));
             
@@ -161,13 +161,13 @@ namespace AirCode.Domain.Entities
         }
 
         // Helper method to get enrolled courses only
-        public IReadOnlyList<CourseReference> GetEnrolledCourses()
+        public IReadOnlyList<CourseRefrence> GetEnrolledCourses()
         {
             return StudentCoursesRefs.Where(c => c.CourseEnrollmentStatus == CourseEnrollmentStatus.Enrolled).ToList().AsReadOnly();
         }
 
         // Helper method to get courses by status
-        public IReadOnlyList<CourseReference> GetCoursesByStatus(CourseEnrollmentStatus status)
+        public IReadOnlyList<CourseRefrence> GetCoursesByStatus(CourseEnrollmentStatus status)
         {
             return StudentCoursesRefs.Where(c => c.CourseEnrollmentStatus == status).ToList().AsReadOnly();
         }
@@ -176,7 +176,7 @@ namespace AirCode.Domain.Entities
     /// <summary>
     /// Represents a reference to a course with enrollment status
     /// </summary>
-    public class CourseReference
+    public class CourseRefrence
     {
         [Required]
         [StringLength(10, ErrorMessage = "Course code cannot exceed 10 characters")]
@@ -189,7 +189,7 @@ namespace AirCode.Domain.Entities
         public DateTime LastStatusChange { get; init; }
 
         // Constructor
-        public CourseReference(string courseCode, CourseEnrollmentStatus enrollmentStatus, 
+        public CourseRefrence(string courseCode, CourseEnrollmentStatus enrollmentStatus, 
             DateTime? enrollmentDate = null, DateTime? lastStatusChange = null)
         {
             CourseCode = courseCode ?? throw new ArgumentNullException(nameof(courseCode));
@@ -199,21 +199,21 @@ namespace AirCode.Domain.Entities
         }
 
         // Factory method for creating new course reference
-        public static CourseReference Create(string courseCode, CourseEnrollmentStatus enrollmentStatus = CourseEnrollmentStatus.Enrolled)
+        public static CourseRefrence Create(string courseCode, CourseEnrollmentStatus enrollmentStatus = CourseEnrollmentStatus.Enrolled)
         {
-            return new CourseReference(courseCode, enrollmentStatus, DateTime.UtcNow, DateTime.UtcNow);
+            return new CourseRefrence(courseCode, enrollmentStatus, DateTime.UtcNow, DateTime.UtcNow);
         }
 
         // Method to update enrollment status
-        public CourseReference WithStatus(CourseEnrollmentStatus newStatus)
+        public CourseRefrence WithStatus(CourseEnrollmentStatus newStatus)
         {
-            return new CourseReference(CourseCode, newStatus, EnrollmentDate, DateTime.UtcNow);
+            return new CourseRefrence(CourseCode, newStatus, EnrollmentDate, DateTime.UtcNow);
         }
 
         // Override equality for proper comparison
         public override bool Equals(object obj)
         {
-            if (obj is CourseReference other)
+            if (obj is CourseRefrence other)
             {
                 return CourseCode == other.CourseCode;
             }
