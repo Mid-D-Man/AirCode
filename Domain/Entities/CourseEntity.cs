@@ -69,21 +69,160 @@ namespace AirCode.Domain.Entities
         }
     }
 
+    /// <summary>
+    /// Represents a student's course enrollment information
+    /// </summary>
     public class StudentCourse
     {
         [Required]
         [StringLength(15, ErrorMessage = "Matric Number cannot exceed 15 characters")]
-        public string StudentMatricNumber { get; init; }//primary identifier format usually something like U21CYS1083, U22CS1009
+        public string StudentMatricNumber { get; init; } // Primary identifier format: U21CYS1083, U22CS1009
+        
         [Required]
         public LevelType StudentLevel { get; init; }
-        public IReadOnlyList<CourseRefrence> StudentCoursesRefs { get; init; }//might be empty if student never pick courses boy
+        
+        public IReadOnlyList<CourseReference> StudentCoursesRefs { get; init; } // Course references list
+        
+        // Tracking fields
+        public DateTime LastModified { get; init; }
+        public string ModifiedBy { get; init; }
+
+        // Constructor for immutability
+        public StudentCourse(string studentMatricNumber, LevelType studentLevel, 
+            List<CourseReference> courseReferences, DateTime? lastModified = null, string modifiedBy = "")
+        {
+            StudentMatricNumber = studentMatricNumber ?? throw new ArgumentNullException(nameof(studentMatricNumber));
+            StudentLevel = studentLevel;
+            StudentCoursesRefs = courseReferences?.AsReadOnly() ?? new List<CourseReference>().AsReadOnly();
+            LastModified = lastModified ?? DateTime.UtcNow;
+            ModifiedBy = modifiedBy ?? "System";
+        }
+
+        // Factory method for creating new student course records
+        public static StudentCourse Create(string studentMatricNumber, LevelType studentLevel, 
+            List<CourseReference> courseReferences = null)
+        {
+            return new StudentCourse(studentMatricNumber, studentLevel, courseReferences, DateTime.UtcNow, "System");
+        }
+
+        // Method to add a course reference
+        public StudentCourse WithAddedCourse(CourseReference courseReference, string modifiedBy = "System")
+        {
+            if (courseReference == null) throw new ArgumentNullException(nameof(courseReference));
+            
+            var updatedCourses = StudentCoursesRefs.ToList();
+            
+            // Check if course already exists and update or add
+            var existingIndex = updatedCourses.FindIndex(c => c.CourseCode == courseReference.CourseCode);
+            if (existingIndex >= 0)
+            {
+                updatedCourses[existingIndex] = courseReference;
+            }
+            else
+            {
+                updatedCourses.Add(courseReference);
+            }
+
+            return new StudentCourse(StudentMatricNumber, StudentLevel, updatedCourses, DateTime.UtcNow, modifiedBy);
+        }
+
+        // Method to remove a course reference
+        public StudentCourse WithRemovedCourse(string courseCode, string modifiedBy = "System")
+        {
+            if (string.IsNullOrWhiteSpace(courseCode)) return this;
+            
+            var updatedCourses = StudentCoursesRefs.Where(c => c.CourseCode != courseCode).ToList();
+            return new StudentCourse(StudentMatricNumber, StudentLevel, updatedCourses, DateTime.UtcNow, modifiedBy);
+        }
+
+        // Method to update course enrollment status
+        public StudentCourse WithUpdatedCourseStatus(string courseCode, CourseEnrollmentStatus newStatus, string modifiedBy = "System")
+        {
+            if (string.IsNullOrWhiteSpace(courseCode)) return this;
+            
+            var updatedCourses = StudentCoursesRefs.ToList();
+            var courseIndex = updatedCourses.FindIndex(c => c.CourseCode == courseCode);
+            
+            if (courseIndex >= 0)
+            {
+                var existingCourse = updatedCourses[courseIndex];
+                updatedCourses[courseIndex] = existingCourse.WithStatus(newStatus);
+                return new StudentCourse(StudentMatricNumber, StudentLevel, updatedCourses, DateTime.UtcNow, modifiedBy);
+            }
+            
+            return this; // Course not found, return unchanged
+        }
+
+        // Method to create updated version with modification tracking
+        public StudentCourse WithModification(string modifiedBy)
+        {
+            return new StudentCourse(StudentMatricNumber, StudentLevel, 
+                StudentCoursesRefs.ToList(), DateTime.UtcNow, modifiedBy);
+        }
+
+        // Helper method to get enrolled courses only
+        public IReadOnlyList<CourseReference> GetEnrolledCourses()
+        {
+            return StudentCoursesRefs.Where(c => c.CourseEnrollmentStatus == CourseEnrollmentStatus.Enrolled).ToList().AsReadOnly();
+        }
+
+        // Helper method to get courses by status
+        public IReadOnlyList<CourseReference> GetCoursesByStatus(CourseEnrollmentStatus status)
+        {
+            return StudentCoursesRefs.Where(c => c.CourseEnrollmentStatus == status).ToList().AsReadOnly();
+        }
     }
 
-    public class CourseRefrence
+    /// <summary>
+    /// Represents a reference to a course with enrollment status
+    /// </summary>
+    public class CourseReference
     {
         [Required]
         [StringLength(10, ErrorMessage = "Course code cannot exceed 10 characters")]
-        public string CourseCode { get; init; } // Primary identifier: CYB415, CSC484,AED994 or some like that, etc.
+        public string CourseCode { get; init; } // Primary identifier: CYB415, CSC484, AED994, etc.
+        
         public CourseEnrollmentStatus CourseEnrollmentStatus { get; init; }
+        
+        // Additional tracking fields
+        public DateTime EnrollmentDate { get; init; }
+        public DateTime LastStatusChange { get; init; }
+
+        // Constructor
+        public CourseReference(string courseCode, CourseEnrollmentStatus enrollmentStatus, 
+            DateTime? enrollmentDate = null, DateTime? lastStatusChange = null)
+        {
+            CourseCode = courseCode ?? throw new ArgumentNullException(nameof(courseCode));
+            CourseEnrollmentStatus = enrollmentStatus;
+            EnrollmentDate = enrollmentDate ?? DateTime.UtcNow;
+            LastStatusChange = lastStatusChange ?? DateTime.UtcNow;
+        }
+
+        // Factory method for creating new course reference
+        public static CourseReference Create(string courseCode, CourseEnrollmentStatus enrollmentStatus = CourseEnrollmentStatus.Enrolled)
+        {
+            return new CourseReference(courseCode, enrollmentStatus, DateTime.UtcNow, DateTime.UtcNow);
+        }
+
+        // Method to update enrollment status
+        public CourseReference WithStatus(CourseEnrollmentStatus newStatus)
+        {
+            return new CourseReference(CourseCode, newStatus, EnrollmentDate, DateTime.UtcNow);
+        }
+
+        // Override equality for proper comparison
+        public override bool Equals(object obj)
+        {
+            if (obj is CourseReference other)
+            {
+                return CourseCode == other.CourseCode;
+            }
+            return false;
+        }
+
+        public override int GetHashCode()
+        {
+            return CourseCode?.GetHashCode() ?? 0;
+        }
     }
 }
