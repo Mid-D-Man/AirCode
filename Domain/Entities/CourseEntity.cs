@@ -97,7 +97,27 @@ namespace AirCode.Domain.Entities
             LastModified = lastModified ?? DateTime.UtcNow;
             ModifiedBy = modifiedBy ?? "System";
         }
+        public StudentCourse(string studentMatricNumber, LevelType studentLevel, 
+            List<CourseRefrence> studentCoursesRefs = null)
+        {
+            StudentMatricNumber = studentMatricNumber;
+            StudentLevel = studentLevel;
+            StudentCoursesRefs = studentCoursesRefs?.AsReadOnly() ?? new List<CourseRefrence>().AsReadOnly();
+        }
 
+      
+
+        // Method to create updated version with new course references
+        public StudentCourse WithCourseReferences(List<CourseRefrence> newCourseRefs)
+        {
+            return new StudentCourse(StudentMatricNumber, StudentLevel, newCourseRefs);
+        }
+
+        // Method to create updated version with new level
+        public StudentCourse WithLevel(LevelType newLevel)
+        {
+            return new StudentCourse(StudentMatricNumber, newLevel, StudentCoursesRefs.ToList());
+        }
         // Factory method for creating new student course records
         public static StudentCourse Create(string studentMatricNumber, LevelType studentLevel, 
             List<CourseRefrence> courseReferences = null)
@@ -197,7 +217,11 @@ namespace AirCode.Domain.Entities
             EnrollmentDate = enrollmentDate ?? DateTime.UtcNow;
             LastStatusChange = lastStatusChange ?? DateTime.UtcNow;
         }
-
+        public CourseRefrence(string courseCode, CourseEnrollmentStatus courseEnrollmentStatus)
+        {
+            CourseCode = courseCode;
+            CourseEnrollmentStatus = courseEnrollmentStatus;
+        }
         // Factory method for creating new course reference
         public static CourseRefrence Create(string courseCode, CourseEnrollmentStatus enrollmentStatus = CourseEnrollmentStatus.Enrolled)
         {

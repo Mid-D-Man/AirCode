@@ -20,6 +20,7 @@ namespace AirCode.Services.Courses
         private readonly MID_ComponentObjectPool<Dictionary<string, Course>> _courseDictPool;
         private readonly string _courseCollection = "COURSES";
         private readonly string _studentCourseCollection = "STUDENT_COURSES";
+        private readonly MID_ComponentObjectPool<List<StudentCourse>> _studentCourseListPool;
 
         private bool _disposed;
         
@@ -369,7 +370,11 @@ namespace AirCode.Services.Courses
             }
         }
 
-      
+        #region  Student Course 
+
+        
+
+        #endregion
         
         #region Private Helper Methods
         
