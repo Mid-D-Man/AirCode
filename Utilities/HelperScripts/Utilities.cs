@@ -1,5 +1,6 @@
 namespace AirCode.Utilities
 {
+    //dont need this 
     public class UserModel
     {
         public string UsernameOrEmail { get; set; }

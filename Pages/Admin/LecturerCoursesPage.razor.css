@@ -1,61 +1,94 @@
 .lecturer-courses-page {
-    padding: 20px;
-    max-width: 1000px;
+    padding: var(--spacing-xl);
+    max-width: 1200px;
     margin: 0 auto;
+    background-color: var(--bg-primary);
+    min-height: 100vh;
 }
 
 .page-header {
-    margin-bottom: 30px;
+    margin-bottom: var(--spacing-xxl);
     text-align: center;
+    padding: var(--spacing-xl);
+    background: linear-gradient(135deg, var(--primary-50) 0%, var(--primary-100) 100%);
+    border-radius: 16px;
+    border: 1px solid var(--primary-200);
 }
 
 .page-header h2 {
-    color: #333;
-    margin-bottom: 10px;
+    color: var(--primary-700);
+    margin-bottom: var(--spacing-md);
+    font-size: 2rem;
+    font-weight: 700;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .lecturer-info {
-    color: #666;
-    font-size: 1.1em;
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+    font-weight: 500;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-sm);
+}
+
+.lecturer-info::before {
+    content: '👨‍🏫';
+    font-size: 1.2rem;
 }
 
 .loading-container {
     text-align: center;
-    padding: 40px;
-    color: #666;
+    padding: var(--spacing-xxl);
+    background-color: var(--bg-secondary);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    margin: var(--spacing-xl) 0;
 }
 
+.loading-container p {
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+    margin-bottom: var(--spacing-lg);
+}
+
+.loading-container::before {
+    content: '';
+    display: block;
+    width: 40px;
+    height: 40px;
+    margin: 0 auto var(--spacing-lg);
+    border: 4px solid var(--primary-200);
+    border-radius: 50%;
+    border-top-color: var(--primary-600);
+    animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Remove the old status message styles since we're using notifications */
 .status-message {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    padding: 15px 20px;
-    border-radius: 8px;
-    color: white;
-    font-weight: bold;
-    z-index: 1001;
-    max-width: 400px;
-    word-wrap: break-word;
-}
-
-.status-message.success {
-    background-color: #28a745;
-}
-
-.status-message.error {
-    background-color: #dc3545;
+    display: none;
 }
 
 @media (max-width: 768px) {
     .lecturer-courses-page {
         padding: 15px;
     }
+    .lecturer-courses-page {
+        padding: var(--spacing-lg);
+    }
 
-    .status-message {
-        position: relative;
-        top: auto;
-        right: auto;
-        margin: 20px 0;
-        max-width: 100%;
+    .page-header {
+        padding: var(--spacing-lg);
+        margin-bottom: var(--spacing-xl);
+    }
+
+    .page-header h2 {
+        font-size: 1.5rem;
     }
 }
