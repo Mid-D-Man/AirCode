@@ -68,4 +68,22 @@ namespace AirCode.Domain.Entities
                 CreditUnits, Schedule, LecturerIds.ToList(), DateTime.UtcNow, modifiedBy);
         }
     }
+
+    public class StudentCourse
+    {
+        [Required]
+        [StringLength(15, ErrorMessage = "Matric Number cannot exceed 15 characters")]
+        public string StudentMatricNumber { get; init; }//primary identifier format usually something like U21CYS1083, U22CS1009
+        [Required]
+        public LevelType StudentLevel { get; init; }
+        public IReadOnlyList<CourseRefrence> StudentCoursesRefs { get; init; }//might be empty if student never pick courses boy
+    }
+
+    public class CourseRefrence
+    {
+        [Required]
+        [StringLength(10, ErrorMessage = "Course code cannot exceed 10 characters")]
+        public string CourseCode { get; init; } // Primary identifier: CYB415, CSC484,AED994 or some like that, etc.
+        public CourseEnrollmentStatus CourseEnrollmentStatus { get; init; }
+    }
 }
