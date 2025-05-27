@@ -15,7 +15,7 @@
 @implements IDisposable
 
 <div class="create-session-page">
-    <h1>Create Session</h1>
+    <h1>Create Attendance Event</h1>
     
     <div class="content-container @(isSessionStarted ? "session-active" : "")">
         <div class="form-container">
@@ -70,12 +70,15 @@
                 <div class="countdown-timer">
                     Session ends in: @FormatTimeRemaining()
                 </div>
-                
+
                 <div class="qr-code-wrapper">
-                    <QRCodeCompo 
-                        Content="@qrCodePayload" 
-                        Duration="@sessionModel.Duration" 
-                        Theme="@ConvertStringToTheme(selectedTheme)" 
+                    <QRCodeCompo
+                        SessionId="@sessionModel.SessionId"
+                        CourseCode="@sessionModel.CourseId"
+                        LectureId="@sessionModel.LectureId"
+                        StartTime="@sessionModel.StartTime"
+                        Duration="@sessionModel.Duration"
+                        Theme="@ConvertStringToTheme(selectedTheme)"
                         Options="@GenerateQRCodeOptions()"
                         OnGenerated="HandleQRCodeGenerated" />
                 </div>

@@ -10,12 +10,12 @@ using AirCode.Services.VisualElements;
 using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
 using System.IdentityModel.Tokens.Jwt;
 using AirCode.Extensions;
+using AirCode.Services.Attendance;
 using AirCode.Services.Auth.Offline;
 using AirCode.Services.Courses;
 using AirCode.Services.Cryptography;
 using AirCode.Services.Department;
-using AirCode.Services.SupaBase;
-using Microsoft.AspNetCore.Components.Authorization;
+using AirCode.Utilities.DataStructures;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
@@ -107,6 +107,8 @@ builder.Services.AddScoped<IPermissionService, PermissionService>();
 builder.Services.AddScoped<IDepartmentService, DepartmentService>();
 builder.Services.AddScoped<ICourseService, CourseService>();
 builder.Services.AddScoped<ISearchContextService, SearchContextService>();
+builder.Services.AddScoped<SessionStateService>();
+builder.Services.AddScoped<QRCodeDecoder>();
 // Firebase Services
 builder.Services.AddScoped<AirCode.Services.Firebase.IFirestoreService, AirCode.Services.Firebase.FirestoreService>();
 

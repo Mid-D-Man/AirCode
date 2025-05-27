@@ -1,3 +1,4 @@
+//used for draging qrcode floating window
 window.floatingQrDrag = {
     isDragging: false,
     dragStartX: 0,
@@ -13,8 +14,17 @@ window.floatingQrDrag = {
         document.addEventListener('touchend', this.handleTouchEnd.bind(this));
     },
 
-    startDrag: function(event, windowElement) {
+    startDrag: function(event) {
         this.isDragging = true;
+
+        // Find the floating window element by traversing up from the drag handle
+        let windowElement = event.target;
+        while (windowElement && !windowElement.classList.contains('floating-qr-window')) {
+            windowElement = windowElement.parentElement;
+        }
+
+        if (!windowElement) return;
+
         this.currentWindow = windowElement;
 
         const clientX = event.touches ? event.touches[0].clientX : event.clientX;
@@ -51,6 +61,8 @@ window.floatingQrDrag = {
     },
 
     updateWindowPosition: function(deltaX, deltaY) {
+        if (!this.currentWindow) return;
+
         const newX = Math.max(0, Math.min(
             window.innerWidth - this.currentWindow.offsetWidth,
             this.windowStartX + deltaX

@@ -81,10 +81,12 @@ namespace AirCode.Services.Attendance
 
     public class SessionData
     {
-        public string CourseName { get; set; } = string.Empty;
-        public string CourseId { get; set; } = string.Empty;
-        public int Duration { get; set; } = 30;
+        public string SessionId { get; set; } = Guid.NewGuid().ToString("N");
+        public string CourseName { get; set; }
+        public string CourseId { get; set; }
         public DateTime StartTime { get; set; }
         public DateTime Date { get; set; }
+        public int Duration { get; set; }
+        public string LectureId { get; set; }
     }
 }

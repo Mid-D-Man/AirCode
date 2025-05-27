@@ -17,7 +17,9 @@
                     Expires in: @FormatTimeRemaining()
                 </div>
                 <QRCodeCompo 
-                    Content="@SessionData.QrCodePayload" 
+                    SessionId="@SessionData.SessionId"
+                    CourseCode="@SessionData.CourseId" 
+                    StartTime="@SessionData.StartTime"
                     Duration="@SessionData.Duration" 
                     Theme="@ConvertStringToTheme(SessionData.Theme)" 
                     Options="@GenerateQRCodeOptions()" />
@@ -84,14 +86,13 @@
 
     private async Task HandleMouseDown(MouseEventArgs e)
     {
-        await JS.InvokeVoidAsync("floatingQrDrag.startDrag", e, DotNetObjectReference.Create(this));
+        await JS.InvokeVoidAsync("floatingQrDrag.startDrag", e);
     }
 
     private async Task HandleTouchStart(TouchEventArgs e)
     {
-        await JS.InvokeVoidAsync("floatingQrDrag.startDrag", e, DotNetObjectReference.Create(this));
+        await JS.InvokeVoidAsync("floatingQrDrag.startDrag", e);
     }
-
     [JSInvokable]
     public void UpdatePosition(double x, double y)
     {
