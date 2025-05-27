@@ -106,6 +106,16 @@
     align-items: center;
     position: relative;
 }
+.active-sessions-list {
+    margin-top: var(--spacing-xxl);
+    background-color: var(--bg-secondary);
+    border-radius: 12px;
+    padding: var(--spacing-xl);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    border: 1px solid var(--border);
+    width: 100%;
+    max-width: 800px;
+}
 
 .countdown-timer {
     background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
