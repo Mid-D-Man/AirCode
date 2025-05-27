@@ -16,13 +16,15 @@
                 <input type="text"
                        @bind="searchQuery"
                        @bind:event="oninput"
-                       @onkeyup="FilterCourses"
+                       @onkeyup="OnSearchQueryChanged"
                        placeholder="Search by course code or name..."
                        class="search-input" />
             </div>
 
             <div class="filters-container">
-                <select @bind="selectedDepartment" @onchange="FilterCourses" class="filter-select">
+                <select value="@selectedDepartment" 
+                        @onchange="OnDepartmentChanged" 
+                        class="filter-select">
                     <option value="">All Departments</option>
                     @foreach (var dept in availableDepartments)
                     {
@@ -30,7 +32,9 @@
                     }
                 </select>
 
-                <select @bind="selectedLevel" @onchange="FilterCourses" class="filter-select">
+                <select value="@selectedLevel" 
+                        @onchange="OnLevelChanged" 
+                        class="filter-select">
                     <option value="">All Levels</option>
                     @foreach (LevelType level in Enum.GetValues<LevelType>())
                     {
@@ -38,7 +42,9 @@
                     }
                 </select>
 
-                <select @bind="selectedSemester" @onchange="FilterCourses" class="filter-select">
+                <select value="@selectedSemester" 
+                        @onchange="OnSemesterChanged" 
+                        class="filter-select">
                     <option value="">All Semesters</option>
                     @foreach (SemesterType semester in Enum.GetValues<SemesterType>())
                     {
@@ -127,6 +133,7 @@
 
     private Course selectedCourse;
     private bool isLoading = true;
+    private Timer? _debounceTimer;
 
     protected override async Task OnInitializedAsync()
     {
@@ -213,6 +220,46 @@
         StateHasChanged();
     }
 
+    private void FilterCoursesDebounced()
+    {
+        _debounceTimer?.Dispose();
+        _debounceTimer = new Timer(_ => InvokeAsync(() =>
+        {
+            FilterCourses();
+            StateHasChanged();
+        }), null, 300, Timeout.Infinite);
+    }
+
+    // Event handlers for filter changes
+    private async Task OnDepartmentChanged(ChangeEventArgs e)
+    {
+        selectedDepartment = e.Value?.ToString() ?? "";
+        FilterCourses();
+    }
+
+    private async Task OnLevelChanged(ChangeEventArgs e)
+    {
+        var value = e.Value?.ToString();
+        selectedLevel = string.IsNullOrEmpty(value) || !Enum.TryParse<LevelType>(value, out var level) 
+            ? (LevelType?)null 
+            : level;
+        FilterCourses();
+    }
+
+    private async Task OnSemesterChanged(ChangeEventArgs e)
+    {
+        var value = e.Value?.ToString();
+        selectedSemester = string.IsNullOrEmpty(value) || !Enum.TryParse<SemesterType>(value, out var semester) 
+            ? (SemesterType?)null 
+            : semester;
+        FilterCourses();
+    }
+
+    private void OnSearchQueryChanged()
+    {
+        FilterCoursesDebounced();
+    }
+
     private void SelectCourse(Course course)
     {
         selectedCourse = course;
@@ -236,6 +283,14 @@
         selectedLevel = null;
         selectedSemester = null;
 
+        _debounceTimer?.Dispose();
+        _debounceTimer = null;
+
         await OnClosed.InvokeAsync();
+    }
+
+    public void Dispose()
+    {
+        _debounceTimer?.Dispose();
     }
 }

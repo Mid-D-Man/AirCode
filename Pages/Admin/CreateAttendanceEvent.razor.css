@@ -45,6 +45,7 @@
     width: 100%;
     max-width: 600px; /* Constrain width for better centering */
 }
+
 .form-container {
     background-color: var(--bg-secondary);
     border-radius: 12px;
@@ -63,6 +64,81 @@
     font-weight: 500;
     margin-bottom: var(--spacing-sm);
     font-size: 0.95rem;
+}
+
+/* Course Selection Styling */
+.selected-course-display {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-md);
+    background-color: var(--bg-tertiary);
+    border: 2px solid var(--primary-200);
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    min-height: 60px;
+}
+
+.selected-course-display:hover {
+    border-color: var(--primary-300);
+    background-color: var(--bg-secondary);
+}
+
+.course-info {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+    flex: 1;
+}
+
+.course-code {
+    font-weight: 600;
+    color: var(--primary-600);
+    font-size: 0.95rem;
+}
+
+.course-name {
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    line-height: 1.3;
+}
+
+.change-course-btn,
+.select-course-btn {
+    background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
+    color: white;
+    border: none;
+    padding: var(--spacing-sm) var(--spacing-md);
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.select-course-btn {
+    width: 100%;
+    padding: var(--spacing-md) var(--spacing-lg);
+    font-size: 0.95rem;
+    border-radius: 8px;
+    min-height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--secondary-500), var(--secondary-600));
+}
+
+.change-course-btn:hover,
+.select-course-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
+    background: linear-gradient(135deg, var(--primary-600), var(--primary-700));
+}
+
+.select-course-btn:hover {
+    background: linear-gradient(135deg, var(--secondary-600), var(--secondary-700));
+    box-shadow: 0 4px 12px rgba(156, 39, 176, 0.3);
 }
 
 .form-control {
@@ -93,19 +169,61 @@
     display: flex;
     justify-content: center;
     margin-top: var(--spacing-xl);
+    position: relative;
 }
 
-.active-session-container {
-    background-color: var(--bg-secondary);
-    border-radius: 12px;
-    padding: var(--spacing-xl);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-    border: 1px solid var(--border);
+.loading-spinner {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin-left: var(--spacing-md);
+}
+
+.loading-spinner::before {
+    content: '';
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--border);
+    border-top: 2px solid var(--primary-500);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Session Header Styling */
+.session-header {
     display: flex;
     flex-direction: column;
     align-items: center;
-    position: relative;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-lg);
+    text-align: center;
 }
+
+.session-header h3 {
+    color: var(--text-primary);
+    font-size: 1.4rem;
+    font-weight: 600;
+    margin: 0;
+    line-height: 1.3;
+}
+
+.course-code-badge {
+    background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
+    color: white;
+    padding: var(--spacing-xs) var(--spacing-md);
+    border-radius: 15px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
 .active-sessions-list {
     margin-top: var(--spacing-xxl);
     background-color: var(--bg-secondary);
@@ -164,15 +282,6 @@
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(156, 39, 176, 0.4);
     background: linear-gradient(135deg, var(--secondary-600), var(--secondary-700));
-}
-
-.active-sessions-list {
-    margin-top: var(--spacing-xxl);
-    background-color: var(--bg-secondary);
-    border-radius: 12px;
-    padding: var(--spacing-xl);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-    border: 1px solid var(--border);
 }
 
 .active-sessions-list h3 {
@@ -252,6 +361,14 @@
         flex-direction: column;
         align-items: center;
     }
+
+    .selected-course-display {
+        min-height: 65px;
+    }
+
+    .course-info {
+        gap: var(--spacing-sm);
+    }
 }
 
 /* Medium Screens / Tablet */
@@ -268,6 +385,18 @@
 
     .create-session-page h1 {
         font-size: 1.75rem;
+    }
+
+    .selected-course-display {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--spacing-sm);
+        min-height: auto;
+    }
+
+    .change-course-btn {
+        align-self: flex-end;
+        margin-top: var(--spacing-xs);
     }
 }
 
@@ -294,6 +423,30 @@
 
     .form-container {
         padding: var(--spacing-lg);
+    }
+
+    .selected-course-display {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--spacing-sm);
+        min-height: auto;
+        padding: var(--spacing-md);
+    }
+
+    .change-course-btn {
+        align-self: stretch;
+        margin-top: var(--spacing-sm);
+        width: 100%;
+        justify-content: center;
+    }
+
+    .select-course-btn {
+        min-height: 55px;
+        font-size: 1rem;
+    }
+
+    .session-header h3 {
+        font-size: 1.2rem;
     }
 
     .session-actions {
@@ -350,6 +503,20 @@
         font-size: 0.9rem;
         padding: var(--spacing-sm);
     }
+
+    .course-code {
+        font-size: 0.9rem;
+    }
+
+    .course-name {
+        font-size: 0.85rem;
+    }
+
+    .change-course-btn,
+    .select-course-btn {
+        font-size: 0.9rem;
+        padding: var(--spacing-sm) var(--spacing-md);
+    }
 }
 
 /* Dark mode specific adjustments */
@@ -365,4 +532,18 @@ body.dark-mode .form-control:focus {
 
 body.dark-mode .session-card:hover {
     border-color: var(--primary-400);
+}
+
+body.dark-mode .selected-course-display {
+    border-color: var(--primary-300);
+    background-color: var(--bg-tertiary);
+}
+
+body.dark-mode .selected-course-display:hover {
+    border-color: var(--primary-400);
+    background-color: var(--bg-secondary);
+}
+
+body.dark-mode .course-code {
+    color: var(--primary-400);
 }
