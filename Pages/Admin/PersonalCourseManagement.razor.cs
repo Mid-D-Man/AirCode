@@ -13,9 +13,10 @@ public partial class PersonalCourseManagement : ComponentBase
     private string ErrorMessage = string.Empty;
     private string SuccessMessage = string.Empty;
 
+    //using matric num if user above level and course below enrol as carry over
     // Student Data
-    [Parameter] public string CurrentMatricNumber { get; set; } = "CSC/19/001"; // This should come from auth context
-    [Parameter] public LevelType CurrentStudentLevel { get; set; } = LevelType.Level300; // This should come from auth context
+    [Parameter] public string CurrentMatricNumber { get; set; } = "U21CYS1083"; // This should come from auth context
+    [Parameter] public LevelType CurrentStudentLevel { get; set; } = LevelType.Level100; // This should come from auth context
     
     private StudentCourse? CurrentStudentCourse;
     private List<Course> AvailableCourses = new();
@@ -40,7 +41,8 @@ public partial class PersonalCourseManagement : ComponentBase
 
             // Load student's current course data
             CurrentStudentCourse = await CourseService.GetStudentCoursesByMatricAsync(CurrentMatricNumber);
-            
+            //creating if missing already handled by the get func
+            /*
             // If student doesn't exist, create new student course record
             if (CurrentStudentCourse == null)
             {
@@ -53,9 +55,10 @@ public partial class PersonalCourseManagement : ComponentBase
                 );
                 await CourseService.AddStudentCourseAsync(CurrentStudentCourse);
             }
-
+             */
             // Load available courses for the student's level
-            AvailableCourses = await CourseService.GetCoursesByLevelAsync(CurrentStudentLevel);
+            //get all courses not by level cause we gas account for carryover courses and what not
+            AvailableCourses = await CourseService.GetAllCoursesAsync();
             
             FilterCourses();
         }

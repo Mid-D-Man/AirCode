@@ -482,38 +482,59 @@ public async Task<StudentCourse> GetStudentCoursesByMatricAsync(string matricNum
 }
 private LevelType DetermineStudentLevel(string matricNumber)
 {
-    // Extract level from matric number pattern (adjust based on your institution's format)
-    // Example: If matric format is like "2021/CS/001" or "CS/21/001"
-    
     if (string.IsNullOrEmpty(matricNumber)) return LevelType.Level100;
     
-    // Simple logic - you can enhance based on your matric number format
+    // Enhanced pattern for format: U{YY}{DEPT}{NNNN}
+    // Example: U21CYS1099, U22CS1009
+    var matricPattern = @"^U(\d{2})([A-Z]{2,4})(\d{4})$";
+    var match = System.Text.RegularExpressions.Regex.Match(matricNumber.ToUpper(), matricPattern);
+    
+    if (!match.Success) return LevelType.Level100;
+    
+    var yearSuffix = int.Parse(match.Groups[1].Value);
+    var departmentCode = match.Groups[2].Value;
+    var studentNumber = match.Groups[3].Value;
+    
+    // Convert 2-digit year to full year
+    var admissionYear = 2000 + yearSuffix;
     var currentYear = DateTime.Now.Year;
     
-    // Try to extract year from matric number
-    var yearMatch = System.Text.RegularExpressions.Regex.Match(matricNumber, @"20(\d{2})|(\d{2})");
-    if (yearMatch.Success)
-    {
-        if (int.TryParse(yearMatch.Groups[1].Success ? yearMatch.Groups[1].Value : yearMatch.Groups[2].Value, out int year))
-        {
-            // Convert 2-digit to 4-digit year if needed
-            if (year < 100) year += (year < 50) ? 2000 : 1900;
-            
-            var academicYearDiff = currentYear - year;
-            return academicYearDiff switch
-            {
-                0 => LevelType.Level100,
-                1 => LevelType.Level200,
-                2 => LevelType.Level300,
-                3 => LevelType.Level400,
-                4 => LevelType.Level500,
-                _ => LevelType.LevelExtra
-            };
-        }
-    }
+    // Calculate academic level based on years since admission
+    var academicYearsPassed = currentYear - admissionYear;
     
-    // Default to Level 100 if unable to determine
-    return LevelType.Level100;
+    return academicYearsPassed switch
+    {
+        0 => LevelType.Level100,  // Freshman year
+        1 => LevelType.Level200,  // Sophomore year
+        2 => LevelType.Level300,  // Junior year
+        3 => LevelType.Level400,  // Senior year
+        4 => LevelType.Level500,  // Fifth year/Graduate
+        _ when academicYearsPassed > 4 => LevelType.LevelExtra,  // Extended program
+        _ => LevelType.Level100   // Negative values (future admission) default to 100
+    };
+}
+
+// Optional: Add validation method for matric number format
+private bool IsValidMatricNumber(string matricNumber)
+{
+    if (string.IsNullOrEmpty(matricNumber)) return false;
+    
+    var matricPattern = @"^U(\d{2})([A-Z]{2,4})(\d{4})$";
+    var match = System.Text.RegularExpressions.Regex.Match(matricNumber.ToUpper(), matricPattern);
+    
+    if (!match.Success) return false;
+    
+    var yearSuffix = int.Parse(match.Groups[1].Value);
+    var studentNumber = int.Parse(match.Groups[3].Value);
+    
+    // Validate year range (assuming 2020-2030 admission window)
+    var admissionYear = 2000 + yearSuffix;
+    if (admissionYear < 2020 || admissionYear > 2040) return false;
+    
+    // Validate student number range (1001-1999 as typical range)
+    if (studentNumber < 1001 || studentNumber > 1999) return false;
+    
+    return true;
 }
 public async Task<List<StudentCourse>> GetStudentCoursesByLevelAsync(LevelType level)
 {
