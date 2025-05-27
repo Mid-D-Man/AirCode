@@ -39,6 +39,11 @@
     private QRCodeData _generatedQRCode;
     private QRCodeDecoder _qrDecoder;
 
+    /*
+  impl Ultra-short QR code lifespan (30-60 seconds)
+       Dynamic codes that regenerate every 15-30 seconds
+     */
+    
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();

@@ -6,130 +6,130 @@
     width: 100vw;
     height: 100vh;
     background-color: rgba(0, 0, 0, 0.5);
-    z-index: 9999;
+    z-index: 1000;
     display: flex;
-    align-items: flex-start;
-    justify-content: flex-start;
+    align-items: center;
+    justify-content: center;
 }
 
 .floating-qr-window {
-    position: absolute;
-    background: var(--bg-secondary);
+    background: white;
     border-radius: 12px;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
     min-width: 350px;
     max-width: 90vw;
-    animation: fadeInScale 0.3s ease;
-    border: 1px solid var(--border);
+    max-height: 90vh;
+    position: absolute;
+    overflow: hidden;
+    transition: all 0.3s ease;
 }
 
-@keyframes fadeInScale {
-    from {
-        opacity: 0;
-        transform: scale(0.9);
-    }
-    to {
-        opacity: 1;
-        transform: scale(1);
-    }
+.floating-qr-window.fullscreen {
+    width: 95vw !important;
+    height: 95vh !important;
+    top: 2.5vh !important;
+    left: 2.5vw !important;
+    max-width: none;
+    max-height: none;
+    border-radius: 8px;
 }
 
 .floating-qr-header {
-    background: linear-gradient(135deg, var(--primary-600) 0%, var(--primary-700) 100%);
-    color: var(--button-text);
-    padding: var(--spacing-md);
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 12px 16px;
+    cursor: move;
+    user-select: none;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    cursor: move;
-    user-select: none;
+    min-height: 48px;
+}
+
+.floating-qr-window.fullscreen .floating-qr-header {
+    cursor: default;
 }
 
 .drag-handle {
     flex: 1;
     font-weight: 600;
-    font-size: 0.95rem;
-    user-select: none;
+    font-size: 14px;
 }
 
+.header-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.fullscreen-button,
 .close-button {
-    background: none;
+    background: rgba(255, 255, 255, 0.2);
     border: none;
-    color: var(--button-text);
-    font-size: 1.5rem;
-    cursor: pointer;
-    width: 30px;
-    height: 30px;
+    color: white;
+    border-radius: 4px;
+    width: 32px;
+    height: 32px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 50%;
+    cursor: pointer;
     transition: background-color 0.2s ease;
+    font-size: 18px;
+    font-weight: bold;
 }
 
+.fullscreen-button:hover,
 .close-button:hover {
-    background-color: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.3);
 }
 
 .floating-qr-content {
-    padding: var(--spacing-lg);
+    padding: 24px;
+    text-align: center;
+    background: white;
+}
+
+.floating-qr-window.fullscreen .floating-qr-content {
+    padding: 48px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: var(--spacing-md);
-    background: var(--bg-secondary);
+    justify-content: center;
+    height: calc(100% - 48px);
 }
 
 .floating-countdown {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: var(--error);
-    padding: var(--spacing-sm) var(--spacing-md);
-    background-color: rgba(244, 67, 54, 0.1);
+    background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+    color: white;
+    padding: 8px 16px;
     border-radius: 20px;
-    border: 1px solid rgba(244, 67, 54, 0.2);
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 20px;
+    display: inline-block;
+    animation: pulse 2s infinite;
 }
 
-/* Dark mode adjustments */
-body.dark-mode .floating-qr-window {
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+.floating-qr-window.fullscreen .floating-countdown {
+    font-size: 18px;
+    padding: 12px 24px;
+    margin-bottom: 32px;
 }
 
-body.dark-mode .floating-countdown {
-    background-color: rgba(244, 67, 54, 0.2);
-    border-color: rgba(244, 67, 54, 0.3);
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
 }
 
-/* Responsive Design */
-@media (max-width: 768px) {
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
     .floating-qr-window {
-        min-width: 90vw;
-        max-height: 90vh;
-        overflow-y: auto;
+        background: #2d3748;
+        color: white;
     }
 
     .floating-qr-content {
-        padding: var(--spacing-md);
-    }
-
-    .drag-handle {
-        font-size: 0.9rem;
-    }
-}
-
-@media (max-width: 480px) {
-    .floating-qr-header {
-        padding: var(--spacing-sm) var(--spacing-md);
-    }
-
-    .floating-qr-content {
-        padding: var(--spacing-sm);
-    }
-
-    .close-button {
-        width: 28px;
-        height: 28px;
-        font-size: 1.3rem;
+        background: #2d3748;
     }
 }

@@ -18,53 +18,55 @@
     <h1>Create Attendance Event</h1>
     
     <div class="content-container @(isSessionStarted ? "session-active" : "")">
-        <div class="form-container">
-            <EditForm Model="sessionModel" OnValidSubmit="StartSession">
-                <DataAnnotationsValidator />
-                <ValidationSummary />
-                
-                <div class="form-group">
-                    <label for="courseName">Course Name</label>
-                    <InputText id="courseName" @bind-Value="sessionModel.CourseName" class="form-control" disabled="@isSessionStarted" />
-                </div>
-                
-                <div class="form-group">
-                    <label for="courseId">Course ID</label>
-                    <InputText id="courseId" @bind-Value="sessionModel.CourseId" class="form-control" disabled="@isSessionStarted" />
-                </div>
-                
-                <div class="form-group">
-                    <label for="duration">Session Duration</label>
-                    <InputSelect id="duration" @bind-Value="sessionModel.Duration" class="form-control" disabled="@isSessionStarted">
-                        <option value="10">10 minutes</option>
-                        <option value="15">15 minutes</option>
-                        <option value="30">30 minutes</option>
-                        <option value="60">1 hour</option>
-                        <option value="120">2 hours</option>
-                        <option value="180">3 hours</option>
-                        <option value="240">4 hours</option>
-                        <option value="300">5 hours</option>
-                        <option value="360">6 hours</option>
-                    </InputSelect>
-                </div>
-                
-                <div class="form-group">
-                    <label for="qrTheme">QR Code Theme</label>
-                    <InputSelect id="qrTheme" @bind-Value="selectedTheme" class="form-control" disabled="@isSessionStarted">
-                        <option value="Standard">Standard</option>
-                        <option value="Gradient">Gradient</option>
-                        <option value="Branded">With Logo</option>
-                        <option value="GradientWithLogo">Gradient with Logo</option>
-                    </InputSelect>
-                </div>
-                
-                <div class="button-container">
-                    <PrimaryButton Text="Start Session" OnClick="StartSession" />
-                </div>
-            </EditForm>
-        </div>
-        
-        @if (isSessionStarted)
+        @if (!isSessionStarted)
+        {
+            <div class="form-container">
+                <EditForm Model="sessionModel" OnValidSubmit="StartSession">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+                    
+                    <div class="form-group">
+                        <label for="courseName">Course Name</label>
+                        <InputText id="courseName" @bind-Value="sessionModel.CourseName" class="form-control" />
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="courseId">Course ID</label>
+                        <InputText id="courseId" @bind-Value="sessionModel.CourseId" class="form-control" />
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="duration">Session Duration</label>
+                        <InputSelect id="duration" @bind-Value="sessionModel.Duration" class="form-control">
+                            <option value="10">10 minutes</option>
+                            <option value="15">15 minutes</option>
+                            <option value="30">30 minutes</option>
+                            <option value="60">1 hour</option>
+                            <option value="120">2 hours</option>
+                            <option value="180">3 hours</option>
+                            <option value="240">4 hours</option>
+                            <option value="300">5 hours</option>
+                            <option value="360">6 hours</option>
+                        </InputSelect>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="qrTheme">QR Code Theme</label>
+                        <InputSelect id="qrTheme" @bind-Value="selectedTheme" class="form-control">
+                            <option value="Standard">Standard</option>
+                            <option value="Gradient">Gradient</option>
+                            <option value="Branded">With Logo</option>
+                            <option value="GradientWithLogo">Gradient with Logo</option>
+                        </InputSelect>
+                    </div>
+                    
+                    <div class="button-container">
+                        <PrimaryButton Text="Start Session" OnClick="StartSession" />
+                    </div>
+                </EditForm>
+            </div>
+        }
+        else
         {
             <div class="active-session-container">
                 <div class="countdown-timer">
@@ -95,12 +97,12 @@
         }
     </div>
     
-    <!-- Active Sessions List -->
-    @if (activeSessions.Any())
+    <!-- Active Sessions List - only show other sessions -->
+    @if (otherActiveSessions.Any())
     {
         <div class="active-sessions-list">
-            <h3>Active Sessions</h3>
-            @foreach (var session in activeSessions)
+            <h3>Other Active Sessions</h3>
+            @foreach (var session in otherActiveSessions)
             {
                 <div class="session-card">
                     <div class="session-info">
@@ -132,7 +134,9 @@
     private DateTime sessionEndTime;
     private System.Threading.Timer countdownTimer;
     private QRCodeData generatedQRCode;
-    private List<ActiveSessionData> activeSessions = new();
+    private List<ActiveSessionData> allActiveSessions = new();
+    private List<ActiveSessionData> otherActiveSessions = new();
+    private ActiveSessionData currentActiveSession;
     
     // Floating QR code properties
     private bool showFloatingQR = false;
@@ -143,27 +147,17 @@
         sessionModel.Duration = 30;
         
         // Load existing sessions from service
-        activeSessions = SessionStateService.GetActiveSessions();
+        RefreshSessionLists();
         
-        // Check if there's a current session for restoration
-        var existingSession = SessionStateService.GetCurrentSession("default");
-        if (existingSession != null)
-        {
-            sessionModel = existingSession;
-            // Check if session should still be active
-            var activeSession = activeSessions.FirstOrDefault(s => s.CourseId == sessionModel.CourseId);
-            if (activeSession != null && DateTime.UtcNow < activeSession.EndTime)
-            {
-                RestoreActiveSession(activeSession);
-            }
-        }
+        // Check if there's already an active session for this course
+        CheckForExistingSession();
         
         SessionStateService.StateChanged += OnStateChanged;
         
         countdownTimer = new System.Threading.Timer(
             _ => InvokeAsync(() => {
                 SessionStateService.CleanupExpiredSessions();
-                activeSessions = SessionStateService.GetActiveSessions();
+                RefreshSessionLists();
                 StateHasChanged();
             }),
             null,
@@ -172,16 +166,50 @@
         );
     }
 
+    private void RefreshSessionLists()
+    {
+        allActiveSessions = SessionStateService.GetActiveSessions();
+        
+        if (isSessionStarted && currentActiveSession != null)
+        {
+            otherActiveSessions = allActiveSessions
+                .Where(s => s.SessionId != currentActiveSession.SessionId)
+                .ToList();
+        }
+        else
+        {
+            otherActiveSessions = allActiveSessions.ToList();
+        }
+    }
+
+    private void CheckForExistingSession()
+    {
+        var existingSession = SessionStateService.GetCurrentSession("default");
+        if (existingSession != null)
+        {
+            var activeSession = allActiveSessions.FirstOrDefault(s => 
+                s.CourseId == existingSession.CourseId && 
+                DateTime.UtcNow < s.EndTime);
+                
+            if (activeSession != null)
+            {
+                RestoreActiveSession(activeSession, existingSession);
+            }
+        }
+    }
+
     private void OnStateChanged()
     {
         InvokeAsync(() => {
-            activeSessions = SessionStateService.GetActiveSessions();
+            RefreshSessionLists();
             StateHasChanged();
         });
     }
 
-    private void RestoreActiveSession(ActiveSessionData activeSession)
+    private void RestoreActiveSession(ActiveSessionData activeSession, SessionData sessionData)
     {
+        sessionModel = sessionData;
+        currentActiveSession = activeSession;
         isSessionStarted = true;
         qrCodePayload = activeSession.QrCodePayload;
         selectedTheme = activeSession.Theme;
@@ -190,15 +218,22 @@
     
     private async void StartSession()
     {
+        // Check if there's already an active session
+        if (allActiveSessions.Any())
+        {
+            // For now, prevent multiple sessions
+            // You could show a message here instead
+            return;
+        }
+
         sessionModel.StartTime = DateTime.UtcNow;
         sessionModel.Date = DateTime.UtcNow.Date;
-        isSessionStarted = true;
         qrCodePayload = await GenerateQrCodePayload();
         
         sessionEndTime = DateTime.UtcNow.AddMinutes(sessionModel.Duration);
         
         // Add to active sessions via service
-        var activeSession = new ActiveSessionData
+        currentActiveSession = new ActiveSessionData
         {
             SessionId = Guid.NewGuid().ToString("N"),
             CourseName = sessionModel.CourseName,
@@ -210,25 +245,26 @@
             Theme = selectedTheme
         };
         
-        SessionStateService.AddActiveSession(activeSession);
+        SessionStateService.AddActiveSession(currentActiveSession);
         SessionStateService.UpdateCurrentSession("default", sessionModel);
         
-        activeSessions = SessionStateService.GetActiveSessions();
+        isSessionStarted = true;
+        RefreshSessionLists();
+        StateHasChanged();
     }
     
     private void EndSession()
     {
-        isSessionStarted = false;
-        
-        // Remove from active sessions via service
-        var sessionToRemove = activeSessions.FirstOrDefault(s => s.QrCodePayload == qrCodePayload);
-        if (sessionToRemove != null)
+        if (currentActiveSession != null)
         {
-            SessionStateService.RemoveActiveSession(sessionToRemove.SessionId);
+            SessionStateService.RemoveActiveSession(currentActiveSession.SessionId);
         }
         
         SessionStateService.RemoveCurrentSession("default");
-        activeSessions = SessionStateService.GetActiveSessions();
+        
+        isSessionStarted = false;
+        currentActiveSession = null;
+        RefreshSessionLists();
     }
     
     private async Task<string> GenerateQrCodePayload()
@@ -244,13 +280,9 @@
     
     private void OpenFloatingQR()
     {
-        if (isSessionStarted)
+        if (isSessionStarted && currentActiveSession != null)
         {
-            var currentSession = activeSessions.FirstOrDefault(s => s.QrCodePayload == qrCodePayload);
-            if (currentSession != null)
-            {
-                OpenFloatingQRForSession(currentSession);
-            }
+            OpenFloatingQRForSession(currentActiveSession);
         }
     }
     
@@ -352,7 +384,7 @@
     
     private string FormatTimeRemaining()
     {
-        if (!isSessionStarted) return "--:--:--";
+        if (!isSessionStarted || currentActiveSession == null) return "--:--:--";
         
         TimeSpan remaining = sessionEndTime - DateTime.UtcNow;
         if (remaining.TotalSeconds <= 0)
