@@ -2,7 +2,6 @@
 @using AirCode.Layout.AdminLayout.Superior
 @using Microsoft.AspNetCore.Authorization
 @layout SuperiorAdminLayout
-@attribute [Authorize(Roles = "LecturerAdmin")]
 @using AirCode.Components.SharedPrefabs
 @using AirCode.Utilities.DataStructures
 @using AirCode.Components.SharedPrefabs.QrCode
@@ -91,6 +90,8 @@
     private DateTime sessionEndTime;
     private System.Threading.Timer countdownTimer;
     private QRCodeData generatedQRCode;
+    public string initiatorId = "yahoo AiAi";//not lecture id but initiator id insted
+    
     protected override void OnInitialized()
     {
         // Set default values if needed
@@ -137,12 +138,11 @@
             // External scanners will redirect to your website
             //  app can decode the full session data
             return await QRCodeDecoder.EncodeSessionDataAsync(
-                JS,
                 sessionId,
                 sessionModel.CourseId,
-                sessionModel.CourseName,
                 sessionModel.StartTime,
-                sessionModel.Duration);
+                sessionModel.Duration,
+                initiatorId);
         
       }
     
