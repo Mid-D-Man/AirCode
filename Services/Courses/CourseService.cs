@@ -459,16 +459,62 @@ public async Task<StudentCourse> GetStudentCoursesByMatricAsync(string matricNum
                 return MapFirestoreModelToStudentEntity(studentCourseData, GetLevelFromStudentDocument(levelDoc));
             }
         }
+
+        // NEW: Handle new student case - create default record
+        var defaultLevel = DetermineStudentLevel(matricNumber); // You'll need to implement this
+        var newStudentCourse = new StudentCourse(
+            matricNumber,
+            defaultLevel,
+            new List<CourseRefrence>(),
+            DateTime.UtcNow,
+            "System"
+        );
+
+        // Auto-create the student record
+        var creationSuccess = await AddStudentCourseAsync(newStudentCourse);
+        return creationSuccess ? newStudentCourse : null;
     }
     catch (Exception ex)
     {
         Console.WriteLine($"Error getting student courses by matric {matricNumber}: {ex.Message}");
         throw;
     }
-
-    return null;
 }
-
+private LevelType DetermineStudentLevel(string matricNumber)
+{
+    // Extract level from matric number pattern (adjust based on your institution's format)
+    // Example: If matric format is like "2021/CS/001" or "CS/21/001"
+    
+    if (string.IsNullOrEmpty(matricNumber)) return LevelType.Level100;
+    
+    // Simple logic - you can enhance based on your matric number format
+    var currentYear = DateTime.Now.Year;
+    
+    // Try to extract year from matric number
+    var yearMatch = System.Text.RegularExpressions.Regex.Match(matricNumber, @"20(\d{2})|(\d{2})");
+    if (yearMatch.Success)
+    {
+        if (int.TryParse(yearMatch.Groups[1].Success ? yearMatch.Groups[1].Value : yearMatch.Groups[2].Value, out int year))
+        {
+            // Convert 2-digit to 4-digit year if needed
+            if (year < 100) year += (year < 50) ? 2000 : 1900;
+            
+            var academicYearDiff = currentYear - year;
+            return academicYearDiff switch
+            {
+                0 => LevelType.Level100,
+                1 => LevelType.Level200,
+                2 => LevelType.Level300,
+                3 => LevelType.Level400,
+                4 => LevelType.Level500,
+                _ => LevelType.LevelExtra
+            };
+        }
+    }
+    
+    // Default to Level 100 if unable to determine
+    return LevelType.Level100;
+}
 public async Task<List<StudentCourse>> GetStudentCoursesByLevelAsync(LevelType level)
 {
     if (_disposed) throw new ObjectDisposedException(nameof(CourseService));
@@ -619,26 +665,47 @@ public async Task<bool> DeleteStudentCourseAsync(string matricNumber)
 }
 
 // Course Reference Management
-public async Task<bool> AddCourseReferenceToStudentAsync(string matricNumber, CourseRefrence courseRef)
-{
-    if (_disposed) throw new ObjectDisposedException(nameof(CourseService));
-    if (!MID_HelperFunctions.IsValidString(matricNumber) || courseRef == null) return false;
+        public async Task<bool> AddCourseReferenceToStudentAsync(string matricNumber, CourseRefrence courseRef)
+        {
+            if (_disposed) throw new ObjectDisposedException(nameof(CourseService));
+            if (!MID_HelperFunctions.IsValidString(matricNumber) || courseRef == null) return false;
 
-    try
-    {
-        var existingStudent = await GetStudentCoursesByMatricAsync(matricNumber);
-        if (existingStudent == null) return false;
+            try
+            {
+                // UPDATED: This will now auto-create student if they don't exist
+                var existingStudent = await GetStudentCoursesByMatricAsync(matricNumber);
+                if (existingStudent == null) return false; // Only fail if creation also failed
 
-        var updatedStudent = existingStudent.WithAddedCourse(courseRef, "System");
-        return await UpdateStudentCourseAsync(updatedStudent);
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"Error adding course reference to student {matricNumber}: {ex.Message}");
-        return false;
-    }
-}
+                var updatedStudent = existingStudent.WithAddedCourse(courseRef, "System");
+                return await UpdateStudentCourseAsync(updatedStudent);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error adding course reference to student {matricNumber}: {ex.Message}");
+                return false;
+            }
+        }
 
+        public async Task<bool> UpdateStudentCourseReferenceStatusAsync(string matricNumber, string courseCode, CourseEnrollmentStatus newStatus)
+        {
+            if (_disposed) throw new ObjectDisposedException(nameof(CourseService));
+            if (!MID_HelperFunctions.IsValidString(matricNumber) || !MID_HelperFunctions.IsValidString(courseCode)) return false;
+
+            try
+            {
+                // UPDATED: This will now auto-create student if they don't exist
+                var existingStudent = await GetStudentCoursesByMatricAsync(matricNumber);
+                if (existingStudent == null) return false; // Only fail if creation also failed
+
+                var updatedStudent = existingStudent.WithUpdatedCourseStatus(courseCode, newStatus, "System");
+                return await UpdateStudentCourseAsync(updatedStudent);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error updating course status for student {matricNumber}: {ex.Message}");
+                return false;
+            }
+        }
 public async Task<bool> RemoveCourseReferenceFromStudentAsync(string matricNumber, string courseCode)
 {
     if (_disposed) throw new ObjectDisposedException(nameof(CourseService));
@@ -659,25 +726,7 @@ public async Task<bool> RemoveCourseReferenceFromStudentAsync(string matricNumbe
     }
 }
 
-public async Task<bool> UpdateStudentCourseReferenceStatusAsync(string matricNumber, string courseCode, CourseEnrollmentStatus newStatus)
-{
-    if (_disposed) throw new ObjectDisposedException(nameof(CourseService));
-    if (!MID_HelperFunctions.IsValidString(matricNumber) || !MID_HelperFunctions.IsValidString(courseCode)) return false;
 
-    try
-    {
-        var existingStudent = await GetStudentCoursesByMatricAsync(matricNumber);
-        if (existingStudent == null) return false;
-
-        var updatedStudent = existingStudent.WithUpdatedCourseStatus(courseCode, newStatus, "System");
-        return await UpdateStudentCourseAsync(updatedStudent);
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"Error updating course status for student {matricNumber}: {ex.Message}");
-        return false;
-    }
-}
 
 // Bulk Operations
 public async Task<bool> ClearAllStudentCourseReferencesAsync()
