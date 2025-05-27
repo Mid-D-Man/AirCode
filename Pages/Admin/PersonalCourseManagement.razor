@@ -1,0 +1,253 @@
+@page "/student/courses"
+@using AirCode.Domain.Entities
+@using AirCode.Domain.Enums
+@using AirCode.Domain.ValueObjects
+@using AirCode.Services.Courses
+@using AirCode.Layout.AdminLayout.Superior
+@layout SuperiorAdminLayout
+
+@inject ICourseService CourseService
+@inject IJSRuntime JSRuntime
+
+<PageTitle>My Course Management</PageTitle>
+
+<div class="student-course-container">
+    <div class="page-header">
+        <h2 class="page-title">
+            <i class="icon-books"></i>
+            Course Management
+        </h2>
+        <div class="student-info">
+            <span class="matric-number">@CurrentMatricNumber</span>
+            <span class="level-badge level-@CurrentStudentLevel.ToString().ToLower()">
+                @GetLevelDisplay(CurrentStudentLevel)
+            </span>
+        </div>
+    </div>
+
+    @if (IsLoading)
+    {
+    <div class="loading-container">
+        <div class="loading-spinner"></div>
+        <p>Loading your courses...</p>
+    </div>
+    }
+    else if (!string.IsNullOrEmpty(ErrorMessage))
+    {
+    <div class="alert alert-error">
+        <i class="icon-warning"></i>
+        @ErrorMessage
+    </div>
+    }
+    else
+    {
+    <div class="course-management-grid">
+        <!-- Current Enrolled Courses -->
+        <div class="enrolled-courses-section">
+            <div class="section-header">
+                <h3>My Enrolled Courses</h3>
+                <span class="course-count">@GetEnrolledCoursesCount() Courses</span>
+            </div>
+
+            @if (CurrentStudentCourse?.StudentCoursesRefs?.Any() == true)
+            {
+            <div class="courses-grid">
+                @foreach (var courseRef in CurrentStudentCourse.StudentCoursesRefs.OrderBy(c => c.CourseCode))
+                {
+                var course = AvailableCourses.FirstOrDefault(c => c.CourseCode == courseRef.CourseCode);
+                <div class="course-card enrolled-card status-@courseRef.CourseEnrollmentStatus.ToString().ToLower()">
+                    <div class="course-header">
+                        <h4 class="course-code">@courseRef.CourseCode</h4>
+                        <div class="course-status">
+                                        <span class="status-badge status-@courseRef.CourseEnrollmentStatus.ToString().ToLower()">
+                                            @courseRef.CourseEnrollmentStatus
+                                        </span>
+                        </div>
+                    </div>
+
+                    @if (course != null)
+                    {
+                    <div class="course-details">
+                        <h5 class="course-name">@course.Name</h5>
+                        <div class="course-info">
+                            <span class="credit-units">@course.CreditUnits Units</span>
+                            <span class="semester">@course.Semester Semester</span>
+                        </div>
+
+                        @if (course.Schedule.TimeSlots?.Any() == true)
+                        {
+                        <div class="schedule-info">
+                            @foreach (var slot in course.Schedule.TimeSlots.Take(2))
+                            {
+                            <div class="time-slot">
+                                <span class="day">@slot.Day.ToString().Substring(0, 3)</span>
+                                <span class="time">@slot.StartTime.ToString(@"hh\:mm") - @slot.EndTime.ToString(@"hh\:mm")</span>
+                            </div>
+                            }
+                        </div>
+                        }
+                    </div>
+                    }
+
+                    <div class="course-dates">
+                        <small class="enrollment-date">
+                            Enrolled: @courseRef.EnrollmentDate.ToString("MMM dd, yyyy")
+                        </small>
+                        @if (courseRef.LastStatusChange != courseRef.EnrollmentDate)
+                        {
+                        <small class="status-change">
+                            Updated: @courseRef.LastStatusChange.ToString("MMM dd, yyyy")
+                        </small>
+                        }
+                    </div>
+
+                    <div class="course-actions">
+                        @if (courseRef.CourseEnrollmentStatus == CourseEnrollmentStatus.Enrolled)
+                        {
+                        <button class="btn btn-warning btn-sm"
+                                @onclick="() => UpdateCourseStatus(courseRef.CourseCode, CourseEnrollmentStatus.Dropped)"
+                                disabled="@IsProcessing">
+                            Drop Course
+                        </button>
+                        }
+                        else if (courseRef.CourseEnrollmentStatus == CourseEnrollmentStatus.Dropped)
+                        {
+                        <button class="btn btn-success btn-sm"
+                                @onclick="() => UpdateCourseStatus(courseRef.CourseCode, CourseEnrollmentStatus.Enrolled)"
+                                disabled="@IsProcessing">
+                            Re-enroll
+                        </button>
+                        }
+
+                        <button class="btn btn-danger btn-sm"
+                                @onclick="() => RemoveCourse(courseRef.CourseCode)"
+                                disabled="@IsProcessing">
+                            Remove
+                        </button>
+                    </div>
+                </div>
+                }
+            </div>
+            }
+            else
+            {
+            <div class="empty-state">
+                <i class="icon-empty"></i>
+                <h4>No Enrolled Courses</h4>
+                <p>You haven't enrolled in any courses yet. Browse available courses to get started.</p>
+            </div>
+            }
+        </div>
+
+        <!-- Available Courses -->
+        <div class="available-courses-section">
+            <div class="section-header">
+                <h3>Available Courses</h3>
+                <div class="course-filters">
+                    <select class="filter-select" @bind="SelectedSemester" @bind:after="FilterCourses">
+                        <option value="">All Semesters</option>
+                        <option value="@SemesterType.FirstSemester">First Semester</option>
+                        <option value="@SemesterType.SecondSemester">Second Semester</option>
+                    </select>
+                    <input type="text" class="search-input" placeholder="Search courses..."
+                           @bind="SearchTerm" @bind:after="FilterCourses" />
+                </div>
+            </div>
+
+            <div class="courses-grid">
+                @foreach (var course in FilteredCourses.Take(12))
+                {
+                var isEnrolled = IsStudentEnrolledInCourse(course.CourseCode);
+                <div class="course-card available-card @(isEnrolled ? "already-enrolled" : "")">
+                    <div class="course-header">
+                        <h4 class="course-code">@course.CourseCode</h4>
+                        <span class="credit-units">@course.CreditUnits Units</span>
+                    </div>
+
+                    <div class="course-details">
+                        <h5 class="course-name">@course.Name</h5>
+                        <div class="course-info">
+                            <span class="semester">@course.Semester Semester</span>
+                            <span class="level">Level @course.Level.ToString().Replace("Level", "")</span>
+                        </div>
+
+                        @if (course.Schedule.TimeSlots?.Any() == true)
+                        {
+                        <div class="schedule-preview">
+                            @foreach (var slot in course.Schedule.TimeSlots.Take(1))
+                            {
+                            <span class="schedule-item">
+                                                @slot.Day.ToString().Substring(0, 3)
+                                @slot.StartTime.ToString(@"hh\:mm")-@slot.EndTime.ToString(@"hh\:mm")
+                                            </span>
+                            }
+                            @if (course.Schedule.TimeSlots.Count > 1)
+                            {
+                            <span class="more-schedule">+@(course.Schedule.TimeSlots.Count - 1) more</span>
+                            }
+                        </div>
+                        }
+                    </div>
+
+                    <div class="course-actions">
+                        @if (isEnrolled)
+                        {
+                        <span class="enrolled-indicator">
+                                        <i class="icon-check"></i> Already Enrolled
+                                    </span>
+                        }
+                        else
+                        {
+                        <button class="btn btn-primary"
+                                @onclick="() => EnrollInCourse(course.CourseCode)"
+                                disabled="@IsProcessing">
+                            Enroll Now
+                        </button>
+                        }
+                    </div>
+                </div>
+                }
+            </div>
+
+            @if (FilteredCourses.Count > 12)
+            {
+            <div class="load-more-container">
+                <button class="btn btn-outline" @onclick="LoadMoreCourses">
+                    Load More Courses (@(FilteredCourses.Count - 12) remaining)
+                </button>
+            </div>
+            }
+        </div>
+    </div>
+
+    <!-- Course Statistics -->
+    <div class="course-statistics">
+        <div class="stat-card">
+            <div class="stat-number">@GetEnrolledCoursesCount()</div>
+            <div class="stat-label">Enrolled Courses</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">@GetTotalCreditUnits()</div>
+            <div class="stat-label">Total Credit Units</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">@GetCarryoverCount()</div>
+            <div class="stat-label">Carryover Courses</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">@GetDroppedCount()</div>
+            <div class="stat-label">Dropped Courses</div>
+        </div>
+    </div>
+    }
+</div>
+
+<!-- Success/Error Messages -->
+@if (!string.IsNullOrEmpty(SuccessMessage))
+{
+<div class="toast toast-success">
+    <i class="icon-success"></i>
+    <span>@SuccessMessage</span>
+    <button class="toast-close" @onclick="() => SuccessMessage = string.Empty">×</button>
+</div>
+}
