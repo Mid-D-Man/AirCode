@@ -59,7 +59,17 @@
     transparent);
     animation: loading-line-animation 1.5s infinite;
 }
+.primary-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background-color: var(--bs-gray, #cccccc);
+}
 
+.primary-button:disabled:hover {
+    transform: none;
+    box-shadow: none;
+    background-color: var(--bs-gray, #cccccc);
+}
 @keyframes loading-line-animation {
     0% {
         left: -100%;
