@@ -1,4 +1,5 @@
 /* Floating QR Code Window Styles */
+/* Floating QR Code Window Styles */
 .floating-qr-overlay {
     position: fixed;
     top: 0;
@@ -24,6 +25,12 @@
     transition: all 0.3s ease;
 }
 
+.floating-qr-window.dragging {
+    transform: scale(1.02);
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+    z-index: 1001;
+}
+
 .floating-qr-window.fullscreen {
     width: 95vw !important;
     height: 95vh !important;
@@ -44,22 +51,29 @@
     justify-content: space-between;
     align-items: center;
     min-height: 48px;
+    position: relative;
 }
 
 .floating-qr-window.fullscreen .floating-qr-header {
     cursor: default;
 }
 
+.floating-qr-window.dragging .floating-qr-header {
+    cursor: grabbing;
+}
+
 .drag-handle {
     flex: 1;
     font-weight: 600;
     font-size: 14px;
+    pointer-events: none; /* Ensures drag events bubble to header */
 }
 
 .header-actions {
     display: flex;
     gap: 8px;
     align-items: center;
+    pointer-events: auto; /* Allow button clicks */
 }
 
 .fullscreen-button,
@@ -120,6 +134,16 @@
 @keyframes pulse {
     0%, 100% { transform: scale(1); }
     50% { transform: scale(1.05); }
+}
+
+/* Prevent text selection during drag */
+.floating-qr-window.dragging * {
+    user-select: none !important;
+    pointer-events: none !important;
+}
+
+.floating-qr-window.dragging .header-actions * {
+    pointer-events: auto !important;
 }
 
 /* Dark mode support */

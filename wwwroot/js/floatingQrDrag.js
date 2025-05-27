@@ -6,12 +6,18 @@ window.floatingQrDrag = {
     windowStartX: 0,
     windowStartY: 0,
     currentWindow: null,
+    blazorComponent: null,
 
     init: function() {
         document.addEventListener('mousemove', this.handleMouseMove.bind(this));
         document.addEventListener('mouseup', this.handleMouseUp.bind(this));
-        document.addEventListener('touchmove', this.handleTouchMove.bind(this));
+        document.addEventListener('touchmove', this.handleTouchMove.bind(this), { passive: false });
         document.addEventListener('touchend', this.handleTouchEnd.bind(this));
+    },
+
+    // Register Blazor component for callbacks
+    registerComponent: function(dotNetComponent) {
+        this.blazorComponent = dotNetComponent;
     },
 
     startDrag: function(event) {
@@ -37,6 +43,10 @@ window.floatingQrDrag = {
         this.windowStartX = rect.left;
         this.windowStartY = rect.top;
 
+        // Add dragging class for visual feedback
+        windowElement.classList.add('dragging');
+        document.body.style.userSelect = 'none';
+
         event.preventDefault();
     },
 
@@ -47,6 +57,7 @@ window.floatingQrDrag = {
         const deltaY = event.clientY - this.dragStartY;
 
         this.updateWindowPosition(deltaX, deltaY);
+        event.preventDefault();
     },
 
     handleTouchMove: function(event) {
@@ -74,6 +85,11 @@ window.floatingQrDrag = {
 
         this.currentWindow.style.left = newX + 'px';
         this.currentWindow.style.top = newY + 'px';
+
+        // Sync position back to Blazor component
+        if (this.blazorComponent) {
+            this.blazorComponent.invokeMethodAsync('UpdatePosition', newX, newY);
+        }
     },
 
     handleMouseUp: function() {
@@ -85,6 +101,10 @@ window.floatingQrDrag = {
     },
 
     stopDrag: function() {
+        if (this.currentWindow) {
+            this.currentWindow.classList.remove('dragging');
+        }
+        document.body.style.userSelect = '';
         this.isDragging = false;
         this.currentWindow = null;
     }
