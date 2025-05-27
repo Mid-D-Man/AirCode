@@ -1,0 +1,241 @@
+@using AirCode.Domain.Entities
+@using AirCode.Domain.Enums
+@using AirCode.Services.Courses
+@inject ICourseService CourseService
+
+<div class="course-selection-modal @(IsVisible ? "visible" : "")">
+    <div class="modal-backdrop" @onclick="CloseModal"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Select Course</h3>
+            <button class="close-btn" @onclick="CloseModal">×</button>
+        </div>
+
+        <div class="modal-body">
+            <div class="search-container">
+                <input type="text"
+                       @bind="searchQuery"
+                       @bind:event="oninput"
+                       @onkeyup="FilterCourses"
+                       placeholder="Search by course code or name..."
+                       class="search-input" />
+            </div>
+
+            <div class="filters-container">
+                <select @bind="selectedDepartment" @onchange="FilterCourses" class="filter-select">
+                    <option value="">All Departments</option>
+                    @foreach (var dept in availableDepartments)
+                    {
+                        <option value="@dept">@dept</option>
+                    }
+                </select>
+
+                <select @bind="selectedLevel" @onchange="FilterCourses" class="filter-select">
+                    <option value="">All Levels</option>
+                    @foreach (LevelType level in Enum.GetValues<LevelType>())
+                    {
+                        <option value="@level">@level.ToString().Replace("Level", "Level ")</option>
+                    }
+                </select>
+
+                <select @bind="selectedSemester" @onchange="FilterCourses" class="filter-select">
+                    <option value="">All Semesters</option>
+                    @foreach (SemesterType semester in Enum.GetValues<SemesterType>())
+                    {
+                        <option value="@semester">@semester.ToString().Replace("Semester", " Semester")</option>
+                    }
+                </select>
+            </div>
+
+            <div class="courses-list">
+                @if (isLoading)
+                {
+                    <div class="loading-indicator">
+                        <div class="spinner"></div>
+                        <span>Loading courses...</span>
+                    </div>
+                }
+                else if (filteredCourses.Any())
+                {
+                    @foreach (var course in filteredCourses.Take(50)) // Limit for performance
+                    {
+                        <div class="course-item @(selectedCourse?.CourseCode == course.CourseCode ? "selected" : "")"
+                             @onclick="() => SelectCourse(course)">
+                            <div class="course-header">
+                                <span class="course-code">@course.CourseCode</span>
+                                <span class="course-level">@course.Level.ToString().Replace("Level", "L")</span>
+                            </div>
+                            <div class="course-name">@course.Name</div>
+                            <div class="course-details">
+                                <span class="department">@course.DepartmentId</span>
+                                <span class="credits">@course.CreditUnits CU</span>
+                                <span class="semester">@course.Semester.ToString().Replace("Semester", "S")</span>
+                            </div>
+                            @if (course.Schedule.TimeSlots?.Any() == true)
+                            {
+                                <div class="course-schedule">
+                                    <small>@course.Schedule.FormatSchedule()</small>
+                                </div>
+                            }
+                        </div>
+                    }
+
+                    @if (filteredCourses.Count > 50)
+                    {
+                        <div class="more-results">
+                            Showing 50 of @filteredCourses.Count results. Please refine your search.
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="no-results">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <path d="m21 21-4.35-4.35"></path>
+                        </svg>
+                        <p>No courses found matching your criteria</p>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn-secondary" @onclick="CloseModal">Cancel</button>
+            <button class="btn-primary"
+                    @onclick="ConfirmSelection"
+                    disabled="@(selectedCourse == null)">
+                Select Course
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public EventCallback<Course> OnCourseSelected { get; set; }
+    [Parameter] public EventCallback OnClosed { get; set; }
+
+    private List<Course> allCourses = new();
+    private List<Course> filteredCourses = new();
+    private List<string> availableDepartments = new();
+
+    private string searchQuery = "";
+    private string selectedDepartment = "";
+    private LevelType? selectedLevel = null;
+    private SemesterType? selectedSemester = null;
+
+    private Course selectedCourse;
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCourses();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (IsVisible && !allCourses.Any())
+        {
+            await LoadCourses();
+        }
+    }
+
+    private async Task LoadCourses()
+    {
+        try
+        {
+            isLoading = true;
+            StateHasChanged();
+
+            allCourses = await CourseService.GetAllCoursesAsync() ?? new List<Course>();
+            availableDepartments = allCourses
+                .Where(c => !string.IsNullOrEmpty(c.DepartmentId))
+                .Select(c => c.DepartmentId)
+                .Distinct()
+                .OrderBy(d => d)
+                .ToList();
+
+            FilterCourses();
+        }
+        catch (Exception ex)
+        {
+            // Log error - you might want to show a toast notification
+            Console.WriteLine($"Error loading courses: {ex.Message}");
+            allCourses = new List<Course>();
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void FilterCourses()
+    {
+        filteredCourses = allCourses.Where(course =>
+            {
+                // Search query filter
+                if (!string.IsNullOrEmpty(searchQuery))
+                {
+                    var query = searchQuery.ToLowerInvariant();
+                    if (!course.CourseCode.ToLowerInvariant().Contains(query) &&
+                        !course.Name.ToLowerInvariant().Contains(query))
+                    {
+                        return false;
+                    }
+                }
+
+                // Department filter
+                if (!string.IsNullOrEmpty(selectedDepartment) &&
+                    course.DepartmentId != selectedDepartment)
+                {
+                    return false;
+                }
+
+                // Level filter
+                if (selectedLevel.HasValue && course.Level != selectedLevel.Value)
+                {
+                    return false;
+                }
+
+                // Semester filter
+                if (selectedSemester.HasValue && course.Semester != selectedSemester.Value)
+                {
+                    return false;
+                }
+
+                return true;
+            })
+            .OrderBy(c => c.CourseCode)
+            .ToList();
+
+        StateHasChanged();
+    }
+
+    private void SelectCourse(Course course)
+    {
+        selectedCourse = course;
+        StateHasChanged();
+    }
+
+    private async Task ConfirmSelection()
+    {
+        if (selectedCourse != null)
+        {
+            await OnCourseSelected.InvokeAsync(selectedCourse);
+            await CloseModal();
+        }
+    }
+
+    private async Task CloseModal()
+    {
+        selectedCourse = null;
+        searchQuery = "";
+        selectedDepartment = "";
+        selectedLevel = null;
+        selectedSemester = null;
+
+        await OnClosed.InvokeAsync();
+    }
+}
