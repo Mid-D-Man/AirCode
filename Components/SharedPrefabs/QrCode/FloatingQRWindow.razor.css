@@ -1,0 +1,135 @@
+/* Floating QR Code Window Styles */
+.floating-qr-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 9999;
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+}
+
+.floating-qr-window {
+    position: absolute;
+    background: var(--bg-secondary);
+    border-radius: 12px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+    min-width: 350px;
+    max-width: 90vw;
+    animation: fadeInScale 0.3s ease;
+    border: 1px solid var(--border);
+}
+
+@keyframes fadeInScale {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.floating-qr-header {
+    background: linear-gradient(135deg, var(--primary-600) 0%, var(--primary-700) 100%);
+    color: var(--button-text);
+    padding: var(--spacing-md);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: move;
+    user-select: none;
+}
+
+.drag-handle {
+    flex: 1;
+    font-weight: 600;
+    font-size: 0.95rem;
+    user-select: none;
+}
+
+.close-button {
+    background: none;
+    border: none;
+    color: var(--button-text);
+    font-size: 1.5rem;
+    cursor: pointer;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background-color 0.2s ease;
+}
+
+.close-button:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.floating-qr-content {
+    padding: var(--spacing-lg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-md);
+    background: var(--bg-secondary);
+}
+
+.floating-countdown {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--error);
+    padding: var(--spacing-sm) var(--spacing-md);
+    background-color: rgba(244, 67, 54, 0.1);
+    border-radius: 20px;
+    border: 1px solid rgba(244, 67, 54, 0.2);
+}
+
+/* Dark mode adjustments */
+body.dark-mode .floating-qr-window {
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+}
+
+body.dark-mode .floating-countdown {
+    background-color: rgba(244, 67, 54, 0.2);
+    border-color: rgba(244, 67, 54, 0.3);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .floating-qr-window {
+        min-width: 90vw;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    .floating-qr-content {
+        padding: var(--spacing-md);
+    }
+
+    .drag-handle {
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .floating-qr-header {
+        padding: var(--spacing-sm) var(--spacing-md);
+    }
+
+    .floating-qr-content {
+        padding: var(--spacing-sm);
+    }
+
+    .close-button {
+        width: 28px;
+        height: 28px;
+        font-size: 1.3rem;
+    }
+}

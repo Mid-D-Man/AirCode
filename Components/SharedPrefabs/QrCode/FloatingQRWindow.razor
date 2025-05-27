@@ -1,0 +1,207 @@
+@using AirCode.Components.SharedPrefabs.QrCode
+@using AirCode.Utilities.DataStructures
+@inject IJSRuntime JS
+
+@if (IsVisible && SessionData != null)
+{
+    <div class="floating-qr-overlay" @onclick="HandleOverlayClick">
+        <div class="floating-qr-window" @onclick:stopPropagation="true" style="@WindowStyle">
+            <div class="floating-qr-header" @onmousedown="HandleMouseDown" @ontouchstart="HandleTouchStart">
+                <div class="drag-handle">
+                    <span>QR Code - @SessionData.CourseName</span>
+                </div>
+                <button class="close-button" @onclick="CloseWindow">×</button>
+            </div>
+            <div class="floating-qr-content">
+                <div class="floating-countdown">
+                    Expires in: @FormatTimeRemaining()
+                </div>
+                <QRCodeCompo 
+                    Content="@SessionData.QrCodePayload" 
+                    Duration="@SessionData.Duration" 
+                    Theme="@ConvertStringToTheme(SessionData.Theme)" 
+                    Options="@GenerateQRCodeOptions()" />
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public FloatingSessionData SessionData { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    
+    private string WindowStyle = "top: 50px; left: 50px;";
+    private System.Threading.Timer countdownTimer;
+    private bool isDragging = false;
+    private double dragStartX, dragStartY, windowStartX, windowStartY;
+
+    protected override void OnParametersSet()
+    {
+        if (IsVisible && SessionData != null)
+        {
+            StartCountdownTimer();
+        }
+        else
+        {
+            StopCountdownTimer();
+        }
+    }
+
+    private void StartCountdownTimer()
+    {
+        StopCountdownTimer();
+        countdownTimer = new System.Threading.Timer(
+            _ => InvokeAsync(() => {
+                if (SessionData != null && DateTime.UtcNow >= SessionData.EndTime)
+                {
+                    CloseWindow();
+                }
+                StateHasChanged();
+            }),
+            null,
+            TimeSpan.Zero,
+            TimeSpan.FromSeconds(1)
+        );
+    }
+
+    private void StopCountdownTimer()
+    {
+        countdownTimer?.Dispose();
+        countdownTimer = null;
+    }
+
+    private async Task CloseWindow()
+    {
+        StopCountdownTimer();
+        await OnClose.InvokeAsync();
+    }
+
+    private async Task HandleOverlayClick()
+    {
+        await CloseWindow();
+    }
+
+    private async Task HandleMouseDown(MouseEventArgs e)
+    {
+        await JS.InvokeVoidAsync("floatingQrDrag.startDrag", e, DotNetObjectReference.Create(this));
+    }
+
+    private async Task HandleTouchStart(TouchEventArgs e)
+    {
+        await JS.InvokeVoidAsync("floatingQrDrag.startDrag", e, DotNetObjectReference.Create(this));
+    }
+
+    [JSInvokable]
+    public void UpdatePosition(double x, double y)
+    {
+        WindowStyle = $"top: {y}px; left: {x}px;";
+        StateHasChanged();
+    }
+
+    private string FormatTimeRemaining()
+    {
+        if (SessionData == null) return "--:--:--";
+        
+        TimeSpan remaining = SessionData.EndTime - DateTime.UtcNow;
+        if (remaining.TotalSeconds <= 0)
+        {
+            return "00:00:00";
+        }
+        
+        return $"{remaining.Hours:00}:{remaining.Minutes:00}:{remaining.Seconds:00}";
+    }
+
+    private QRCodeTheme ConvertStringToTheme(string theme)
+    {
+        return theme switch
+        {
+            "Gradient" => QRCodeTheme.Gradient,
+            "Branded" => QRCodeTheme.Branded,
+            "GradientWithLogo" => QRCodeTheme.GradientWithLogo,
+            _ => QRCodeTheme.Standard
+        };
+    }
+
+    private QRCodeBaseOptions GenerateQRCodeOptions()
+    {
+        if (SessionData == null) return new QRCodeBaseOptions();
+
+        QRCodeBaseOptions options = new QRCodeBaseOptions
+        {
+            Content = SessionData.QrCodePayload,
+            Size = 300,
+            DarkColor = "#000000",
+            LightColor = "#FFFFFF",
+            ErrorLevel = ErrorCorrectionLevel.M,
+            Margin = 4
+        };
+        
+        return SessionData.Theme switch
+        {
+            "Gradient" => new QRCodeGradientOptions
+            {
+                Content = SessionData.QrCodePayload,
+                Size = 300,
+                DarkColor = "#000000",
+                LightColor = "#FFFFFF",
+                ErrorLevel = ErrorCorrectionLevel.M,
+                Margin = 4,
+                GradientColor1 = "#3498db",
+                GradientColor2 = "#9b59b6",
+                Direction = GradientDirection.Diagonal
+            },
+            "Branded" => new QRCodeBrandedOptions
+            {
+                Content = SessionData.QrCodePayload,
+                Size = 300,
+                DarkColor = "#000000",
+                LightColor = "#FFFFFF",
+                ErrorLevel = ErrorCorrectionLevel.H,
+                Margin = 4,
+                LogoUrl = "/icon-192.png",
+                LogoSizeRatio = 0.2f,
+                AddLogoBorder = true,
+                LogoBorderColor = "#FFFFFF",
+                LogoBorderWidth = 2,
+                LogoBorderRadius = 5
+            },
+            "GradientWithLogo" => new QRCodeGradientBrandedOptions
+            {
+                Content = SessionData.QrCodePayload,
+                Size = 300,
+                DarkColor = "#000000",
+                LightColor = "#FFFFFF",
+                ErrorLevel = ErrorCorrectionLevel.H,
+                Margin = 4,
+                GradientColor1 = "#3498db",
+                GradientColor2 = "#9b59b6",
+                Direction = GradientDirection.Radial,
+                LogoUrl = "/icon-192.png",
+                LogoSizeRatio = 0.2f,
+                AddLogoBorder = true,
+                LogoBorderColor = "#FFFFFF",
+                LogoBorderWidth = 2,
+                LogoBorderRadius = 5
+            },
+            _ => options
+        };
+    }
+
+    public void Dispose()
+    {
+        StopCountdownTimer();
+    }
+
+    public class FloatingSessionData
+    {
+        public string SessionId { get; set; }
+        public string CourseName { get; set; }
+        public string CourseId { get; set; }
+        public DateTime StartTime { get; set; }
+        public DateTime EndTime { get; set; }
+        public int Duration { get; set; }
+        public string QrCodePayload { get; set; }
+        public string Theme { get; set; }
+    }
+}
