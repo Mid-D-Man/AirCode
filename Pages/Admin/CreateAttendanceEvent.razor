@@ -2,11 +2,13 @@
 @using AirCode.Layout.AdminLayout.Superior
 @using Microsoft.AspNetCore.Authorization
 @layout SuperiorAdminLayout
+@attribute [Authorize(Roles = "LecturerAdmin")]
 @using AirCode.Components.SharedPrefabs
 @using AirCode.Utilities.DataStructures
 @using AirCode.Components.SharedPrefabs.QrCode
 @using AirCode.Components.SharedPrefabs.Buttons
 @inject IJSRuntime JS
+@inject QRCodeDecoder QRCodeDecoder
 
 <div class="create-session-page">
     <h1>Create Session</h1>
@@ -74,13 +76,68 @@
                         OnGenerated="HandleQRCodeGenerated" />
                 </div>
                 
-                <div class="end-session-button">
+                <div class="session-actions">
+                    <button class="floating-qr-icon" @onclick="OpenFloatingQR" title="Open Floating QR Code">
+                        <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M3 11h8V3H3v8zm2-6h4v4H5V5zM3 21h8v-8H3v8zm2-6h4v4H5v-4zM13 3v8h8V3h-8zm6 6h-4V5h4v4zM19 13h2v2h-2zM13 13h2v2h-2zM15 15h2v2h-2zM13 17h2v2h-2zM15 19h2v2h-2zM17 17h2v2h-2zM19 19h2v2h-2zM17 15h2v2h-2z"/>
+                        </svg>
+                    </button>
                     <PrimaryButton Text="End Session" OnClick="EndSession" />
                 </div>
             </div>
         }
     </div>
+    
+    <!-- Active Sessions List -->
+    @if (activeSessions.Any())
+    {
+        <div class="active-sessions-list">
+            <h3>Active Sessions</h3>
+            @foreach (var session in activeSessions)
+            {
+                <div class="session-card">
+                    <div class="session-info">
+                        <strong>@session.CourseName (@session.CourseId)</strong>
+                        <span class="session-time">Ends: @session.EndTime.ToString("HH:mm")</span>
+                    </div>
+                    <button class="qr-icon-button" @onclick="() => OpenFloatingQRForSession(session)" title="Show QR Code">
+                        <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M3 11h8V3H3v8zm2-6h4v4H5V5zM3 21h8v-8H3v8zm2-6h4v4H5v-4zM13 3v8h8V3h-8zm6 6h-4V5h4v4z"/>
+                        </svg>
+                    </button>
+                </div>
+            }
+        </div>
+    }
 </div>
+
+<!-- Floating QR Code Window -->
+@if (showFloatingQR)
+{
+    <div class="floating-qr-overlay" @onclick="CloseFloatingQR">
+        <div class="floating-qr-window" @onclick:stopPropagation="true" style="@floatingWindowStyle">
+            <div class="floating-qr-header">
+                <div class="drag-handle" @onmousedown="StartDrag" @ontouchstart="StartDrag">
+                    <span>QR Code - @floatingSessionData?.CourseName</span>
+                </div>
+                <button class="close-button" @onclick="CloseFloatingQR">×</button>
+            </div>
+            <div class="floating-qr-content">
+                <div class="floating-countdown">
+                    Expires in: @FormatFloatingTimeRemaining()
+                </div>
+                @if (floatingSessionData != null)
+                {
+                    <QRCodeCompo 
+                        Content="@floatingSessionData.QrCodePayload" 
+                        Duration="@floatingSessionData.Duration" 
+                        Theme="@ConvertStringToTheme(floatingSessionData.Theme)" 
+                        Options="@GenerateFloatingQRCodeOptions()" />
+                }
+            </div>
+        </div>
+    </div>
+}
 
 @code {
     private SessionData sessionModel = new();
@@ -90,12 +147,19 @@
     private DateTime sessionEndTime;
     private System.Threading.Timer countdownTimer;
     private QRCodeData generatedQRCode;
-    public string initiatorId = "yahoo AiAi";//not lecture id but initiator id insted
+    private List<ActiveSessionData> activeSessions = new();
     
+    // Floating QR code properties
+    private bool showFloatingQR = false;
+    private ActiveSessionData floatingSessionData;
+    private string floatingWindowStyle = "top: 50px; left: 50px;";
+    private bool isDragging = false;
+    private double dragStartX, dragStartY, windowStartX, windowStartY;
+    private System.Threading.Timer floatingCountdownTimer;
+
     protected override void OnInitialized()
     {
-        // Set default values if needed
-        sessionModel.Duration = 30; // Default to 30 minutes
+        sessionModel.Duration = 30;
     }
     
     private async void StartSession()
@@ -105,12 +169,27 @@
         isSessionStarted = true;
         qrCodePayload = await GenerateQrCodePayload();
         
-        // Calculate end time for countdown
         sessionEndTime = DateTime.UtcNow.AddMinutes(sessionModel.Duration);
         
-        // Start the countdown timer
+        // Add to active sessions list
+        var activeSession = new ActiveSessionData
+        {
+            SessionId = Guid.NewGuid().ToString("N"),
+            CourseName = sessionModel.CourseName,
+            CourseId = sessionModel.CourseId,
+            StartTime = sessionModel.StartTime,
+            EndTime = sessionEndTime,
+            Duration = sessionModel.Duration,
+            QrCodePayload = qrCodePayload,
+            Theme = selectedTheme
+        };
+        activeSessions.Add(activeSession);
+        
         countdownTimer = new System.Threading.Timer(
-            _ => InvokeAsync(StateHasChanged),
+            _ => InvokeAsync(() => {
+                StateHasChanged();
+                CleanupExpiredSessions();
+            }),
             null,
             TimeSpan.Zero,
             TimeSpan.FromSeconds(1)
@@ -123,28 +202,93 @@
         countdownTimer?.Dispose();
         countdownTimer = null;
         
-        // Here youna go  save the session data to your database
-        // SaveSessionData();
-        //then other fefol connect and send stuff to the same db
+        // Remove from active sessions
+        activeSessions.RemoveAll(s => s.QrCodePayload == qrCodePayload);
     }
     
     private async Task<string> GenerateQrCodePayload()
     {
-       
-            // Generate a unique session ID
-            var sessionId = Guid.NewGuid().ToString("N");
-      
-            // Use the QRCodeDecoder to create a dual-purpose QR code
-            // External scanners will redirect to your website
-            //  app can decode the full session data
-            return await QRCodeDecoder.EncodeSessionDataAsync(
-                sessionId,
-                sessionModel.CourseId,
-                sessionModel.StartTime,
-                sessionModel.Duration,
-                initiatorId);
+        var sessionId = Guid.NewGuid().ToString("N");
         
-      }
+        return await QRCodeDecoder.EncodeSessionDataAsync(
+            sessionId,
+            sessionModel.CourseId,
+            sessionModel.StartTime,
+            sessionModel.Duration);
+    }
+    
+    private void OpenFloatingQR()
+    {
+        if (isSessionStarted)
+        {
+            var currentSession = activeSessions.FirstOrDefault(s => s.QrCodePayload == qrCodePayload);
+            if (currentSession != null)
+            {
+                OpenFloatingQRForSession(currentSession);
+            }
+        }
+    }
+    
+    private void OpenFloatingQRForSession(ActiveSessionData session)
+    {
+        floatingSessionData = session;
+        showFloatingQR = true;
+        
+        // Start floating countdown timer
+        floatingCountdownTimer = new System.Threading.Timer(
+            _ => InvokeAsync(() => {
+                if (floatingSessionData != null && DateTime.UtcNow >= floatingSessionData.EndTime)
+                {
+                    CloseFloatingQR();
+                }
+                StateHasChanged();
+            }),
+            null,
+            TimeSpan.Zero,
+            TimeSpan.FromSeconds(1)
+        );
+    }
+    
+    private void CloseFloatingQR()
+    {
+        showFloatingQR = false;
+        floatingSessionData = null;
+        floatingCountdownTimer?.Dispose();
+        floatingCountdownTimer = null;
+    }
+    
+    private void StartDrag(MouseEventArgs e)
+    {
+        isDragging = true;
+        dragStartX = e.ClientX;
+        dragStartY = e.ClientY;
+        
+        // Parse current window position
+        var parts = floatingWindowStyle.Split(';');
+        foreach (var part in parts)
+        {
+            var trimmed = part.Trim();
+            if (trimmed.StartsWith("top:"))
+                windowStartY = double.Parse(trimmed.Replace("top:", "").Replace("px", "").Trim());
+            else if (trimmed.StartsWith("left:"))
+                windowStartX = double.Parse(trimmed.Replace("left:", "").Replace("px", "").Trim());
+        }
+    }
+    
+    private void CleanupExpiredSessions()
+    {
+        var expiredSessions = activeSessions.Where(s => DateTime.UtcNow >= s.EndTime).ToList();
+        foreach (var expired in expiredSessions)
+        {
+            activeSessions.Remove(expired);
+        }
+        
+        // Close floating QR if current session expired
+        if (floatingSessionData != null && DateTime.UtcNow >= floatingSessionData.EndTime)
+        {
+            CloseFloatingQR();
+        }
+    }
     
     private QRCodeTheme ConvertStringToTheme(string theme)
     {
@@ -159,10 +303,19 @@
     
     private QRCodeBaseOptions GenerateQRCodeOptions()
     {
-        // Base options
+        return GenerateQRCodeOptionsForTheme(selectedTheme, qrCodePayload);
+    }
+    
+    private QRCodeBaseOptions GenerateFloatingQRCodeOptions()
+    {
+        return GenerateQRCodeOptionsForTheme(floatingSessionData?.Theme ?? "Standard", floatingSessionData?.QrCodePayload ?? "");
+    }
+    
+    private QRCodeBaseOptions GenerateQRCodeOptionsForTheme(string theme, string content)
+    {
         QRCodeBaseOptions options = new QRCodeBaseOptions
         {
-            Content = qrCodePayload,
+            Content = content,
             Size = 300,
             DarkColor = "#000000",
             LightColor = "#FFFFFF",
@@ -170,12 +323,11 @@
             Margin = 4
         };
         
-        // Apply theme-specific options
-        return selectedTheme switch
+        return theme switch
         {
             "Gradient" => new QRCodeGradientOptions
             {
-                Content = qrCodePayload,
+                Content = content,
                 Size = 300,
                 DarkColor = "#000000",
                 LightColor = "#FFFFFF",
@@ -187,11 +339,11 @@
             },
             "Branded" => new QRCodeBrandedOptions
             {
-                Content = qrCodePayload,
+                Content = content,
                 Size = 300,
                 DarkColor = "#000000",
                 LightColor = "#FFFFFF",
-                ErrorLevel = ErrorCorrectionLevel.H, // Higher error correction for logo
+                ErrorLevel = ErrorCorrectionLevel.H,
                 Margin = 4,
                 LogoUrl = "/icon-192.png",
                 LogoSizeRatio = 0.2f,
@@ -202,11 +354,11 @@
             },
             "GradientWithLogo" => new QRCodeGradientBrandedOptions
             {
-                Content = qrCodePayload,
+                Content = content,
                 Size = 300,
                 DarkColor = "#000000",
                 LightColor = "#FFFFFF",
-                ErrorLevel = ErrorCorrectionLevel.H, // Higher error correction for logo
+                ErrorLevel = ErrorCorrectionLevel.H,
                 Margin = 4,
                 GradientColor1 = "#3498db",
                 GradientColor2 = "#9b59b6",
@@ -236,15 +388,41 @@
         return $"{remaining.Hours:00}:{remaining.Minutes:00}:{remaining.Seconds:00}";
     }
     
+    private string FormatFloatingTimeRemaining()
+    {
+        if (floatingSessionData == null) return "--:--:--";
+        
+        TimeSpan remaining = floatingSessionData.EndTime - DateTime.UtcNow;
+        if (remaining.TotalSeconds <= 0)
+        {
+            return "00:00:00";
+        }
+        
+        return $"{remaining.Hours:00}:{remaining.Minutes:00}:{remaining.Seconds:00}";
+    }
+    
     private Task HandleQRCodeGenerated(QRCodeData qrCode)
     {
         generatedQRCode = qrCode;
-        // You could do additional processing here
         return Task.CompletedTask;
     }
     
     public void Dispose()
     {
         countdownTimer?.Dispose();
+        floatingCountdownTimer?.Dispose();
+    }
+    
+    // Supporting data structure for active sessions
+    public class ActiveSessionData
+    {
+        public string SessionId { get; set; }
+        public string CourseName { get; set; }
+        public string CourseId { get; set; }
+        public DateTime StartTime { get; set; }
+        public DateTime EndTime { get; set; }
+        public int Duration { get; set; }
+        public string QrCodePayload { get; set; }
+        public string Theme { get; set; }
     }
 }

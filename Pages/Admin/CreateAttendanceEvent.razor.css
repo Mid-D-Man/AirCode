@@ -95,6 +95,212 @@ h1 {
     margin: 20px 0;
 }
 
-.end-session-button {
+.session-actions {
+    display: flex;
+    align-items: center;
+    gap: 15px;
     margin-top: 20px;
+}
+
+.floating-qr-icon {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.floating-qr-icon:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* Active Sessions List */
+.active-sessions-list {
+    width: 100%;
+    max-width: 600px;
+    margin-top: 40px;
+    padding: 20px;
+    background-color: var(--bg-light);
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.active-sessions-list h3 {
+    margin-bottom: 20px;
+    color: var(--h1-color);
+    text-align: center;
+}
+
+.session-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    margin-bottom: 10px;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease;
+}
+
+.session-card:hover {
+    transform: translateY(-2px);
+}
+
+.session-info {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.session-time {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.qr-icon-button {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.qr-icon-button:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* Floating QR Code Window */
+.floating-qr-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 9999;
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+}
+
+.floating-qr-window {
+    position: absolute;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+    min-width: 350px;
+    max-width: 90vw;
+    animation: fadeInScale 0.3s ease;
+}
+
+@keyframes fadeInScale {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.floating-qr-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: move;
+}
+
+.drag-handle {
+    flex: 1;
+    font-weight: 600;
+    user-select: none;
+}
+
+.close-button {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.5rem;
+    cursor: pointer;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background-color 0.2s ease;
+}
+
+.close-button:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.floating-qr-content {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+}
+
+.floating-countdown {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #e74c3c;
+    padding: 8px 16px;
+    background-color: #fff3f3;
+    border-radius: 20px;
+    border: 1px solid #fadbd8;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .floating-qr-window {
+        min-width: 90vw;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    .session-card {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .qr-icon-button {
+        align-self: flex-end;
+    }
+}
+
+@media (max-width: 480px) {
+    .session-actions {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .floating-qr-icon {
+        width: 45px;
+        height: 45px;
+    }
 }
