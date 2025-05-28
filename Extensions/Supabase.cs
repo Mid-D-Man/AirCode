@@ -9,6 +9,7 @@ namespace AirCode.Extensions
         {
             // Register Supabase services
             services.AddScoped<ISupabaseDatabase, SupabaseDatabase>();
+            services.AddScoped<ISupabaseAuthService, SupabaseAuthService>();
             services.AddScoped<ICatService, CatService>();
             
             return services;

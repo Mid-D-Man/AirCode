@@ -1,153 +1,181 @@
 
-using Supabase;
-using Supabase.Postgrest;
+using AirCode.Services.Storage;
+using Microsoft.AspNetCore.Components.Authorization;
 using Supabase.Postgrest.Models;
-using Client = Supabase.Client;
+using Supabase.Postgrest;
+using static Supabase.Postgrest.Constants;
 
 namespace AirCode.Services.SupaBase
 {
+   
+
     public class SupabaseDatabase : ISupabaseDatabase
     {
-        private readonly string _supabaseUrl;
-        private readonly string _supabaseKey;
-        private Client _supabaseClient;
-        private readonly SupabaseOptions _options;
+        private readonly Supabase.Client _client;
+        private readonly AuthenticationStateProvider _authStateProvider;
+        private readonly IBlazorAppLocalStorageService _localStorage;
+        private readonly ILogger<SupabaseDatabase> _logger;
         private bool _initialized = false;
 
-        public SupabaseDatabase(IConfiguration configuration)
+        public SupabaseDatabase(
+            Supabase.Client client,
+            AuthenticationStateProvider authStateProvider,
+            IBlazorAppLocalStorageService localStorage,
+            ILogger<SupabaseDatabase> logger)
         {
-            _supabaseUrl = configuration["Supabase:Url"] ?? throw new ArgumentNullException("Supabase URL is not configured");
-            _supabaseKey = configuration["Supabase:AnonKey"] ?? throw new ArgumentNullException("Supabase Key is not configured");
-            
-            _options = new SupabaseOptions
-            {
-                AutoConnectRealtime = true
-            };
-            
-            _supabaseClient = new Client(_supabaseUrl, _supabaseKey, _options);
+            _logger = logger;
+            _logger.LogInformation("------------------- DATABASE SERVICE CONSTRUCTOR -------------------");
+            _client = client;
+            _authStateProvider = authStateProvider;
+            _localStorage = localStorage;
         }
 
         public async Task InitializeAsync()
         {
             if (!_initialized)
             {
-                await _supabaseClient.InitializeAsync();
-                _initialized = true;
+                try
+                {
+                    await _client.InitializeAsync();
+                    _initialized = true;
+                    _logger.LogInformation("Supabase client initialized successfully");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to initialize Supabase client");
+                    throw;
+                }
             }
         }
 
-        public async Task<T?> GetByIdAsync<T>(int id) where T : BaseModel, new()
+        public async Task<IReadOnlyList<TModel>> GetAllAsync<TModel>() where TModel : BaseModel, new()
         {
             await EnsureInitializedAsync();
             
             try
             {
-                return await _supabaseClient
-                    .From<T>()
-                    .Filter("id", Constants.Operator.Equals, id)
+                var response = await _client.From<TModel>().Get();
+                return response.Models;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving all items of type {ModelType}", typeof(TModel).Name);
+                return new List<TModel>();
+            }
+        }
+
+        public async Task<TModel?> GetByIdAsync<TModel>(int id) where TModel : BaseModel, new()
+        {
+            await EnsureInitializedAsync();
+            
+            try
+            {
+                return await _client
+                    .From<TModel>()
+                    .Filter("id", Operator.Equals, id)
                     .Single();
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error retrieving by ID: {ex.Message}");
+                _logger.LogError(ex, "Error retrieving {ModelType} by ID: {Id}", typeof(TModel).Name, id);
                 return null;
             }
         }
 
-        public async Task<List<T>> GetAllAsync<T>() where T : BaseModel, new()
+        public async Task<List<TModel>> InsertAsync<TModel>(TModel item) where TModel : BaseModel, new()
         {
             await EnsureInitializedAsync();
             
             try
             {
-                var result = await _supabaseClient
-                    .From<T>()
+                var response = await _client.From<TModel>().Insert(item);
+                _logger.LogInformation("Successfully inserted {ModelType}", typeof(TModel).Name);
+                return response.Models;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error inserting {ModelType}", typeof(TModel).Name);
+                throw;
+            }
+        }
+
+        public async Task<List<TModel>> UpdateAsync<TModel>(TModel item) where TModel : BaseModel, new()
+        {
+            await EnsureInitializedAsync();
+            
+            try
+            {
+                var response = await _client.From<TModel>().Update(item);
+                _logger.LogInformation("Successfully updated {ModelType}", typeof(TModel).Name);
+                return response.Models;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating {ModelType}", typeof(TModel).Name);
+                throw;
+            }
+        }
+
+        public async Task<List<TModel>> DeleteAsync<TModel>(TModel item) where TModel : BaseModel, new()
+        {
+            await EnsureInitializedAsync();
+            
+            try
+            {
+                var response = await _client.From<TModel>().Delete(item);
+                _logger.LogInformation("Successfully deleted {ModelType}", typeof(TModel).Name);
+                return response.Models;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting {ModelType}", typeof(TModel).Name);
+                throw;
+            }
+        }
+
+        public async Task<List<TModel>> SoftDeleteAsync<TModel>(TModel item) where TModel : BaseModel, new()
+        {
+            await EnsureInitializedAsync();
+            
+            try
+            {
+                // This implementation assumes your model has SoftDelete and SoftDeletedAt properties
+                // Adjust the property names based on your actual model structure
+                var response = await _client.Postgrest
+                    .Table<TModel>()
+                    .Set(x => new KeyValuePair<object, object>("soft_delete", true))
+                    .Set(x => new KeyValuePair<object, object>("soft_deleted_at", DateTime.UtcNow))
+                    .Where(x => ((dynamic)x).Id == ((dynamic)item).Id)
+                    .Update();
+                
+              /*  _logger.LogInformation("Successfully soft deleted {ModelType} with ID: {Id}", 
+                    typeof(TModel).Name, ((dynamic)item).Id);*/
+                return response.Models;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error soft deleting {ModelType}", typeof(TModel).Name);
+                throw;
+            }
+        }
+
+        public async Task<List<TModel>> GetWithFilterAsync<TModel>(string columnName, Operator filterOperator, object value) where TModel : BaseModel, new()
+        {
+            await EnsureInitializedAsync();
+            
+            try
+            {
+                var result = await _client
+                    .From<TModel>()
+                    .Filter(columnName, filterOperator, value)
                     .Get();
                 
-                return result?.Models ?? new List<T>();
+                return result?.Models ?? new List<TModel>();
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error retrieving all items: {ex.Message}");
-                return new List<T>();
-            }
-        }
-
-        public async Task<T> InsertAsync<T>(T item) where T : BaseModel, new()
-        {
-            await EnsureInitializedAsync();
-            
-            try
-            {
-                var response = await _supabaseClient
-                    .From<T>()
-                    .Insert(item);
-                
-                return response?.Models?[0] ?? item;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error inserting item: {ex.Message}");
-                throw;
-            }
-        }
-
-        public async Task<T> UpdateAsync<T>(T item) where T : BaseModel, new()
-        {
-            await EnsureInitializedAsync();
-            
-            try
-            {
-                var response = await _supabaseClient
-                    .From<T>()
-                    .Update(item);
-                
-                return response?.Models?[0] ?? item;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error updating item: {ex.Message}");
-                throw;
-            }
-        }
-
-        public async Task DeleteAsync<T>(int id) where T : BaseModel, new()
-        {
-            await EnsureInitializedAsync();
-            
-            try
-            {
-                await _supabaseClient
-                    .From<T>()
-                    .Filter("id", Constants.Operator.Equals, id)
-                    .Delete();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error deleting item: {ex.Message}");
-                throw;
-            }
-        }
-
-        public async Task<List<T>> GetWithFilterAsync<T>(string columnName, string filterOperator, object value) where T : BaseModel, new()
-        {
-            await EnsureInitializedAsync();
-            
-            try
-            {
-                var op = ParseOperator(filterOperator);
-                
-                var result = await _supabaseClient
-                    .From<T>()
-                    .Filter(columnName, op, value)
-                    .Get();
-                
-                return result?.Models ?? new List<T>();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error filtering items: {ex.Message}");
-                return new List<T>();
+                _logger.LogError(ex, "Error filtering {ModelType} items", typeof(TModel).Name);
+                return new List<TModel>();
             }
         }
 
@@ -157,11 +185,11 @@ namespace AirCode.Services.SupaBase
             
             try
             {
-                return await _supabaseClient.Rpc<T>(functionName, parameters);
+                return await _client.Rpc<T>(functionName, parameters);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error executing RPC function: {ex.Message}");
+                _logger.LogError(ex, "Error executing RPC function: {FunctionName}", functionName);
                 throw;
             }
         }
@@ -173,26 +201,5 @@ namespace AirCode.Services.SupaBase
                 await InitializeAsync();
             }
         }
-
-        private Constants.Operator ParseOperator(string op)
-        {
-            return op.ToLower() switch
-            {
-                "eq" => Constants.Operator.Equals,
-                "neq" => Constants.Operator.NotEqual,
-                "gt" => Constants.Operator.GreaterThan,
-                "gte" => Constants.Operator.GreaterThanOrEqual,
-                "lt" => Constants.Operator.LessThan,
-                "lte" => Constants.Operator.LessThanOrEqual,
-                "like" => Constants.Operator.Like,
-                "ilike" => Constants.Operator.ILike,
-                "in" => Constants.Operator.In,
-                "contains" => Constants.Operator.Contains,
-                "containedin" => Constants.Operator.ContainedIn,
-                "fts" => Constants.Operator.FTS,
-                _ => Constants.Operator.Equals
-            };
-        }
     }
-
 }

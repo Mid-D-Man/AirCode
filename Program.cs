@@ -16,6 +16,8 @@ using AirCode.Services.Courses;
 using AirCode.Services.Cryptography;
 using AirCode.Services.Department;
 using AirCode.Utilities.DataStructures;
+using Supabase;
+using Supabase.Gotrue;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
@@ -115,6 +117,22 @@ builder.Services.AddScoped<AirCode.Services.Firebase.IFirestoreService, AirCode.
 
 // Add Supabase services
 builder.Services.AddSupabaseServices();
+// Supabase Client Configuration
+builder.Services.AddScoped<Supabase.Client>(provider =>
+{
+    var configuration = provider.GetRequiredService<IConfiguration>();
+    var supabaseUrl = configuration["Supabase:Url"] ?? throw new ArgumentNullException("Supabase:Url");
+    var supabaseKey = configuration["Supabase:AnonKey"] ?? throw new ArgumentNullException("Supabase:AnonKey");
+    
+    var options = new Supabase.SupabaseOptions
+    {
+        AutoConnectRealtime = true,
+        AutoRefreshToken = true,
+        SessionHandler = new DefaultSupabaseSessionHandler()
+    };
+    
+    return new Supabase.Client(supabaseUrl, supabaseKey, options);
+});
 
 //factory issue not leaving /
 builder.Services.AddScoped(typeof(AccountClaimsPrincipalFactory<RemoteUserAccount>),
