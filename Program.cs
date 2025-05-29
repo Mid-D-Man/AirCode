@@ -126,14 +126,13 @@ builder.Services.AddScoped<Supabase.Client>(provider =>
     
     var options = new Supabase.SupabaseOptions
     {
-        AutoConnectRealtime = true,
+        AutoConnectRealtime = false,  // Disable realtime for WebAssembly
         AutoRefreshToken = true,
         SessionHandler = new DefaultSupabaseSessionHandler()
     };
     
     return new Supabase.Client(supabaseUrl, supabaseKey, options);
 });
-
 //factory issue not leaving /
 builder.Services.AddScoped(typeof(AccountClaimsPrincipalFactory<RemoteUserAccount>),
     typeof(CustomAccountFactory));

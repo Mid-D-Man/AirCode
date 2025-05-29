@@ -40,6 +40,12 @@ namespace AirCode.Services.SupaBase
                     _initialized = true;
                     _logger.LogInformation("Supabase client initialized successfully");
                 }
+                catch (Supabase.Realtime.Exceptions.RealtimeException ex) when (ex.InnerException is System.PlatformNotSupportedException)
+                {
+                    // WebSockets not supported in WebAssembly - continue without realtime
+                    _logger.LogWarning("Realtime features disabled due to WebAssembly platform limitations: {Message}", ex.Message);
+                    _initialized = true; // Mark as initialized to continue with basic functionality
+                }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Failed to initialize Supabase client");
@@ -139,6 +145,7 @@ namespace AirCode.Services.SupaBase
             
             try
             {
+                /*
                 // This implementation assumes your model has SoftDelete and SoftDeletedAt properties
                 // Adjust the property names based on your actual model structure
                 var response = await _client.Postgrest
@@ -147,10 +154,11 @@ namespace AirCode.Services.SupaBase
                     .Set(x => new KeyValuePair<object, object>("soft_deleted_at", DateTime.UtcNow))
                     .Where(x => ((dynamic)x).Id == ((dynamic)item).Id)
                     .Update();
-                
+                */
               /*  _logger.LogInformation("Successfully soft deleted {ModelType} with ID: {Id}", 
                     typeof(TModel).Name, ((dynamic)item).Id);*/
-                return response.Models;
+                //return response.Models;
+                return null;
             }
             catch (Exception ex)
             {
