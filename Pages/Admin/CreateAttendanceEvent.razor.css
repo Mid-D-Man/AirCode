@@ -354,6 +354,78 @@
     transform: scale(1.1);
 }
 
+.course-selection-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.2s ease-out;
+}
+
+.course-selection-modal {
+    background-color: var(--bg-secondary);
+    border-radius: 16px;
+    padding: var(--spacing-xl);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--border);
+    max-width: 90vw;
+    max-height: 85vh;
+    overflow-y: auto;
+    position: relative;
+    animation: slideIn 0.3s ease-out;
+    min-width: 500px;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Modal Close Button */
+.modal-close-btn {
+    position: absolute;
+    top: var(--spacing-md);
+    right: var(--spacing-md);
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: var(--spacing-xs);
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.modal-close-btn:hover {
+    background-color: var(--bg-tertiary);
+    color: var(--text-primary);
+    transform: scale(1.1);
+}
+
+
 /* Large Screens / Desktop */
 @media (min-width: 1025px) {
     .create-session-page {
@@ -401,6 +473,13 @@
     .change-course-btn {
         align-self: flex-end;
         margin-top: var(--spacing-xs);
+    }
+    .course-selection-modal {
+        min-width: unset;
+        width: 95vw;
+        max-height: 90vh;
+        padding: var(--spacing-lg);
+        border-radius: 12px;
     }
 }
 
@@ -521,6 +600,18 @@
     .select-course-btn {
         font-size: 0.9rem;
         padding: var(--spacing-sm) var(--spacing-md);
+    }
+    .course-selection-modal {
+        width: 98vw;
+        height: 95vh;
+        max-height: 95vh;
+        padding: var(--spacing-md);
+        overflow-y: auto;
+    }
+
+    .modal-close-btn {
+        top: var(--spacing-sm);
+        right: var(--spacing-sm);
     }
 }
 
