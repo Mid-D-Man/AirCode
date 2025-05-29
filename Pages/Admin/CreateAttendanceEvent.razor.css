@@ -43,7 +43,8 @@
     align-items: center;
     position: relative;
     width: 100%;
-    max-width: 600px; /* Constrain width for better centering */
+    max-width: 900px; /* Increased from 600px */
+    min-width: 600px; /* Add minimum width for consistency */
 }
 
 .form-container {
@@ -52,6 +53,9 @@
     padding: var(--spacing-xl);
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
     border: 1px solid var(--border);
+    width: 100%;
+    max-width: 900px; /* Match active-session-container */
+    min-width: 600px;
 }
 
 .form-group {
@@ -417,12 +421,13 @@
     }
 
     .active-session-container {
-        order: -1;
-        padding: var(--spacing-lg);
+        min-width: unset;
+        max-width: 95vw;
     }
 
     .form-container {
-        padding: var(--spacing-lg);
+        min-width: unset;
+        max-width: 95vw;
     }
 
     .selected-course-display {

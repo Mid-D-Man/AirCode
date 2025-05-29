@@ -5,7 +5,7 @@
 
 @if (IsVisible)
 {
-    <div class="modal-overlay" @onclick="HandleBackdropClick">
+    <div class="modal-overlay @(IsVisible ? "visible" : "")" @onclick="HandleBackdropClick">
         <div class="modal-content" @onclick:stopPropagation="true">
             <div class="modal-header">
                 <h3>
@@ -41,7 +41,7 @@
                         <option value="">All Levels</option>
                         @foreach (LevelType level in Enum.GetValues<LevelType>())
                         {
-                            <option value="@level">Level @((int)level + 100)</option>
+                            <option value="@level">Level @GetLevelDisplay(level)</option>
                         }
                     </select>
 
@@ -72,7 +72,7 @@
                                  @onclick="() => SelectCourse(course)">
                                 <div class="course-header">
                                     <span class="course-code">@course.CourseCode</span>
-                                    <span class="course-level">Level @((int)course.Level + 100)</span>
+                                    <span class="course-level">Level @GetLevelDisplay(course.Level)</span>
                                 </div>
                                 <div class="course-name">@course.Name</div>
                                 <div class="course-details">
@@ -147,6 +147,20 @@
         {
             await LoadCourses();
         }
+    }
+
+    private string GetLevelDisplay(LevelType level)
+    {
+        return level switch
+        {
+            LevelType.Level100 => "100",
+            LevelType.Level200 => "200",
+            LevelType.Level300 => "300",
+            LevelType.Level400 => "400",
+            LevelType.Level500 => "500",
+            LevelType.LevelExtra => "Extra",
+            _ => "Unknown"
+        };
     }
 
     private async Task LoadCourses()
