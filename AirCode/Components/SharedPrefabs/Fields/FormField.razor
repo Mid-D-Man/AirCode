@@ -1,0 +1,87 @@
+@* Components/SharedPrefabs/Fields/FormField.razor *@
+<div class="input-field">
+    <label for="@FieldId" class="@(IsRequired ? "required" : "")">
+        @Label
+    </label>
+    <input
+        id="@FieldId"
+        type="@Type"
+        class="form-input @(IsInvalid ? "invalid" : "")"
+        placeholder="@Placeholder"
+        value="@Value"
+        maxlength="@MaxLength"
+        @oninput="OnInputHandler"
+        @onblur="OnBlurHandler"
+        @onfocus="OnFocusHandler" />
+
+    @if (IsInvalid && !string.IsNullOrEmpty(ErrorMessage))
+    {
+        <div class="error-message">@ErrorMessage</div>
+    }
+</div>
+
+@code {
+    [Parameter] public string Label { get; set; } = "";
+    [Parameter] public string Placeholder { get; set; } = "";
+    [Parameter] public string Type { get; set; } = "text";
+    [Parameter] public string Value { get; set; } = "";
+    [Parameter] public bool IsRequired { get; set; }
+    [Parameter] public bool IsInvalid { get; set; }
+    [Parameter] public string ErrorMessage { get; set; } = "";
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+    [Parameter] public EventCallback<FocusEventArgs> OnBlur { get; set; }
+    [Parameter] public EventCallback<FocusEventArgs> OnFocus { get; set; }
+    [Parameter] public RenderFragment ChildContent { get; set; }
+    [Parameter] public string Id { get; set; } = "";
+    [Parameter] public int MaxLength { get; set; } = 200; // Default max length
+    [Parameter] public EventCallback<ValidationEventArgs> OnValidate { get; set; }
+
+    // Use a stable field for the ID so it remains consistent across renders.
+    private string _fieldId;
+
+    private string FieldId => _fieldId;
+
+    protected override void OnInitialized()
+    {
+        _fieldId = !string.IsNullOrEmpty(Id)
+            ? Id
+            : $"field_{Guid.NewGuid():N}";
+    }
+
+    private async Task OnInputHandler(ChangeEventArgs e)
+    {
+        if (e.Value is string value)
+        {
+            await ValueChanged.InvokeAsync(value);
+        }
+    }
+
+    private async Task OnBlurHandler(FocusEventArgs args)
+    {
+        // Trigger validation when field loses focus (if there's a value)
+        if (!string.IsNullOrEmpty(Value))
+        {
+            var validationArgs = new ValidationEventArgs
+            {
+                Value = Value,
+                FieldName = Label
+            };
+            await OnValidate.InvokeAsync(validationArgs);
+        }
+
+        await OnBlur.InvokeAsync(args);
+    }
+
+    private async Task OnFocusHandler(FocusEventArgs args)
+    {
+        await OnFocus.InvokeAsync(args);
+    }
+
+    public class ValidationEventArgs
+    {
+        public string Value { get; set; }
+        public string FieldName { get; set; }
+        public bool IsValid { get; set; } = true;
+        public string ErrorMessage { get; set; } = string.Empty;
+    }
+}

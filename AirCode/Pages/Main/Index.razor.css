@@ -1,0 +1,117 @@
+.main-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    padding: 0 var(--container-padding);
+    z-index: 1;
+    position: relative;
+}
+
+.welcome-section {
+    text-align: center;
+    margin-bottom: 2.5rem;
+}
+
+.welcome-title {
+    font-size: 3rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 0.75rem;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.welcome-subtitle {
+    font-size: 1.2rem;
+    color: var(--text-secondary);
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.auth-container {
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border-radius: 1.25rem;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 3rem;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+    width: 100%;
+    max-width: 700px;
+    transition: all 0.3s ease;
+}
+
+.auth-container:hover {
+    box-shadow: 0 15px 50px rgba(0, 0, 0, 0.2);
+    transform: translateY(-5px);
+}
+
+.auth-options {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    gap: 2rem;
+}
+
+/* Button Styling Overrides */
+.auth-options ::deep(.primary-button) {
+    min-width: 180px;
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+}
+
+.auth-options ::deep(.offline-button) {
+    background-color: var(--secondary-600);
+}
+
+.auth-options ::deep(.offline-button:hover) {
+    background-color: var(--secondary-700);
+}
+
+/* Dark mode adjustments */
+body.dark-mode .auth-container {
+    background: rgba(30, 30, 30, 0.7);
+    border: 1px solid rgba(70, 70, 70, 0.3);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .welcome-title {
+        font-size: 2.5rem;
+    }
+
+    .auth-container {
+        padding: 2.5rem;
+        max-width: 600px;
+    }
+}
+
+@media (max-width: 576px) {
+    .welcome-title {
+        font-size: 2rem;
+    }
+
+    .auth-container {
+        padding: 2rem;
+    }
+
+    .auth-options {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .auth-options ::deep(.primary-button) {
+        width: 100%;
+    }
+}
+
+@media (max-width: 360px) {
+    .welcome-title {
+        font-size: 1.75rem;
+    }
+
+    .auth-container {
+        padding: 1.5rem;
+    }
+}

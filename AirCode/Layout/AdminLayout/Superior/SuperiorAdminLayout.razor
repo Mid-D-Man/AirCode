@@ -1,0 +1,32 @@
+@* Layout/Admin/SuperiorAdminLayout.razor *@
+@inherits LayoutComponentBase
+
+@using AirCode.Components.SharedPrefabs.Buttons
+
+<div class="superior-admin-layout">
+    <SuperiorAdminNavMenu />
+    <div class="main-content">
+        <div class="content-top">
+            <!--   <DynamicSearch Context="Admin" Placeholder="Search admin..." />  Add the theme toggle here -->
+         
+            <ThemeToggle />
+
+            <div class="quick-stats">
+                <div class="stat-item">
+                    <span class="stat-value">150</span>
+                    <span class="stat-label">Total Users</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value">25</span>
+                    <span class="stat-label">Active Sessions</span>
+                </div>
+            </div>
+        </div>
+        <div class="content-bottom">
+            @Body
+        </div>
+    </div>
+</div>
+@code {
+//navigation handled by superioradminnavmenu
+}

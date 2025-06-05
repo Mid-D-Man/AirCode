@@ -1,0 +1,81 @@
+/* Components/Shared/InputField.razor.css */
+.input-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    position: relative;
+}
+
+label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    transition: color 0.2s ease;
+}
+
+label.required::after {
+    content: "*";
+    color: var(--error);
+    margin-left: 0.25rem;
+}
+
+.form-input {
+    padding: 0.625rem;
+    border: 1px solid var(--border);
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: var(--primary-500);
+    box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.25);
+}
+
+.form-input:hover {
+    border-color: var(--primary-300);
+}
+
+.form-input.invalid {
+    border-color: var(--error);
+}
+
+.form-input.invalid:focus {
+    box-shadow: 0 0 0 3px rgba(244, 67, 54, 0.25);
+}
+
+.form-input::placeholder {
+    color: var(--text-tertiary);
+}
+
+.error-message {
+    font-size: 0.75rem;
+    color: var(--error);
+    margin-top: 0.25rem;
+}
+
+/* Remove the problematic underline that was appearing too low */
+/* we Instead, just enhance the border-bottom on focus */
+.input-field:focus-within .form-input {
+    border-bottom-color: var(--primary-500);
+    border-bottom-width: 2px;
+}
+
+/* Dark mode specific adjustments */
+body.dark-mode .form-input {
+    background-color: var(--dark-bg-secondary);
+    border-color: var(--dark-border);
+}
+
+body.dark-mode .form-input:hover {
+    border-color: var(--primary-700);
+}
+
+body.dark-mode .form-input:focus {
+    border-color: var(--primary-600);
+}

@@ -6,13 +6,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>AirCode</title>
     <base href="/" />
+    
+    <!-- CSS -->
     <link href="css/bootstrap/bootstrap.min.css" rel="stylesheet" />
     <link href="css/app.css" rel="stylesheet" />
-    <link rel="icon" type="image/png" href="favicon.png" />
+    <link href="css/colors.css" rel="stylesheet" />
+    <link href="css/responsive.css" rel="stylesheet" />
     <link href="AirCode.styles.css" rel="stylesheet" />
+
+    <!-- Icons and Manifest -->
+    <link rel="icon" type="image/png" href="favicon.png" />
     <link href="manifest.json" rel="manifest" />
     <link rel="apple-touch-icon" sizes="512x512" href="icon-512.png" />
     <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
+
 </head>
 
 <body>
@@ -29,9 +36,44 @@
         <a href="" class="reload">Reload</a>
         <a class="dismiss">🗙</a>
     </div>
+
+    <!-- Framework and Core Services -->
     <script src="_framework/blazor.webassembly.js"></script>
     <script>navigator.serviceWorker.register('service-worker.js');</script>
-    <script> src ="./js/debug.js"</script>
+    <script src="_content/Microsoft.AspNetCore.Components.WebAssembly.Authentication/AuthenticationService.js"></script>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+
+    <!-- Firebase Configuration -->
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAM9mrDb2-eFgtMsMm7eJzt6GHIBCHEeGw",
+            authDomain: "aircode-4d07c.firebaseapp.com",
+            projectId: "aircode-4d07c",
+            storageBucket: "aircode-4d07c.firebasestorage.app",
+            messagingSenderId: "1041427366169",
+            appId: "1:1041427366169:web:6b7c84fefdcbe64edc4588",
+            measurementId: "G-PLN2D6PVVX",
+            databaseURL: "https://aircode-4d07c-default-rtdb.firebaseio.com/"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+    </script>
+
+    <!-- Application Scripts -->
+    <script src="./js/debug.js"></script>
+    <script src="./js/connectivityServices.js"></script>
+    <script src="./js/themeSwitcher.js"></script>
+    <script src="./js/pageNavigator.js"></script>
+    <script src="./js/authHelper.js"></script>
+    <script src="./js/cryptographyHandler.js"></script>
+    <script src="./js/offlineCredentialsHandler.js"></script>
+    <!--   <script src="./js/floatingQrDrag.js"></script>
+    <script src="./js/firestoreModule.js"></script>
+    <script type="module" src="./js/qrCodeModule.js"></script> -->
 
 </body>
 

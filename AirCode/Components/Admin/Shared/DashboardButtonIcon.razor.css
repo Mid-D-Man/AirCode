@@ -1,0 +1,16 @@
+.dashboard-button-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%; /* Ensure full width for horizontal layout */
+    padding: 10px;
+    color: var(--white); /* Use the white color from colors.css */
+    text-decoration: none;
+}
+
+.dashboard-button-icon i {
+    font-size: 1.5rem;
+    margin-right: 10px; /* Add margin to space out icon and label */
+}
+
+

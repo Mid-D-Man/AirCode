@@ -1,0 +1,46 @@
+@namespace AirCode.Components.SharedPrefabs.Others
+
+<div class="modal-backdrop @(_isVisible ? "show" : "")"></div>
+<div class="modal @(_isVisible ? "show" : "")">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>@Title</h3>
+            <button type="button" class="close-button" @onclick="@OnClose">×</button>
+        </div>
+        <div class="modal-body">
+            <p>@Message</p>
+        </div>
+        <div class="modal-footer">
+            @if (ShowSecondaryButton)
+            {
+                <button type="button" class="secondary-button" @onclick="@OnSecondary">@SecondaryButtonText</button>
+            }
+            <button type="button" class="primary-button" @onclick="@OnPrimary">@PrimaryButtonText</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    private bool _isVisible;
+
+    [Parameter] public string Title { get; set; } = "Notification";
+    [Parameter] public string Message { get; set; } = "";
+    [Parameter] public string PrimaryButtonText { get; set; } = "OK";
+    [Parameter] public string SecondaryButtonText { get; set; } = "Cancel";
+    [Parameter] public bool ShowSecondaryButton { get; set; } = true;
+    [Parameter] public EventCallback OnPrimary { get; set; }
+    [Parameter] public EventCallback OnSecondary { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    public void Show()
+    {
+        _isVisible = true;
+        StateHasChanged();
+    }
+
+    public void Hide()
+    {
+        _isVisible = false;
+        StateHasChanged();
+    }
+}

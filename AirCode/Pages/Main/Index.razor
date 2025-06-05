@@ -1,0 +1,205 @@
+@page "/"
+@layout MainLayout
+@using AirCode.Components.SharedPrefabs.Others
+@using AirCode.Components.SharedPrefabs.Buttons
+@using AirCode.Domain.Enums
+@using AirCode.Layout.Main
+@using AirCode.Services.Auth
+@using AirCode.Services.Auth.Offline
+@using AirCode.Utilities.HelperScripts
+@using Microsoft.AspNetCore.Components.Authorization
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+@inject IOfflineCredentialsService OfflineCredentialService
+@inject IAuthService AuthService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@implements IDisposable
+
+<BlobBackground />
+
+<div class="main-container">
+    <AuthorizeView>
+        <Authorized>
+            @{
+                // If user is already authenticated, redirect them based on their role
+                _ = RedirectAuthenticatedUser();
+            }
+            <div class="welcome-section">
+                <h1 class="welcome-title">Welcome back!</h1>
+                <p class="welcome-subtitle">Redirecting you to your dashboard...</p>
+            </div>
+        </Authorized>
+        <NotAuthorized>
+            <div class="welcome-section">
+                <h1 class="welcome-title">Welcome to AirCode</h1>
+                <p class="welcome-subtitle">Secure attendance tracking for higher institutions</p>
+            </div>
+
+            <div class="auth-container">
+                <div class="auth-options">
+                    <PrimaryButton Text="Continue Online" OnClick="ContinueOnline" IsLoading="@isOnlineLoading" />
+                    <PrimaryButton Text="Continue Offline" OnClick="ContinueOffline" Class="offline-button" IsLoading="@isOfflineLoading" />
+                </div>
+            </div>
+        </NotAuthorized>
+    </AuthorizeView>
+</div>
+
+@code {
+    
+    //ok from here here is what we gonna do from this page which is our starting page
+    //remember u have to do the actual project words stuff too its annoying but such is life
+    /// <summary>
+    /// we cheack if player is connected to za internet or not 
+    /// case HasInternet -> run auth0 login and we have set up how thats handled so no issue there
+    /// except of cource we have to be able to retrive users metadata or u know what lets do this when we do all the maginc
+    /// in auth0 update our firebase data base with the users id and role, and admin id if applicable , make sure to compress though maybe
+    /// then over here if we test and cant get metadata from the auth0 itself then we just simply use firebase and create offline credentials from there in our call back page which
+    /// should lead to superior or standard or cleinet pages based of our claims and there we handle the rest of the magic note dont forget to store our offline credentials key,iv in firebase too
+    /// case NoInternet -> check for valid offline credentials
+    /// case Has -> then authenticate locally get role and send to page offline mode or even create a seprate offline page for regular admins and clients
+    /// note superior admin does not have offline mode nor do we store his offline credentials
+    /// case DoesNotHave -> show message and quit app or something
+    /// hmm we also need to run one more cheack withn the offline mode and prompt user if they want to reconnect (their network is working) to net,
+    /// if they agree we just send them back to / to start again else we leave them alone
+    /// ok this is a preety solid foundation for the auth now the whole attendance business make this in another script init
+    /// and for godssake stop it with the shit spellingz
+    /// and yeah yeah yeah only store credentials after auuth callback when all is good,we probably dont need the button above but
+    /// hmmm unless we actually make it like continue offline, continue online sorta business hmm auto or manual
+    /// manual give option to go offline even with internet connection mauto does not
+    /// this is a conondrum not how itssspelt
+    /// the council has decided we will go manual but but but for online make sure to cheack if player is online first init so spifi up the index page make it look good also use our blobs 
+    /// </summary>
+    
+    private bool isOnlineLoading = false;
+    private bool isOfflineLoading = false;
+    private bool isOnline = true;
+    private DotNetObjectReference<Index> objRef;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        // Initialize connectivity checker
+        objRef = DotNetObjectReference.Create(this);
+        await JSRuntime.InvokeVoidAsync("connectivityChecker.init", objRef);
+
+        // Get initial online status
+        isOnline = await JSRuntime.InvokeAsync<bool>("connectivityChecker.getOnlineStatus");
+    }
+
+    [JSInvokable]
+    public void OnConnectivityChanged(bool online)
+    {
+        isOnline = online;
+        StateHasChanged();
+    }
+
+    private async Task RedirectAuthenticatedUser()
+    {
+        try
+        {
+            // Get the user's role
+            string userRole = await AuthService.GetUserRoleAsync();
+            MID_HelperFunctions.DebugMessage($"[auth] Login in user with role {userRole} auto ");
+            // Navigate based on the role
+            switch (userRole?.ToLower())
+            {
+                case "superioradmin":
+                    NavigationManager.NavigateTo("/Admin/SuperiorDashboard", forceLoad: false);
+                    break;
+                case "lectureradmin":
+                    NavigationManager.NavigateTo("/Admin/SuperiorDashboard", forceLoad: false);
+                    break;
+                case "courseadmin":
+                    NavigationManager.NavigateTo("/Admin/SuperiorDashboard", forceLoad: false);
+                    break;
+                case "student":
+                    NavigationManager.NavigateTo("/Client/Dashboard", forceLoad: false);
+                    break;
+                default:
+                    // If we can't determine the role, go to auth-info for debugging
+                    NavigationManager.NavigateTo("/auth-info", forceLoad: false);
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("console.error", $"Error redirecting authenticated user: {ex.Message}");
+        }
+    }
+
+    private async Task ContinueOnline()
+    {
+        isOnlineLoading = true;
+
+        if (!isOnline)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "You are currently offline. Please check your internet connection and try again.");
+            isOnlineLoading = false;
+            return;
+        }
+
+        // Use the built-in authentication mechanism
+        NavigationManager.NavigateTo("authentication/login");
+        
+        isOnlineLoading = false;
+    }
+
+    private async Task ContinueOffline()
+    {
+        isOfflineLoading = true;
+
+        try {
+            // Check if offline credentials exist
+            var offlineCredentials = await OfflineCredentialService.GetCredentialsAsync();
+
+            if (offlineCredentials == null)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "No offline credentials found. Please login online at least once for credentials to be created.");
+                isOfflineLoading = false;
+                return;
+            }
+
+            // Get user ID and role from credentials
+            string userId = await OfflineCredentialService.GetUserIdAsync();
+            string userRole = await OfflineCredentialService.GetUserRoleAsync();
+
+            if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(userRole))
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Invalid offline credentials. Please login online.");
+                isOfflineLoading = false;
+                return;
+            }
+
+            // Navigate based on role
+            switch (userRole.ToLower())
+            {
+                case "lectureradmin":
+                    NavigationManager.NavigateTo("/Admin/Dashboard");
+                    break;
+                case "courseadmin":
+                    NavigationManager.NavigateTo("/Admin/Dashboard");
+                    break;
+                case "student":
+                    NavigationManager.NavigateTo("/Client/Dashboard");
+                    break;
+                default:
+                    await JSRuntime.InvokeVoidAsync("alert", "Unable to determine user role. Please login online.");
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Error accessing offline credentials: {ex.Message}");
+        }
+        finally {
+            isOfflineLoading = false;
+        }
+    }
+
+    public void Dispose()
+    {
+        // Clean up JS interop
+        JSRuntime.InvokeVoidAsync("connectivityChecker.dispose");
+        objRef?.Dispose();
+    }
+}

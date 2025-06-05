@@ -1,0 +1,175 @@
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@using AirCode.Services.Auth
+@using Microsoft.JSInterop
+@using System.Text.Json
+
+@inject IAuthService AuthService
+@inject IAccessTokenProvider TokenProvider
+@inject IJSRuntime JSRuntime
+
+<div class="card">
+    <div class="card-header">Authentication Debugger</div>
+    <div class="card-body">
+        <button @onclick="DebugTokens" class="btn btn-info mb-3">Debug Auth Tokens</button>
+
+        @if(_isLoading)
+        {
+            <p>Loading token information...</p>
+        }
+        else if (!string.IsNullOrEmpty(_errorMessage))
+        {
+            <div class="alert alert-danger">@_errorMessage</div>
+        }
+        else if (!string.IsNullOrEmpty(_tokenInfo))
+        {
+            <h5>Token Information</h5>
+            <div class="token-info border p-2" style="max-height: 250px; overflow: auto;">
+                <pre>@_tokenInfo</pre>
+            </div>
+
+            @if (!string.IsNullOrEmpty(_rawToken))
+            {
+                <div class="mt-3">
+                    <button @onclick="CopyToken" class="btn btn-sm btn-secondary">Copy Token</button>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    private bool _isLoading = false;
+    private string _tokenInfo = "";
+    private string _errorMessage = "";
+    private string _rawToken = "";
+
+    private async Task DebugTokens()
+    {
+        _isLoading = true;
+        _tokenInfo = "";
+        _errorMessage = "";
+        _rawToken = "";
+
+        try
+        {
+            await AuthService.LogAuthenticationMessageAsync("Starting token debug process");
+
+            // Method 1: Try to get from TokenProvider
+            var tokenResult = await TokenProvider.RequestAccessToken();
+            if (tokenResult.TryGetToken(out var accessToken))
+            {
+                _rawToken = accessToken.Value;
+                await ProcessToken(accessToken.Value, "AccessTokenProvider");
+                return;
+            }
+
+            // Method 2: Try to get from AuthService
+            var authServiceToken = await AuthService.GetJwtTokenAsync();
+            if (authServiceToken != "Token not found" && !authServiceToken.StartsWith("Error"))
+            {
+                _rawToken = authServiceToken;
+                await ProcessToken(authServiceToken, "AuthService");
+                return;
+            }
+
+            // Method 3: Try JavaScript extraction
+            var jsToken = await JSRuntime.InvokeAsync<string>("authHelper.extractAuthTokensFromStorage");
+            if (!string.IsNullOrEmpty(jsToken))
+            {
+                _rawToken = jsToken;
+                await ProcessToken(jsToken, "Browser Storage");
+                return;
+            }
+
+            _errorMessage = "No authentication token could be found through any method";
+            await AuthService.LogAuthenticationMessageAsync(_errorMessage);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error debugging tokens: {ex.Message}";
+            await AuthService.LogAuthenticationMessageAsync(_errorMessage);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task ProcessToken(string token, string source)
+    {
+        try
+        {
+            await AuthService.LogAuthenticationMessageAsync($"Processing token from {source}, length: {token.Length}");
+           
+            var builder = new System.Text.StringBuilder();
+            builder.AppendLine($"Token found from: {source}");
+            builder.AppendLine($"Token length: {token.Length}");
+
+            // Check if it's a JWT format
+            var parts = token.Split('.');
+            if (parts.Length == 3)
+            {
+                builder.AppendLine("Token appears to be in JWT format (header.payload.signature)");
+
+                try
+                {
+                    // Try to decode header
+                    var header = parts[0];
+                    var paddedHeader = header.PadRight(header.Length + (4 - header.Length % 4) % 4, '=');
+                    var decodedHeader = Convert.FromBase64String(paddedHeader);
+                    var headerJson = System.Text.Encoding.UTF8.GetString(decodedHeader);
+                    
+                    var formattedHeader = System.Text.Json.JsonSerializer.Serialize(
+                        System.Text.Json.JsonSerializer.Deserialize<JsonElement>(headerJson),
+                        new JsonSerializerOptions { WriteIndented = true }
+                    );
+
+                    builder.AppendLine("\nHEADER:");
+                    builder.AppendLine(formattedHeader);
+
+                    // Try to decode payload
+                    var payload = parts[1];
+                    var paddedPayload = payload.PadRight(payload.Length + (4 - payload.Length % 4) % 4, '=');
+                    var decodedPayload = Convert.FromBase64String(paddedPayload);
+                    var payloadJson = System.Text.Encoding.UTF8.GetString(decodedPayload);
+                    var formattedPayload = System.Text.Json.JsonSerializer.Serialize(
+                        System.Text.Json.JsonSerializer.Deserialize<JsonElement>(payloadJson),
+                        new JsonSerializerOptions { WriteIndented = true }
+                    );
+
+                    builder.AppendLine("\nPAYLOAD:");
+                    builder.AppendLine(formattedPayload);
+                }
+                catch (Exception ex)
+                {
+                    builder.AppendLine($"\nError decoding token: {ex.Message}");
+                }
+            }
+            else
+            {
+                builder.AppendLine("Token does not appear to be in standard JWT format");
+            }
+
+            _tokenInfo = builder.ToString();
+            await AuthService.LogAuthenticationMessageAsync("Token processed successfully");
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error processing token: {ex.Message}";
+            await AuthService.LogAuthenticationMessageAsync(_errorMessage);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task CopyToken()
+    {
+        if (!string.IsNullOrEmpty(_rawToken))
+        {
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", _rawToken);
+            await AuthService.LogAuthenticationMessageAsync("Token copied to clipboard");
+        }
+    }
+}

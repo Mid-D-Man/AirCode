@@ -1,0 +1,86 @@
+@using AirCode.Services.VisualElements
+@inject ISvgIconService SvgIconService
+@implements IDisposable
+
+@if (string.IsNullOrEmpty(_svgContent))
+{
+    <i class="@_fallbackIconClass"></i>
+}
+else
+{
+    <div class="svg-icon @CssClass" style="@StyleString" @attributes="AdditionalAttributes">
+        @((MarkupString)_svgContent)
+    </div>
+}
+
+@code {
+    [Parameter]
+    public string IconName { get; set; } = "";
+
+    [Parameter]
+    public string Width { get; set; } = "16px";
+
+    [Parameter]
+    public string Height { get; set; } = "16px";
+
+    [Parameter]
+    public string CssClass { get; set; } = "";
+
+    [Parameter]
+    public string Fill { get; set; } = "currentColor";
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public Dictionary<string, object> AdditionalAttributes { get; set; }
+
+    private string _svgContent = string.Empty;
+    private string _fallbackIconClass = "fas fa-circle";
+    private bool _initialized = false;
+
+    private string StyleString => $"width: {Width}; height: {Height};";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSvgContentAsync();
+        _initialized = true;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_initialized && !string.IsNullOrEmpty(IconName))
+        {
+            await LoadSvgContentAsync();
+        }
+    }
+
+    private async Task LoadSvgContentAsync()
+    {
+        if (string.IsNullOrEmpty(IconName))
+        {
+            return;
+        }
+
+        var content = await SvgIconService.GetSvgContentAsync(IconName);
+
+        if (!string.IsNullOrEmpty(content))
+        {
+            // If we want to modify the SVG (e.g., to set the fill color)
+            if (!string.IsNullOrEmpty(Fill) && Fill != "currentColor")
+            {
+                content = content.Replace("fill=\"currentColor\"", $"fill=\"{Fill}\"");
+            }
+
+            _svgContent = content;
+        }
+        else
+        {
+            _svgContent = string.Empty;
+        }
+
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        // Clean up if needed
+    }
+}

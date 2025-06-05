@@ -1,0 +1,26 @@
+@* Components/SharedPrefabs/Others/BlobBackground.razor *@
+<div class="main-background">
+    @for (int i = 1; i <= 6; i++)
+    {
+        <div class="blob blob-@i">
+            <div class="blob-inner" style="background-color: @GetRandomColor()"></div>
+        </div>
+    }
+</div>
+
+@code {
+    private Random random = new Random();
+
+    private string GetRandomColor()
+    {
+        string[] colors = { 
+            "rgba(33, 150, 243, 0.4)",  // Blue (primary-500)
+            "rgba(244, 67, 54, 0.4)",   // Red (error color)
+            "rgba(255, 235, 59, 0.4)",  // Yellow (bright)
+            "rgba(156, 39, 176, 0.4)",  // Purple (secondary-500)
+            "rgba(76, 175, 80, 0.4)",   // Green (success)
+            "rgba(255, 152, 0, 0.4)"    // Orange (warning)
+        };
+        return colors[random.Next(colors.Length)];
+    }
+}

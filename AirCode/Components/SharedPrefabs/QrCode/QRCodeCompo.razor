@@ -1,0 +1,311 @@
+@using AirCode.Utilities.DataStructures
+@using AirCode.Services.Cryptography
+@using Microsoft.AspNetCore.Components
+@inject IJSRuntime JS
+@inject ICryptographyService CryptographyService
+
+<div class="qr-code">
+    <h3>Attendance QR Code</h3>
+    <div class="qr-code-container">
+        <div id="qrCodeContainer_@QRCodeId"></div>
+    </div>
+    <div class="qr-code-info">
+        <p>Scan this QR code to mark attendance</p>
+        <p>Valid for @Duration minutes</p>
+        @if (!string.IsNullOrEmpty(CourseCode))
+        {
+            <p><strong>Course:</strong> @CourseCode</p>
+        }
+        @if (!string.IsNullOrEmpty(LectureId))
+        {
+            <p><strong>Session:</strong> @LectureId</p>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public string SessionId { get; set; }
+    [Parameter] public string CourseCode { get; set; }
+    [Parameter] public string LectureId { get; set; }
+    [Parameter] public DateTime StartTime { get; set; } = DateTime.UtcNow;
+    [Parameter] public int Duration { get; set; } = 30;
+    [Parameter] public QRCodeTheme Theme { get; set; } = QRCodeTheme.Standard;
+    [Parameter] public QRCodeBaseOptions Options { get; set; }
+    [Parameter] public EventCallback<QRCodeData> OnGenerated { get; set; }
+    
+    private string QRCodeId = Guid.NewGuid().ToString("N");
+    private IJSObjectReference _qrCodeModule;
+    private bool _jsInitialized = false;
+    private QRCodeData _generatedQRCode;
+    private QRCodeDecoder _qrDecoder;
+
+    /*
+  impl Ultra-short QR code lifespan (30-60 seconds)
+       Dynamic codes that regenerate every 15-30 seconds
+     */
+    
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        _qrDecoder = new QRCodeDecoder(CryptographyService);
+        
+        if (!_jsInitialized)
+        {
+            try
+            {
+                _qrCodeModule = await JS.InvokeAsync<IJSObjectReference>("import", "./js/qrCodeModule.js");
+                _jsInitialized = true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to load JS module: {ex.Message}");
+            }
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Validate required parameters
+        if (string.IsNullOrEmpty(SessionId))
+        {
+            SessionId = Guid.NewGuid().ToString("N");
+        }
+
+        if (string.IsNullOrEmpty(CourseCode))
+        {
+            throw new ArgumentException("CourseCode is required for QR code generation");
+        }
+
+        // Initialize default options if not provided
+        Options ??= new QRCodeBaseOptions
+        {
+            Size = 300,
+            DarkColor = "#000000",
+            LightColor = "#FFFFFF",
+            ErrorLevel = ErrorCorrectionLevel.M,
+            Margin = 4
+        };
+        
+        await base.OnParametersSetAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && _jsInitialized)
+        {
+            await GenerateSecureQRCode();
+        }
+        else if (!firstRender && !string.IsNullOrEmpty(CourseCode) && _jsInitialized && 
+                 (_generatedQRCode == null || HasParametersChanged()))
+        {
+            await GenerateSecureQRCode();
+        }
+    }
+
+    private bool HasParametersChanged()
+    {
+        return _generatedQRCode?.Content != GetCurrentContentIdentifier();
+    }
+
+    private string GetCurrentContentIdentifier()
+    {
+        return $"{SessionId}|{CourseCode}|{StartTime:O}|{Duration}|{LectureId}";
+    }
+
+    private async Task GenerateSecureQRCode()
+    {
+        try
+        {
+            if (!_jsInitialized || string.IsNullOrEmpty(CourseCode))
+                return;
+
+            // Generate encrypted QR code content using the decoder service
+            string secureContent = await _qrDecoder.EncodeSessionDataAsync(
+                SessionId,
+                CourseCode,
+                StartTime,
+                Duration,
+                LectureId
+            );
+
+            // Set content for options
+            var updatedOptions = Options with { Content = secureContent };
+            
+            string svg;
+            int size = updatedOptions.Size;
+            
+            // Generate QR code based on theme
+            switch (Theme)
+            {
+                case QRCodeTheme.Gradient:
+                    svg = await GenerateGradientQRCode(secureContent, size, updatedOptions);
+                    break;
+                
+                case QRCodeTheme.Branded:
+                    svg = await GenerateBrandedQRCode(secureContent, size, updatedOptions);
+                    break;
+                
+                case QRCodeTheme.GradientWithLogo:
+                    svg = await GenerateGradientBrandedQRCode(secureContent, size, updatedOptions);
+                    break;
+                
+                default: // Standard theme
+                    svg = await GenerateStandardQRCode(secureContent, size, updatedOptions);
+                    break;
+            }
+            
+            if (!string.IsNullOrEmpty(svg))
+            {
+                await _qrCodeModule.InvokeVoidAsync("setSvgContent", $"qrCodeContainer_{QRCodeId}", svg);
+                
+                // Create QR code data object
+                _generatedQRCode = new QRCodeData
+                {
+                    Id = QRCodeId,
+                    Content = GetCurrentContentIdentifier(), // Store identifier for change detection
+                    SvgContent = svg,
+                    CreatedAt = DateTime.UtcNow,
+                    ValidDuration = Duration,
+                    Theme = Theme
+                };
+                
+                // Invoke callback if registered
+                if (OnGenerated.HasDelegate)
+                {
+                    await OnGenerated.InvokeAsync(_generatedQRCode);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error generating secure QR code: {ex.Message}");
+        }
+    }
+
+    private async Task<string> GenerateStandardQRCode(string content, int size, QRCodeBaseOptions options)
+    {
+        var jsOptions = new
+        {
+            errorLevel = options.ErrorLevel.ToString(),
+            margin = options.Margin
+        };
+        
+        return await _qrCodeModule.InvokeAsync<string>("generateQrCode", 
+            content, size, options.DarkColor, options.LightColor, jsOptions);
+    }
+
+    private async Task<string> GenerateGradientQRCode(string content, int size, QRCodeBaseOptions baseOptions)
+    {
+        var gradientOptions = baseOptions as QRCodeGradientOptions ?? new QRCodeGradientOptions 
+        { 
+            Content = content,
+            Size = size,
+            DarkColor = baseOptions.DarkColor,
+            LightColor = baseOptions.LightColor,
+            ErrorLevel = baseOptions.ErrorLevel,
+            Margin = baseOptions.Margin
+        };
+        
+        var jsOptions = new
+        {
+            errorLevel = gradientOptions.ErrorLevel.ToString(),
+            useGradient = true,
+            gradientDirection = GradientDirectionToString(gradientOptions.Direction),
+            gradientColor1 = gradientOptions.GradientColor1,
+            gradientColor2 = gradientOptions.GradientColor2,
+            margin = gradientOptions.Margin
+        };
+        
+        return await _qrCodeModule.InvokeAsync<string>("generateEnhancedQrCode", 
+            content, size, gradientOptions.DarkColor, gradientOptions.LightColor, jsOptions);
+    }
+
+    private async Task<string> GenerateBrandedQRCode(string content, int size, QRCodeBaseOptions baseOptions)
+    {
+        var brandedOptions = baseOptions as QRCodeBrandedOptions ?? new QRCodeBrandedOptions 
+        { 
+            Content = content,
+            Size = size,
+            LogoUrl = "/icon-192.png",
+            DarkColor = baseOptions.DarkColor,
+            LightColor = baseOptions.LightColor,
+            ErrorLevel = baseOptions.ErrorLevel,
+            Margin = baseOptions.Margin
+        };
+        
+        var jsOptions = new
+        {
+            errorLevel = brandedOptions.ErrorLevel.ToString(),
+            logoUrl = brandedOptions.LogoUrl,
+            logoSizeRatio = brandedOptions.LogoSizeRatio,
+            addLogoBorder = brandedOptions.AddLogoBorder,
+            logoBorderColor = brandedOptions.LogoBorderColor,
+            logoBorderWidth = brandedOptions.LogoBorderWidth,
+            logoBorderRadius = brandedOptions.LogoBorderRadius,
+            margin = brandedOptions.Margin
+        };
+        
+        return await _qrCodeModule.InvokeAsync<string>("generateEnhancedQrCode", 
+            content, size, brandedOptions.DarkColor, brandedOptions.LightColor, jsOptions);
+    }
+
+    private async Task<string> GenerateGradientBrandedQRCode(string content, int size, QRCodeBaseOptions baseOptions)
+    {
+        var combinedOptions = baseOptions as QRCodeGradientBrandedOptions ?? new QRCodeGradientBrandedOptions 
+        { 
+            Content = content,
+            Size = size,
+            LogoUrl = "/icon-192.png",
+            DarkColor = baseOptions.DarkColor,
+            LightColor = baseOptions.LightColor,
+            ErrorLevel = baseOptions.ErrorLevel,
+            Margin = baseOptions.Margin
+        };
+        
+        var jsOptions = new
+        {
+            errorLevel = combinedOptions.ErrorLevel.ToString(),
+            useGradient = true,
+            gradientDirection = GradientDirectionToString(combinedOptions.Direction),
+            gradientColor1 = combinedOptions.GradientColor1,
+            gradientColor2 = combinedOptions.GradientColor2,
+            logoUrl = combinedOptions.LogoUrl,
+            logoSizeRatio = combinedOptions.LogoSizeRatio,
+            addLogoBorder = combinedOptions.AddLogoBorder,
+            logoBorderColor = combinedOptions.LogoBorderColor,
+            logoBorderWidth = combinedOptions.LogoBorderWidth,
+            logoBorderRadius = combinedOptions.LogoBorderRadius,
+            margin = combinedOptions.Margin
+        };
+        
+        return await _qrCodeModule.InvokeAsync<string>("generateEnhancedQrCode", 
+            content, size, combinedOptions.DarkColor, combinedOptions.LightColor, jsOptions);
+    }
+    
+    private string GradientDirectionToString(GradientDirection direction)
+    {
+        return direction switch
+        {
+            GradientDirection.LinearX => "linear-x",
+            GradientDirection.LinearY => "linear-y",
+            GradientDirection.Diagonal => "diagonal",
+            GradientDirection.Radial => "radial",
+            _ => "linear-x"
+        };
+    }
+    
+    public async ValueTask DisposeAsync()
+    {
+        if (_qrCodeModule != null)
+        {
+            try
+            {
+                await _qrCodeModule.DisposeAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error disposing JS module: {ex.Message}");
+            }
+        }
+    }
+}

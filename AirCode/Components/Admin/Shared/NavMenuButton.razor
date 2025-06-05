@@ -1,0 +1,27 @@
+
+@namespace Aircode.Components.Admin.Shared
+@using AirCode.Components.SharedPrefabs.Others
+
+<div class="nav-button" @onclick="@OnClick">
+    <div class="icon">
+        <SvgIcon IconName="@IconName" Width="20px" Height="20px" />
+    </div>
+    @if (IsExpanded)
+    {
+        <span class="text">@Label</span>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public string IconName { get; set; } = "";
+
+    [Parameter]
+    public string Label { get; set; } = "";
+
+    [Parameter]
+    public bool IsExpanded { get; set; }
+
+    [Parameter]
+    public EventCallback OnClick { get; set; }
+}

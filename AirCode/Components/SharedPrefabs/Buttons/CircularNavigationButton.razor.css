@@ -1,0 +1,120 @@
+.circular-button-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    margin: 0 0.5rem;
+}
+
+.circular-button {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    border: none;
+    background-color: var(--secondary);
+    color: var(--text-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.circular-button:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+}
+
+.circular-button.primary {
+    background-color: var(--primary-color);
+    width: 75px;
+    height: 75px;
+    z-index: 2;
+}
+
+.circular-button.primary:hover {
+    background-color: var(--primary-rgb);
+}
+
+.button-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.button-icon {
+    width: 24px;
+    height: 24px;
+    transition: transform 0.3s ease;
+    margin-bottom: 5px;
+}
+
+.button-text {
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+    transition: opacity 0.3s ease;
+}
+
+.active-indicator {
+    width: 5px;
+    height: 5px;
+    background-color: var(--primary-color);
+    border-radius: 50%;
+    margin-top: 5px;
+}
+
+.circular-button-container.active .circular-button {
+    background-color: var(--primary-color);
+    transform: scale(1.05);
+}
+
+.circular-button-container.active .button-icon {
+    transform: scale(1.1);
+}
+
+/* Animation for hover */
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.circular-button.primary {
+    animation: pulse 2s infinite;
+}
+
+/* Animation for active state */
+@keyframes pop {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+    100% { transform: scale(1.05); }
+}
+
+.circular-button-container.active .circular-button {
+    animation: pop 0.3s ease-out;
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+    .circular-button {
+        width: 50px;
+        height: 50px;
+    }
+
+    .circular-button.primary {
+        width: 65px;
+        height: 65px;
+    }
+
+    .button-icon {
+        width: 20px;
+        height: 20px;
+        margin-bottom: 3px;
+    }
+
+    .button-text {
+        font-size: 0.7rem;
+    }
+}

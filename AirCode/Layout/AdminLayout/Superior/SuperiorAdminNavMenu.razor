@@ -1,0 +1,73 @@
+@inherits LayoutComponentBase
+@using AirCode.Components.Admin.Shared
+@using AirCode.Utilities.DataStructures
+@using Aircode.Components.Admin.Shared
+
+<div class="nav-menu @(IsExpanded ? "expanded" : "collapsed")">
+    <div class="nav-top">
+        <Burger OnToggle="ToggleNavMenu" />
+    </div>
+
+    <div class="nav-middle">
+        @foreach (var item in NavigationItems)
+        {
+            <NavLink href="@item.Path" class="nav-item" data-tooltip="@item.Label">
+                <NavMenuButton
+                    IconName="@item.IconName"
+                    Label="@item.Label"
+                    IsExpanded="IsExpanded"
+                    OnClick="@(() => NavigationManager.NavigateTo(item.Path))"
+                />
+            </NavLink>
+        }
+    </div>
+
+    <div class="nav-bottom">
+        @foreach (var item in BottomItems)
+        {
+            <NavLink href="@(item.Path ?? "#")" class="nav-item" data-tooltip="@item.Label">
+                <NavMenuButton
+                    IconName="@item.IconName"
+                    Label="@item.Label"
+                    IsExpanded="IsExpanded"
+                    OnClick="@(item.Action ?? (() => {}))"
+                />
+            </NavLink>
+        }
+    </div>
+</div>
+
+@code {
+    private bool IsExpanded { get; set; } = true;
+    [Inject]
+    private NavigationManager NavigationManager { get; set; }
+
+    private void ToggleNavMenu(bool isChecked)
+    {
+        IsExpanded = isChecked;
+    }
+
+    private void HandleSettings() => NavigationManager.NavigateTo("/admin/settings");
+    private void HandleContact() => NavigationManager.NavigateTo("/admin/contact");
+    private void HandleLogout() => NavigationManager.NavigateTo("/auth");
+    
+    private List<NavItem> NavigationItems => new()
+    {
+        new("home", "Dashboard", "/Admin/Dashboard"),
+        new("qrcode", "Attendance Event", "/Admin/CreateSession"),
+        new("users", "Session Management", "/Admin/ManageAcademicSession"),
+        new("admin", "Manage Departments", "/Admin/ManageDepartments"),
+        new("courses", "Manage Courses", "/Admin/ManageCourses"),
+        new("courses", "Supa Testo", "/SupaTest"),
+        new("report", "Student Test", "/student/courses"),
+        new("stats", "Lecturer Test", "/Admin/lecturer/courses")
+    };
+
+    // Modified to use the same structure as NavigationItems
+    private List<NavItem> BottomItems => new()
+    {
+        new("settings", "Settings", "/Admin/Settings"),
+        new("contact", "Contact", "/Admin/Contact"),
+        new("logout", "Logout", "/auth")
+    };
+}

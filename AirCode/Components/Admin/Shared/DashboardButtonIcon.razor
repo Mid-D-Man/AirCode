@@ -1,0 +1,12 @@
+<div class="dashboard-button-icon">
+    <i class="@IconClass"></i>
+    <span>@Label</span> <!-- Add the label here to ensure proper layout -->
+</div>
+
+@code {
+    [Parameter]
+    public string IconClass { get; set; } = "fas fa-circle"; // Default icon as a circle
+    [Parameter]
+    public string Label { get; set; } = ""; // Label for the button
+}
+

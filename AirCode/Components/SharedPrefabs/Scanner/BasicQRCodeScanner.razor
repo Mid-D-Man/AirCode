@@ -1,0 +1,136 @@
+@using ReactorBlazorQRCodeScanner
+@inject IJSRuntime JSRuntime
+
+<div class="qr-scanner-container">
+    @if (isActive)
+    {
+        <QRCodeScanner
+            Class="qr-scanner"
+            OnResult="HandleScanResult"
+            OnError="HandleScanError"
+            VideoConstraints="videoConstraints"
+            ScanDelay="@ScanDelay"
+            PreferredCamera="@PreferredCamera" />
+    }
+    else
+    {
+        <div class="scanner-placeholder">
+            <div class="scanner-icon">
+                <i class="oi oi-target"></i>
+            </div>
+            <p>Click to start scanning</p>
+            <button class="start-scanner-btn" @onclick="StartScanner">
+                <i class="oi oi-play-circle"></i> Start Scanner
+            </button>
+        </div>
+    }
+
+    @if (isActive)
+    {
+        <div class="scanner-controls">
+            <button class="control-btn" @onclick="StopScanner">
+                <i class="oi oi-media-stop"></i> Stop
+            </button>
+            <button class="control-btn" @onclick="SwitchCamera">
+                <i class="oi oi-loop-circular"></i> Switch Camera
+            </button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="scanner-error">
+            <i class="oi oi-warning"></i>
+            <span>@errorMessage</span>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public EventCallback<string> OnScanResult { get; set; }
+    [Parameter] public EventCallback<string> OnError { get; set; }
+    [Parameter] public int ScanDelay { get; set; } = 300;
+    [Parameter] public string PreferredCamera { get; set; } = "environment";
+    [Parameter] public bool AutoStart { get; set; } = true;
+
+    private bool isActive = false;
+    private string errorMessage = "";
+    private object videoConstraints = new
+    {
+        width = new { ideal = 1280 },
+        height = new { ideal = 720 },
+        facingMode = "environment"
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (AutoStart)
+        {
+            await StartScanner();
+        }
+    }
+
+    private async Task StartScanner()
+    {
+        try
+        {
+            errorMessage = "";
+            isActive = true;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to start scanner: {ex.Message}";
+            isActive = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task StopScanner()
+    {
+        isActive = false;
+        errorMessage = "";
+        StateHasChanged();
+    }
+
+    private async Task SwitchCamera()
+    {
+        // Toggle between front and back camera
+        var currentMode = PreferredCamera == "environment" ? "user" : "environment";
+        PreferredCamera = currentMode;
+
+        videoConstraints = new
+        {
+            width = new { ideal = 1280 },
+            height = new { ideal = 720 },
+            facingMode = currentMode
+        };
+
+        // Restart scanner with new camera
+        if (isActive)
+        {
+            await StopScanner();
+            await Task.Delay(500); // Brief delay to ensure cleanup
+            await StartScanner();
+        }
+    }
+
+    private async Task HandleScanResult(string result)
+    {
+        if (!string.IsNullOrEmpty(result))
+        {
+            await OnScanResult.InvokeAsync(result);
+        }
+    }
+
+    private async Task HandleScanError(string error)
+    {
+        errorMessage = error;
+        StateHasChanged();
+
+        if (OnError.HasDelegate)
+        {
+            await OnError.InvokeAsync(error);
+        }
+    }
+}
