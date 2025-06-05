@@ -1,0 +1,713 @@
+@page "/SupaTest"
+@using AirCode.Services.SupaBase
+@using AirCode.Models.Supabase
+@inject ISupabaseDatabase SupabaseDb
+@inject ISupabaseAuthService SupabaseAuth
+@inject ICatService CatService
+@inject IJSRuntime JSRuntime
+@implements IDisposable
+
+<h3>Enhanced Supabase Test & Authentication</h3>
+
+<div class="container">
+    <!-- Authentication Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Supabase Authentication</h4>
+                </div>
+                <div class="card-body">
+                    @if (_currentUser != null)
+                    {
+                        <div class="alert alert-success">
+                            <strong>Authenticated User:</strong> @_currentUser.Email
+                            <br>
+                            <small>User ID: @_currentUser.Id</small>
+                        </div>
+                        <button class="btn btn-outline-danger" @onclick="LogoutUser">Sign Out</button>
+                        <button class="btn btn-info ml-2" @onclick="RefreshUserSession">Refresh Session</button>
+                    }
+                    else
+                    {
+                        <div class="row">
+                            <!-- Login Form -->
+                            <div class="col-md-6">
+                                <h5>Login</h5>
+                                <EditForm Model="@_loginModel" OnValidSubmit="LoginUser">
+                                    <div class="mb-3">
+                                        <label class="form-label">Email</label>
+                                        <InputText @bind-Value="_loginModel.Email" class="form-control" type="email" />
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Password</label>
+                                        <InputText @bind-Value="_loginModel.Password" class="form-control" type="password" />
+                                    </div>
+                                    <button type="submit" class="btn btn-primary" disabled="@_authLoading">
+                                        @if (_authLoading) { <span class="spinner-border spinner-border-sm me-2"></span> }
+                                        Login
+                                    </button>
+                                </EditForm>
+                            </div>
+                            
+                            <!-- Registration Form -->
+                            <div class="col-md-6">
+                                <h5>Register New User</h5>
+                                <EditForm Model="@_registerModel" OnValidSubmit="RegisterUser">
+                                    <div class="mb-3">
+                                        <label class="form-label">Email</label>
+                                        <InputText @bind-Value="_registerModel.Email" class="form-control" type="email" />
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Password</label>
+                                        <InputText @bind-Value="_registerModel.Password" class="form-control" type="password" />
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Full Name (Optional)</label>
+                                        <InputText @bind-Value="_registerModel.FullName" class="form-control" />
+                                    </div>
+                                    <button type="submit" class="btn btn-success" disabled="@_authLoading">
+                                        @if (_authLoading) { <span class="spinner-border spinner-border-sm me-2"></span> }
+                                        Register
+                                    </button>
+                                </EditForm>
+                            </div>
+                        </div>
+                        
+                        <hr>
+                        <div class="text-center">
+                            <button class="btn btn-outline-secondary" @onclick="ResetPassword" disabled="@_authLoading">
+                                Reset Password
+                            </button>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Courses Management Section -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Courses Management</h4>
+                    <small class="text-muted">Authentication Status: @(_currentUser != null ? "Authenticated" : "Guest Mode")</small>
+                </div>
+                <div class="card-body">
+                    @if (_loading)
+                    {
+                        <div class="d-flex justify-content-center">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    }
+                    else if (_courses.Any())
+                    {
+                        <div class="mb-3">
+                            <strong>Total Courses: @_courses.Count</strong>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-striped table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Code</th>
+                                        <th>Title</th>
+                                        <th>Credits</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var course in _courses)
+                                    {
+                                        <tr>
+                                            <td>@course.Id</td>
+                                            <td><code>@course.Code</code></td>
+                                            <td>@course.Title</td>
+                                            <td>@course.CreditUnits</td>
+                                            <td>
+                                                <div class="btn-group btn-group-sm">
+                                                    <button class="btn btn-outline-primary" @onclick="() => SelectCourse(course)">Edit</button>
+                                                    <button class="btn btn-outline-danger" @onclick="() => DeleteCourse(course.Id)">Delete</button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> No courses found. Add a new course to get started.
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h4>@(_editMode ? "Edit Course" : "Add New Course")</h4>
+                </div>
+                <div class="card-body">
+                    <EditForm Model="@_currentCourse" OnValidSubmit="HandleSubmit">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary class="alert alert-danger" />
+                        
+                        <div class="mb-3">
+                            <label for="code" class="form-label">Course Code</label>
+                            <InputText id="code" @bind-Value="_currentCourse.Code" class="form-control" placeholder="e.g., CS101" />
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="title" class="form-label">Course Title</label>
+                            <InputText id="title" @bind-Value="_currentCourse.Title" class="form-control" placeholder="e.g., Introduction to Computer Science" />
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description</label>
+                            <InputTextArea id="description" @bind-Value="_currentCourse.Description" class="form-control" rows="3" placeholder="Course description..." />
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="credits" class="form-label">Credit Units</label>
+                            <InputNumber id="credits" @bind-Value="_currentCourse.CreditUnits" class="form-control" min="1" max="6" />
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <button type="submit" class="btn btn-primary" disabled="@_loading">
+                                @if (_loading) { <span class="spinner-border spinner-border-sm me-2"></span> }
+                                @(_editMode ? "Update" : "Add") Course
+                            </button>
+                            @if (_editMode)
+                            {
+                                <button type="button" class="btn btn-secondary" @onclick="ResetForm">Cancel</button>
+                            }
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Cat Service Test Section -->
+    <div class="row mb-4">
+        <div class="col-md-6 offset-md-3">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Cat Service Integration Test</h4>
+                    <small class="text-muted">Supabase Edge Function</small>
+                </div>
+                <div class="card-body text-center">
+                    @if (string.IsNullOrEmpty(_catImageUrl))
+                    {
+                        <div class="py-4">
+                            <i class="fas fa-cat fa-3x text-muted mb-3"></i>
+                            <br>
+                            <button class="btn btn-info" @onclick="GetRandomCat" disabled="@_catLoading">
+                                @if (_catLoading) { <span class="spinner-border spinner-border-sm me-2"></span> }
+                                Get Random Cat
+                            </button>
+                        </div>
+                    }
+                    else
+                    {
+                        <img src="@_catImageUrl" alt="Random Cat" class="img-fluid mb-3 rounded" style="max-height: 300px;" />
+                        <div>
+                            <button class="btn btn-info" @onclick="GetRandomCat" disabled="@_catLoading">
+                                @if (_catLoading) { <span class="spinner-border spinner-border-sm me-2"></span> }
+                                Get Another Cat
+                            </button>
+                            <button class="btn btn-outline-secondary ml-2" @onclick="ClearCatImage">Clear</button>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Service Status Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Service Status & Diagnostics</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="card border-@(_isSupabaseInitialized ? "success" : "warning")">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-database fa-2x text-@(_isSupabaseInitialized ? "success" : "warning")"></i>
+                                    <h6 class="mt-2">Database</h6>
+                                    <small>@(_isSupabaseInitialized ? "Connected" : "Initializing")</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card border-@(_currentUser != null ? "success" : "secondary")">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-user-shield fa-2x text-@(_currentUser != null ? "success" : "secondary")"></i>
+                                    <h6 class="mt-2">Authentication</h6>
+                                    <small>@(_currentUser != null ? "Authenticated" : "Anonymous")</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card border-info">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-cog fa-2x text-info"></i>
+                                    <h6 class="mt-2">Edge Functions</h6>
+                                    <small>Available</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="row mt-3">
+            <div class="col-12">
+                <div class="alert alert-danger alert-dismissible fade show">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Error:</strong> @_errorMessage
+                    <button type="button" class="btn-close" @onclick="ClearError"></button>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(_successMessage))
+    {
+        <div class="row mt-3">
+            <div class="col-12">
+                <div class="alert alert-success alert-dismissible fade show">
+                    <i class="fas fa-check-circle"></i>
+                    <strong>Success:</strong> @_successMessage
+                    <button type="button" class="btn-close" @onclick="ClearSuccess"></button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    // Models for authentication
+    public class LoginModel
+    {
+        public string Email { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+    }
+
+    public class RegisterModel
+    {
+        public string Email { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+        public string FullName { get; set; } = string.Empty;
+    }
+
+    // State variables
+    private List<Course> _courses = new();
+    private Course _currentCourse = new();
+    private LoginModel _loginModel = new();
+    private RegisterModel _registerModel = new();
+    private Supabase.Gotrue.User? _currentUser;
+    
+    // UI state
+    private bool _editMode = false;
+    private bool _loading = true;
+    private bool _authLoading = false;
+    private bool _catLoading = false;
+    private bool _isSupabaseInitialized = false;
+    
+    // Messages
+    private string _errorMessage = string.Empty;
+    private string _successMessage = string.Empty;
+    private string _catImageUrl = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await InitializeServices();
+        await LoadInitialData();
+    }
+
+    private async Task InitializeServices()
+    {
+        try
+        {
+            _loading = true;
+            
+            // Initialize Supabase database
+            await SupabaseDb.InitializeAsync();
+            _isSupabaseInitialized = true;
+            
+            // Check current authentication status
+            _currentUser = await SupabaseAuth.GetCurrentUserAsync();
+            
+            SetSuccessMessage("Services initialized successfully");
+        }
+        catch (Exception ex)
+        {
+            SetErrorMessage($"Service initialization failed: {ex.Message}");
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task LoadInitialData()
+    {
+        await LoadCourses();
+    }
+
+    #region Authentication Methods
+
+    private async Task LoginUser()
+    {
+        if (string.IsNullOrEmpty(_loginModel.Email) || string.IsNullOrEmpty(_loginModel.Password))
+        {
+            SetErrorMessage("Email and password are required");
+            return;
+        }
+
+        try
+        {
+            _authLoading = true;
+            ClearMessages();
+
+            var success = await SupabaseAuth.LoginAsync(_loginModel.Email, _loginModel.Password);
+            
+            if (success)
+            {
+                _currentUser = await SupabaseAuth.GetCurrentUserAsync();
+                SetSuccessMessage($"Successfully logged in as {_currentUser?.Email}");
+                
+                // Reset login form
+                _loginModel = new LoginModel();
+                
+                // Reload data with authenticated context
+                await LoadCourses();
+            }
+            else
+            {
+                SetErrorMessage("Login failed. Please check your credentials.");
+            }
+        }
+        catch (Exception ex)
+        {
+            SetErrorMessage($"Login error: {ex.Message}");
+        }
+        finally
+        {
+            _authLoading = false;
+        }
+    }
+
+    private async Task RegisterUser()
+    {
+        if (string.IsNullOrEmpty(_registerModel.Email) || string.IsNullOrEmpty(_registerModel.Password))
+        {
+            SetErrorMessage("Email and password are required");
+            return;
+        }
+
+        try
+        {
+            _authLoading = true;
+            ClearMessages();
+
+            var userData = new Dictionary<string, object>();
+            if (!string.IsNullOrEmpty(_registerModel.FullName))
+            {
+                userData["full_name"] = _registerModel.FullName;
+            }
+
+            var success = await SupabaseAuth.RegisterAsync(_registerModel.Email, _registerModel.Password, userData);
+            
+            if (success)
+            {
+                _currentUser = await SupabaseAuth.GetCurrentUserAsync();
+                SetSuccessMessage($"Registration successful! Welcome {_registerModel.Email}");
+                
+                // Reset registration form
+                _registerModel = new RegisterModel();
+            }
+            else
+            {
+                SetErrorMessage("Registration failed. Email may already be in use.");
+            }
+        }
+        catch (Exception ex)
+        {
+            SetErrorMessage($"Registration error: {ex.Message}");
+        }
+        finally
+        {
+            _authLoading = false;
+        }
+    }
+
+    private async Task LogoutUser()
+    {
+        try
+        {
+            _authLoading = true;
+            await SupabaseAuth.LogoutAsync();
+            _currentUser = null;
+            SetSuccessMessage("Successfully logged out");
+        }
+        catch (Exception ex)
+        {
+            SetErrorMessage($"Logout error: {ex.Message}");
+        }
+        finally
+        {
+            _authLoading = false;
+        }
+    }
+
+    private async Task RefreshUserSession()
+    {
+        try
+        {
+            _authLoading = true;
+            var success = await SupabaseAuth.RefreshSessionAsync();
+            
+            if (success)
+            {
+                _currentUser = await SupabaseAuth.GetCurrentUserAsync();
+                SetSuccessMessage("Session refreshed successfully");
+            }
+            else
+            {
+                SetErrorMessage("Failed to refresh session");
+            }
+        }
+        catch (Exception ex)
+        {
+            SetErrorMessage($"Session refresh error: {ex.Message}");
+        }
+        finally
+        {
+            _authLoading = false;
+        }
+    }
+
+    private async Task ResetPassword()
+    {
+        var email = await JSRuntime.InvokeAsync<string>("prompt", "Enter your email address for password reset:");
+        
+        if (string.IsNullOrEmpty(email))
+            return;
+
+        try
+        {
+            _authLoading = true;
+            var success = await SupabaseAuth.ResetPasswordAsync(email);
+            
+            if (success)
+            {
+                SetSuccessMessage($"Password reset email sent to {email}");
+            }
+            else
+            {
+                SetErrorMessage("Failed to send password reset email");
+            }
+        }
+        catch (Exception ex)
+        {
+            SetErrorMessage($"Password reset error: {ex.Message}");
+        }
+        finally
+        {
+            _authLoading = false;
+        }
+    }
+
+    #endregion
+
+    #region Course Management Methods
+
+    private async Task LoadCourses()
+    {
+        try
+        {
+            _loading = true;
+            ClearMessages();
+            _courses = (await SupabaseDb.GetAllAsync<Course>()).ToList();
+        }
+        catch (Exception ex)
+        {
+            SetErrorMessage($"Error loading courses: {ex.Message}");
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void SelectCourse(Course course)
+    {
+        _currentCourse = new Course
+        {
+            Id = course.Id,
+            Code = course.Code,
+            Title = course.Title,
+            Description = course.Description,
+            CreditUnits = course.CreditUnits,
+            CreatedAt = course.CreatedAt,
+            UpdatedAt = DateTime.UtcNow
+        };
+        _editMode = true;
+        ClearMessages();
+    }
+
+    private async Task HandleSubmit()
+    {
+        try
+        {
+            _loading = true;
+            ClearMessages();
+            
+            if (_editMode)
+            {
+                await SupabaseDb.UpdateAsync(_currentCourse);
+                SetSuccessMessage($"Course '{_currentCourse.Code}' updated successfully");
+            }
+            else
+            {
+                _currentCourse.CreatedAt = DateTime.UtcNow;
+                await SupabaseDb.InsertAsync(_currentCourse);
+                SetSuccessMessage($"Course '{_currentCourse.Code}' added successfully");
+            }
+            
+            await LoadCourses();
+            ResetForm();
+        }
+        catch (Exception ex)
+        {
+            SetErrorMessage($"Error saving course: {ex.Message}");
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task DeleteCourse(int id)
+    {
+        var course = _courses.FirstOrDefault(c => c.Id == id);
+        if (course == null) return;
+
+        if (!await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you want to delete course '{course.Code} - {course.Title}'?"))
+            return;
+            
+        try
+        {
+            _loading = true;
+            var courseToDelete = new Course { Id = id };
+            await SupabaseDb.DeleteAsync(courseToDelete);
+            
+            SetSuccessMessage($"Course '{course.Code}' deleted successfully");
+            await LoadCourses();
+            
+            if (_currentCourse.Id == id)
+                ResetForm();
+        }
+        catch (Exception ex)
+        {
+            SetErrorMessage($"Error deleting course: {ex.Message}");
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void ResetForm()
+    {
+        _currentCourse = new Course();
+        _editMode = false;
+        ClearMessages();
+    }
+
+    #endregion
+
+    #region Cat Service Methods
+
+    private async Task GetRandomCat()
+    {
+        try
+        {
+            _catLoading = true;
+            ClearMessages();
+            
+            _catImageUrl = await CatService.GetRandomCatImageAsync();
+            
+            if (_catImageUrl.StartsWith("Failed") || _catImageUrl.StartsWith("An error"))
+            {
+                SetErrorMessage(_catImageUrl);
+                _catImageUrl = string.Empty;
+            }
+            else
+            {
+                SetSuccessMessage("Random cat loaded successfully!");
+            }
+        }
+        catch (Exception ex)
+        {
+            SetErrorMessage($"Error getting cat image: {ex.Message}");
+        }
+        finally
+        {
+            _catLoading = false;
+        }
+    }
+
+    private void ClearCatImage()
+    {
+        _catImageUrl = string.Empty;
+    }
+
+    #endregion
+
+    #region Utility Methods
+
+    private void SetErrorMessage(string message)
+    {
+        _errorMessage = message;
+        _successMessage = string.Empty;
+    }
+
+    private void SetSuccessMessage(string message)
+    {
+        _successMessage = message;
+        _errorMessage = string.Empty;
+    }
+
+    private void ClearMessages()
+    {
+        _errorMessage = string.Empty;
+        _successMessage = string.Empty;
+    }
+
+    private void ClearError() => _errorMessage = string.Empty;
+    private void ClearSuccess() => _successMessage = string.Empty;
+
+    #endregion
+
+    public void Dispose()
+    {
+        // Cleanup resources if needed
+    }
+}

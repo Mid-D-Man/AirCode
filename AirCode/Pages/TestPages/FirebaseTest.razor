@@ -1,0 +1,480 @@
+@page "/FirebaseTest"
+@using AirCode.Services.Firebase
+@using Newtonsoft.Json
+@using Newtonsoft.Json.Linq
+@inject IFirestoreService FirestoreService
+
+<h3 class="page-title">Firebase Firestore Test</h3>
+
+<div class="test-container">
+    <div class="status-section">
+        <h4>Connection Status</h4>
+        <p>Initialized: <span class="@(IsInitialized ? "status-success" : "status-error")">@(IsInitialized ? "Yes" : "No")</span></p>
+        <p>Connected: <span class="@(IsConnected ? "status-success" : "status-error")">@(IsConnected ? "Yes" : "No")</span></p>
+        <button class="btn btn-primary" @onclick="CheckConnectionStatus">Check Connection</button>
+    </div>
+
+    <div class="card-container">
+        <!-- Test Document Operations -->
+        <div class="test-card">
+            <h4>Document Operations</h4>
+            
+            <!-- Add Document -->
+            <div class="test-section">
+                <h5>Add Document</h5>
+                <div class="form-group">
+                    <label>Collection:</label>
+                    <input type="text" class="form-control" @bind="AddDocCollection" />
+                </div>
+                <div class="form-group">
+                    <label>Document Data (JSON):</label>
+                    <textarea class="form-control" @bind="AddDocData" rows="4"></textarea>
+                </div>
+                <button class="btn btn-success" @onclick="AddDocument">Add Document</button>
+                @if (!string.IsNullOrEmpty(AddDocResult))
+                {
+                    <div class="result">
+                        <p>Result: @AddDocResult</p>
+                    </div>
+                }
+            </div>
+            
+            <!-- Get Document -->
+            <div class="test-section">
+                <h5>Get Document</h5>
+                <div class="form-group">
+                    <label>Collection:</label>
+                    <input type="text" class="form-control" @bind="GetDocCollection" />
+                </div>
+                <div class="form-group">
+                    <label>Document ID:</label>
+                    <input type="text" class="form-control" @bind="GetDocId" />
+                </div>
+                <button class="btn btn-primary" @onclick="GetDocument">Get Document</button>
+                @if (!string.IsNullOrEmpty(GetDocResult))
+                {
+                    <div class="result">
+                        <p>Result:</p>
+                        <pre>@GetDocResult</pre>
+                    </div>
+                }
+            </div>
+            
+            <!-- Update Document -->
+            <div class="test-section">
+                <h5>Update Document</h5>
+                <div class="form-group">
+                    <label>Collection:</label>
+                    <input type="text" class="form-control" @bind="UpdateDocCollection" />
+                </div>
+                <div class="form-group">
+                    <label>Document ID:</label>
+                    <input type="text" class="form-control" @bind="UpdateDocId" />
+                </div>
+                <div class="form-group">
+                    <label>Document Data (JSON):</label>
+                    <textarea class="form-control" @bind="UpdateDocData" rows="4"></textarea>
+                </div>
+                <button class="btn btn-warning" @onclick="UpdateDocument">Update Document</button>
+                @if (UpdateDocResult.HasValue)
+                {
+                    <div class="result">
+                        <p>Result: @(UpdateDocResult.Value ? "Success" : "Failed")</p>
+                    </div>
+                }
+            </div>
+            
+            <!-- Delete Document -->
+            <div class="test-section">
+                <h5>Delete Document</h5>
+                <div class="form-group">
+                    <label>Collection:</label>
+                    <input type="text" class="form-control" @bind="DeleteDocCollection" />
+                </div>
+                <div class="form-group">
+                    <label>Document ID:</label>
+                    <input type="text" class="form-control" @bind="DeleteDocId" />
+                </div>
+                <button class="btn btn-danger" @onclick="DeleteDocument">Delete Document</button>
+                @if (DeleteDocResult.HasValue)
+                {
+                    <div class="result">
+                        <p>Result: @(DeleteDocResult.Value ? "Success" : "Failed")</p>
+                    </div>
+                }
+            </div>
+        </div>
+        
+        <!-- Test Collection Operations -->
+        <div class="test-card">
+            <h4>Collection Operations</h4>
+            
+            <!-- Get Collection -->
+            <div class="test-section">
+                <h5>Get Collection</h5>
+                <div class="form-group">
+                    <label>Collection:</label>
+                    <input type="text" class="form-control" @bind="GetCollectionName" />
+                </div>
+                <button class="btn btn-primary" @onclick="GetCollection">Get Collection</button>
+                @if (!string.IsNullOrEmpty(GetCollectionResult))
+                {
+                    <div class="result">
+                        <p>Result:</p>
+                        <pre>@GetCollectionResult</pre>
+                    </div>
+                }
+            </div>
+            
+            <!-- Query Collection -->
+            <div class="test-section">
+                <h5>Query Collection</h5>
+                <div class="form-group">
+                    <label>Collection:</label>
+                    <input type="text" class="form-control" @bind="QueryCollectionName" />
+                </div>
+                <div class="form-group">
+                    <label>Field:</label>
+                    <input type="text" class="form-control" @bind="QueryField" />
+                </div>
+                <div class="form-group">
+                    <label>Value (JSON):</label>
+                    <input type="text" class="form-control" @bind="QueryValue" />
+                </div>
+                <button class="btn btn-primary" @onclick="QueryCollection">Query Collection</button>
+                @if (!string.IsNullOrEmpty(QueryCollectionResult))
+                {
+                    <div class="result">
+                        <p>Result:</p>
+                        <pre>@QueryCollectionResult</pre>
+                    </div>
+                }
+            </div>
+        </div>
+        
+        <!-- Test Batch Operations -->
+        <div class="test-card">
+            <h4>Batch Operations</h4>
+            
+            <!-- Add Batch -->
+            <div class="test-section">
+                <h5>Add Batch</h5>
+                <div class="form-group">
+                    <label>Collection:</label>
+                    <input type="text" class="form-control" @bind="BatchCollection" />
+                </div>
+                <div class="form-group">
+                    <label>Items (JSON Array):</label>
+                    <textarea class="form-control" @bind="BatchData" rows="6"></textarea>
+                </div>
+                <button class="btn btn-success" @onclick="AddBatch">Add Batch</button>
+                @if (BatchResult.HasValue)
+                {
+                    <div class="result">
+                        <p>Result: @(BatchResult.Value ? "Success" : "Failed")</p>
+                    </div>
+                }
+            </div>
+            
+            <!-- Sync Collection -->
+            <div class="test-section">
+                <h5>Sync Collection</h5>
+                <div class="form-group">
+                    <label>Collection:</label>
+                    <input type="text" class="form-control" @bind="SyncCollection" />
+                </div>
+                <div class="form-group">
+                    <label>Local Data (JSON Array):</label>
+                    <textarea class="form-control" @bind="SyncData" rows="6"></textarea>
+                </div>
+                <button class="btn btn-info" @onclick="SyncCollectionWithLocal">Sync Collection</button>
+                @if (SyncResult.HasValue)
+                {
+                    <div class="result">
+                        <p>Result: @(SyncResult.Value ? "Success" : "Failed")</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Database Explorer -->
+    <div class="database-explorer">
+        <h4>Database Explorer</h4>
+        <div class="form-group">
+            <label>Collection to Explore:</label>
+            <input type="text" class="form-control" @bind="ExploreCollection" />
+            <button class="btn btn-primary" @onclick="ExploreDatabase">Explore</button>
+        </div>
+        
+        @if (!string.IsNullOrEmpty(ExploreResult))
+        {
+            <div class="explorer-results">
+                <h5>Results for: @ExploreCollection</h5>
+                <pre>@ExploreResult</pre>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    // Connection status
+    private bool IsInitialized;
+    private bool IsConnected;
+    
+    // Document operations
+    private string AddDocCollection = "test-items";
+    private string AddDocData = "{ \"name\": \"Test Item\", \"value\": 123, \"timestamp\": \"" + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + "\" }";
+    private string AddDocResult;
+    
+    private string GetDocCollection = "test-items";
+    private string GetDocId;
+    private string GetDocResult;
+    
+    private string UpdateDocCollection = "test-items";
+    private string UpdateDocId;
+    private string UpdateDocData = "{ \"name\": \"Updated Item\", \"value\": 456, \"timestamp\": \"" + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + "\" }";
+    private bool? UpdateDocResult;
+    
+    private string DeleteDocCollection = "test-items";
+    private string DeleteDocId;
+    private bool? DeleteDocResult;
+    
+    // Collection operations
+    private string GetCollectionName = "test-items";
+    private string GetCollectionResult;
+    
+    private string QueryCollectionName = "test-items";
+    private string QueryField = "name";
+    private string QueryValue = "\"Test Item\"";
+    private string QueryCollectionResult;
+    
+    // Batch operations
+    private string BatchCollection = "batch-items";
+    private string BatchData = "[\n  { \"name\": \"Batch Item 1\", \"value\": 1 },\n  { \"name\": \"Batch Item 2\", \"value\": 2 },\n  { \"name\": \"Batch Item 3\", \"value\": 3 }\n]";
+    private bool? BatchResult;
+    
+    private string SyncCollection = "sync-items";
+    private string SyncData = "[\n  { \"name\": \"Sync Item 1\", \"value\": 1 },\n  { \"name\": \"Sync Item 2\", \"value\": 2 },\n  { \"name\": \"Sync Item 3\", \"value\": 3 }\n]";
+    private bool? SyncResult;
+    
+    // Database explorer
+    private string ExploreCollection = "test-items";
+    private string ExploreResult;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        await CheckConnectionStatus();
+    }
+    
+    private async Task CheckConnectionStatus()
+    {
+        IsInitialized = FirestoreService.IsInitialized;
+        IsConnected = await FirestoreService.IsConnectedAsync();
+        StateHasChanged();
+    }
+    
+     private async Task AddDocument()
+    {
+        try
+        {
+            // Validate JSON
+            JObject.Parse(AddDocData);
+            
+            // Use consistent JSON settings like FirestoreService
+            var settings = new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.None,
+                NullValueHandling = NullValueHandling.Ignore,
+                ReferenceLoopHandling = ReferenceLoopHandling.Ignore
+            };
+            var data = JsonConvert.DeserializeObject<object>(AddDocData, settings);
+            
+            var result = await FirestoreService.AddDocumentAsync<object>(AddDocCollection, data);
+            AddDocResult = result ?? "Failed to add document";
+        }
+        catch (Exception ex)
+        {
+            AddDocResult = $"Error: {ex.Message}";
+        }
+    }
+    
+    private async Task GetDocument()
+    {
+        try
+        {
+            var result = await FirestoreService.GetDocumentAsync<object>(GetDocCollection, GetDocId);
+            if (result != null)
+            {
+                // Use consistent JSON settings like FirestoreService
+                var settings = new JsonSerializerSettings
+                {
+                    TypeNameHandling = TypeNameHandling.None,
+                    NullValueHandling = NullValueHandling.Ignore,
+                    Formatting = Formatting.Indented
+                };
+                GetDocResult = JsonConvert.SerializeObject(result, settings);
+            }
+            else
+            {
+                GetDocResult = "Document not found";
+            }
+        }
+        catch (Exception ex)
+        {
+            GetDocResult = $"Error: {ex.Message}";
+        }
+    }
+    
+    private async Task UpdateDocument()
+    {
+        try
+        {
+            // Validate JSON
+            JObject.Parse(UpdateDocData);
+            
+            // Use consistent JSON settings like FirestoreService
+            var settings = new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.None,
+                NullValueHandling = NullValueHandling.Ignore,
+                ReferenceLoopHandling = ReferenceLoopHandling.Ignore
+            };
+            var data = JsonConvert.DeserializeObject<object>(UpdateDocData, settings);
+            
+            UpdateDocResult = await FirestoreService.UpdateDocumentAsync<object>(
+                UpdateDocCollection, 
+                UpdateDocId, 
+                data);
+        }
+        catch (Exception ex)
+        {
+            UpdateDocResult = false;
+            Console.WriteLine($"Update error: {ex.Message}");
+        }
+    }
+    
+    private async Task DeleteDocument()
+    {
+        try
+        {
+           // DeleteDocResult = await FirestoreService.DeleteDocumentAsync(DeleteDocCollection, DeleteDocId);
+        }
+        catch (Exception ex)
+        {
+            DeleteDocResult = false;
+            Console.WriteLine($"Delete error: {ex.Message}");
+        }
+    }
+    
+    private async Task GetCollection()
+    {
+        try
+        {
+            var result = await FirestoreService.GetCollectionAsync<object>(GetCollectionName);
+            // Use consistent JSON settings like FirestoreService
+            var settings = new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.None,
+                NullValueHandling = NullValueHandling.Ignore,
+                Formatting = Formatting.Indented
+            };
+            GetCollectionResult = JsonConvert.SerializeObject(result, settings);
+        }
+        catch (Exception ex)
+        {
+            GetCollectionResult = $"Error: {ex.Message}";
+        }
+    }
+    
+    private async Task QueryCollection()
+    {
+        try
+        {
+            // Parse the value using Newtonsoft.Json
+            var settings = new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.None,
+                NullValueHandling = NullValueHandling.Ignore
+            };
+            var value = JsonConvert.DeserializeObject<object>(QueryValue, settings);
+            
+            var result = await FirestoreService.QueryCollectionAsync<object>(QueryCollectionName, QueryField, value);
+            // Use consistent JSON settings for output
+            settings.Formatting = Formatting.Indented;
+            QueryCollectionResult = JsonConvert.SerializeObject(result, settings);
+        }
+        catch (Exception ex)
+        {
+            QueryCollectionResult = $"Error: {ex.Message}";
+        }
+    }
+    
+    private async Task AddBatch()
+    {
+        try
+        {
+            // Validate JSON array
+            JArray.Parse(BatchData);
+            
+            // Use consistent JSON settings like FirestoreService
+            var settings = new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.None,
+                NullValueHandling = NullValueHandling.Ignore,
+                ReferenceLoopHandling = ReferenceLoopHandling.Ignore
+            };
+            var items = JsonConvert.DeserializeObject<List<object>>(BatchData, settings);
+            BatchResult = await FirestoreService.AddBatchAsync(BatchCollection, items);
+        }
+        catch (Exception ex)
+        {
+            BatchResult = false;
+            Console.WriteLine($"Batch error: {ex.Message}");
+        }
+    }
+    
+    private async Task SyncCollectionWithLocal()
+    {
+        try
+        {
+            // Validate JSON array
+            JArray.Parse(SyncData);
+            
+            // Use consistent JSON settings like FirestoreService
+            var settings = new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.None,
+                NullValueHandling = NullValueHandling.Ignore,
+                ReferenceLoopHandling = ReferenceLoopHandling.Ignore
+            };
+            var items = JsonConvert.DeserializeObject<List<object>>(SyncData, settings);
+            SyncResult = await FirestoreService.SyncCollectionWithLocalAsync(SyncCollection, items);
+        }
+        catch (Exception ex)
+        {
+            SyncResult = false;
+            Console.WriteLine($"Sync error: {ex.Message}");
+        }
+    }
+    
+    private async Task ExploreDatabase()
+    {
+        try
+        {
+            var result = await FirestoreService.GetCollectionAsync<object>(ExploreCollection);
+            // Use consistent JSON settings like FirestoreService
+            var settings = new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.None,
+                NullValueHandling = NullValueHandling.Ignore,
+                Formatting = Formatting.Indented
+            };
+            ExploreResult = JsonConvert.SerializeObject(result, settings);
+        }
+        catch (Exception ex)
+        {
+            ExploreResult = $"Error: {ex.Message}";
+        }
+    }
+}

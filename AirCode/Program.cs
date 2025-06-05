@@ -77,8 +77,9 @@ builder.Services.AddScoped<IOfflineCredentialsService, OfflineCredentialsService
 //add custom configs here 
 
 
-// Add Supabase services
+// Add all supabase services
 builder.Services.AddSupabaseServices();
+
 // Supabase Client Configuration
 builder.Services.AddScoped<Supabase.Client>(provider =>
 {

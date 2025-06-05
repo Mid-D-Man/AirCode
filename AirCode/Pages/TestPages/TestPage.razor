@@ -1,0 +1,80 @@
+@page "/auth-test"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@using System.Text.Json
+@using Microsoft.AspNetCore.Components.Authorization
+@attribute [Authorize]
+
+@inject IAccessTokenProvider TokenProvider
+@inject AuthenticationStateProvider AuthStateProvider
+
+<h3>Auth0 Authentication Test</h3>
+
+<div class="card">
+    <div class="card-header">
+        User Information
+    </div>
+    <div class="card-body">
+        @if (_userInfo != null)
+        {
+            <div>
+                <h5>Identity Claims:</h5>
+                <ul>
+                    @foreach (var claim in _userInfo)
+                    {
+                        <li><strong>@claim.Key:</strong> @claim.Value</li>
+                    }
+                </ul>
+            </div>
+        }
+        else
+        {
+            <p>Loading user information...</p>
+        }
+    </div>
+</div>
+
+<div class="card mt-4">
+    <div class="card-header">
+        Token Information
+    </div>
+    <div class="card-body">
+        @if (!string.IsNullOrEmpty(_token))
+        {
+            <div>
+                <h5>JWT Token:</h5>
+                <div class="token-display">
+                    @_token
+                </div>
+            </div>
+        }
+        else
+        {
+            <p>Loading token information...</p>
+        }
+    </div>
+</div>
+
+@code {
+    private Dictionary<string, string> _userInfo;
+    private string _token;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Get claims from the authentication state
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity.IsAuthenticated)
+        {
+            _userInfo = user.Claims.ToDictionary(c => c.Type, c => c.Value);
+        }
+
+        // Get the access token
+        var tokenResult = await TokenProvider.RequestAccessToken();
+        if (tokenResult.TryGetToken(out var accessToken))
+        {
+            _token = accessToken.Value;
+        }
+    }
+}
