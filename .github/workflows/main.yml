@@ -1,0 +1,14 @@
+            - name: GitHub Pages Blazor WASM
+  # You may pin to the exact commit or the version.
+  # uses: na1307/blazor-github-pages@da07d46d47ad5038f3caf9a3ba5a4a5cdad5f49b
+  uses: na1307/blazor-github-pages@v3.0
+  with:
+    # Path of project (.csproj)
+    project-path: 
+    # Path to output in Publish step
+    publish-path: # default is _out
+    # Set to true only when running this action from the default GitHub Pages repository ({ID}.github.io).
+    main-repo: # optional, default is false
+    # Whether to apply repository-specific modifications to 404.html as well. This only takes effect when main-repo is false.
+    fix-404: # optional, default is true
+          
