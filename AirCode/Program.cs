@@ -5,6 +5,7 @@ using AirCode;
 using AirCode.Extensions;
 using AirCode.Services.Auth;
 using AirCode.Services.Auth.Offline;
+using AirCode.Services.Cryptography;
 using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
 using Supabase;
 
@@ -70,6 +71,7 @@ builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>()
 
 
 //Auth(auth0 ish) service
+builder.Services.AddScoped<ICryptographyService, CryptographyService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IOfflineCredentialsService, OfflineCredentialsService>();
 //add custom configs here 
