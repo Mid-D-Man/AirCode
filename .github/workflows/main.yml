@@ -40,12 +40,10 @@ jobs:
           cp ./pages/index.html ./pages/404.html
           sed -i 's|<base href="/" />|<base href="/${{ github.event.repository.name }}/" />|g' ./pages/index.html ./pages/404.html
           
-          # Fix service worker paths
-          if [ -f "./pages/service-worker.js" ]; then
-            sed -i 's|"/|"/${{ github.event.repository.name }}/|g' ./pages/service-worker.js
-          fi
+          # Replace development service worker with production version
           if [ -f "./pages/service-worker.published.js" ]; then
-            sed -i 's|"/|"/${{ github.event.repository.name }}/|g' ./pages/service-worker.published.js
+            cp ./pages/service-worker.published.js ./pages/service-worker.js
+            sed -i 's|"/|"/${{ github.event.repository.name }}/|g' ./pages/service-worker.js
           fi
 
       - name: Upload Pages
