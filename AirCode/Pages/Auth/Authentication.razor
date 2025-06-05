@@ -1,0 +1,46 @@
+@page "/authentication/{action}"
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@using Microsoft.Extensions.Configuration
+@using AirCode.Services.Auth
+
+@inject NavigationManager Navigation
+@inject IConfiguration Configuration
+@inject IAuthService AuthService
+
+<RemoteAuthenticatorView Action="@Action" OnLogInSucceeded="HandleLoginSuccess">
+    <LoggingIn>
+        <p>Redirecting to Auth0 login...</p>
+    </LoggingIn>
+    <CompletingLoggingIn>
+        <p>Completing login process...</p>
+    </CompletingLoggingIn>
+    <LogOut>
+        @{
+            var authority = $"https://{Configuration["Auth0:Domain"]}";
+            var clientId = Configuration["Auth0:ClientId"];
+            Navigation.NavigateTo($"{authority}/v2/logout?client_id={clientId}");
+        }
+    </LogOut>
+</RemoteAuthenticatorView>
+
+@code{
+    [Parameter] public string Action { get; set; }
+    
+    private async Task HandleLoginSuccess(RemoteAuthenticationState state)
+    {
+        try
+        {
+            // Log successful authentication
+            await AuthService.LogAuthenticationMessageAsync("Authentication successful!");
+            
+            // Process the login and navigate to appropriate page based on role
+            // This is delegated to the AuthService to keep this component clean
+            await AuthService.ProcessSuccessfulLoginAsync();
+        }
+        catch (Exception ex)
+        {
+            await AuthService.LogAuthenticationMessageAsync($"Unhandled exception: {ex.Message}");
+            Navigation.NavigateTo("/", forceLoad: false);
+        }
+    }
+}
