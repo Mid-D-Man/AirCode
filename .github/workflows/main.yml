@@ -1,4 +1,4 @@
-name: Deploy Blazor WASM to GitHub Pages
+name: AirCode Deploy Blazor WASM to GitHub Pages
 
 on:
   push:
@@ -38,7 +38,13 @@ jobs:
           cp -r ./dist/wwwroot/* ./pages/
           touch ./pages/.nojekyll
           cp ./pages/index.html ./pages/404.html
+          
+          # Update base href and favicon paths
           sed -i 's|<base href="/" />|<base href="/${{ github.event.repository.name }}/" />|g' ./pages/index.html ./pages/404.html
+          sed -i 's|href="favicon.png"|href="/${{ github.event.repository.name }}/favicon.png"|g' ./pages/index.html ./pages/404.html
+          sed -i 's|href="manifest.json"|href="/${{ github.event.repository.name }}/manifest.json"|g' ./pages/index.html ./pages/404.html
+          sed -i 's|href="icon-512.png"|href="/${{ github.event.repository.name }}/icon-512.png"|g' ./pages/index.html ./pages/404.html
+          sed -i 's|href="icon-192.png"|href="/${{ github.event.repository.name }}/icon-192.png"|g' ./pages/index.html ./pages/404.html
           
           # Replace development service worker with production version
           if [ -f "./pages/service-worker.published.js" ]; then
