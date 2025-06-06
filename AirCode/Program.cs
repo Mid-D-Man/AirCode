@@ -33,6 +33,8 @@ builder.Services.AddOidcAuthentication(options =>
     options.ProviderOptions.DefaultScopes.Add("profile");
     options.ProviderOptions.DefaultScopes.Add("email");
     
+    options.ProviderOptions.RedirectUri = "https://mid-d-man.github.io/AirCode/authentication/login-callback";
+    options.ProviderOptions.PostLogoutRedirectUri = "https://mid-d-man.github.io/AirCode/";
    
   
 });
