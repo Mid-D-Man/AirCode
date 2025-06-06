@@ -37,14 +37,46 @@ jobs:
           mkdir -p ./pages
           cp -r ./dist/wwwroot/* ./pages/
           touch ./pages/.nojekyll
-          cp ./pages/index.html ./pages/404.html
-          sed -i 's|<base href="/" />|<base href="/${{ github.event.repository.name }}/" />|g' ./pages/index.html ./pages/404.html
           
-          # Replace development service worker with production version
+          # Create 404.html with SPA routing script
+          cat > ./pages/404.html << 'EOF'
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <meta charset="utf-8">
+              <title>Single Page Apps for GitHub Pages</title>
+              <script type="text/javascript">
+                var pathSegmentsToKeep = 1;
+                var l = window.location;
+                l.replace(
+                  l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
+                  l.pathname.split('/').slice(0, 1 + pathSegmentsToKeep).join('/') + '/?/' +
+                  l.pathname.slice(1).split('/').slice(pathSegmentsToKeep).join('/').replace(/&/g, '~and~') +
+                  (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
+                  l.hash
+                );
+              </script>
+            </head>
+            <body>
+            </body>
+          </html>
+          EOF
+          
+          # Update base href in index.html
+          sed -i 's|<base href="/" />|<base href="/${{ github.event.repository.name }}/" />|g' ./pages/index.html
+          
+          # Add SPA routing script to index.html after the base tag
+          sed -i '/<base href="[^"]*" \/>/a\    \n    <!-- SPA routing fix for GitHub Pages -->\n    <script type="text/javascript">\n        (function(l) {\n            if (l.search[1] === "/" ) {\n                var decoded = l.search.slice(1).split("&").map(function(s) { \n                return s.replace(/~and~/g, "&")\n                }).join("?");\n                window.history.replaceState(null, null,\n                    l.pathname.slice(0, -1) + decoded + l.hash\n                );\n            }\n        }(window.location))\n    </script>' ./pages/index.html
+          
+          # Fix service worker references
           if [ -f "./pages/service-worker.published.js" ]; then
             cp ./pages/service-worker.published.js ./pages/service-worker.js
             sed -i 's|"/|"/${{ github.event.repository.name }}/|g' ./pages/service-worker.js
           fi
+          
+          # Fix asset references in index.html
+          sed -i 's|href="/|href="/${{ github.event.repository.name }}/|g' ./pages/index.html
+          sed -i 's|src="/|src="/${{ github.event.repository.name }}/|g' ./pages/index.html
 
       - name: Upload Pages
         uses: actions/upload-pages-artifact@v3

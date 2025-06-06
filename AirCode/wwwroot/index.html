@@ -7,7 +7,31 @@
 
     <title>AirCode</title>
     <base href="/" />
-    
+
+    <!-- SPA routing fix for GitHub Pages - must be early in head -->
+    <script type="text/javascript">
+        // Single Page Apps for GitHub Pages
+        // MIT License
+        // https://github.com/rafgraph/spa-github-pages
+        // This script checks to see if a redirect is present in the query string,
+        // converts it back into the correct url and adds it to the
+        // browser's history using window.history.replaceState(...),
+        // which won't cause the browser to attempt to load the new url.
+        // When the single page app is loaded further down in this file,
+        // the correct url will be waiting in the browser's history for
+        // the single page app to route accordingly.
+        (function(l) {
+            if (l.search[1] === '/' ) {
+                var decoded = l.search.slice(1).split('&').map(function(s) {
+                    return s.replace(/~and~/g, '&')
+                }).join('?');
+                window.history.replaceState(null, null,
+                    l.pathname.slice(0, -1) + decoded + l.hash
+                );
+            }
+        }(window.location))
+    </script>
+
     <!-- CSS -->
     <link href="css/bootstrap/bootstrap.min.css" rel="stylesheet" />
     <link href="css/app.css" rel="stylesheet" />
@@ -24,57 +48,57 @@
 </head>
 
 <body>
-    <div id="app">
-        <svg class="loading-progress">
-            <circle r="40%" cx="50%" cy="50%" />
-            <circle r="40%" cx="50%" cy="50%" />
-        </svg>
-        <div class="loading-progress-text"></div>
-    </div>
+<div id="app">
+    <svg class="loading-progress">
+        <circle r="40%" cx="50%" cy="50%" />
+        <circle r="40%" cx="50%" cy="50%" />
+    </svg>
+    <div class="loading-progress-text"></div>
+</div>
 
-    <div id="blazor-error-ui">
-        An unhandled error has occurred.
-        <a href="" class="reload">Reload</a>
-        <a class="dismiss">🗙</a>
-    </div>
+<div id="blazor-error-ui">
+    An unhandled error has occurred.
+    <a href="" class="reload">Reload</a>
+    <a class="dismiss">🗙</a>
+</div>
 
-    <!-- Framework and Core Services -->
-    <script src="_framework/blazor.webassembly.js"></script>
-    <script>navigator.serviceWorker.register('service-worker.js');</script>
-    <script src="_content/Microsoft.AspNetCore.Components.WebAssembly.Authentication/AuthenticationService.js"></script>
+<!-- Framework and Core Services -->
+<script src="_framework/blazor.webassembly.js"></script>
+<script>navigator.serviceWorker.register('service-worker.js');</script>
+<script src="_content/Microsoft.AspNetCore.Components.WebAssembly.Authentication/AuthenticationService.js"></script>
 
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
 
-    <!-- Firebase Configuration -->
-    <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyAM9mrDb2-eFgtMsMm7eJzt6GHIBCHEeGw",
-            authDomain: "aircode-4d07c.firebaseapp.com",
-            projectId: "aircode-4d07c",
-            storageBucket: "aircode-4d07c.firebasestorage.app",
-            messagingSenderId: "1041427366169",
-            appId: "1:1041427366169:web:6b7c84fefdcbe64edc4588",
-            measurementId: "G-PLN2D6PVVX",
-            databaseURL: "https://aircode-4d07c-default-rtdb.firebaseio.com/"
-        };
+<!-- Firebase Configuration -->
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyAM9mrDb2-eFgtMsMm7eJzt6GHIBCHEeGw",
+        authDomain: "aircode-4d07c.firebaseapp.com",
+        projectId: "aircode-4d07c",
+        storageBucket: "aircode-4d07c.firebasestorage.app",
+        messagingSenderId: "1041427366169",
+        appId: "1:1041427366169:web:6b7c84fefdcbe64edc4588",
+        measurementId: "G-PLN2D6PVVX",
+        databaseURL: "https://aircode-4d07c-default-rtdb.firebaseio.com/"
+    };
 
-        firebase.initializeApp(firebaseConfig);
-    </script>
+    firebase.initializeApp(firebaseConfig);
+</script>
 
-    <!-- Application Scripts -->
-    <script src="./js/debug.js"></script>
-    <script src="./js/connectivityServices.js"></script>
-    <script src="./js/themeSwitcher.js"></script>
-    <script src="./js/pageNavigator.js"></script>
-    <script src="./js/authHelper.js"></script>
-    <script src="./js/cryptographyHandler.js"></script>
-    <script src="./js/offlineCredentialsHandler.js"></script>
-    <!--   <script src="./js/floatingQrDrag.js"></script>
-    <script src="./js/firestoreModule.js"></script>
-    <script type="module" src="./js/qrCodeModule.js"></script> -->
+<!-- Application Scripts -->
+<script src="./js/debug.js"></script>
+<script src="./js/connectivityServices.js"></script>
+<script src="./js/themeSwitcher.js"></script>
+<script src="./js/pageNavigator.js"></script>
+<script src="./js/authHelper.js"></script>
+<script src="./js/cryptographyHandler.js"></script>
+<script src="./js/offlineCredentialsHandler.js"></script>
+<!--   <script src="./js/floatingQrDrag.js"></script>
+<script src="./js/firestoreModule.js"></script>
+<script type="module" src="./js/qrCodeModule.js"></script> -->
 
 </body>
 

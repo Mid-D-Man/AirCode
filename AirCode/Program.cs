@@ -62,7 +62,7 @@ builder.Services.AddAuthorizationCore(options =>
         policy.RequireRole("superioradmin", "lectureradmin", "courseadmin"));
 });
 
-builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
+builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress)  });
 // HTTP client with Auth0 token
 builder.Services.AddHttpClient("AirCodeAPI", 
         client => client.BaseAddress = new Uri(builder.HostEnvironment.BaseAddress))
