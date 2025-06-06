@@ -37,14 +37,32 @@ jobs:
           mkdir -p ./pages
           cp -r ./dist/wwwroot/* ./pages/
           touch ./pages/.nojekyll
-          cp ./pages/index.html ./pages/404.html
+          
+          # Create 404.html that redirects to index.html for SPA routing
+          cat > ./pages/404.html << 'EOF'
+          <!DOCTYPE html>
+          <html>
+          <head>
+              <meta charset="utf-8">
+              <title>AirCode</title>
+              <script>
+                  // Redirect to index.html with the current path as a query parameter
+                  var path = window.location.pathname.replace('/${{ github.event.repository.name }}', '');
+                  window.location.replace('/${{ github.event.repository.name }}/#' + path);
+              </script>
+          </head>
+          <body>
+              Redirecting...
+          </body>
+          </html>
+          EOF
           
           # Update base href and favicon paths
-          sed -i 's|<base href="/" />|<base href="/${{ github.event.repository.name }}/" />|g' ./pages/index.html ./pages/404.html
-          sed -i 's|href="favicon.png"|href="/${{ github.event.repository.name }}/favicon.png"|g' ./pages/index.html ./pages/404.html
-          sed -i 's|href="manifest.json"|href="/${{ github.event.repository.name }}/manifest.json"|g' ./pages/index.html ./pages/404.html
-          sed -i 's|href="icon-512.png"|href="/${{ github.event.repository.name }}/icon-512.png"|g' ./pages/index.html ./pages/404.html
-          sed -i 's|href="icon-192.png"|href="/${{ github.event.repository.name }}/icon-192.png"|g' ./pages/index.html ./pages/404.html
+          sed -i 's|<base href="/" />|<base href="/${{ github.event.repository.name }}/" />|g' ./pages/index.html
+          sed -i 's|href="favicon.png"|href="/${{ github.event.repository.name }}/favicon.png"|g' ./pages/index.html
+          sed -i 's|href="manifest.json"|href="/${{ github.event.repository.name }}/manifest.json"|g' ./pages/index.html
+          sed -i 's|href="icon-512.png"|href="/${{ github.event.repository.name }}/icon-512.png"|g' ./pages/index.html
+          sed -i 's|href="icon-192.png"|href="/${{ github.event.repository.name }}/icon-192.png"|g' ./pages/index.html
           
           # Replace development service worker with production version
           if [ -f "./pages/service-worker.published.js" ]; then
