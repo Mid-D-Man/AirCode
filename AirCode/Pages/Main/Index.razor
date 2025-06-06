@@ -28,6 +28,10 @@
                 <h1 class="welcome-title">Welcome back!</h1>
                 <p class="welcome-subtitle">Redirecting you to your dashboard...</p>
             </div>
+            <button @onclick="TriggerNav">Navigate Invisibly</button>
+
+            <NavLink id="autoNav" href="ShaderPage1" style="display: none;"></NavLink>
+
         </Authorized>
         <NotAuthorized>
             <div class="welcome-section">
@@ -107,7 +111,8 @@
                     NavigationManager.NavigateTo("/SupaTest", forceLoad: false);
                     break;
                 case "lectureradmin":
-                    NavigationManager.NavigateTo("/ShaderPage1", forceLoad: false);
+                    await TriggerNav();
+                   // NavigationManager.NavigateTo("/ShaderPage1", forceLoad: false);
                     break;
                 case "courseadmin":
                     NavigationManager.NavigateTo("/SupaTest", forceLoad: false);
@@ -126,7 +131,10 @@
             await JSRuntime.InvokeVoidAsync("console.error", $"Error redirecting authenticated user: {ex.Message}");
         }
     }
-
+    private async Task TriggerNav()
+    {
+        await JSRuntime.InvokeVoidAsync("document.getElementById('autoNav').click");
+    }
     private async Task ContinueOnline()
     {
         isOnlineLoading = true;
