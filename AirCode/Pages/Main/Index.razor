@@ -108,10 +108,11 @@
                     NavigationManager.NavigateTo("/SupaTest", forceLoad: false);
                     break;
                 case "lectureradmin":
-                    NavigationManager.NavigateTo("/Ad/SupaTest", forceLoad: false);
+                    NavigationManager.NavigateTo("supaBaseTest", forceLoad: false);
+                  
                     break;
                 case "courseadmin":
-                    NavigationManager.NavigateTo("/SupaTest", forceLoad: false);
+                    NavigationManager.NavigateTo("supaBaseTest", forceLoad: false);
                     break;
                 case "student":
                     NavigationManager.NavigateTo("/Client/Dashboard", forceLoad: false);
@@ -175,7 +176,8 @@
             switch (userRole.ToLower())
             {
                 case "lectureradmin":
-                    NavigationManager.NavigateTo("/Admin/Dashboard");
+                    NavigationManager.NavigateTo("supaBaseTest", forceLoad: false);
+
                     break;
                 case "courseadmin":
                     NavigationManager.NavigateTo("/Admin/Dashboard");
