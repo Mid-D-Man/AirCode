@@ -102,6 +102,4 @@ builder.Services.AddScoped<Supabase.Client>(provider =>
 builder.Services.AddScoped(typeof(AccountClaimsPrincipalFactory<RemoteUserAccount>),
     typeof(CustomAccountFactory));
 
-
-
 await builder.Build().RunAsync();
