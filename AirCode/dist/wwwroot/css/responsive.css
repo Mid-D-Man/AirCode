@@ -1,0 +1,232 @@
+/* Base variables for responsive design */
+:root {
+    --container-max-width: 1280px;
+    --container-padding: 1rem;
+    --grid-gap: 1rem;
+
+    /* Typography */
+    --font-size-base: 1rem;
+    --line-height-base: 1.5;
+
+    /* Spacing */
+    --spacing-xs: 0.25rem;
+    --spacing-sm: 0.5rem;
+    --spacing-md: 1rem;
+    --spacing-lg: 1.5rem;
+    --spacing-xl: 2rem;
+    --spacing-xxl: 3rem;
+}
+
+/* Extra Large Screens / Desktop */
+@media (min-width: 1280px) {
+    :root {
+        --container-padding: 2rem;
+        --grid-gap: 1.5rem;
+        --font-size-base: 1rem;
+    }
+
+    .container {
+        max-width: var(--container-max-width);
+        margin: 0 auto;
+    }
+
+    /* Grid system for desktop */
+    .grid {
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);
+        gap: var(--grid-gap);
+    }
+}
+
+/* Large Screens / Tablet Landscape */
+@media (min-width: 1025px) and (max-width: 1279px) {
+    :root {
+        --container-padding: 1.5rem;
+        --grid-gap: 1.25rem;
+    }
+
+    .container {
+        padding: 0 var(--container-padding);
+    }
+
+    /* Grid system for large screens */
+    .grid {
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);
+        gap: var(--grid-gap);
+    }
+}
+
+/* Medium Screens / Tablet Portrait */
+@media (min-width: 768px) and (max-width: 1024px) {
+    :root {
+        --container-padding: 1.25rem;
+        --grid-gap: 1rem;
+    }
+
+    .container {
+        padding: 0 var(--container-padding);
+    }
+
+    /* Grid system for medium screens */
+    .grid {
+        display: grid;
+        grid-template-columns: repeat(8, 1fr);
+        gap: var(--grid-gap);
+    }
+
+    /* Typography adjustments */
+    h1 {
+        font-size: 1.75rem;
+    }
+
+    h2 {
+        font-size: 1.5rem;
+    }
+
+    /* Card grid adjustments */
+    .card-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Small Screens / Mobile Landscape */
+@media (min-width: 481px) and (max-width: 767px) {
+    :root {
+        --container-padding: 1rem;
+        --grid-gap: 0.75rem;
+    }
+
+    .container {
+        padding: 0 var(--container-padding);
+    }
+
+    /* Grid system for small screens */
+    .grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: var(--grid-gap);
+    }
+
+    /* Typography adjustments */
+    h1 {
+        font-size: 1.5rem;
+    }
+
+    h2 {
+        font-size: 1.25rem;
+    }
+
+    /* Card grid adjustments */
+    .card-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Extra Small Screens / Mobile Portrait */
+@media (max-width: 480px) {
+    :root {
+        --container-padding: 0.75rem;
+        --grid-gap: 0.5rem;
+    }
+
+    .container {
+        padding: 0 var(--container-padding);
+    }
+
+    /* Grid system for extra small screens */
+    .grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--grid-gap);
+    }
+
+    /* Typography adjustments */
+    h1 {
+        font-size: 1.25rem;
+    }
+
+    h2 {
+        font-size: 1.1rem;
+    }
+
+    p, li, a {
+        font-size: 0.95rem;
+    }
+
+    /* Card grid adjustments */
+    .card-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* Form elements */
+    input, select, textarea {
+        width: 100%;
+    }
+
+    /* Buttons */
+    .btn {
+        width: 100%;
+        margin-bottom: var(--spacing-md);
+    }
+}
+
+/* Support for high-density displays */
+@media (min-resolution: 192dpi), (min-resolution: 2dppx) {
+    /* Optimize images and icons for high-density displays */
+    .icon {
+        transform: scale(0.8);
+    }
+}
+
+/* Print styles */
+@media print {
+    .no-print {
+        display: none !important;
+    }
+
+    body {
+        font-size: 12pt;
+    }
+
+    a[href]:after {
+        content: " (" attr(href) ")";
+    }
+}
+
+/* Utility classes for responsive behavior */
+.hide-on-mobile {
+    display: none;
+}
+
+@media (min-width: 768px) {
+    .hide-on-mobile {
+        display: initial;
+    }
+
+    .show-on-mobile {
+        display: none;
+    }
+}
+
+/* Responsive container classes */
+.container-fluid {
+    width: 100%;
+    padding-right: var(--container-padding);
+    padding-left: var(--container-padding);
+}
+
+.container {
+    width: 100%;
+    padding-right: var(--container-padding);
+    padding-left: var(--container-padding);
+    margin-right: auto;
+    margin-left: auto;
+}
+
+/* Fluid typography that scales with viewport width */
+@media (min-width: 481px) {
+    html {
+        font-size: calc(14px + 0.25vw);
+    }
+}
