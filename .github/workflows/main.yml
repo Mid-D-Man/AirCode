@@ -73,10 +73,6 @@ jobs:
             cp ./pages/service-worker.published.js ./pages/service-worker.js
             sed -i 's|"/|"/${{ github.event.repository.name }}/|g' ./pages/service-worker.js
           fi
-          
-          # Fix asset references in index.html
-          sed -i 's|href="/|href="/${{ github.event.repository.name }}/|g' ./pages/index.html
-          sed -i 's|src="/|src="/${{ github.event.repository.name }}/|g' ./pages/index.html
 
       - name: Upload Pages
         uses: actions/upload-pages-artifact@v3
