@@ -1,0 +1,48 @@
+# netlify.toml - Place in root directory of your project
+[build]
+publish = "dist/wwwroot"
+command = "dotnet publish -c Release -o dist"
+
+[[redirects]]
+from = "/*"
+to = "/index.html"
+status = 200
+
+[build.environment]
+DOTNET_VERSION = "7.0.x"
+
+# Custom headers for enhanced security and functionality
+[[headers]]
+for = "/*"
+[headers.values]
+X-Frame-Options = "SAMEORIGIN"
+X-Content-Type-Options = "nosniff"
+Referrer-Policy = "strict-origin-when-cross-origin"
+# Custom CSP that allows Auth0 and Firebase
+Content-Security-Policy = '''
+      base-uri 'self';
+      default-src 'self';
+      img-src 'self' data: https: *.githubusercontent.com *.github.io;
+      object-src 'none';
+      script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com;
+      style-src 'self' 'unsafe-inline';
+      connect-src 'self' https://dev-msf1vlcbx1a8wtg3.eu.auth0.com https://www.gstatic.com https://firestore.googleapis.com https://aircode-4d07c-default-rtdb.firebaseio.com wss: ws:;
+      frame-src 'self' https://dev-msf1vlcbx1a8wtg3.eu.auth0.com;
+      upgrade-insecure-requests;
+    '''
+
+[[headers]]
+for = "*.js"
+[headers.values]
+Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+for = "*.css"
+[headers.values]
+Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+for = "*.wasm"
+[headers.values]
+Content-Type = "application/wasm"
+Cache-Control = "public, max-age=31536000, immutable"

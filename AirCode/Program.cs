@@ -13,6 +13,9 @@ var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
+// Get base URI for environment-specific redirects
+var baseUri = builder.HostEnvironment.BaseAddress;
+
 // Configure Auth0 authentication
 builder.Services.AddOidcAuthentication(options =>
 {
@@ -33,9 +36,10 @@ builder.Services.AddOidcAuthentication(options =>
     options.ProviderOptions.DefaultScopes.Add("profile");
     options.ProviderOptions.DefaultScopes.Add("email");
     
-    options.ProviderOptions.RedirectUri = "https://mid-d-man.github.io/AirCode/authentication/login-callback";
-    options.ProviderOptions.PostLogoutRedirectUri = "https://mid-d-man.github.io/AirCode/";
-   
+       
+    // Dynamic redirect URIs based on environment
+    options.ProviderOptions.RedirectUri = $"{baseUri.TrimEnd('/')}authentication/login-callback";
+    options.ProviderOptions.PostLogoutRedirectUri = baseUri.TrimEnd('/');
   
 });
 
