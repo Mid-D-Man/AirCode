@@ -109,7 +109,7 @@ input:checked + .slider:before {
     font-weight: 500;
 }
 
-/* Large scanner container inspired by ShareIt */
+/* Scanner container with glass morphism */
 .scan-container {
     position: relative;
     display: flex;
@@ -160,19 +160,128 @@ input:checked + .slider:before {
     50% { opacity: 0.8; transform: scale(1.02); }
 }
 
-/* Scanner component styles */
-::deep(.zxing-scanner), ::deep(.mid-scanner) {
+/* QR Scanner container styles */
+.qr-scanner-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Scanner placeholder styles */
+.scanner-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    text-align: center;
+    color: var(--text-secondary);
+}
+
+.scanner-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    color: var(--primary-500);
+    opacity: 0.6;
+}
+
+.scanner-placeholder p {
+    margin-bottom: 1.5rem;
+    font-size: 1.1rem;
+}
+
+.start-scanner-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    background: linear-gradient(135deg, var(--primary-500) 0%, var(--primary-700) 100%);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.start-scanner-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+}
+
+/* Scanner controls */
+.scanner-controls {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 1rem;
+    z-index: 10;
+}
+
+.control-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    color: var(--primary-700);
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.control-btn:hover {
+    background: rgba(255, 255, 255, 1);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+
+/* Scanner error styles */
+.scanner-error {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: rgba(244, 67, 54, 0.9);
+    color: white;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    z-index: 10;
+    box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3);
+}
+
+/* ReactorBlazorQRCodeScanner component styles */
+::deep .qr-scanner-container,
+::deep .ReactorBlazorQRCodeScanner {
     width: 100%;
     height: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, rgba(0, 0, 0, 0.02) 0%, rgba(0, 0, 0, 0.05) 100%);
     position: relative;
     z-index: 0;
 }
 
-::deep(.scanner-preview), ::deep(video) {
+::deep video {
     width: 100%;
     height: 100%;
     object-fit: cover;
@@ -314,6 +423,16 @@ input:checked + .slider:before {
 
     .scan-item {
         padding: 0.75rem;
+    }
+
+    .scanner-controls {
+        bottom: 10px;
+        gap: 0.5rem;
+    }
+
+    .control-btn {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.8rem;
     }
 }
 
