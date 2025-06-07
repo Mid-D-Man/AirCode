@@ -19,11 +19,7 @@
     <div class="qr-scanner-container">
         @if (isActive)
         {
-            <QRCodeScanner
-                ShowOutput="false"
-                Width="100%"
-                OnResult="HandleScanResult"
-                OnError="HandleScanError" />
+            <QRCodeScanner ShowOutput="@showScannerOutput" Width="100%" />
         }
         else
         {
@@ -121,21 +117,40 @@
 
 @code {
     private QRCodeScannerJsInterop? _qrCodeScannerJsInterop;
+    private Action<string>? _onQrCodeScanAction;
     private List<ScanRecord> recentScans = new List<ScanRecord>();
     private bool autoStartScanner = true;
     private bool isActive = false;
     private bool showPopup = false;
+    private bool showScannerOutput = true;
     private string lastScannedCode = string.Empty;
     private DateTime scanTimestamp;
     private string errorMessage = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
+        _onQrCodeScanAction = (code) => OnQrCodeScan(code);
         _qrCodeScannerJsInterop = new QRCodeScannerJsInterop(JS);
 
         if (autoStartScanner)
         {
             await StartScanner();
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && autoStartScanner)
+        {
+            try
+            {
+                await _qrCodeScannerJsInterop.Init(_onQrCodeScanAction);
+            }
+            catch (Exception ex)
+            {
+                errorMessage = $"Failed to initialize scanner: {ex.Message}";
+                StateHasChanged();
+            }
         }
     }
 
@@ -157,6 +172,12 @@
         {
             errorMessage = string.Empty;
             isActive = true;
+            
+            if (_qrCodeScannerJsInterop != null)
+            {
+                await _qrCodeScannerJsInterop.Init(_onQrCodeScanAction);
+            }
+            
             StateHasChanged();
         }
         catch (Exception ex)
@@ -189,32 +210,25 @@
         }
     }
 
-    private async Task HandleScanResult(string result)
+    private async void OnQrCodeScan(string code)
     {
-        if (!string.IsNullOrEmpty(result) && !showPopup)
+        if (!string.IsNullOrEmpty(code) && !showPopup && code != lastScannedCode)
         {
-// Pause scanning to prevent multiple detections
+            // Pause scanning to prevent multiple detections
             await PauseScanning();
 
-// Process the scanned result
-            await ProcessAttendanceCode(result);
+            // Process the scanned result
+            await ProcessAttendanceCode(code);
 
-// Update UI with scanned data
-            lastScannedCode = result;
+            // Update UI with scanned data
+            lastScannedCode = code;
             scanTimestamp = DateTime.Now;
             showPopup = true;
 
-            AddScanRecord(result, true);
+            AddScanRecord(code, true);
 
             await InvokeAsync(StateHasChanged);
         }
-    }
-
-    private async Task HandleScanError(string error)
-    {
-        errorMessage = error;
-        AddScanRecord($"Scan error: {error}", false);
-        StateHasChanged();
     }
 
     private async Task PauseScanning()
@@ -224,6 +238,7 @@
             try
             {
                 await _qrCodeScannerJsInterop.StopRecording();
+                isActive = false;
             }
             catch (Exception ex)
             {
@@ -238,7 +253,7 @@
         {
             try
             {
-                await _qrCodeScannerJsInterop.Init((code) => _ = HandleScanResult(code));
+                await _qrCodeScannerJsInterop.Init(_onQrCodeScanAction);
                 isActive = true;
                 errorMessage = string.Empty;
             }
@@ -265,7 +280,7 @@
         try
         {
             await JS.InvokeVoidAsync("navigator.clipboard.writeText", lastScannedCode);
-// Could add a brief success indicator here
+            // Could add a brief success indicator here
         }
         catch (Exception)
         {
@@ -278,12 +293,12 @@
     {
         try
         {
-// Add your attendance processing logic here
-// This could involve:
-// 1. Decrypting the QR code data
-// 2. Validating the session
-// 3. Recording attendance
-// 4. Showing success/failure feedback
+            // Add your attendance processing logic here
+            // This could involve:
+            // 1. Decrypting the QR code data
+            // 2. Validating the session
+            // 3. Recording attendance
+            // 4. Showing success/failure feedback
 
             Console.WriteLine($"Processing attendance code: {qrCode}");
         }
@@ -305,7 +320,7 @@
 
         recentScans.Insert(0, scanRecord);
 
-// Keep only the most recent scans (limit to 5)
+        // Keep only the most recent scans (limit to 5)
         if (recentScans.Count > 5)
         {
             recentScans.RemoveAt(recentScans.Count - 1);
@@ -332,7 +347,7 @@
             }
             catch
             {
-// Ignore disposal errors
+                // Ignore disposal errors
             }
         }
     }
