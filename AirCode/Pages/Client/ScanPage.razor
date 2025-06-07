@@ -10,7 +10,7 @@
 
     <div class="scanner-options">
         <label class="scanner-toggle">
-            <input type="checkbox" @bind="autoStartScanner" @onchange="OnToggleAutoStart" />
+            <input type="checkbox" @bind="autoStartScanner" @bind:after="OnToggleAutoStart" />
             <span class="slider"></span>
             <span class="toggle-label">@(autoStartScanner ? "Auto Start" : "Manual Start")</span>
         </label>
@@ -19,40 +19,40 @@
     <div class="qr-scanner-container">
         @if (isActive)
         {
-        <QRCodeScanner
-            ShowOutput="false"
-            Width="100%"
-            OnResult="HandleScanResult"
-            OnError="HandleScanError" />
+            <QRCodeScanner
+                ShowOutput="false"
+                Width="100%"
+                OnResult="HandleScanResult"
+                OnError="HandleScanError" />
         }
         else
         {
-        <div class="scanner-placeholder">
-            <div class="scanner-icon">
-                <i class="oi oi-target"></i>
+            <div class="scanner-placeholder">
+                <div class="scanner-icon">
+                    <i class="oi oi-target"></i>
+                </div>
+                <p>Click to start scanning</p>
+                <button class="start-scanner-btn" @onclick="StartScanner">
+                    <i class="oi oi-play-circle"></i> Start Scanner
+                </button>
             </div>
-            <p>Click to start scanning</p>
-            <button class="start-scanner-btn" @onclick="StartScanner">
-                <i class="oi oi-play-circle"></i> Start Scanner
-            </button>
-        </div>
         }
 
         @if (isActive)
         {
-        <div class="scanner-controls">
-            <button class="control-btn" @onclick="StopScanner">
-                <i class="oi oi-media-stop"></i> Stop
-            </button>
-        </div>
+            <div class="scanner-controls">
+                <button class="control-btn" @onclick="StopScanner">
+                    <i class="oi oi-media-stop"></i> Stop
+                </button>
+            </div>
         }
 
         @if (!string.IsNullOrEmpty(errorMessage))
         {
-        <div class="scanner-error">
-            <i class="oi oi-warning"></i>
-            <span>@errorMessage</span>
-        </div>
+            <div class="scanner-error">
+                <i class="oi oi-warning"></i>
+                <span>@errorMessage</span>
+            </div>
         }
     </div>
 
@@ -60,31 +60,31 @@
         <h4>Recent Scans</h4>
         @if (recentScans.Count > 0)
         {
-        <div class="scan-list">
-            @foreach (var scan in recentScans)
-            {
-            <div class="scan-item @(scan.IsSuccessful ? "success" : "error")">
-                <div class="scan-info">
-                    <span class="scan-time">@scan.ScanTime.ToString("HH:mm:ss")</span>
-                    <span class="scan-data">@GetDisplayText(scan.Data)</span>
-                </div>
-                <span class="scan-status-icon">
+            <div class="scan-list">
+                @foreach (var scan in recentScans)
+                {
+                    <div class="scan-item @(scan.IsSuccessful ? "success" : "error")">
+                        <div class="scan-info">
+                            <span class="scan-time">@scan.ScanTime.ToString("HH:mm:ss")</span>
+                            <span class="scan-data">@GetDisplayText(scan.Data)</span>
+                        </div>
+                        <span class="scan-status-icon">
                             @if (scan.IsSuccessful)
-                    {
-                    <i class="oi oi-check"></i>
-                    }
-                    else
-                    {
-                    <i class="oi oi-x"></i>
-                    }
+                            {
+                                <i class="oi oi-check"></i>
+                            }
+                            else
+                            {
+                                <i class="oi oi-x"></i>
+                            }
                         </span>
+                    </div>
+                }
             </div>
-            }
-        </div>
         }
         else
         {
-        <div class="no-scans">No recent scans</div>
+            <div class="no-scans">No recent scans</div>
         }
     </div>
 </div>
@@ -92,192 +92,192 @@
 <!-- QR Code Result Popup -->
 @if (showPopup)
 {
-<div class="popup-overlay" @onclick="ClosePopup">
-    <div class="popup-content" @onclick:stopPropagation="true">
-        <div class="popup-header">
-            <h4>QR Code Detected</h4>
-            <button class="popup-close" @onclick="ClosePopup">&times;</button>
-        </div>
-        <div class="popup-body">
-            <div class="qr-result">
-                <div class="result-label">Scanned Content:</div>
-                <div class="result-content">@lastScannedCode</div>
+    <div class="popup-overlay" @onclick="ClosePopup">
+        <div class="popup-content" @onclick:stopPropagation="true">
+            <div class="popup-header">
+                <h4>QR Code Detected</h4>
+                <button class="popup-close" @onclick="ClosePopup">&times;</button>
             </div>
-            <div class="scan-timestamp">
-                Scanned at: @scanTimestamp.ToString("MMM dd, yyyy HH:mm:ss")
+            <div class="popup-body">
+                <div class="qr-result">
+                    <div class="result-label">Scanned Content:</div>
+                    <div class="result-content">@lastScannedCode</div>
+                </div>
+                <div class="scan-timestamp">
+                    Scanned at: @scanTimestamp.ToString("MMM dd, yyyy HH:mm:ss")
+                </div>
             </div>
-        </div>
-        <div class="popup-footer">
-            <button class="btn btn-primary" @onclick="CopyToClipboard">
-                Copy Content
-            </button>
-            <button class="btn btn-secondary" @onclick="ClosePopup">
-                Continue Scanning
-            </button>
+            <div class="popup-footer">
+                <button class="btn btn-primary" @onclick="CopyToClipboard">
+                    Copy Content
+                </button>
+                <button class="btn btn-secondary" @onclick="ClosePopup">
+                    Continue Scanning
+                </button>
+            </div>
         </div>
     </div>
-</div>
 }
 
 @code {
-private QRCodeScannerJsInterop? _qrCodeScannerJsInterop;
-private List<ScanRecord> recentScans = new List<ScanRecord>();
-private bool autoStartScanner = true;
-private bool isActive = false;
-private bool showPopup = false;
-private string lastScannedCode = string.Empty;
-private DateTime scanTimestamp;
-private string errorMessage = string.Empty;
+    private QRCodeScannerJsInterop? _qrCodeScannerJsInterop;
+    private List<ScanRecord> recentScans = new List<ScanRecord>();
+    private bool autoStartScanner = true;
+    private bool isActive = false;
+    private bool showPopup = false;
+    private string lastScannedCode = string.Empty;
+    private DateTime scanTimestamp;
+    private string errorMessage = string.Empty;
 
-protected override async Task OnInitializedAsync()
-{
-_qrCodeScannerJsInterop = new QRCodeScannerJsInterop(JS);
+    protected override async Task OnInitializedAsync()
+    {
+        _qrCodeScannerJsInterop = new QRCodeScannerJsInterop(JS);
 
-if (autoStartScanner)
-{
-await StartScanner();
-}
-}
+        if (autoStartScanner)
+        {
+            await StartScanner();
+        }
+    }
 
-private async Task OnToggleAutoStart()
-{
-if (autoStartScanner && !isActive)
-{
-await StartScanner();
-}
-else if (!autoStartScanner && isActive)
-{
-await StopScanner();
-}
-}
+    private async Task OnToggleAutoStart()
+    {
+        if (autoStartScanner && !isActive)
+        {
+            await StartScanner();
+        }
+        else if (!autoStartScanner && isActive)
+        {
+            await StopScanner();
+        }
+    }
 
-private async Task StartScanner()
-{
-try
-{
-errorMessage = string.Empty;
-isActive = true;
-StateHasChanged();
-}
-catch (Exception ex)
-{
-errorMessage = $"Failed to start scanner: {ex.Message}";
-isActive = false;
-AddScanRecord($"Scanner error: {ex.Message}", false);
-StateHasChanged();
-}
-}
+    private async Task StartScanner()
+    {
+        try
+        {
+            errorMessage = string.Empty;
+            isActive = true;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to start scanner: {ex.Message}";
+            isActive = false;
+            AddScanRecord($"Scanner error: {ex.Message}", false);
+            StateHasChanged();
+        }
+    }
 
-private async Task StopScanner()
-{
-try
-{
-if (_qrCodeScannerJsInterop != null && isActive)
-{
-await _qrCodeScannerJsInterop.StopRecording();
-}
-}
-catch (Exception ex)
-{
-errorMessage = $"Error stopping scanner: {ex.Message}";
-}
-finally
-{
-isActive = false;
-errorMessage = string.Empty;
-StateHasChanged();
-}
-}
+    private async Task StopScanner()
+    {
+        try
+        {
+            if (_qrCodeScannerJsInterop != null && isActive)
+            {
+                await _qrCodeScannerJsInterop.StopRecording();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error stopping scanner: {ex.Message}";
+        }
+        finally
+        {
+            isActive = false;
+            errorMessage = string.Empty;
+            StateHasChanged();
+        }
+    }
 
-private async Task HandleScanResult(string result)
-{
-if (!string.IsNullOrEmpty(result) && !showPopup)
-{
+    private async Task HandleScanResult(string result)
+    {
+        if (!string.IsNullOrEmpty(result) && !showPopup)
+        {
 // Pause scanning to prevent multiple detections
-await PauseScanning();
+            await PauseScanning();
 
 // Process the scanned result
-await ProcessAttendanceCode(result);
+            await ProcessAttendanceCode(result);
 
 // Update UI with scanned data
-lastScannedCode = result;
-scanTimestamp = DateTime.Now;
-showPopup = true;
+            lastScannedCode = result;
+            scanTimestamp = DateTime.Now;
+            showPopup = true;
 
-AddScanRecord(result, true);
+            AddScanRecord(result, true);
 
-await InvokeAsync(StateHasChanged);
-}
-}
+            await InvokeAsync(StateHasChanged);
+        }
+    }
 
-private async Task HandleScanError(string error)
-{
-errorMessage = error;
-AddScanRecord($"Scan error: {error}", false);
-StateHasChanged();
-}
+    private async Task HandleScanError(string error)
+    {
+        errorMessage = error;
+        AddScanRecord($"Scan error: {error}", false);
+        StateHasChanged();
+    }
 
-private async Task PauseScanning()
-{
-if (_qrCodeScannerJsInterop != null && isActive)
-{
-try
-{
-await _qrCodeScannerJsInterop.StopRecording();
-}
-catch (Exception ex)
-{
-errorMessage = $"Failed to pause scanner: {ex.Message}";
-}
-}
-}
+    private async Task PauseScanning()
+    {
+        if (_qrCodeScannerJsInterop != null && isActive)
+        {
+            try
+            {
+                await _qrCodeScannerJsInterop.StopRecording();
+            }
+            catch (Exception ex)
+            {
+                errorMessage = $"Failed to pause scanner: {ex.Message}";
+            }
+        }
+    }
 
-private async Task ResumeScanning()
-{
-if (_qrCodeScannerJsInterop != null && !isActive)
-{
-try
-{
-await _qrCodeScannerJsInterop.Init((code) => _ = HandleScanResult(code));
-isActive = true;
-errorMessage = string.Empty;
-}
-catch (Exception ex)
-{
-errorMessage = $"Failed to resume scanner: {ex.Message}";
-AddScanRecord($"Resume error: {ex.Message}", false);
-}
-}
-}
+    private async Task ResumeScanning()
+    {
+        if (_qrCodeScannerJsInterop != null && !isActive)
+        {
+            try
+            {
+                await _qrCodeScannerJsInterop.Init((code) => _ = HandleScanResult(code));
+                isActive = true;
+                errorMessage = string.Empty;
+            }
+            catch (Exception ex)
+            {
+                errorMessage = $"Failed to resume scanner: {ex.Message}";
+                AddScanRecord($"Resume error: {ex.Message}", false);
+            }
+        }
+    }
 
-private async Task ClosePopup()
-{
-showPopup = false;
-if (autoStartScanner)
-{
-await ResumeScanning();
-}
-StateHasChanged();
-}
+    private async Task ClosePopup()
+    {
+        showPopup = false;
+        if (autoStartScanner)
+        {
+            await ResumeScanning();
+        }
+        StateHasChanged();
+    }
 
-private async Task CopyToClipboard()
-{
-try
-{
-await JS.InvokeVoidAsync("navigator.clipboard.writeText", lastScannedCode);
+    private async Task CopyToClipboard()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", lastScannedCode);
 // Could add a brief success indicator here
-}
-catch (Exception)
-{
-errorMessage = "Failed to copy to clipboard";
-StateHasChanged();
-}
-}
+        }
+        catch (Exception)
+        {
+            errorMessage = "Failed to copy to clipboard";
+            StateHasChanged();
+        }
+    }
 
-private async Task ProcessAttendanceCode(string qrCode)
-{
-try
-{
+    private async Task ProcessAttendanceCode(string qrCode)
+    {
+        try
+        {
 // Add your attendance processing logic here
 // This could involve:
 // 1. Decrypting the QR code data
@@ -285,62 +285,62 @@ try
 // 3. Recording attendance
 // 4. Showing success/failure feedback
 
-Console.WriteLine($"Processing attendance code: {qrCode}");
-}
-catch (Exception ex)
-{
-Console.WriteLine($"Error processing attendance: {ex.Message}");
-AddScanRecord($"Processing failed: {ex.Message}", false);
-}
-}
+            Console.WriteLine($"Processing attendance code: {qrCode}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error processing attendance: {ex.Message}");
+            AddScanRecord($"Processing failed: {ex.Message}", false);
+        }
+    }
 
-private void AddScanRecord(string data, bool isSuccessful)
-{
-var scanRecord = new ScanRecord
-{
-Data = data ?? "Invalid code",
-ScanTime = DateTime.Now,
-IsSuccessful = isSuccessful
-};
+    private void AddScanRecord(string data, bool isSuccessful)
+    {
+        var scanRecord = new ScanRecord
+        {
+            Data = data ?? "Invalid code",
+            ScanTime = DateTime.Now,
+            IsSuccessful = isSuccessful
+        };
 
-recentScans.Insert(0, scanRecord);
+        recentScans.Insert(0, scanRecord);
 
 // Keep only the most recent scans (limit to 5)
-if (recentScans.Count > 5)
-{
-recentScans.RemoveAt(recentScans.Count - 1);
-}
+        if (recentScans.Count > 5)
+        {
+            recentScans.RemoveAt(recentScans.Count - 1);
+        }
 
-StateHasChanged();
-}
+        StateHasChanged();
+    }
 
-private string GetDisplayText(string data)
-{
-if (string.IsNullOrEmpty(data))
-return "Invalid code";
+    private string GetDisplayText(string data)
+    {
+        if (string.IsNullOrEmpty(data))
+            return "Invalid code";
 
-return data.Length > 30 ? data.Substring(0, 27) + "..." : data;
-}
+        return data.Length > 30 ? data.Substring(0, 27) + "..." : data;
+    }
 
-public async ValueTask DisposeAsync()
-{
-if (_qrCodeScannerJsInterop != null && isActive)
-{
-try
-{
-await _qrCodeScannerJsInterop.StopRecording();
-}
-catch
-{
+    public async ValueTask DisposeAsync()
+    {
+        if (_qrCodeScannerJsInterop != null && isActive)
+        {
+            try
+            {
+                await _qrCodeScannerJsInterop.StopRecording();
+            }
+            catch
+            {
 // Ignore disposal errors
-}
-}
-}
+            }
+        }
+    }
 
-private class ScanRecord
-{
-public string Data { get; set; } = "";
-public DateTime ScanTime { get; set; }
-public bool IsSuccessful { get; set; }
-}
+    private class ScanRecord
+    {
+        public string Data { get; set; } = "";
+        public DateTime ScanTime { get; set; }
+        public bool IsSuccessful { get; set; }
+    }
 }
