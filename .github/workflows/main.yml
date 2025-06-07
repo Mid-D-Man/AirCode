@@ -38,6 +38,13 @@ jobs:
           cp -r ./dist/wwwroot/* ./pages/
           touch ./pages/.nojekyll
           
+          # Copy SVG files if they exist in a different location
+          if [ -d "./AirCode/svgs" ]; then
+            mkdir -p ./pages/svgs
+            cp -r ./AirCode/svgs/* ./pages/svgs/
+          fi
+          
+          
           # Create 404.html with SPA routing script
           cat > ./pages/404.html << 'EOF'
           <!DOCTYPE html>

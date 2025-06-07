@@ -1,10 +1,7 @@
-
 // Services/SvgIcon/SvgIconService.cs
 using Microsoft.AspNetCore.Components;
-using Microsoft.JSInterop;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -19,7 +16,7 @@ namespace AirCode.Services.VisualElements
         private readonly Dictionary<string, string> _iconNameMap = new Dictionary<string, string>();
         private List<string> _availableIcons = null;
         private const string DefaultIcon = "fas fa-circle";
-        private const string SvgFolder = "/svgs/";
+        private const string SvgFolder = "svgs/";
         private const string SvgExtension = ".svg";
 
         public SvgIconService(HttpClient httpClient, NavigationManager navigationManager)
@@ -32,7 +29,6 @@ namespace AirCode.Services.VisualElements
         private void InitializeIconNameMap()
         {
             // Map icon names to their file names
-            // This makes it easier to get icons by a consistent name
             _iconNameMap.Add("add_user", "AddUser_Icon");
             _iconNameMap.Add("admin", "Admin_Icon");
             _iconNameMap.Add("airplane", "Airplane_Icon");
@@ -96,8 +92,9 @@ namespace AirCode.Services.VisualElements
                 fileName += SvgExtension;
             }
 
-            // Build the full URL
-            string url = _navigationManager.BaseUri.TrimEnd('/') + SvgFolder + fileName;
+            // Build the full URL using NavigationManager's ToAbsoluteUri
+            string relativePath = SvgFolder + fileName;
+            string url = _navigationManager.ToAbsoluteUri(relativePath).ToString();
 
             try
             {
@@ -108,9 +105,10 @@ namespace AirCode.Services.VisualElements
                 
                 return svgContent;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // If we can't find the icon, return null (or you could return a default SVG)
+                // Log the error for debugging
+                Console.WriteLine($"Failed to load SVG icon '{iconName}' from '{url}': {ex.Message}");
                 return null;
             }
         }
@@ -122,9 +120,6 @@ namespace AirCode.Services.VisualElements
                 return _availableIcons;
             }
 
-            // In a real-world scenario, you might want to fetch the list 
-            // of available SVGs from the server
-            // For now, we'll return the keys from our map
             _availableIcons = _iconNameMap.Keys.ToList();
             return _availableIcons;
         }
@@ -135,8 +130,7 @@ namespace AirCode.Services.VisualElements
             return _iconNameMap.ContainsKey(normalizedName);
         }
 
-        // Helper method to get a specific icon by name
-        // This allows for IntelliSense suggestions in your IDE
+        // Helper methods for specific icons
         public async Task<string> GetAddUserIconAsync() => await GetSvgContentAsync("add_user");
         public async Task<string> GetAdminIconAsync() => await GetSvgContentAsync("admin");
         public async Task<string> GetAirplaneIconAsync() => await GetSvgContentAsync("airplane");

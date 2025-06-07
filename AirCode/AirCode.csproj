@@ -35,5 +35,7 @@
       <_ContentIncludedByDefault Remove="Shared\SurveyPrompt.razor" />
       <_ContentIncludedByDefault Remove="Layout\AdminLayout\Standard\StandardAdminLayout.razor" />
     </ItemGroup>
-
+    <ItemGroup>
+        <Content Include="wwwroot\svgs\**" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
 </Project>
