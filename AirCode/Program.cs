@@ -78,7 +78,7 @@ builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>()
 builder.Services.AddScoped<ICryptographyService, CryptographyService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IOfflineCredentialsService, OfflineCredentialsService>();
-builder.Services.AddScoped<IAuthOfflineService, IAuthOfflineService>();
+//builder.Services.AddScoped<IAuthOfflineService, IAuthOfflineService>();
 builder.Services.AddScoped<IBlazorAppLocalStorageService, BlazorAppLocalStorageService>();
 builder.Services.AddScoped<ISvgIconService, SvgIconService>();
 //add custom configs here 
