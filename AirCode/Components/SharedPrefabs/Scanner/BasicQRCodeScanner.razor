@@ -1,10 +1,12 @@
-@using ReactorBlazorQRCodeScanner
 @inject IJSRuntime JSRuntime
 
 <div class="qr-scanner-container">
     @if (isActive)
     {
-        <QRCodeScanner ShowOutput="@showScannerOutput" Width="100%" />
+        <div class="video-container">
+            <video id="@videoElementId" autoplay playsinline muted style="width: 100%; height: auto;"></video>
+            <canvas id="@canvasElementId" style="display: none;"></canvas>
+        </div>
     }
     else
     {
@@ -25,6 +27,9 @@
             <button class="control-btn" @onclick="StopScanner">
                 <i class="oi oi-media-stop"></i> Stop
             </button>
+            <button class="control-btn" @onclick="SwitchCamera">
+                <i class="oi oi-loop-circular"></i> Switch Camera
+            </button>
         </div>
     }
 
@@ -44,35 +49,57 @@
     [Parameter] public string PreferredCamera { get; set; } = "environment";
     [Parameter] public bool AutoStart { get; set; } = true;
 
-    private QRCodeScannerJsInterop? _qrCodeScannerJsInterop;
-    private Action<string>? _onQrCodeScanAction;
+    private IJSObjectReference? cameraModule;
+    private DotNetObjectReference<BasicQRCodeScanner>? dotNetRef;
     private bool isActive = false;
-    private bool showScannerOutput = true;
     private string errorMessage = "";
     private string lastScannedCode = "";
+    private readonly string videoElementId = $"video_{Guid.NewGuid():N}";
+    private readonly string canvasElementId = $"canvas_{Guid.NewGuid():N}";
 
     protected override async Task OnInitializedAsync()
     {
-        _onQrCodeScanAction = (code) => OnQrCodeScan(code);
-        _qrCodeScannerJsInterop = new QRCodeScannerJsInterop(JSRuntime);
-
+        dotNetRef = DotNetObjectReference.Create(this);
+        
         if (AutoStart)
         {
+            // Delay auto-start to ensure DOM is ready
+            await Task.Delay(100);
             await StartScanner();
         }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && AutoStart)
+        if (firstRender)
         {
             try
             {
-                await _qrCodeScannerJsInterop.Init(_onQrCodeScanAction);
+                // Load jsQR library if not already loaded
+                await JSRuntime.InvokeVoidAsync("eval", @"
+                    if (!window.jsQR) {
+                        const script = document.createElement('script');
+                        script.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js';
+                        document.head.appendChild(script);
+                    }
+                ");
+                
+                // Load our camera utility
+                cameraModule = await JSRuntime.InvokeAsync<IJSObjectReference>("eval", @"
+                    (function() {
+                        if (window.CameraUtil) {
+                            return { 
+                                instance: new window.CameraUtil(),
+                                available: true 
+                            };
+                        }
+                        return { available: false };
+                    })()
+                ");
             }
             catch (Exception ex)
             {
-                errorMessage = $"Failed to initialize scanner: {ex.Message}";
+                errorMessage = $"Failed to initialize camera module: {ex.Message}";
                 await HandleScanError(errorMessage);
                 StateHasChanged();
             }
@@ -85,17 +112,40 @@
         {
             errorMessage = "";
             isActive = true;
-            
-            if (_qrCodeScannerJsInterop != null)
-            {
-                await _qrCodeScannerJsInterop.Init(_onQrCodeScanAction);
-            }
-            
             StateHasChanged();
+            
+            // Wait for DOM update
+            await Task.Delay(50);
+            
+            await JSRuntime.InvokeVoidAsync("eval", $@"
+                (async function() {{
+                    try {{
+                        const cameraUtil = new window.CameraUtil();
+                        window.currentCameraUtil = cameraUtil;
+                        
+                        await cameraUtil.initialize(
+                            '{videoElementId}',
+                            '{canvasElementId}',
+                            function(qrData) {{
+                                DotNet.invokeMethodAsync('AirCode', 'OnQrCodeDetected', '{dotNetRef?.Value}', qrData);
+                            }},
+                            {{
+                                scanDelay: {ScanDelay},
+                                preferredCamera: '{PreferredCamera}'
+                            }}
+                        );
+                        
+                        cameraUtil.startScanning();
+                    }} catch (error) {{
+                        console.error('Scanner start error:', error);
+                        DotNet.invokeMethodAsync('AirCode', 'OnScanError', '{dotNetRef?.Value}', error.message);
+                    }}
+                }})();
+            ");
         }
         catch (Exception ex)
         {
-            errorMessage = $"Failed to start scanner: {ex.Message}";
+            errorMessage = $"Scanner initialization failed: {ex.Message}";
             isActive = false;
             await HandleScanError(errorMessage);
             StateHasChanged();
@@ -106,14 +156,16 @@
     {
         try
         {
-            if (_qrCodeScannerJsInterop != null && isActive)
-            {
-                await _qrCodeScannerJsInterop.StopRecording();
-            }
+            await JSRuntime.InvokeVoidAsync("eval", @"
+                if (window.currentCameraUtil) {
+                    window.currentCameraUtil.cleanup();
+                    window.currentCameraUtil = null;
+                }
+            ");
         }
         catch (Exception ex)
         {
-            errorMessage = $"Error stopping scanner: {ex.Message}";
+            errorMessage = $"Scanner cleanup error: {ex.Message}";
             await HandleScanError(errorMessage);
         }
         finally
@@ -124,57 +176,81 @@
         }
     }
 
-    private async void OnQrCodeScan(string code)
+    private async Task SwitchCamera()
     {
-        if (!string.IsNullOrEmpty(code) && code != lastScannedCode)
+        try
         {
-            lastScannedCode = code;
+            await JSRuntime.InvokeVoidAsync("eval", @"
+                if (window.currentCameraUtil) {
+                    window.currentCameraUtil.switchCamera();
+                }
+            ");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Camera switch failed: {ex.Message}";
+            await HandleScanError(errorMessage);
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnQrCodeDetected(string qrData)
+    {
+        if (!string.IsNullOrEmpty(qrData) && qrData != lastScannedCode)
+        {
+            lastScannedCode = qrData;
             
-            // Pause scanning to prevent multiple detections
+            // Pause scanning to prevent duplicates
             await PauseScanning();
             
-            // Invoke the callback
+            // Invoke callback
             if (OnScanResult.HasDelegate)
             {
-                await InvokeAsync(async () => await OnScanResult.InvokeAsync(code));
+                await OnScanResult.InvokeAsync(qrData);
             }
         }
     }
 
+    [JSInvokable]
+    public async Task OnScanError(string error)
+    {
+        await HandleScanError(error);
+    }
+
     private async Task PauseScanning()
     {
-        if (_qrCodeScannerJsInterop != null && isActive)
+        try
         {
-            try
-            {
-                await _qrCodeScannerJsInterop.StopRecording();
-                isActive = false;
-                StateHasChanged();
-            }
-            catch (Exception ex)
-            {
-                errorMessage = $"Failed to pause scanner: {ex.Message}";
-                await HandleScanError(errorMessage);
-            }
+            await JSRuntime.InvokeVoidAsync("eval", @"
+                if (window.currentCameraUtil) {
+                    window.currentCameraUtil.stopScanning();
+                }
+            ");
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Pause scanning failed: {ex.Message}";
+            await HandleScanError(errorMessage);
         }
     }
 
     public async Task ResumeScanning()
     {
-        if (_qrCodeScannerJsInterop != null && !isActive)
+        try
         {
-            try
-            {
-                await _qrCodeScannerJsInterop.Init(_onQrCodeScanAction);
-                isActive = true;
-                errorMessage = "";
-                StateHasChanged();
-            }
-            catch (Exception ex)
-            {
-                errorMessage = $"Failed to resume scanner: {ex.Message}";
-                await HandleScanError(errorMessage);
-            }
+            await JSRuntime.InvokeVoidAsync("eval", @"
+                if (window.currentCameraUtil) {
+                    window.currentCameraUtil.startScanning();
+                }
+            ");
+            errorMessage = "";
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Resume scanning failed: {ex.Message}";
+            await HandleScanError(errorMessage);
         }
     }
 
@@ -188,16 +264,20 @@
 
     public async ValueTask DisposeAsync()
     {
-        if (_qrCodeScannerJsInterop != null && isActive)
+        try
         {
-            try
-            {
-                await _qrCodeScannerJsInterop.StopRecording();
-            }
-            catch
-            {
-                // Ignore disposal errors
-            }
+            await JSRuntime.InvokeVoidAsync("eval", @"
+                if (window.currentCameraUtil) {
+                    window.currentCameraUtil.cleanup();
+                    window.currentCameraUtil = null;
+                }
+            ");
         }
+        catch
+        {
+            // Ignore disposal errors
+        }
+        
+        dotNetRef?.Dispose();
     }
 }
