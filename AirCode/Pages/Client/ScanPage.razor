@@ -1,0 +1,137 @@
+@page "/Client/ScanPage"
+@using AirCode.Components.SharedPrefabs
+@using AirCode.Components.SharedPrefabs.Scanner
+@layout AirCode.Layout.ClientLayout.ClientLayout
+@inject IJSRuntime JSRuntime
+
+<div class="scan-attendance-page">
+    <div class="scan-header">
+        <h3>Scan QR Code</h3>
+        <p>Scan the attendance QR code to mark your presence</p>
+    </div>
+    
+    <div class="scanner-options">
+        <label class="scanner-toggle">
+            <input type="checkbox" @bind="autoStartScanner" />
+            <span class="slider"></span>
+            <span class="toggle-label">@(autoStartScanner ? "Auto Start" : "Manual Start")</span>
+        </label>
+    </div>
+    
+    <div class="scan-container">
+        <BasicQRCodeScanner 
+            OnScanResult="HandleScanResult"
+            OnError="HandleScanError"
+            AutoStart="@autoStartScanner"
+            ScanDelay="300"
+            PreferredCamera="environment" />
+    </div>
+    
+    <div class="scan-history">
+        <h4>Recent Scans</h4>
+        @if (recentScans.Count > 0)
+        {
+            <div class="scan-list">
+                @foreach (var scan in recentScans)
+                {
+                    <div class="scan-item @(scan.IsSuccessful ? "success" : "error")">
+                        <div class="scan-info">
+                            <span class="scan-time">@scan.ScanTime.ToString("HH:mm:ss")</span>
+                            <span class="scan-data">@GetDisplayText(scan.Data)</span>
+                        </div>
+                        <span class="scan-status-icon">
+                            @if (scan.IsSuccessful)
+                            {
+                                <i class="oi oi-check"></i>
+                            }
+                            else
+                            {
+                                <i class="oi oi-x"></i>
+                            }
+                        </span>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="no-scans">No recent scans</div>
+        }
+    </div>
+</div>
+
+@code {
+    private List<ScanRecord> recentScans = new List<ScanRecord>();
+    private bool autoStartScanner = true;
+    
+    private async Task HandleScanResult(string result)
+    {
+        if (!string.IsNullOrEmpty(result))
+        {
+            AddScanRecord(result, true);
+            
+            // Process the scanned QR code (e.g., validate attendance)
+            await ProcessAttendanceCode(result);
+        }
+    }
+    
+    private async Task HandleScanError(string error)
+    {
+        AddScanRecord($"Error: {error}", false);
+    }
+    
+    private void AddScanRecord(string data, bool isSuccessful)
+    {
+        var scanRecord = new ScanRecord
+        {
+            Data = data ?? "Invalid code",
+            ScanTime = DateTime.Now,
+            IsSuccessful = isSuccessful
+        };
+        
+        recentScans.Insert(0, scanRecord);
+        
+        // Keep only the most recent scans (limit to 5)
+        if (recentScans.Count > 5)
+        {
+            recentScans.RemoveAt(recentScans.Count - 1);
+        }
+        
+        StateHasChanged();
+    }
+    
+    private async Task ProcessAttendanceCode(string qrCode)
+    {
+        try
+        {
+            // Add your attendance processing logic here
+            // This could involve:
+            // 1. Decrypting the QR code data
+            // 2. Validating the session
+            // 3. Recording attendance
+            // 4. Showing success/failure feedback
+            
+            Console.WriteLine($"Processing attendance code: {qrCode}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error processing attendance: {ex.Message}");
+            AddScanRecord($"Processing failed: {ex.Message}", false);
+        }
+    }
+    
+    private string GetDisplayText(string data)
+    {
+        if (string.IsNullOrEmpty(data))
+            return "Invalid code";
+        
+        return data.Length > 30 ? data.Substring(0, 27) + "..." : data;
+    }
+    
+    private class ScanRecord
+    {
+        public string Data { get; set; } = "";
+        public DateTime ScanTime { get; set; }
+        public bool IsSuccessful { get; set; }
+    }
+}

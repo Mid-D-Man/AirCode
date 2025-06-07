@@ -1,0 +1,220 @@
+/* Layout/ClientLayout/ClientLayout.razor.css */
+
+.client-layout {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    width: 100%;
+    background: linear-gradient(135deg, var(--primary-500) 0%, var(--primary-700) 100%);
+    color: var(--dark-text-color);
+    position: relative;
+    overflow: hidden;
+}
+
+.main-content {
+    display: flex;
+    flex-direction: column;
+    height: calc(100% - 120px); /* Account for nav height */
+    width: 100%;
+    position: relative;
+}
+
+.content-top {
+    height: 70px;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 1.5rem;
+    color: white;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    position: relative;
+    z-index: 10;
+}
+
+.content-top::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+    z-index: -1;
+}
+
+.header-left h2 {
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: white;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    letter-spacing: -0.5px;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.notifications {
+    position: relative;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+}
+
+.notifications:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+}
+
+.notification-icon {
+    color: white;
+    font-size: 1.4rem;
+    display: block;
+}
+
+.notification-badge {
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    background: linear-gradient(135deg, var(--error) 0%, #ff6b6b 100%);
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(244, 67, 54, 0.4);
+}
+
+.profile-button {
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.profile-button:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+}
+
+.profile-image {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    object-fit: cover;
+    filter: brightness(1.1);
+}
+
+.content-bottom {
+    flex: 1;
+    padding: 1.5rem;
+    overflow-y: auto;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 24px 24px 0 0;
+    margin-top: 8px;
+    position: relative;
+    animation: slideUp 0.4s ease-out;
+}
+
+.content-bottom::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40px;
+    height: 4px;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 2px;
+    margin-top: 8px;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .content-top {
+        height: 60px;
+        padding: 0 1rem;
+    }
+
+    .header-left h2 {
+        font-size: 1.5rem;
+    }
+
+    .profile-image {
+        width: 32px;
+        height: 32px;
+    }
+
+    .notifications {
+        padding: 6px;
+    }
+
+    .notification-icon {
+        font-size: 1.2rem;
+    }
+
+    .content-bottom {
+        padding: 1rem;
+        border-radius: 20px 20px 0 0;
+    }
+
+    .main-content {
+        height: calc(100% - 100px);
+    }
+}
+
+@media (max-width: 480px) {
+    .content-top {
+        height: 55px;
+        padding: 0 0.75rem;
+    }
+
+    .header-left h2 {
+        font-size: 1.3rem;
+    }
+
+    .header-right {
+        gap: 0.75rem;
+    }
+
+    .profile-image {
+        width: 30px;
+        height: 30px;
+    }
+
+    .content-bottom {
+        padding: 0.75rem;
+        border-radius: 16px 16px 0 0;
+    }
+}

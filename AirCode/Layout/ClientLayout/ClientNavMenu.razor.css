@@ -1,0 +1,307 @@
+/* Layout/ClientLayout/ClientNavMenu.razor.css */
+
+.client-nav-menu {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 120px;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-bottom: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.client-nav-menu::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+    z-index: -1;
+}
+
+.nav-buttons {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-around;
+    width: 90%;
+    max-width: 400px;
+    padding: 1rem 0;
+    position: relative;
+}
+
+.nav-button {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    margin: 0 0.5rem;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.button-circle {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+    position: relative;
+    overflow: hidden;
+}
+
+.button-circle::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.1) 100%);
+    border-radius: inherit;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.nav-button:hover .button-circle {
+    transform: translateY(-8px) scale(1.05);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.2);
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.nav-button:hover .button-circle::before {
+    opacity: 1;
+}
+
+.nav-button.primary .button-circle {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, var(--secondary-400) 0%, var(--secondary-600) 100%);
+    box-shadow: 0 12px 32px rgba(156, 39, 176, 0.3);
+    z-index: 2;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+}
+
+.nav-button.primary:hover .button-circle {
+    background: linear-gradient(135deg, var(--secondary-300) 0%, var(--secondary-500) 100%);
+    transform: translateY(-10px) scale(1.1);
+    box-shadow: 0 20px 48px rgba(156, 39, 176, 0.4);
+}
+
+.nav-button.primary .button-circle::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.2) 0%, transparent 70%);
+    border-radius: inherit;
+    animation: pulse 3s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: translate(-50%, -50%) scale(1); opacity: 0.7; }
+    50% { transform: translate(-50%, -50%) scale(1.1); opacity: 0.3; }
+    100% { transform: translate(-50%, -50%) scale(1); opacity: 0.7; }
+}
+
+.button-icon {
+    width: 26px;
+    height: 26px;
+    transition: all 0.3s ease;
+    filter: brightness(0) invert(1);
+    z-index: 1;
+}
+
+.nav-button.primary .button-icon {
+    width: 32px;
+    height: 32px;
+}
+
+.button-text {
+    font-size: 0.75rem;
+    margin-top: 0.75rem;
+    color: white;
+    font-weight: 500;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s ease;
+}
+
+.nav-button.primary .button-text {
+    font-weight: 600;
+    font-size: 0.8rem;
+}
+
+.active-indicator {
+    width: 6px;
+    height: 6px;
+    background: white;
+    border-radius: 50%;
+    margin-top: 6px;
+    box-shadow: 0 2px 8px rgba(255, 255, 255, 0.5);
+    animation: glow 2s infinite alternate;
+}
+
+@keyframes glow {
+    from { box-shadow: 0 2px 8px rgba(255, 255, 255, 0.5); }
+    to { box-shadow: 0 2px 16px rgba(255, 255, 255, 0.8); }
+}
+
+.nav-button.active .button-circle {
+    background: rgba(255, 255, 255, 0.35);
+    transform: scale(1.1);
+    border: 2px solid rgba(255, 255, 255, 0.5);
+}
+
+.nav-button.active .button-icon {
+    transform: scale(1.1);
+}
+
+.nav-button.active .button-text {
+    color: white;
+    font-weight: 600;
+}
+
+/* Animation for page transition */
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.nav-button {
+    animation: slideInUp 0.6s ease-out backwards;
+}
+
+.nav-button:nth-child(1) {
+    animation-delay: 0.1s;
+}
+
+.nav-button:nth-child(2) {
+    animation-delay: 0s;
+}
+
+.nav-button:nth-child(3) {
+    animation-delay: 0.2s;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .client-nav-menu {
+        height: 100px;
+    }
+
+    .button-circle {
+        width: 55px;
+        height: 55px;
+    }
+
+    .nav-button.primary .button-circle {
+        width: 70px;
+        height: 70px;
+    }
+
+    .button-icon {
+        width: 22px;
+        height: 22px;
+    }
+
+    .nav-button.primary .button-icon {
+        width: 28px;
+        height: 28px;
+    }
+
+    .button-text {
+        font-size: 0.7rem;
+        margin-top: 0.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .client-nav-menu {
+        height: 90px;
+    }
+
+    .nav-buttons {
+        width: 95%;
+    }
+
+    .button-circle {
+        width: 50px;
+        height: 50px;
+    }
+
+    .nav-button.primary .button-circle {
+        width: 65px;
+        height: 65px;
+    }
+
+    .button-icon {
+        width: 20px;
+        height: 20px;
+    }
+
+    .nav-button.primary .button-icon {
+        width: 26px;
+        height: 26px;
+    }
+
+    .button-text {
+        font-size: 0.65rem;
+    }
+}
+
+/* Desktop adjustments */
+@media (min-width: 1024px) {
+    .client-nav-menu {
+        height: 140px;
+    }
+
+    .button-circle {
+        width: 70px;
+        height: 70px;
+    }
+
+    .nav-button.primary .button-circle {
+        width: 90px;
+        height: 90px;
+    }
+
+    .button-icon {
+        width: 28px;
+        height: 28px;
+    }
+
+    .nav-button.primary .button-icon {
+        width: 36px;
+        height: 36px;
+    }
+
+    .button-text {
+        font-size: 0.85rem;
+        margin-top: 1rem;
+    }
+}

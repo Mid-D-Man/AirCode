@@ -1,0 +1,187 @@
+@page "/client/profile"
+@using AirCode.Services.Auth
+@layout AirCode.Layout.ClientLayout.ClientLayout
+@inject NavigationManager NavigationManager
+
+<div class="client-profile-page">
+    <div class="profile-header">
+        <div class="profile-avatar-container">
+            <img src="@ProfileImagePath" alt="Profile" class="profile-avatar" />
+            <!--input type="file" accept="image/*" @ref="fileInput" @onchange="OnFileSelected" style="display: none;" /-->
+            <button class="change-avatar-btn" @onclick="TriggerFileInput">
+                <i class="oi oi-camera"></i>
+            </button>
+        </div>
+        <div class="profile-user-info">
+            <h3>@UserName</h3>
+            <p>@UserEmail</p>
+        </div>
+    </div>
+
+    <div class="profile-sections">
+        <div class="profile-section">
+            <h4>Personal Information</h4>
+            <div class="form-group">
+                <label>Full Name</label>
+                <input type="text" @bind="FullName" disabled="@(!IsEditing)" />
+            </div>
+            <div class="form-group">
+                <label>Phone Number</label>
+                <input type="tel" @bind="PhoneNumber" disabled="@(!IsEditing)" />
+            </div>
+        </div>
+
+        <div class="profile-section">
+            <h4>Change Password</h4>
+            @if (IsChangingPassword)
+            {
+                <div class="form-group">
+                    <label>Current Password</label>
+                    <input type="password" @bind="CurrentPassword" />
+                </div>
+                <div class="form-group">
+                    <label>New Password</label>
+                    <input type="password" @bind="NewPassword" />
+                </div>
+                <div class="form-group">
+                    <label>Confirm New Password</label>
+                    <input type="password" @bind="ConfirmNewPassword" />
+                </div>
+            }
+            <button class="toggle-password-change" @onclick="TogglePasswordChange">
+                @(IsChangingPassword ? "Cancel" : "Change Password")
+            </button>
+        </div>
+    </div>
+
+    <div class="profile-actions">
+        @if (IsEditing)
+        {
+            <button class="btn btn-save" @onclick="SaveChanges">Save Changes</button>
+            <button class="btn btn-cancel" @onclick="CancelEditing">Cancel</button>
+        }
+        else
+        {
+            <button class="btn btn-edit" @onclick="StartEditing">Edit Profile</button>
+        }
+        <button class="btn btn-logout" @onclick="Logout">Logout</button>
+    </div>
+
+    @if (!string.IsNullOrEmpty(ErrorMessage))
+    {
+        <div class="error-message">@ErrorMessage</div>
+    }
+</div>
+
+@code {
+    private ElementReference fileInput;
+    private string ProfileImagePath = "/icons/user-profile.png";
+    private string UserName = "John Doe";
+    private string UserEmail = "john.doe@example.com";
+    private string FullName = "John Doe";
+    private string PhoneNumber = "+1 (123) 456-7890";
+    private bool IsEditing = false;
+    private bool IsChangingPassword = false;
+    private string CurrentPassword = "";
+    private string NewPassword = "";
+    private string ConfirmNewPassword = "";
+    private string ErrorMessage = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        // TODO: Load user data from user storage service
+        // var userData = await UserStorageService.GetCurrentUserAsync();
+        // Populate user details
+    }
+
+    private void TriggerFileInput()
+    {
+       // JSRuntime.InvokeVoidAsync("eval", "document.querySelector('input[type=file]').click()");
+    }
+
+    private async Task OnFileSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file != null)
+        {
+            // TODO: Implement file upload logic
+            // 1. Validate file type and size
+            // 2. Upload to server or convert to base64
+            // 3. Update ProfileImagePath
+        }
+    }
+
+    private void StartEditing()
+    {
+        IsEditing = true;
+    }
+
+    private void CancelEditing()
+    {
+        IsEditing = false;
+        IsChangingPassword = false;
+        ResetPasswordFields();
+    }
+
+    private async Task SaveChanges()
+    {
+        // Validate input
+        if (IsChangingPassword)
+        {
+            if (!ValidatePasswordChange())
+            {
+                return;
+            }
+            // TODO: Implement password change logic
+        }
+
+        // TODO: Save profile changes
+        IsEditing = false;
+        IsChangingPassword = false;
+    }
+
+    private bool ValidatePasswordChange()
+    {
+        if (string.IsNullOrWhiteSpace(CurrentPassword))
+        {
+            ErrorMessage = "Current password is required.";
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(NewPassword))
+        {
+            ErrorMessage = "New password is required.";
+            return false;
+        }
+
+        if (NewPassword != ConfirmNewPassword)
+        {
+            ErrorMessage = "New passwords do not match.";
+            return false;
+        }
+
+        ErrorMessage = "";
+        return true;
+    }
+
+    private void TogglePasswordChange()
+    {
+        IsChangingPassword = !IsChangingPassword;
+        ResetPasswordFields();
+    }
+
+    private void ResetPasswordFields()
+    {
+        CurrentPassword = "";
+        NewPassword = "";
+        ConfirmNewPassword = "";
+    }
+
+    private async Task Logout()
+    {
+        // TODO: Implement logout logic
+        // 1. Clear user session
+        // 2. Navigate to login page
+        NavigationManager.NavigateTo("/auth/login");
+    }
+}

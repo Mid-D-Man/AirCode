@@ -1,0 +1,361 @@
+/* Pages/Client/ScanPage.razor.css */
+
+.scan-attendance-page {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    padding: 0;
+    overflow-y: auto;
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+}
+
+.scan-header {
+    text-align: center;
+    margin-bottom: 1.5rem;
+    padding: 0 1rem;
+}
+
+.scan-header h3 {
+    color: var(--primary-700);
+    margin-bottom: 0.5rem;
+    font-size: 1.8rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--primary-600) 0%, var(--primary-800) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.scan-header p {
+    color: var(--text-secondary);
+    font-size: 1rem;
+    opacity: 0.8;
+}
+
+/* Scanner options with glass morphism */
+.scanner-options {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 2rem;
+    padding: 0 1rem;
+}
+
+.scanner-toggle {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+    padding: 12px 20px;
+    background: rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.scanner-toggle:hover {
+    background: rgba(255, 255, 255, 0.35);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+}
+
+.scanner-toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: relative;
+    display: inline-block;
+    width: 54px;
+    height: 28px;
+    background: rgba(156, 163, 175, 0.3);
+    border-radius: 28px;
+    margin-right: 12px;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 22px;
+    width: 22px;
+    left: 3px;
+    bottom: 2px;
+    background: white;
+    border-radius: 50%;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+input:checked + .slider {
+    background: linear-gradient(135deg, var(--secondary-400) 0%, var(--secondary-600) 100%);
+    box-shadow: 0 0 20px rgba(156, 39, 176, 0.3);
+}
+
+input:checked + .slider:before {
+    transform: translateX(26px);
+    box-shadow: 0 4px 16px rgba(156, 39, 176, 0.4);
+}
+
+.toggle-label {
+    font-size: 0.95rem;
+    color: var(--primary-700);
+    font-weight: 500;
+}
+
+/* Large scanner container inspired by ShareIt */
+.scan-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 2rem;
+    border-radius: 24px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.3);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    box-shadow:
+            0 20px 60px rgba(0, 0, 0, 0.1),
+            inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    transition: all 0.3s ease;
+}
+
+.scan-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+    z-index: 1;
+    pointer-events: none;
+}
+
+.scan-container::after {
+    content: '';
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    right: 20px;
+    bottom: 20px;
+    border: 3px dashed var(--secondary-400);
+    border-radius: 16px;
+    z-index: 2;
+    pointer-events: none;
+    animation: scanPulse 2s infinite;
+    opacity: 0.6;
+}
+
+@keyframes scanPulse {
+    0%, 100% { opacity: 0.4; transform: scale(1); }
+    50% { opacity: 0.8; transform: scale(1.02); }
+}
+
+/* Scanner component styles */
+::deep(.zxing-scanner), ::deep(.mid-scanner) {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.02) 0%, rgba(0, 0, 0, 0.05) 100%);
+    position: relative;
+    z-index: 0;
+}
+
+::deep(.scanner-preview), ::deep(video) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: inherit;
+}
+
+/* Scan history with glass morphism */
+.scan-history {
+    padding: 1.5rem;
+    background: rgba(255, 255, 255, 0.3);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 20px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+    margin: 0 1rem;
+}
+
+.scan-history h4 {
+    color: var(--primary-700);
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.scan-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.scan-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.4);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+    animation: slideInFromBottom 0.4s ease-out;
+    transition: all 0.3s ease;
+}
+
+.scan-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+.scan-item.success {
+    border-left: 4px solid var(--success);
+    background: rgba(76, 175, 80, 0.1);
+}
+
+.scan-item.error {
+    border-left: 4px solid var(--error);
+    background: rgba(244, 67, 54, 0.1);
+}
+
+.scan-info {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.scan-time {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+    font-weight: 500;
+}
+
+.scan-data {
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.scan-status-icon {
+    font-size: 1.4rem;
+    margin-left: 1rem;
+}
+
+.scan-item.success .scan-status-icon {
+    color: var(--success);
+}
+
+.scan-item.error .scan-status-icon {
+    color: var(--error);
+}
+
+.no-scans {
+    color: var(--text-secondary);
+    text-align: center;
+    padding: 2rem;
+    font-style: italic;
+    opacity: 0.7;
+}
+
+@keyframes slideInFromBottom {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Mobile-first responsive design */
+@media (max-width: 480px) {
+    .scan-container {
+        width: calc(100vw - 2rem);
+        height: calc(100vw - 2rem);
+        max-width: 320px;
+        max-height: 320px;
+        margin: 0 1rem 1.5rem;
+    }
+
+    .scan-header h3 {
+        font-size: 1.5rem;
+    }
+
+    .scan-header p {
+        font-size: 0.9rem;
+    }
+
+    .scanner-options {
+        margin-bottom: 1.5rem;
+    }
+
+    .scan-history {
+        margin: 0 0.75rem;
+        padding: 1rem;
+    }
+
+    .scan-item {
+        padding: 0.75rem;
+    }
+}
+
+@media (min-width: 481px) and (max-width: 767px) {
+    .scan-container {
+        width: 350px;
+        height: 350px;
+    }
+}
+
+@media (min-width: 768px) and (max-width: 1024px) {
+    .scan-container {
+        width: 400px;
+        height: 400px;
+    }
+
+    .scan-header h3 {
+        font-size: 2rem;
+    }
+}
+
+@media (min-width: 1025px) {
+    .scan-container {
+        width: 450px;
+        height: 450px;
+    }
+
+    .scan-header h3 {
+        font-size: 2.2rem;
+    }
+
+    .scan-header p {
+        font-size: 1.1rem;
+    }
+
+    .scan-attendance-page {
+        padding: 2rem;
+    }
+
+    .scan-history {
+        margin: 0;
+        max-width: 600px;
+        margin: 0 auto;
+    }
+}

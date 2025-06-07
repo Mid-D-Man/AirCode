@@ -1,0 +1,46 @@
+@* Layout/ClientLayout/ClientLayout.razor *@
+@namespace AirCode.Layout.ClientLayout
+@inherits LayoutComponentBase
+
+<div class="client-layout">
+    <div class="main-content">
+        <div class="content-top">
+            <div class="header-left">
+                <h2>AirCode</h2>
+            </div>
+            <div class="header-right">
+                <div class="notifications" @onclick="OpenNotifications">
+                    <span class="notification-icon">
+                        <i class="oi oi-bell"></i>
+                        @if(NotificationCount > 0)
+                        {
+                            <span class="notification-badge">@(NotificationCount > 9 ? "9+" : NotificationCount.ToString())</span>
+                        }
+                    </span>
+                </div>
+                <div class="profile-button" @onclick="OpenProfile">
+                    <img src="/svgs/Users_Icon.svg" alt="Profile" class="profile-image" />
+                
+                </div>
+            </div>
+        </div>
+        <div class="content-bottom">
+            @Body
+        </div>
+    </div>
+    <ClientNavMenu />
+</div>
+
+@code {
+    private int NotificationCount = 3; // This would be populated from your service
+    
+    private void OpenNotifications()
+    {
+        // Logic to open notifications
+    }
+    
+    private void OpenProfile()
+    {
+        // Logic to open profile
+    }
+}

@@ -6,6 +6,8 @@ using AirCode.Extensions;
 using AirCode.Services.Auth;
 using AirCode.Services.Auth.Offline;
 using AirCode.Services.Cryptography;
+using AirCode.Services.Storage;
+using AirCode.Services.VisualElements;
 using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
 using Supabase;
 
@@ -76,6 +78,9 @@ builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>()
 builder.Services.AddScoped<ICryptographyService, CryptographyService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IOfflineCredentialsService, OfflineCredentialsService>();
+builder.Services.AddScoped<IAuthOfflineService, IAuthOfflineService>();
+builder.Services.AddScoped<IBlazorAppLocalStorageService, BlazorAppLocalStorageService>();
+builder.Services.AddScoped<ISvgIconService, SvgIconService>();
 //add custom configs here 
 
 

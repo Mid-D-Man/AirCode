@@ -1,0 +1,76 @@
+@* Layout/ClientLayout/ClientNavMenu.razor *@
+@namespace AirCode.Layout.ClientLayout
+@inject NavigationManager NavigationManager
+
+<div class="client-nav-menu">
+    <div class="nav-buttons">
+        <div class="nav-button @(currentPage == "stats" ? "active" : "")" @onclick="@(() => NavigateTo("stats"))">
+            <div class="button-circle">
+                <img src="/svgs/Stats_Icon.svg" alt="Stats" class="button-icon" />
+            </div>
+            <span class="button-text">Stats</span>
+            @if (currentPage == "stats")
+            {
+                <div class="active-indicator"></div>
+            }
+        </div>
+        
+        <div class="nav-button primary @(currentPage == "scan" ? "active" : "")" @onclick="@(() => NavigateTo("scan"))">
+            <div class="button-circle">
+                <img src="/svgs/ScanQrCode_Icon.svg" alt="Scan" class="button-icon" />
+            </div>
+            <span class="button-text">Scan</span>
+            @if (currentPage == "scan")
+            {
+                <div class="active-indicator"></div>
+            }
+        </div>
+        
+        <div class="nav-button @(currentPage == "settings" ? "active" : "")" @onclick="@(() => NavigateTo("settings"))">
+            <div class="button-circle">
+                <img src="/svgs/Settings_Icon.svg" alt="Settings" class="button-icon" />
+            </div>
+            <span class="button-text">Settings</span>
+            @if (currentPage == "settings")
+            {
+                <div class="active-indicator"></div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private string currentPage = "scan";
+
+    protected override void OnInitialized()
+    {
+        // Determine the current page from the URL
+        var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
+        var path = uri.AbsolutePath;
+        
+        if (path.Contains("stats"))
+            currentPage = "stats";
+        else if (path.Contains("settings"))
+            currentPage = "settings";
+        else
+            currentPage = "scan";
+    }
+
+    private void NavigateTo(string page)
+    {
+        currentPage = page;
+        
+        switch (page)
+        {
+            case "stats":
+                NavigationManager.NavigateTo("/Client/Stats");
+                break;
+            case "settings":
+                NavigationManager.NavigateTo("/Client/Settings");
+                break;
+            default:
+                NavigationManager.NavigateTo("/Client/ScanPage");
+                break;
+        }
+    }
+}

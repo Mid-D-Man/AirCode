@@ -1,0 +1,139 @@
+@page "/Client/Settings"
+@using ILocalStorageService = AirCode.Services.Storage.IBlazorAppLocalStorageService
+@layout AirCode.Layout.ClientLayout.ClientLayout
+@inject ILocalStorageService BlazorAppLocalStorage
+
+<div class="client-settings-page">
+    <div class="settings-header">
+        <h3>App Settings</h3>
+        <p>Customize your app experience</p>
+    </div>
+
+    <div class="settings-sections">
+        <div class="settings-section">
+            <div class="setting-item">
+                <div class="setting-info">
+                    <span class="setting-title">Dark Mode</span>
+                    <span class="setting-description">Switch between light and dark themes</span>
+                </div>
+                <div class="setting-control">
+                    <label class="toggle-switch">
+                        <input type="checkbox" 
+                               checked="@isDarkModeEnabled" 
+                               @onchange="ToggleDarkMode" />
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <div class="setting-item">
+                <div class="setting-info">
+                    <span class="setting-title">Two-Factor Authentication</span>
+                    <span class="setting-description">Add an extra layer of security to your account</span>
+                </div>
+                <div class="setting-control">
+                    <label class="toggle-switch">
+                        <input type="checkbox" 
+                               checked="@isTwoFactorEnabled" 
+                               @onchange="ToggleTwoFactor" />
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <div class="setting-item">
+                <div class="setting-info">
+                    <span class="setting-title">Notification Preferences</span>
+                    <span class="setting-description">Manage how you receive notifications</span>
+                </div>
+                <div class="setting-control">
+                    <select class="notification-select" @bind="selectedNotificationPreference">
+                        <option value="all">All Notifications</option>
+                        <option value="important">Important Only</option>
+                        <option value="none">No Notifications</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <div class="setting-item">
+                <div class="setting-info">
+                    <span class="setting-title">Data Collection</span>
+                    <span class="setting-description">Allow anonymous usage data collection</span>
+                </div>
+                <div class="setting-control">
+                    <label class="toggle-switch">
+                        <input type="checkbox" 
+                               checked="@isDataCollectionEnabled" 
+                               @onchange="ToggleDataCollection" />
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="advanced-settings">
+        <h4>Advanced Settings</h4>
+        <button class="reset-settings-btn" @onclick="ResetToDefaultSettings">
+            Reset to Default Settings
+        </button>
+    </div>
+</div>
+
+@code {
+    private bool isDarkModeEnabled = false;
+    private bool isTwoFactorEnabled = false;
+    private bool isDataCollectionEnabled = false;
+    private string selectedNotificationPreference = "all";
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Load settings from local storage
+        isDarkModeEnabled = await BlazorAppLocalStorage.GetItemAsync<bool>("darkMode");
+        isTwoFactorEnabled = await BlazorAppLocalStorage.GetItemAsync<bool>("twoFactor");
+        isDataCollectionEnabled = await BlazorAppLocalStorage.GetItemAsync<bool>("dataCollection");
+        selectedNotificationPreference = await BlazorAppLocalStorage.GetItemAsync<string>("notificationPreference") ?? "all";
+    }
+
+    private async Task ToggleDarkMode(ChangeEventArgs e)
+    {
+        isDarkModeEnabled = (bool)e.Value;
+        await BlazorAppLocalStorage.SetItemAsync("darkMode", isDarkModeEnabled);
+        // TODO: Actually implement dark mode theme switching
+    }
+
+    private async Task ToggleTwoFactor(ChangeEventArgs e)
+    {
+        isTwoFactorEnabled = (bool)e.Value;
+        await BlazorAppLocalStorage.SetItemAsync("twoFactor", isTwoFactorEnabled);
+        // TODO: Implement 2FA setup/disable logic
+    }
+
+    private async Task ToggleDataCollection(ChangeEventArgs e)
+    {
+        isDataCollectionEnabled = (bool)e.Value;
+        await BlazorAppLocalStorage.SetItemAsync("dataCollection", isDataCollectionEnabled);
+        // TODO: Handle data collection opt-in/out
+    }
+
+    private async Task ResetToDefaultSettings()
+    {
+        isDarkModeEnabled = false;
+        isTwoFactorEnabled = false;
+        isDataCollectionEnabled = false;
+        selectedNotificationPreference = "all";
+
+        await BlazorAppLocalStorage.SetItemAsync("darkMode", isDarkModeEnabled);
+        await BlazorAppLocalStorage.SetItemAsync("twoFactor", isTwoFactorEnabled);
+        await BlazorAppLocalStorage.SetItemAsync("dataCollection", isDataCollectionEnabled);
+        await BlazorAppLocalStorage.SetItemAsync("notificationPreference", selectedNotificationPreference);
+
+        StateHasChanged();
+    }
+}
