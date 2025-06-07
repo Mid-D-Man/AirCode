@@ -4,12 +4,7 @@
 <div class="qr-scanner-container">
     @if (isActive)
     {
-        <QRCodeScanner
-            OnResult="HandleScanResult"
-            OnError="HandleScanError"
-            VideoConstraints="videoConstraints"
-            ScanDelay="@ScanDelay"
-            PreferredCamera="@PreferredCamera" />
+        <QRCodeScanner ShowOutput="@showScannerOutput" Width="100%" />
     }
     else
     {
@@ -30,9 +25,6 @@
             <button class="control-btn" @onclick="StopScanner">
                 <i class="oi oi-media-stop"></i> Stop
             </button>
-            <button class="control-btn" @onclick="SwitchCamera">
-                <i class="oi oi-loop-circular"></i> Switch Camera
-            </button>
         </div>
     }
 
@@ -52,20 +44,38 @@
     [Parameter] public string PreferredCamera { get; set; } = "environment";
     [Parameter] public bool AutoStart { get; set; } = true;
 
+    private QRCodeScannerJsInterop? _qrCodeScannerJsInterop;
+    private Action<string>? _onQrCodeScanAction;
     private bool isActive = false;
+    private bool showScannerOutput = true;
     private string errorMessage = "";
-    private object videoConstraints = new
-    {
-        width = new { ideal = 1280 },
-        height = new { ideal = 720 },
-        facingMode = "environment"
-    };
+    private string lastScannedCode = "";
 
     protected override async Task OnInitializedAsync()
     {
+        _onQrCodeScanAction = (code) => OnQrCodeScan(code);
+        _qrCodeScannerJsInterop = new QRCodeScannerJsInterop(JSRuntime);
+
         if (AutoStart)
         {
             await StartScanner();
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && AutoStart)
+        {
+            try
+            {
+                await _qrCodeScannerJsInterop.Init(_onQrCodeScanAction);
+            }
+            catch (Exception ex)
+            {
+                errorMessage = $"Failed to initialize scanner: {ex.Message}";
+                await HandleScanError(errorMessage);
+                StateHasChanged();
+            }
         }
     }
 
@@ -75,61 +85,119 @@
         {
             errorMessage = "";
             isActive = true;
+            
+            if (_qrCodeScannerJsInterop != null)
+            {
+                await _qrCodeScannerJsInterop.Init(_onQrCodeScanAction);
+            }
+            
             StateHasChanged();
         }
         catch (Exception ex)
         {
             errorMessage = $"Failed to start scanner: {ex.Message}";
             isActive = false;
+            await HandleScanError(errorMessage);
             StateHasChanged();
         }
     }
 
     private async Task StopScanner()
     {
-        isActive = false;
-        errorMessage = "";
-        StateHasChanged();
-    }
-
-    private async Task SwitchCamera()
-    {
-        // Toggle between front and back camera
-        var currentMode = PreferredCamera == "environment" ? "user" : "environment";
-        PreferredCamera = currentMode;
-
-        videoConstraints = new
+        try
         {
-            width = new { ideal = 1280 },
-            height = new { ideal = 720 },
-            facingMode = currentMode
-        };
-
-        // Restart scanner with new camera
-        if (isActive)
+            if (_qrCodeScannerJsInterop != null && isActive)
+            {
+                await _qrCodeScannerJsInterop.StopRecording();
+            }
+        }
+        catch (Exception ex)
         {
-            await StopScanner();
-            await Task.Delay(500); // Brief delay to ensure cleanup
-            await StartScanner();
+            errorMessage = $"Error stopping scanner: {ex.Message}";
+            await HandleScanError(errorMessage);
+        }
+        finally
+        {
+            isActive = false;
+            errorMessage = "";
+            StateHasChanged();
         }
     }
 
-    private async Task HandleScanResult(string result)
+    private async void OnQrCodeScan(string code)
     {
-        if (!string.IsNullOrEmpty(result))
+        if (!string.IsNullOrEmpty(code) && code != lastScannedCode)
         {
-            await OnScanResult.InvokeAsync(result);
+            lastScannedCode = code;
+            
+            // Pause scanning to prevent multiple detections
+            await PauseScanning();
+            
+            // Invoke the callback
+            if (OnScanResult.HasDelegate)
+            {
+                await InvokeAsync(async () => await OnScanResult.InvokeAsync(code));
+            }
+        }
+    }
+
+    private async Task PauseScanning()
+    {
+        if (_qrCodeScannerJsInterop != null && isActive)
+        {
+            try
+            {
+                await _qrCodeScannerJsInterop.StopRecording();
+                isActive = false;
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                errorMessage = $"Failed to pause scanner: {ex.Message}";
+                await HandleScanError(errorMessage);
+            }
+        }
+    }
+
+    public async Task ResumeScanning()
+    {
+        if (_qrCodeScannerJsInterop != null && !isActive)
+        {
+            try
+            {
+                await _qrCodeScannerJsInterop.Init(_onQrCodeScanAction);
+                isActive = true;
+                errorMessage = "";
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                errorMessage = $"Failed to resume scanner: {ex.Message}";
+                await HandleScanError(errorMessage);
+            }
         }
     }
 
     private async Task HandleScanError(string error)
     {
-        errorMessage = error;
-        StateHasChanged();
-
         if (OnError.HasDelegate)
         {
             await OnError.InvokeAsync(error);
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_qrCodeScannerJsInterop != null && isActive)
+        {
+            try
+            {
+                await _qrCodeScannerJsInterop.StopRecording();
+            }
+            catch
+            {
+                // Ignore disposal errors
+            }
         }
     }
 }

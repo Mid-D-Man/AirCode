@@ -1,13 +1,15 @@
 @page "/Client/ScanPage"
-@inject IJSRuntime JS
-@using ReactorBlazorQRCodeScanner
+@using AirCode.Components.SharedPrefabs
+@using AirCode.Components.SharedPrefabs.Scanner
+@layout AirCode.Layout.ClientLayout.ClientLayout
+@inject IJSRuntime JSRuntime
 
-<div class="scan-page">
+<div class="scan-attendance-page">
     <div class="scan-header">
-        <h3>QR Code Scanner</h3>
-        <p>Position QR code within the scanning area</p>
+        <h3>Scan QR Code</h3>
+        <p>Scan the attendance QR code to mark your presence</p>
     </div>
-
+    
     <div class="scanner-options">
         <label class="scanner-toggle">
             <input type="checkbox" @bind="autoStartScanner" @bind:after="OnToggleAutoStart" />
@@ -15,43 +17,17 @@
             <span class="toggle-label">@(autoStartScanner ? "Auto Start" : "Manual Start")</span>
         </label>
     </div>
-
-    <div class="qr-scanner-container">
-        @if (isActive)
-        {
-            <QRCodeScanner ShowOutput="@showScannerOutput" Width="100%" />
-        }
-        else
-        {
-            <div class="scanner-placeholder">
-                <div class="scanner-icon">
-                    <i class="oi oi-target"></i>
-                </div>
-                <p>Click to start scanning</p>
-                <button class="start-scanner-btn" @onclick="StartScanner">
-                    <i class="oi oi-play-circle"></i> Start Scanner
-                </button>
-            </div>
-        }
-
-        @if (isActive)
-        {
-            <div class="scanner-controls">
-                <button class="control-btn" @onclick="StopScanner">
-                    <i class="oi oi-media-stop"></i> Stop
-                </button>
-            </div>
-        }
-
-        @if (!string.IsNullOrEmpty(errorMessage))
-        {
-            <div class="scanner-error">
-                <i class="oi oi-warning"></i>
-                <span>@errorMessage</span>
-            </div>
-        }
+    
+    <div class="scan-container">
+        <BasicQRCodeScanner 
+            @ref="scannerRef"
+            OnScanResult="HandleScanResult"
+            OnError="HandleScanError"
+            AutoStart="@autoStartScanner"
+            ScanDelay="300"
+            PreferredCamera="environment" />
     </div>
-
+    
     <div class="scan-history">
         <h4>Recent Scans</h4>
         @if (recentScans.Count > 0)
@@ -116,179 +92,89 @@
 }
 
 @code {
-    private QRCodeScannerJsInterop? _qrCodeScannerJsInterop;
-    private Action<string>? _onQrCodeScanAction;
+    private BasicQRCodeScanner? scannerRef;
     private List<ScanRecord> recentScans = new List<ScanRecord>();
     private bool autoStartScanner = true;
-    private bool isActive = false;
     private bool showPopup = false;
-    private bool showScannerOutput = true;
     private string lastScannedCode = string.Empty;
     private DateTime scanTimestamp;
-    private string errorMessage = string.Empty;
-
-    protected override async Task OnInitializedAsync()
-    {
-        _onQrCodeScanAction = (code) => OnQrCodeScan(code);
-        _qrCodeScannerJsInterop = new QRCodeScannerJsInterop(JS);
-
-        if (autoStartScanner)
-        {
-            await StartScanner();
-        }
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender && autoStartScanner)
-        {
-            try
-            {
-                await _qrCodeScannerJsInterop.Init(_onQrCodeScanAction);
-            }
-            catch (Exception ex)
-            {
-                errorMessage = $"Failed to initialize scanner: {ex.Message}";
-                StateHasChanged();
-            }
-        }
-    }
-
+    
     private async Task OnToggleAutoStart()
     {
-        if (autoStartScanner && !isActive)
-        {
-            await StartScanner();
-        }
-        else if (!autoStartScanner && isActive)
-        {
-            await StopScanner();
-        }
+        // The scanner component will handle auto-start behavior
+        StateHasChanged();
     }
-
-    private async Task StartScanner()
+    
+    private async Task HandleScanResult(string result)
     {
-        try
+        if (!string.IsNullOrEmpty(result) && !showPopup && result != lastScannedCode)
         {
-            errorMessage = string.Empty;
-            isActive = true;
-            
-            if (_qrCodeScannerJsInterop != null)
-            {
-                await _qrCodeScannerJsInterop.Init(_onQrCodeScanAction);
-            }
-            
-            StateHasChanged();
-        }
-        catch (Exception ex)
-        {
-            errorMessage = $"Failed to start scanner: {ex.Message}";
-            isActive = false;
-            AddScanRecord($"Scanner error: {ex.Message}", false);
-            StateHasChanged();
-        }
-    }
-
-    private async Task StopScanner()
-    {
-        try
-        {
-            if (_qrCodeScannerJsInterop != null && isActive)
-            {
-                await _qrCodeScannerJsInterop.StopRecording();
-            }
-        }
-        catch (Exception ex)
-        {
-            errorMessage = $"Error stopping scanner: {ex.Message}";
-        }
-        finally
-        {
-            isActive = false;
-            errorMessage = string.Empty;
-            StateHasChanged();
-        }
-    }
-
-    private async void OnQrCodeScan(string code)
-    {
-        if (!string.IsNullOrEmpty(code) && !showPopup && code != lastScannedCode)
-        {
-            // Pause scanning to prevent multiple detections
-            await PauseScanning();
-
-            // Process the scanned result
-            await ProcessAttendanceCode(code);
-
             // Update UI with scanned data
-            lastScannedCode = code;
+            lastScannedCode = result;
             scanTimestamp = DateTime.Now;
             showPopup = true;
-
-            AddScanRecord(code, true);
-
-            await InvokeAsync(StateHasChanged);
+            
+            AddScanRecord(result, true);
+            
+            // Process the scanned QR code (e.g., validate attendance)
+            await ProcessAttendanceCode(result);
+            
+            StateHasChanged();
         }
     }
-
-    private async Task PauseScanning()
+    
+    private async Task HandleScanError(string error)
     {
-        if (_qrCodeScannerJsInterop != null && isActive)
-        {
-            try
-            {
-                await _qrCodeScannerJsInterop.StopRecording();
-                isActive = false;
-            }
-            catch (Exception ex)
-            {
-                errorMessage = $"Failed to pause scanner: {ex.Message}";
-            }
-        }
+        AddScanRecord($"Error: {error}", false);
     }
-
-    private async Task ResumeScanning()
-    {
-        if (_qrCodeScannerJsInterop != null && !isActive)
-        {
-            try
-            {
-                await _qrCodeScannerJsInterop.Init(_onQrCodeScanAction);
-                isActive = true;
-                errorMessage = string.Empty;
-            }
-            catch (Exception ex)
-            {
-                errorMessage = $"Failed to resume scanner: {ex.Message}";
-                AddScanRecord($"Resume error: {ex.Message}", false);
-            }
-        }
-    }
-
+    
     private async Task ClosePopup()
     {
         showPopup = false;
-        if (autoStartScanner)
+        
+        // Resume scanning if auto-start is enabled
+        if (autoStartScanner && scannerRef != null)
         {
-            await ResumeScanning();
+            await scannerRef.ResumeScanning();
         }
+        
         StateHasChanged();
     }
-
+    
     private async Task CopyToClipboard()
     {
         try
         {
-            await JS.InvokeVoidAsync("navigator.clipboard.writeText", lastScannedCode);
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", lastScannedCode);
             // Could add a brief success indicator here
         }
         catch (Exception)
         {
-            errorMessage = "Failed to copy to clipboard";
-            StateHasChanged();
+            // Handle clipboard error - could show error message
+            AddScanRecord("Failed to copy to clipboard", false);
         }
     }
-
+    
+    private void AddScanRecord(string data, bool isSuccessful)
+    {
+        var scanRecord = new ScanRecord
+        {
+            Data = data ?? "Invalid code",
+            ScanTime = DateTime.Now,
+            IsSuccessful = isSuccessful
+        };
+        
+        recentScans.Insert(0, scanRecord);
+        
+        // Keep only the most recent scans (limit to 5)
+        if (recentScans.Count > 5)
+        {
+            recentScans.RemoveAt(recentScans.Count - 1);
+        }
+        
+        StateHasChanged();
+    }
+    
     private async Task ProcessAttendanceCode(string qrCode)
     {
         try
@@ -299,7 +185,7 @@
             // 2. Validating the session
             // 3. Recording attendance
             // 4. Showing success/failure feedback
-
+            
             Console.WriteLine($"Processing attendance code: {qrCode}");
         }
         catch (Exception ex)
@@ -308,50 +194,15 @@
             AddScanRecord($"Processing failed: {ex.Message}", false);
         }
     }
-
-    private void AddScanRecord(string data, bool isSuccessful)
-    {
-        var scanRecord = new ScanRecord
-        {
-            Data = data ?? "Invalid code",
-            ScanTime = DateTime.Now,
-            IsSuccessful = isSuccessful
-        };
-
-        recentScans.Insert(0, scanRecord);
-
-        // Keep only the most recent scans (limit to 5)
-        if (recentScans.Count > 5)
-        {
-            recentScans.RemoveAt(recentScans.Count - 1);
-        }
-
-        StateHasChanged();
-    }
-
+    
     private string GetDisplayText(string data)
     {
         if (string.IsNullOrEmpty(data))
             return "Invalid code";
-
+        
         return data.Length > 30 ? data.Substring(0, 27) + "..." : data;
     }
-
-    public async ValueTask DisposeAsync()
-    {
-        if (_qrCodeScannerJsInterop != null && isActive)
-        {
-            try
-            {
-                await _qrCodeScannerJsInterop.StopRecording();
-            }
-            catch
-            {
-                // Ignore disposal errors
-            }
-        }
-    }
-
+    
     private class ScanRecord
     {
         public string Data { get; set; } = "";
