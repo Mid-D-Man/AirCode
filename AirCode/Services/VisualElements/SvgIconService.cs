@@ -92,21 +92,37 @@ namespace AirCode.Services.VisualElements
                 fileName += SvgExtension;
             }
 
-            // Build the URL using the configured HttpClient base address
-            string url = $"{_httpClient.BaseAddress.ToString().TrimEnd('/')}/AirCode/{SvgFolder}{fileName}";
+            // DEBUG: Log the base address
+            Console.WriteLine($"HttpClient BaseAddress: {_httpClient.BaseAddress}");
+            Console.WriteLine($"NavigationManager BaseUri: {_navigationManager.BaseUri}");
+
+            // Hardcoded approach for GitHub Pages
+            string url;
+            if (_navigationManager.BaseUri.Contains("github.io"))
+            {
+                // Extract the domain and construct the full path
+                var uri = new Uri(_navigationManager.BaseUri);
+                url = $"{uri.Scheme}://{uri.Host}/AirCode/{SvgFolder}{fileName}";
+            }
+            else
+            {
+                // Local development
+                url = $"{_navigationManager.BaseUri.TrimEnd('/')}/{SvgFolder}{fileName}";
+            }
+    
+            Console.WriteLine($"Constructed URL: {url}");
 
             try
             {
                 string svgContent = await _httpClient.GetStringAsync(url);
-                
+        
                 // Cache the result
                 _iconCache[iconName] = svgContent;
-                
+        
                 return svgContent;
             }
             catch (Exception ex)
             {
-                // Log the error for debugging
                 Console.WriteLine($"Failed to load SVG icon '{iconName}' from '{url}': {ex.Message}");
                 return null;
             }
