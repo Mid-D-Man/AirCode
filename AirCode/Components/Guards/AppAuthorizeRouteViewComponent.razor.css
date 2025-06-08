@@ -1,0 +1,91 @@
+.auth-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 50vh;
+    flex-direction: column;
+}
+
+.auth-loading p {
+    font-size: 1.2rem;
+    color: #6c757d;
+    margin: 0;
+    animation: pulse 1.5s ease-in-out infinite alternate;
+}
+
+.unauthorized-access {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    text-align: center;
+    padding: 2rem;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin: 2rem auto;
+    max-width: 500px;
+}
+
+.unauthorized-access h3 {
+    color: #dc3545;
+    font-size: 2rem;
+    margin-bottom: 1rem;
+    font-weight: 600;
+}
+
+.unauthorized-access p {
+    color: #6c757d;
+    font-size: 1.1rem;
+    margin-bottom: 2rem;
+    line-height: 1.5;
+}
+
+.unauthorized-access .btn {
+    padding: 0.75rem 2rem;
+    font-size: 1rem;
+    font-weight: 500;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+}
+
+.unauthorized-access .btn-primary {
+    background: linear-gradient(45deg, #007bff, #0056b3);
+    color: white;
+    box-shadow: 0 2px 4px rgba(0, 123, 255, 0.3);
+}
+
+.unauthorized-access .btn-primary:hover {
+    background: linear-gradient(45deg, #0056b3, #004085);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 123, 255, 0.4);
+}
+
+@keyframes pulse {
+    0% {
+        opacity: 0.6;
+    }
+    100% {
+        opacity: 1;
+    }
+}
+
+/* Responsive design */
+@media (max-width: 576px) {
+    .unauthorized-access {
+        margin: 1rem;
+        padding: 1.5rem;
+    }
+
+    .unauthorized-access h3 {
+        font-size: 1.5rem;
+    }
+
+    .unauthorized-access p {
+        font-size: 1rem;
+    }
+}

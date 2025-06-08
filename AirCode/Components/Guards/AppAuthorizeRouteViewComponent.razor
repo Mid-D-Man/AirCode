@@ -1,0 +1,104 @@
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Rendering
+@using AirCode.Services.Permissions
+@inherits ComponentBase
+@implements IComponent
+@inject IPermissionService PermissionService
+@inject NavigationManager NavigationManager
+
+@if (Authorized)
+{
+    <RouteView RouteData="@RouteData" DefaultLayout="@DefaultLayout" />
+}
+else if (IsRedirecting)
+{
+    <div class="auth-loading">
+        <p>Redirecting...</p>
+    </div>
+}
+else
+{
+    <div class="unauthorized-access">
+        <h3>Access Denied</h3>
+        <p>You don't have permission to access this page.</p>
+        <button class="btn btn-primary" @onclick="() => NavigationManager.NavigateTo('/'.ToString())">
+            Return Home
+        </button>
+    </div>
+}
+
+@code {
+    [Parameter] public RouteData RouteData { get; set; } = default!;
+    [Parameter] public Type? DefaultLayout { get; set; }
+    [CascadingParameter] private Task<AuthenticationState>? AuthenticationState { get; set; }
+
+    private bool Authorized { get; set; }
+    private bool IsRedirecting { get; set; }
+
+    protected async Task OnInitializedAsync()
+    {
+        if (AuthenticationState == null) return;
+
+        var authState = await AuthenticationState;
+        var user = authState.User;
+
+        // Check authentication first
+        if (!user.Identity?.IsAuthenticated ?? true)
+        {
+            IsRedirecting = true;
+            var returnUrl = Uri.EscapeDataString(NavigationManager.Uri);
+            NavigationManager.NavigateTo($"/authentication/login?returnUrl={returnUrl}");
+            return;
+        }
+
+        // Check authorization
+        Authorized = await CheckAuthorizationAsync(user);
+        StateHasChanged();
+    }
+
+    private async Task<bool> CheckAuthorizationAsync(ClaimsPrincipal user)
+    {
+        var authorizeAttribute = RouteData.PageType
+            .GetCustomAttributes(typeof(AuthorizeAttribute), true)
+            .Cast<AuthorizeAttribute>()
+            .FirstOrDefault();
+
+        if (authorizeAttribute == null) return true;
+
+        // Check roles
+        if (!string.IsNullOrEmpty(authorizeAttribute.Roles))
+        {
+            var roles = authorizeAttribute.Roles.Split(',')
+                .Select(r => r.Trim())
+                .ToArray();
+
+            return roles.Any(role => user.IsInRole(role));
+        }
+
+        // Check policies
+        if (!string.IsNullOrEmpty(authorizeAttribute.Policy))
+        {
+            return await CheckPolicyAsync(user, authorizeAttribute.Policy);
+        }
+
+        return user.Identity.IsAuthenticated;
+    }
+
+    private async Task<bool> CheckPolicyAsync(ClaimsPrincipal user, string policy)
+    {
+        var userId = user.FindFirst("sub")?.Value ?? user.FindFirst("id")?.Value;
+        if (string.IsNullOrEmpty(userId)) return false;
+
+        return policy switch
+        {
+            "SuperiorAdmin" => user.IsInRole("superioradmin"),
+            "LecturerAdmin" => user.IsInRole("lectureradmin"),
+            "CourseAdmin" => user.IsInRole("courseadmin"),
+            "AnyAdmin" => user.IsInRole("superioradmin") || user.IsInRole("lectureradmin") || user.IsInRole("courseadmin"),
+            "Student" => user.IsInRole("student"),
+            _ => true
+        };
+    }
+}

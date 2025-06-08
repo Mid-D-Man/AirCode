@@ -1,13 +1,16 @@
+@using System.Security.Claims
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.WebAssembly.Authentication
-
+@using AirCode.Services.Guards
 @inject NavigationManager Navigation
 @inject SignOutSessionStateManager SignOutManager
+@inject IRouteGuardService RouteGuardService
 
 <AuthorizeView>
     <Authorized>
         <div class="user-info">
-            <span class="user-name">Hello, @context.User.Identity.Name!</span>
+            <span class="user-name">Hello, @GetDisplayName(context.User)!</span>
+            <span class="user-role">(@GetUserRole(context.User))</span>
             <button class="btn btn-link logout-btn" @onclick="BeginSignOut">Log out</button>
         </div>
     </Authorized>
@@ -26,5 +29,26 @@
     private void Login()
     {
         Navigation.NavigateTo("authentication/login");
+    }
+
+    private string GetDisplayName(ClaimsPrincipal user)
+    {
+        return user.FindFirst("name")?.Value ?? 
+               user.FindFirst("preferred_username")?.Value ?? 
+               user.Identity?.Name ?? 
+               "User";
+    }
+
+    private string GetUserRole(ClaimsPrincipal user)
+    {
+        var role = user.FindFirst("http://schemas.microsoft.com/ws/2008/06/identity/claims/role")?.Value;
+        return role switch
+        {
+            "superioradmin" => "Superior Admin",
+            "lectureradmin" => "Lecturer",
+            "courseadmin" => "Course Admin",
+            "student" => "Student",
+            _ => "Unknown"
+        };
     }
 }
