@@ -92,9 +92,8 @@ namespace AirCode.Services.VisualElements
                 fileName += SvgExtension;
             }
 
-            // Build the URL relative to the application base
-            string relativePath = SvgFolder + fileName;
-            string url = new Uri(new Uri(_navigationManager.BaseUri), relativePath).ToString();
+            // Build the URL using the configured HttpClient base address
+            string url = $"{_httpClient.BaseAddress.ToString().TrimEnd('/')}/{SvgFolder}{fileName}";
 
             try
             {
