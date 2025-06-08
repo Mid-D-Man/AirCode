@@ -16,7 +16,7 @@
                     IconName="@item.IconName"
                     Label="@item.Label"
                     IsExpanded="IsExpanded"
-                    OnClick="@(() => NavigationManager.NavigateTo(item.Path))"
+                    OnClick="@(() => NavigationManager.NavigateTo(item.Path,false))"
                 />
             </NavLink>
         }
@@ -53,14 +53,14 @@
     
     private List<NavItem> NavigationItems => new()
     {
-        new("home", "Dashboard", "/Admin/Dashboard"),
-        new("qrcode", "Attendance Event", "/Admin/CreateSession"),
-        new("users", "Session Management", "/Admin/ManageAcademicSession"),
-        new("admin", "Manage Departments", "/Admin/ManageDepartments"),
-        new("courses", "Manage Courses", "/Admin/ManageCourses"),
-        new("courses", "Supa Testo", "/SupaTest"),
-        new("report", "Student Test", "/student/courses"),
-        new("stats", "Lecturer Test", "/Admin/lecturer/courses")
+        new("home", "Dashboard", "Admin/Dashboard"),
+        new("qrcode", "Attendance Event", "Admin/CreateSession"),
+        new("users", "Session Management", "Admin/ManageAcademicSession"),
+        new("admin", "Manage Departments", "Admin/ManageDepartments"),
+        new("courses", "Manage Courses", "Admin/ManageCourses"),
+        new("courses", "Supa Testo", "SupaTest"),
+        new("report", "Student Test", "student/courses"),
+        new("stats", "Lecturer Test", "Admin/lecturer/courses")
     };
 
     // Modified to use the same structure as NavigationItems
