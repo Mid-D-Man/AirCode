@@ -3,7 +3,14 @@
 <div class="circular-button-container @(IsActive ? "active" : "")" @onclick="HandleClick">
     <button class="circular-button @ButtonClass">
         <div class="button-content">
-            <img src="@IconPath" alt="@Text" class="button-icon" />
+            @if (!string.IsNullOrEmpty(IconSvgContent))
+            {
+                @((MarkupString)IconSvgContent)
+            }
+            else if (!string.IsNullOrEmpty(IconPath))
+            {
+                <img src="@IconPath" alt="@Text" class="button-icon" />
+            }
         </div>
     </button>
     <span class="button-text">@Text</span>
@@ -16,6 +23,9 @@
 @code {
     [Parameter]
     public string IconPath { get; set; }
+
+    [Parameter]
+    public string IconSvgContent { get; set; }
 
     [Parameter]
     public string Text { get; set; }

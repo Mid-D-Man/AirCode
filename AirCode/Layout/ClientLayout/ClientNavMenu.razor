@@ -7,23 +7,23 @@
 <div class="client-nav-menu">
     <div class="nav-buttons">
         <CircularNavigationButton 
-            IconPath="/svgs/Stats_Icon.svg"
+            IconSvgContent="@statsIconSvg"
             Text="Stats"
-            ButtonClass="@(currentPage == "stats" ? "nav-active" : "")"
+            ButtonClass="@GetButtonClass("stats")"
             IsActive="@(currentPage == "stats")"
             OnClick="@(() => NavigateTo("stats"))" />
         
         <CircularNavigationButton 
-            IconPath="/svgs/ScanQrCode_Icon.svg"
+            IconSvgContent="@scanIconSvg"
             Text="Scan"
-            ButtonClass="primary @(currentPage == "scan" ? "nav-active" : "")"
+            ButtonClass="@GetPrimaryButtonClass("scan")"
             IsActive="@(currentPage == "scan")"
             OnClick="@(() => NavigateTo("scan"))" />
         
         <CircularNavigationButton 
-            IconPath="/svgs/Settings_Icon.svg"
+            IconSvgContent="@settingsIconSvg"
             Text="Settings"
-            ButtonClass="@(currentPage == "settings" ? "nav-active" : "")"
+            ButtonClass="@GetButtonClass("settings")"
             IsActive="@(currentPage == "settings")"
             OnClick="@(() => NavigateTo("settings"))" />
     </div>
@@ -31,8 +31,11 @@
 
 @code {
     private string currentPage = "scan";
+    private string statsIconSvg = string.Empty;
+    private string scanIconSvg = string.Empty;
+    private string settingsIconSvg = string.Empty;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         // Determine the current page from the URL
         var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
@@ -44,6 +47,36 @@
             currentPage = "settings";
         else
             currentPage = "scan";
+
+        // Load SVG icons
+        await LoadIcons();
+    }
+
+    private async Task LoadIcons()
+    {
+        try
+        {
+            statsIconSvg = await SvgIconService.GetSvgContentAsync("stats") ?? string.Empty;
+            scanIconSvg = await SvgIconService.GetSvgContentAsync("scan_qrcode") ?? string.Empty;
+            settingsIconSvg = await SvgIconService.GetSvgContentAsync("settings") ?? string.Empty;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading navigation icons: {ex.Message}");
+            // Icons will remain empty strings, component should handle gracefully
+        }
+    }
+
+    private string GetButtonClass(string page)
+    {
+        return currentPage == page ? "nav-active" : "";
+    }
+
+    private string GetPrimaryButtonClass(string page)
+    {
+        var baseClass = "primary";
+        var activeClass = currentPage == page ? " nav-active" : "";
+        return baseClass + activeClass;
     }
 
     private void NavigateTo(string page)

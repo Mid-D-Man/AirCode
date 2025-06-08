@@ -91,6 +91,19 @@
     height: 32px;
 }
 
+/* SVG icon styling */
+.button-content svg {
+    width: 24px;
+    height: 24px;
+    transition: transform 0.3s ease;
+    fill: currentColor;
+}
+
+.circular-button.primary .button-content svg {
+    width: 32px;
+    height: 32px;
+}
+
 .button-text {
     font-size: 0.75rem;
     margin-top: 0.75rem;
@@ -123,7 +136,8 @@
     transform: scale(1.05);
 }
 
-.circular-button-container.active .button-icon {
+.circular-button-container.active .button-icon,
+.circular-button-container.active .button-content svg {
     transform: scale(1.1);
 }
 
@@ -161,12 +175,14 @@
         height: 65px;
     }
 
-    .button-icon {
+    .button-icon,
+    .button-content svg {
         width: 20px;
         height: 20px;
     }
 
-    .circular-button.primary .button-icon {
+    .circular-button.primary .button-icon,
+    .circular-button.primary .button-content svg {
         width: 26px;
         height: 26px;
     }
