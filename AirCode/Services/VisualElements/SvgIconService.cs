@@ -96,19 +96,9 @@ namespace AirCode.Services.VisualElements
             Console.WriteLine($"HttpClient BaseAddress: {_httpClient.BaseAddress}");
             Console.WriteLine($"NavigationManager BaseUri: {_navigationManager.BaseUri}");
 
-            // Hardcoded approach for GitHub Pages
-            string url;
-            if (_navigationManager.BaseUri.Contains("github.io"))
-            {
-                // Extract the domain and construct the full path
-                var uri = new Uri(_navigationManager.BaseUri);
-                url = $"{uri.Scheme}://{uri.Host}/AirCode/{SvgFolder}{fileName}";
-            }
-            else
-            {
-                // Local development
-                url = $"{_navigationManager.BaseUri.TrimEnd('/')}/{SvgFolder}{fileName}";
-            }
+            // Use NavigationManager.BaseUri instead of HttpClient.BaseAddress
+            string baseUrl = _navigationManager.BaseUri.TrimEnd('/');
+            string url = $"{baseUrl}/{SvgFolder}{fileName}";
     
             Console.WriteLine($"Constructed URL: {url}");
 

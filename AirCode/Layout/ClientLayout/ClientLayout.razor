@@ -1,6 +1,7 @@
 @* Layout/ClientLayout/ClientLayout.razor *@
 @namespace AirCode.Layout.ClientLayout
 @inherits LayoutComponentBase
+@inject AirCode.Services.VisualElements.ISvgIconService SvgIconService
 
 <div class="client-layout">
     <div class="main-content">
@@ -19,8 +20,14 @@
                     </span>
                 </div>
                 <div class="profile-button" @onclick="OpenProfile">
-                    <img src="/svgs/Users_Icon.svg" alt="Profile" class="profile-image" />
-                
+                    @if (!string.IsNullOrEmpty(userIconSvg))
+                    {
+                        @((MarkupString)userIconSvg)
+                    }
+                    else
+                    {
+                        <img src="/svgs/Users_Icon.svg" alt="Profile" class="profile-image" />
+                    }
                 </div>
             </div>
         </div>
@@ -32,7 +39,22 @@
 </div>
 
 @code {
-    private int NotificationCount = 3; // This would be populated from your service
+    private int NotificationCount = 3;
+    private string userIconSvg = string.Empty;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        // Load user icon SVG
+        try
+        {
+            userIconSvg = await SvgIconService.GetSvgContentAsync("CrowGuy_Icon");
+        }
+        catch
+        {
+            // Fallback to static image if SVG service fails
+            userIconSvg = string.Empty;
+        }
+    }
     
     private void OpenNotifications()
     {

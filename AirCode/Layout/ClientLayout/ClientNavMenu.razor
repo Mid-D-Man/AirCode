@@ -1,41 +1,31 @@
 @* Layout/ClientLayout/ClientNavMenu.razor *@
 @namespace AirCode.Layout.ClientLayout
 @inject NavigationManager NavigationManager
+@inject AirCode.Services.VisualElements.ISvgIconService SvgIconService
+@using AirQrCode.Components.SharedPrefabs
 
 <div class="client-nav-menu">
     <div class="nav-buttons">
-        <div class="nav-button @(currentPage == "stats" ? "active" : "")" @onclick="@(() => NavigateTo("stats"))">
-            <div class="button-circle">
-                <img src="/svgs/Stats_Icon.svg" alt="Stats" class="button-icon" />
-            </div>
-            <span class="button-text">Stats</span>
-            @if (currentPage == "stats")
-            {
-                <div class="active-indicator"></div>
-            }
-        </div>
+        <CircularNavigationButton 
+            IconPath="/svgs/Stats_Icon.svg"
+            Text="Stats"
+            ButtonClass="@(currentPage == "stats" ? "nav-active" : "")"
+            IsActive="@(currentPage == "stats")"
+            OnClick="@(() => NavigateTo("stats"))" />
         
-        <div class="nav-button primary @(currentPage == "scan" ? "active" : "")" @onclick="@(() => NavigateTo("scan"))">
-            <div class="button-circle">
-                <img src="/svgs/ScanQrCode_Icon.svg" alt="Scan" class="button-icon" />
-            </div>
-            <span class="button-text">Scan</span>
-            @if (currentPage == "scan")
-            {
-                <div class="active-indicator"></div>
-            }
-        </div>
+        <CircularNavigationButton 
+            IconPath="/svgs/ScanQrCode_Icon.svg"
+            Text="Scan"
+            ButtonClass="primary @(currentPage == "scan" ? "nav-active" : "")"
+            IsActive="@(currentPage == "scan")"
+            OnClick="@(() => NavigateTo("scan"))" />
         
-        <div class="nav-button @(currentPage == "settings" ? "active" : "")" @onclick="@(() => NavigateTo("settings"))">
-            <div class="button-circle">
-                <img src="/svgs/Settings_Icon.svg" alt="Settings" class="button-icon" />
-            </div>
-            <span class="button-text">Settings</span>
-            @if (currentPage == "settings")
-            {
-                <div class="active-indicator"></div>
-            }
-        </div>
+        <CircularNavigationButton 
+            IconPath="/svgs/Settings_Icon.svg"
+            Text="Settings"
+            ButtonClass="@(currentPage == "settings" ? "nav-active" : "")"
+            IsActive="@(currentPage == "settings")"
+            OnClick="@(() => NavigateTo("settings"))" />
     </div>
 </div>
 

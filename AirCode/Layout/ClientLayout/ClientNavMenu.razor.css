@@ -39,34 +39,36 @@
     position: relative;
 }
 
-.nav-button {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    position: relative;
+/* Override circular button styles for nav menu */
+.nav-buttons .circular-button-container {
     margin: 0 0.5rem;
-    cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    animation: slideInUp 0.6s ease-out backwards;
 }
 
-.button-circle {
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
+.nav-buttons .circular-button-container:nth-child(1) {
+    animation-delay: 0.1s;
+}
+
+.nav-buttons .circular-button-container:nth-child(2) {
+    animation-delay: 0s;
+}
+
+.nav-buttons .circular-button-container:nth-child(3) {
+    animation-delay: 0.2s;
+}
+
+.nav-buttons .circular-button {
     background: rgba(255, 255, 255, 0.2);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border: 1px solid rgba(255, 255, 255, 0.3);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
     position: relative;
     overflow: hidden;
+    color: white;
 }
 
-.button-circle::before {
+.nav-buttons .circular-button::before {
     content: '';
     position: absolute;
     top: 0;
@@ -79,17 +81,17 @@
     transition: opacity 0.3s ease;
 }
 
-.nav-button:hover .button-circle {
+.nav-buttons .circular-button:hover {
     transform: translateY(-8px) scale(1.05);
     box-shadow: 0 16px 40px rgba(0, 0, 0, 0.2);
     background: rgba(255, 255, 255, 0.3);
 }
 
-.nav-button:hover .button-circle::before {
+.nav-buttons .circular-button:hover::before {
     opacity: 1;
 }
 
-.nav-button.primary .button-circle {
+.nav-buttons .circular-button.primary {
     width: 80px;
     height: 80px;
     background: linear-gradient(135deg, var(--secondary-400) 0%, var(--secondary-600) 100%);
@@ -98,13 +100,13 @@
     border: 2px solid rgba(255, 255, 255, 0.4);
 }
 
-.nav-button.primary:hover .button-circle {
+.nav-buttons .circular-button.primary:hover {
     background: linear-gradient(135deg, var(--secondary-300) 0%, var(--secondary-500) 100%);
     transform: translateY(-10px) scale(1.1);
     box-shadow: 0 20px 48px rgba(156, 39, 176, 0.4);
 }
 
-.nav-button.primary .button-circle::after {
+.nav-buttons .circular-button.primary::after {
     content: '';
     position: absolute;
     top: 50%;
@@ -123,39 +125,31 @@
     100% { transform: translate(-50%, -50%) scale(1); opacity: 0.7; }
 }
 
-.button-icon {
-    width: 26px;
-    height: 26px;
-    transition: all 0.3s ease;
+.nav-buttons .button-icon {
     filter: brightness(0) invert(1);
     z-index: 1;
 }
 
-.nav-button.primary .button-icon {
+.nav-buttons .circular-button.primary .button-icon {
     width: 32px;
     height: 32px;
 }
 
-.button-text {
-    font-size: 0.75rem;
-    margin-top: 0.75rem;
+.nav-buttons .button-text {
     color: white;
     font-weight: 500;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-    transition: all 0.3s ease;
+    font-size: 0.75rem;
+    margin-top: 0.75rem;
 }
 
-.nav-button.primary .button-text {
+.nav-buttons .circular-button.primary + .button-text {
     font-weight: 600;
     font-size: 0.8rem;
 }
 
-.active-indicator {
-    width: 6px;
-    height: 6px;
+.nav-buttons .active-indicator {
     background: white;
-    border-radius: 50%;
-    margin-top: 6px;
     box-shadow: 0 2px 8px rgba(255, 255, 255, 0.5);
     animation: glow 2s infinite alternate;
 }
@@ -165,17 +159,17 @@
     to { box-shadow: 0 2px 16px rgba(255, 255, 255, 0.8); }
 }
 
-.nav-button.active .button-circle {
+.nav-buttons .circular-button-container.active .circular-button {
     background: rgba(255, 255, 255, 0.35);
     transform: scale(1.1);
     border: 2px solid rgba(255, 255, 255, 0.5);
 }
 
-.nav-button.active .button-icon {
+.nav-buttons .circular-button-container.active .button-icon {
     transform: scale(1.1);
 }
 
-.nav-button.active .button-text {
+.nav-buttons .circular-button-container.active .button-text {
     color: white;
     font-weight: 600;
 }
@@ -192,49 +186,33 @@
     }
 }
 
-.nav-button {
-    animation: slideInUp 0.6s ease-out backwards;
-}
-
-.nav-button:nth-child(1) {
-    animation-delay: 0.1s;
-}
-
-.nav-button:nth-child(2) {
-    animation-delay: 0s;
-}
-
-.nav-button:nth-child(3) {
-    animation-delay: 0.2s;
-}
-
 /* Responsive adjustments */
 @media (max-width: 768px) {
     .client-nav-menu {
         height: 100px;
     }
 
-    .button-circle {
+    .nav-buttons .circular-button {
         width: 55px;
         height: 55px;
     }
 
-    .nav-button.primary .button-circle {
+    .nav-buttons .circular-button.primary {
         width: 70px;
         height: 70px;
     }
 
-    .button-icon {
+    .nav-buttons .button-icon {
         width: 22px;
         height: 22px;
     }
 
-    .nav-button.primary .button-icon {
+    .nav-buttons .circular-button.primary .button-icon {
         width: 28px;
         height: 28px;
     }
 
-    .button-text {
+    .nav-buttons .button-text {
         font-size: 0.7rem;
         margin-top: 0.5rem;
     }
@@ -249,27 +227,27 @@
         width: 95%;
     }
 
-    .button-circle {
+    .nav-buttons .circular-button {
         width: 50px;
         height: 50px;
     }
 
-    .nav-button.primary .button-circle {
+    .nav-buttons .circular-button.primary {
         width: 65px;
         height: 65px;
     }
 
-    .button-icon {
+    .nav-buttons .button-icon {
         width: 20px;
         height: 20px;
     }
 
-    .nav-button.primary .button-icon {
+    .nav-buttons .circular-button.primary .button-icon {
         width: 26px;
         height: 26px;
     }
 
-    .button-text {
+    .nav-buttons .button-text {
         font-size: 0.65rem;
     }
 }
@@ -280,27 +258,27 @@
         height: 140px;
     }
 
-    .button-circle {
+    .nav-buttons .circular-button {
         width: 70px;
         height: 70px;
     }
 
-    .nav-button.primary .button-circle {
+    .nav-buttons .circular-button.primary {
         width: 90px;
         height: 90px;
     }
 
-    .button-icon {
+    .nav-buttons .button-icon {
         width: 28px;
         height: 28px;
     }
 
-    .nav-button.primary .button-icon {
+    .nav-buttons .circular-button.primary .button-icon {
         width: 36px;
         height: 36px;
     }
 
-    .button-text {
+    .nav-buttons .button-text {
         font-size: 0.85rem;
         margin-top: 1rem;
     }
