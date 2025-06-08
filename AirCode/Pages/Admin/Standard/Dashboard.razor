@@ -1,0 +1,11 @@
+@page "/Admin/Dashboard"
+@using AirCode.Layout.AdminLayout
+@using AirCode.Layout.AdminLayout.Superior
+@using Microsoft.AspNetCore.Authorization
+@layout SuperiorAdminLayout
+@attribute [Authorize(Roles = "LecturerAdmin")]
+//continue from here
+<PageTitle>Admin Dashboard</PageTitle>
+
+<h1>Dashboard</h1>
+// Dashboard content

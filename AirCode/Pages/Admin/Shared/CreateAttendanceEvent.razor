@@ -1,0 +1,596 @@
+@page "/Admin/CreateSession"
+@using AirCode.Layout.AdminLayout.Superior
+@using Microsoft.AspNetCore.Authorization
+@layout SuperiorAdminLayout
+@using AirCode.Components.SharedPrefabs
+@using AirCode.Components.SharedPrefabs.Others
+@using AirCode.Utilities.DataStructures
+@using AirCode.Utilities.HelperScripts
+@using AirCode.Components.SharedPrefabs.QrCode
+@using AirCode.Components.SharedPrefabs.Buttons
+@using AirCode.Services
+@using AirCode.Services.Attendance
+@using AirCode.Services.Courses
+@using AirCode.Services.Firebase
+@using AirCode.Domain.Entities
+@using SessionData = AirCode.Services.Attendance.SessionData
+@inject IJSRuntime JS
+@inject QRCodeDecoder QRCodeDecoder
+@inject SessionStateService SessionStateService
+@inject ICourseService CourseService
+@inject IFirestoreService FirestoreService
+@implements IDisposable
+
+<div class="create-session-page">
+    <h1>Create Attendance Event</h1>
+    
+    <div class="content-container @(isSessionStarted ? "session-active" : "")">
+        @if (!isSessionStarted)
+        {
+            <div class="form-container">
+                <EditForm Model="sessionModel" OnValidSubmit="StartSession">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+                    
+                    <div class="form-group">
+                        <label>Selected Course</label>
+                        @if (selectedCourse != null)
+                        {
+                            <div class="selected-course-display">
+                                <div class="course-info">
+                                    <span class="course-code">@selectedCourse.CourseCode</span>
+                                    <span class="course-name">@selectedCourse.Name</span>
+                                </div>
+                                <button type="button" class="change-course-btn" @onclick="ShowCourseSelection">
+                                    Change Course
+                                </button>
+                            </div>
+                        }
+                        else
+                        {
+                            <button type="button" class="select-course-btn" @onclick="ShowCourseSelection">
+                                Select Course
+                            </button>
+                        }
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="duration">Session Duration</label>
+                        <InputSelect id="duration" @bind-Value="sessionModel.Duration" class="form-control">
+                            <option value="10">10 minutes</option>
+                            <option value="15">15 minutes</option>
+                            <option value="30">30 minutes</option>
+                            <option value="60">1 hour</option>
+                            <option value="120">2 hours</option>
+                            <option value="180">3 hours</option>
+                            <option value="240">4 hours</option>
+                            <option value="300">5 hours</option>
+                            <option value="360">6 hours</option>
+                        </InputSelect>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="qrTheme">QR Code Theme</label>
+                        <InputSelect id="qrTheme" @bind-Value="selectedTheme" class="form-control">
+                            <option value="Standard">Standard</option>
+                            <option value="Gradient">Gradient</option>
+                            <option value="Branded">With Logo</option>
+                            <option value="GradientWithLogo">Gradient with Logo</option>
+                        </InputSelect>
+                    </div>
+                    
+                    <div class="button-container">
+                        <PrimaryButton Text="Start Session" 
+                                     OnClick="StartSession" 
+                                     Disabled="@(selectedCourse == null || isCreatingSession)" />
+                        @if (isCreatingSession)
+                        {
+                            <div class="loading-spinner">
+                                <span>Creating session...</span>
+                            </div>
+                        }
+                    </div>
+                </EditForm>
+            </div>
+        }
+        else
+        {
+            <div class="active-session-container">
+                <div class="session-header">
+                    <h3>@selectedCourse?.Name</h3>
+                    <span class="course-code-badge">@selectedCourse?.CourseCode</span>
+                </div>
+
+                <div class="countdown-timer">
+                    Session ends in: @FormatTimeRemaining()
+                </div>
+
+                <div class="qr-code-wrapper">
+                    <QRCodeCompo
+                        SessionId="@sessionModel.SessionId"
+                        CourseCode="@sessionModel.CourseId"
+                        LectureId="@sessionModel.LectureId"
+                        StartTime="@sessionModel.StartTime"
+                        Duration="@sessionModel.Duration"
+                        Theme="@ConvertStringToTheme(selectedTheme)"
+                        Options="@GenerateQRCodeOptions()"
+                        OnGenerated="HandleQRCodeGenerated" />
+                </div>
+                
+                <div class="session-actions">
+                    <button class="floating-qr-icon" @onclick="OpenFloatingQR" title="Open Floating QR Code">
+                        <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M3 11h8V3H3v8zm2-6h4v4H5V5zM3 21h8v-8H3v8zm2-6h4v4H5v-4zM13 3v8h8V3h-8zm6 6h-4V5h4v4zM19 13h2v2h-2zM13 13h2v2h-2zM15 15h2v2h-2zM13 17h2v2h-2zM15 19h2v2h-2zM17 17h2v2h-2zM19 19h2v2h-2zM17 15h2v2h-2z"/>
+                        </svg>
+                    </button>
+                    <PrimaryButton Text="End Session" OnClick="EndSession" />
+                </div>
+            </div>
+        }
+    </div>
+    
+    <!-- Active Sessions List -->
+    @if (otherActiveSessions.Any())
+    {
+        <div class="active-sessions-list">
+            <h3>Other Active Sessions</h3>
+            @foreach (var session in otherActiveSessions)
+            {
+                <div class="session-card">
+                    <div class="session-info">
+                        <strong>@session.CourseName (@session.CourseId)</strong>
+                        <span class="session-time">Ends: @session.EndTime.ToString("HH:mm")</span>
+                    </div>
+                    <button class="qr-icon-button" @onclick="() => OpenFloatingQRForSession(session)" title="Show QR Code">
+                        <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M3 11h8V3H3v8zm2-6h4v4H5V5zM3 21h8v-8H3v8zm2-6h4v4H5v-4zM13 3v8h8V3h-8zm6 6h-4V5h4v4z"/>
+                        </svg>
+                    </button>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<!-- Course Selection Modal -->
+<CourseSelectionComponent 
+    IsVisible="showCourseSelection" 
+    OnCourseSelected="HandleCourseSelected"
+    OnClosed="HideCourseSelection" />
+
+<!-- Floating QR Code Component -->
+<FloatingQRWindow 
+    IsVisible="showFloatingQR" 
+    SessionData="floatingSessionData" 
+    OnClose="CloseFloatingQR" />
+
+@code {
+    private SessionData sessionModel = new();
+    private bool isSessionStarted = false;
+    private bool isCreatingSession = false;
+    private string qrCodePayload = string.Empty;
+    private string selectedTheme = "Standard";
+    private DateTime sessionEndTime;
+    private System.Threading.Timer countdownTimer;
+    private QRCodeData generatedQRCode;
+    private List<ActiveSessionData> allActiveSessions = new();
+    private List<ActiveSessionData> otherActiveSessions = new();
+    private ActiveSessionData currentActiveSession;
+    
+    // Course selection
+    private Course selectedCourse;
+    private bool showCourseSelection = false;
+    
+    // Floating QR code properties
+    private bool showFloatingQR = false;
+    private FloatingQRWindow.FloatingSessionData floatingSessionData;
+
+    protected override void OnInitialized()
+    {
+        sessionModel.Duration = 30;
+        
+        RefreshSessionLists();
+        CheckForExistingSession();
+        
+        SessionStateService.StateChanged += OnStateChanged;
+        
+        countdownTimer = new System.Threading.Timer(
+            _ => InvokeAsync(() => {
+                SessionStateService.CleanupExpiredSessions();
+                RefreshSessionLists();
+                StateHasChanged();
+            }),
+            null,
+            TimeSpan.Zero,
+            TimeSpan.FromSeconds(1)
+        );
+    }
+
+    private void RefreshSessionLists()
+    {
+        allActiveSessions = SessionStateService.GetActiveSessions();
+        
+        if (isSessionStarted && currentActiveSession != null)
+        {
+            otherActiveSessions = allActiveSessions
+                .Where(s => s.SessionId != currentActiveSession.SessionId)
+                .ToList();
+        }
+        else
+        {
+            otherActiveSessions = allActiveSessions.ToList();
+        }
+    }
+
+    private void CheckForExistingSession()
+    {
+        var existingSession = SessionStateService.GetCurrentSession("default");
+        if (existingSession != null)
+        {
+            var activeSession = allActiveSessions.FirstOrDefault(s => 
+                s.CourseId == existingSession.CourseId && 
+                DateTime.UtcNow < s.EndTime);
+                
+            if (activeSession != null)
+            {
+                RestoreExistingSession(activeSession, existingSession);
+            }
+        }
+    }
+
+    private async void RestoreExistingSession(ActiveSessionData activeSession, SessionData sessionData)
+    {
+        sessionModel = sessionData;
+        currentActiveSession = activeSession;
+        isSessionStarted = true;
+        qrCodePayload = activeSession.QrCodePayload;
+        selectedTheme = activeSession.Theme;
+        sessionEndTime = activeSession.EndTime;
+        
+        // Restore selected course
+        if (!string.IsNullOrEmpty(sessionData.CourseId))
+        {
+            selectedCourse = await CourseService.GetCourseByIdAsync(sessionData.CourseId);
+        }
+        
+        StateHasChanged();
+    }
+
+    private void OnStateChanged()
+    {
+        InvokeAsync(() => {
+            RefreshSessionLists();
+            StateHasChanged();
+        });
+    }
+
+    private void ShowCourseSelection()
+    {
+        showCourseSelection = true;
+    }
+
+    private void HideCourseSelection()
+    {
+        showCourseSelection = false;
+    }
+
+    private void HandleCourseSelected(Course course)
+    {
+        selectedCourse = course;
+        sessionModel.CourseId = course.CourseCode;
+        sessionModel.CourseName = course.Name;
+        showCourseSelection = false;
+        StateHasChanged();
+    }
+
+    private async void StartSession()
+    {
+        if (selectedCourse == null) return;
+
+        // Check if there's already an active session for this course
+        if (allActiveSessions.Any(s => s.CourseId == selectedCourse.CourseCode))
+        {
+            // Show error message - session already exists for this course
+            return;
+        }
+
+        try
+        {
+            isCreatingSession = true;
+            StateHasChanged();
+
+            sessionModel.StartTime = DateTime.UtcNow;
+            sessionModel.Date = DateTime.UtcNow.Date;
+            sessionModel.SessionId = Guid.NewGuid().ToString("N");
+            
+            qrCodePayload = await GenerateQrCodePayload();
+            sessionEndTime = DateTime.UtcNow.AddMinutes(sessionModel.Duration);
+
+            // Create Firebase attendance event document
+            await CreateFirebaseAttendanceEvent();
+
+            // Add to active sessions via service
+            currentActiveSession = new ActiveSessionData
+            {
+                SessionId = sessionModel.SessionId,
+                CourseName = sessionModel.CourseName,
+                CourseId = sessionModel.CourseId,
+                StartTime = sessionModel.StartTime,
+                EndTime = sessionEndTime,
+                Duration = sessionModel.Duration,
+                QrCodePayload = qrCodePayload,
+                Theme = selectedTheme
+            };
+
+            SessionStateService.AddActiveSession(currentActiveSession);
+            SessionStateService.UpdateCurrentSession("default", sessionModel);
+
+            isSessionStarted = true;
+            RefreshSessionLists();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error starting session: {ex.Message}");
+            // Handle error appropriately
+        }
+        finally
+        {
+            isCreatingSession = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task CreateFirebaseAttendanceEvent()
+{
+    try
+    {
+        // Get all students taking this course
+        var allStudentCourses = await CourseService.GetAllStudentCoursesAsync();
+        var studentsInCourse = allStudentCourses
+            .Where(sc => sc.GetEnrolledCourses().Any(cr => cr.CourseCode == sessionModel.CourseId))
+            .ToList();
+
+        // Build AttendanceRecords for each student
+        var attendanceRecords = new Dictionary<string, object>();
+        foreach (var studentCourse in studentsInCourse)
+        {
+            attendanceRecords[studentCourse.StudentMatricNumber] = new
+            {
+                MatricNumber = studentCourse.StudentMatricNumber,
+                HasScannedAttendance = false,
+                ScanTime = (DateTime?)null,
+                IsOnlineScan = false
+            };
+        }
+
+        var attendanceEventData = new
+        {
+            SessionId = sessionModel.SessionId,
+            CourseCode = sessionModel.CourseId,
+            CourseName = sessionModel.CourseName,
+            StartTime = sessionModel.StartTime,
+            Duration = sessionModel.Duration,
+            EndTime = sessionEndTime,
+            Theme = selectedTheme,
+            CreatedAt = DateTime.UtcNow,
+            Status = "Active",
+            TemporalKey = "Sukablak",
+            AttendanceRecords = attendanceRecords
+        };
+
+        // Create document with course-based naming: AttendanceEvent_{CourseCode}
+        var documentId = $"AttendanceEvent_{sessionModel.CourseId}";
+        
+        // Check if document exists, if so, add this as a field
+        var existingDoc = await FirestoreService.GetDocumentAsync<Dictionary<string, object>>("ATTENDANCE_EVENTS", documentId);
+        
+        if (existingDoc != null)
+        {
+            // Add new event as a field within existing document
+            var eventFieldName = $"Event_{sessionModel.SessionId}_{sessionModel.StartTime:yyyyMMdd}";
+            await FirestoreService.AddOrUpdateFieldAsync("ATTENDANCE_EVENTS", documentId, eventFieldName, attendanceEventData);
+        }
+        else
+        {
+            // Create new document with first event
+            var courseEventDocument = new Dictionary<string, object>
+            {
+                ["CourseCode"] = sessionModel.CourseId,
+                ["CourseName"] = sessionModel.CourseName,
+                ["CreatedAt"] = DateTime.UtcNow,
+                ["LastEventAt"] = DateTime.UtcNow,
+                [$"Event_{sessionModel.SessionId}_{sessionModel.StartTime:yyyyMMdd}"] = attendanceEventData
+            };
+
+            await FirestoreService.AddDocumentAsync("ATTENDANCE_EVENTS", courseEventDocument, documentId);
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error creating Firebase attendance event: {ex.Message}");
+        throw; // Re-throw to handle in calling method
+    }
+}
+    private async void EndSession()
+    {
+        try
+        {
+            if (currentActiveSession != null)
+            {
+                // Update Firebase document to mark session as ended
+                await UpdateFirebaseAttendanceEventStatus("Ended");
+                
+                SessionStateService.RemoveActiveSession(currentActiveSession.SessionId);
+            }
+
+            SessionStateService.RemoveCurrentSession("default");
+
+            isSessionStarted = false;
+            currentActiveSession = null;
+            selectedCourse = null;
+            RefreshSessionLists();
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error ending session: {ex.Message}");
+        }
+    }
+
+    private async Task UpdateFirebaseAttendanceEventStatus(string status)
+    {
+        try
+        {
+            var documentId = $"AttendanceEvent_{sessionModel.CourseId}";
+            var eventFieldName = $"Event_{sessionModel.SessionId}_{sessionModel.StartTime:yyyyMMdd}";
+            var statusFieldName = $"{eventFieldName}.Status";
+            var endTimeFieldName = $"{eventFieldName}.ActualEndTime";
+
+            await FirestoreService.AddOrUpdateFieldAsync("ATTENDANCE_EVENTS", documentId, statusFieldName, status);
+            await FirestoreService.AddOrUpdateFieldAsync("ATTENDANCE_EVENTS", documentId, endTimeFieldName, DateTime.UtcNow);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error updating Firebase event status: {ex.Message}");
+        }
+    }
+
+    private async Task<string> GenerateQrCodePayload()
+    {
+        return await QRCodeDecoder.EncodeSessionDataAsync(
+            sessionModel.SessionId,
+            sessionModel.CourseId,
+            sessionModel.StartTime,
+            sessionModel.Duration);
+    }
+
+    private void OpenFloatingQR()
+    {
+        if (isSessionStarted && currentActiveSession != null)
+        {
+            OpenFloatingQRForSession(currentActiveSession);
+        }
+    }
+
+    private void OpenFloatingQRForSession(ActiveSessionData session)
+    {
+        floatingSessionData = new FloatingQRWindow.FloatingSessionData
+        {
+            SessionId = session.SessionId,
+            CourseName = session.CourseName,
+            CourseId = session.CourseId,
+            StartTime = session.StartTime,
+            EndTime = session.EndTime,
+            Duration = session.Duration,
+            QrCodePayload = session.QrCodePayload,
+            Theme = session.Theme
+        };
+        showFloatingQR = true;
+    }
+
+    private void CloseFloatingQR()
+    {
+        showFloatingQR = false;
+        floatingSessionData = null;
+    }
+
+    private QRCodeTheme ConvertStringToTheme(string theme)
+    {
+        return theme switch
+        {
+            "Gradient" => QRCodeTheme.Gradient,
+            "Branded" => QRCodeTheme.Branded,
+            "GradientWithLogo" => QRCodeTheme.GradientWithLogo,
+            _ => QRCodeTheme.Standard
+        };
+    }
+
+    private QRCodeBaseOptions GenerateQRCodeOptions()
+    {
+        QRCodeBaseOptions options = new QRCodeBaseOptions
+        {
+            Content = qrCodePayload,
+            Size = 300,
+            DarkColor = "#000000",
+            LightColor = "#FFFFFF",
+            ErrorLevel = ErrorCorrectionLevel.M,
+            Margin = 4
+        };
+
+        return selectedTheme switch
+        {
+            "Gradient" => new QRCodeGradientOptions
+            {
+                Content = qrCodePayload,
+                Size = 300,
+                DarkColor = "#000000",
+                LightColor = "#FFFFFF",
+                ErrorLevel = ErrorCorrectionLevel.M,
+                Margin = 4,
+                GradientColor1 = "#3498db",
+                GradientColor2 = "#9b59b6",
+                Direction = GradientDirection.Diagonal
+            },
+            "Branded" => new QRCodeBrandedOptions
+            {
+                Content = qrCodePayload,
+                Size = 300,
+                DarkColor = "#000000",
+                LightColor = "#FFFFFF",
+                ErrorLevel = ErrorCorrectionLevel.H,
+                Margin = 4,
+                LogoUrl = "/icon-192.png",
+                LogoSizeRatio = 0.2f,
+                AddLogoBorder = true,
+                LogoBorderColor = "#FFFFFF",
+                LogoBorderWidth = 2,
+                LogoBorderRadius = 5
+            },
+            "GradientWithLogo" => new QRCodeGradientBrandedOptions
+            {
+                Content = qrCodePayload,
+                Size = 300,
+                DarkColor = "#000000",
+                LightColor = "#FFFFFF",
+                ErrorLevel = ErrorCorrectionLevel.H,
+                Margin = 4,
+                GradientColor1 = "#3498db",
+                GradientColor2 = "#9b59b6",
+                Direction = GradientDirection.Radial,
+                LogoUrl = "/icon-192.png",
+                LogoSizeRatio = 0.2f,
+                AddLogoBorder = true,
+                LogoBorderColor = "#FFFFFF",
+                LogoBorderWidth = 2,
+                LogoBorderRadius = 5
+            },
+            _ => options
+        };
+    }
+
+    private string FormatTimeRemaining()
+    {
+        if (!isSessionStarted || currentActiveSession == null) return "--:--:--";
+
+        TimeSpan remaining = sessionEndTime - DateTime.UtcNow;
+        if (remaining.TotalSeconds <= 0)
+        {
+            EndSession();
+            return "00:00:00";
+        }
+
+        return $"{remaining.Hours:00}:{remaining.Minutes:00}:{remaining.Seconds:00}";
+    }
+
+    private Task HandleQRCodeGenerated(QRCodeData qrCode)
+    {
+        generatedQRCode = qrCode;
+        return Task.CompletedTask;
+    }
+
+    public void Dispose()
+    {
+        countdownTimer?.Dispose();
+        SessionStateService.StateChanged -= OnStateChanged;
+    }
+}

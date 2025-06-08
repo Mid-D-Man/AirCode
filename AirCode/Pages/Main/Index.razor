@@ -105,17 +105,17 @@
             switch (userRole?.ToLower())
             {
                 case "superioradmin":
-                    NavigationManager.NavigateTo("/SupaTest", forceLoad: false);
+                    NavigationManager.NavigateTo("Admin/SuperiorDashboard", forceLoad: false);
                     break;
                 case "lectureradmin":
-                    NavigationManager.NavigateTo("Client/ScanPage", forceLoad: false);
+                    NavigationManager.NavigateTo("Admin/Dashboard", forceLoad: false);
                   
                     break;
                 case "courseadmin":
-                    NavigationManager.NavigateTo("supaBaseTest", forceLoad: false);
+                    NavigationManager.NavigateTo("Admin/Dashboard", forceLoad: false);
                     break;
                 case "student":
-                    NavigationManager.NavigateTo("/Client/Dashboard", forceLoad: false);
+                    NavigationManager.NavigateTo("Client/ScanAttendance", forceLoad: false);
                     break;
                 default:
                     // If we can't determine the role, go to auth-info for debugging

@@ -1,0 +1,429 @@
+.course-management-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: var(--spacing-lg);
+    background-color: var(--bg-primary);
+}
+
+.assigned-courses-section {
+    margin-bottom: var(--spacing-xl);
+}
+
+.assigned-courses-section h3 {
+    color: var(--text-primary);
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: var(--spacing-lg);
+    text-align: center;
+}
+
+.course-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-lg);
+    margin-bottom: var(--spacing-md);
+    background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.course-item::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: 4px;
+    background: linear-gradient(to bottom, var(--primary-500), var(--primary-700));
+}
+
+.course-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    border-color: var(--primary-300);
+}
+
+.course-info {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    gap: var(--spacing-xs);
+    padding-left: var(--spacing-md);
+}
+
+.course-code {
+    font-weight: 700;
+    font-size: 1.2rem;
+    color: var(--primary-700);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.course-name {
+    color: var(--text-primary);
+    font-size: 1rem;
+    font-weight: 500;
+    line-height: 1.4;
+}
+
+.course-details {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    display: flex;
+    gap: var(--spacing-sm);
+    align-items: center;
+}
+
+.course-details::before {
+    content: '•';
+    color: var(--primary-500);
+    font-weight: bold;
+}
+
+.btn-remove, .btn-add-course {
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-remove {
+    background: linear-gradient(135deg, var(--error) 0%, #c62828 100%);
+    color: white;
+    padding: var(--spacing-sm) var(--spacing-lg);
+    box-shadow: 0 2px 4px rgba(244, 67, 54, 0.3);
+}
+
+.btn-remove:hover:not(:disabled) {
+    background: linear-gradient(135deg, #c62828 0%, #b71c1c 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(244, 67, 54, 0.4);
+}
+
+.btn-add-course {
+    background: linear-gradient(135deg, var(--primary-600) 0%, var(--primary-700) 100%);
+    color: white;
+    padding: var(--spacing-md) var(--spacing-xl);
+    font-size: 1rem;
+    box-shadow: 0 2px 8px rgba(33, 150, 243, 0.3);
+    margin: 0 auto;
+    display: block;
+}
+
+.btn-add-course:hover:not(:disabled) {
+    background: linear-gradient(135deg, var(--primary-700) 0%, var(--primary-800) 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(33, 150, 243, 0.4);
+}
+
+.no-courses {
+    color: var(--text-secondary);
+    font-style: italic;
+    text-align: center;
+    padding: var(--spacing-xxl);
+    background-color: var(--bg-secondary);
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    font-size: 1.1rem;
+}
+
+/* Loading Spinner */
+.loading-spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: white;
+    animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Modal Styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    backdrop-filter: blur(4px);
+}
+
+.modal-content {
+    background-color: var(--bg-secondary);
+    border-radius: 16px;
+    width: 90%;
+    max-width: 700px;
+    max-height: 80vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--border);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-lg) var(--spacing-xl);
+    background: linear-gradient(135deg, var(--primary-50) 0%, var(--primary-100) 100%);
+    border-bottom: 1px solid var(--border);
+}
+
+.modal-header h4 {
+    color: var(--primary-700);
+    font-weight: 600;
+    font-size: 1.25rem;
+    margin: 0;
+}
+
+.btn-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--text-secondary);
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.btn-close:hover {
+    background-color: var(--error);
+    color: white;
+    transform: scale(1.1);
+}
+
+.modal-body {
+    padding: var(--spacing-xl);
+    flex-grow: 1;
+    overflow-y: auto;
+}
+
+.search-box {
+    margin-bottom: var(--spacing-lg);
+}
+
+.search-input {
+    width: 100%;
+    padding: var(--spacing-md);
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    font-size: 1rem;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    transition: all 0.2s ease;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: var(--primary-500);
+    box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+}
+
+.course-list {
+    max-height: 400px;
+    overflow-y: auto;
+    padding-right: var(--spacing-xs);
+}
+
+.course-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.course-list::-webkit-scrollbar-track {
+    background: var(--bg-tertiary);
+    border-radius: 3px;
+}
+
+.course-list::-webkit-scrollbar-thumb {
+    background: var(--primary-300);
+    border-radius: 3px;
+}
+
+.selectable-course-item {
+    padding: var(--spacing-lg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: var(--spacing-md);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: var(--bg-secondary);
+    position: relative;
+    overflow: hidden;
+}
+
+.selectable-course-item::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: 3px;
+    background: var(--primary-500);
+    transform: scaleY(0);
+    transition: transform 0.2s ease;
+}
+
+.selectable-course-item:hover {
+    background-color: var(--primary-50);
+    border-color: var(--primary-300);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.selectable-course-item:hover::before {
+    transform: scaleY(1);
+}
+
+.selectable-course-item:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Confirmation Dialog */
+.confirmation-dialog {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: var(--bg-secondary);
+    border-radius: 12px;
+    padding: var(--spacing-xl);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--border);
+    z-index: 1001;
+    min-width: 320px;
+    max-width: 90vw;
+}
+
+.confirmation-dialog h4 {
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-md);
+    font-size: 1.1rem;
+}
+
+.confirmation-dialog p {
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-lg);
+    line-height: 1.5;
+}
+
+.confirmation-buttons {
+    display: flex;
+    gap: var(--spacing-md);
+    justify-content: flex-end;
+}
+
+.btn-confirm, .btn-cancel {
+    padding: var(--spacing-sm) var(--spacing-lg);
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-confirm {
+    background-color: var(--error);
+    color: white;
+}
+
+.btn-confirm:hover {
+    background-color: #c62828;
+}
+
+.btn-cancel {
+    background-color: var(--bg-tertiary);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+}
+
+.btn-cancel:hover {
+    background-color: var(--bg-primary);
+}
+
+/* Disabled State */
+button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .course-management-container {
+        padding: var(--spacing-md);
+    }
+
+    .course-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--spacing-md);
+    }
+
+    .btn-remove {
+        align-self: flex-end;
+    }
+
+    .modal-content {
+        width: 95%;
+        max-height: 90vh;
+    }
+
+    .modal-header, .modal-body {
+        padding: var(--spacing-md);
+    }
+
+    .confirmation-dialog {
+        margin: var(--spacing-md);
+        min-width: auto;
+    }
+
+    .confirmation-buttons {
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 480px) {
+    .course-info {
+        padding-left: var(--spacing-sm);
+    }
+
+    .course-code {
+        font-size: 1rem;
+    }
+
+    .course-name {
+        font-size: 0.9rem;
+    }
+
+    .course-details {
+        font-size: 0.8rem;
+    }
+}

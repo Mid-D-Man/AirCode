@@ -1,0 +1,71 @@
+@* Pages/Admin/SuperiorDashboard.razor *@
+@page "/Admin/SuperiorDashboard"
+
+@attribute [Authorize(Roles = "LecturerAdmin")]
+@layout SuperiorAdminLayout
+@using AirCode.Layout.AdminLayout
+@using Microsoft.AspNetCore.Authorization
+@using AirCode.Components.Admin.Shared
+@using AirCode.Layout.AdminLayout.Superior
+
+<div class="dashboard-grid">
+    <AdminCard Title="System Overview">
+        <Content>
+            <StatCard 
+                Title="Total Users" 
+                Value="@_totalUsers.ToString()" 
+                Icon="fas fa-users" 
+                Trend="@_usersTrend" />
+            <StatCard 
+                Title="Active Sessions" 
+                Value="@_activeSessions.ToString()" 
+                Icon="fas fa-calendar-check" 
+                Trend="@_sessionsTrend" />
+        </Content>
+    </AdminCard>
+
+    <AdminCard Title="Recent Activities">
+        <Content>
+            @foreach (var activity in _recentActivities)
+            {
+                <div class="activity-item">
+                    <i class="@activity.Icon"></i>
+                    <div class="activity-details">
+                        <span class="activity-title">@activity.Title</span>
+                        <span class="activity-time">@activity.Time.ToString("g")</span>
+                    </div>
+                </div>
+            }
+        </Content>
+    </AdminCard>
+</div>
+
+@code {
+    private int _totalUsers;
+    private int _activeSessions;
+    private string _usersTrend = "";
+    private string _sessionsTrend = "";
+    private List<ActivityItem> _recentActivities = new();
+
+    private class ActivityItem
+    {
+        public string Icon { get; set; } = "";
+        public string Title { get; set; } = "";
+        public DateTime Time { get; set; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Sample data initialization
+        _totalUsers = 150;
+        _activeSessions = 25;
+        _usersTrend = "up";
+        _sessionsTrend = "down";
+
+        _recentActivities = new List<ActivityItem>
+        {
+            new() { Icon = "fas fa-user-plus", Title = "New user registered", Time = DateTime.Now.AddHours(-1) },
+            new() { Icon = "fas fa-calendar-plus", Title = "New session created", Time = DateTime.Now.AddHours(-2) }
+        };
+    }
+}

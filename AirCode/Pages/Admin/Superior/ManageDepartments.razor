@@ -1,0 +1,238 @@
+@page "/Admin/ManageDepartments"
+@using AirCode.Domain.Entities
+@using AirCode.Domain.Enums
+@using AirCode.Layout.AdminLayout.Superior
+@layout SuperiorAdminLayout
+
+<div class="container-fluid bg-primary p-4">
+    <div class="row">
+        <div class="col-12">
+            <h2 class="text-primary mb-4">Manage Departments</h2>
+        </div>
+    </div>
+
+    @if (_isLoading)
+    {
+        <div class="row">
+            <div class="col-12 text-center">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card bg-secondary shadow-sm">
+                    <div class="card-header bg-tertiary">
+                        <h3 class="text-primary mb-0">Add New Department</h3>
+                    </div>
+                    <div class="card-body">
+                        <EditForm Model="@_newDepartment" OnValidSubmit="@HandleValidSubmit">
+                            <DataAnnotationsValidator />
+                            <ValidationSummary />
+
+                            <div class="mb-3">
+                                <label for="departmentId" class="form-label text-primary">Department ID</label>
+                                <InputText id="departmentId" class="form-control" @bind-Value="_newDepartment.DepartmentId" />
+                                <ValidationMessage For="@(() => _newDepartment.DepartmentId)" />
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="name" class="form-label text-primary">Department Name</label>
+                                <InputText id="name" class="form-control" @bind-Value="_newDepartment.Name" />
+                                <ValidationMessage For="@(() => _newDepartment.Name)" />
+                            </div>
+
+                            <button type="submit" class="btn btn-primary">Add Department</button>
+                        </EditForm>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card bg-secondary shadow-sm">
+                    <div class="card-header bg-tertiary">
+                        <h3 class="text-primary mb-0">Available Departments</h3>
+                    </div>
+                    <div class="card-body">
+                        @if (_departments.Count == 0)
+                        {
+                            <p class="text-tertiary">No departments available.</p>
+                        }
+                        else
+                        {
+                            <div class="list-group">
+                                @foreach (var department in _departments)
+                                {
+                                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h5 class="mb-1">@department.Name</h5>
+                                            <small class="text-tertiary">ID: @department.DepartmentId</small>
+                                        </div>
+                                        <div class="btn-group">
+                                            <button class="btn btn-primary btn-sm me-2" @onclick="() => SelectDepartment(department)">
+                                                <i class="bi bi-info-circle"></i> Details
+                                            </button>
+                                            <button class="btn btn-danger btn-sm" @onclick="() => ConfirmDelete(department)">
+                                                <i class="bi bi-trash"></i> Delete
+                                            </button>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @if (_selectedDepartment != null)
+        {
+            <div class="row">
+                <div class="col-12">
+                    <div class="card bg-secondary shadow-sm">
+                        <div class="card-header bg-tertiary">
+                            <h3 class="text-primary mb-0">Department Details: @_selectedDepartment.Name</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <h4 class="text-secondary">Department Information</h4>
+                                    <p><strong>ID:</strong> @_selectedDepartment.DepartmentId</p>
+                                    <p><strong>Name:</strong> @_selectedDepartment.Name</p>
+                                    <p><strong>Last Modified:</strong> @_selectedDepartment.LastModified.ToString("g")</p>
+                                    <p><strong>Modified By:</strong> @_selectedDepartment.ModifiedBy</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <h4 class="text-secondary">Add New Level</h4>
+                                    <div class="input-group mb-3">
+                                        <select class="form-select" @bind="_newLevelType">
+                                            @foreach (var levelType in Enum.GetValues(typeof(LevelType)))
+                                            {
+                                                <option value="@levelType">@levelType</option>
+                                            }
+                                        </select>
+                                        <button class="btn btn-outline-primary" type="button" @onclick="AddLevelToDepartment">Add Level</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <h4 class="text-secondary mb-3">Levels</h4>
+                            
+                            @if (_selectedDepartment.Levels.Count == 0)
+                            {
+                                <p class="text-tertiary">No levels available for this department.</p>
+                            }
+                            else
+                            {
+                                <div class="accordion" id="levelsAccordion">
+                                    @foreach (var level in _selectedDepartment.Levels)
+                                    {
+                                        <div class="accordion-item">
+                                            <h2 class="accordion-header" id="heading-@level.LevelType">
+                                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                                        data-bs-target="#collapse-@level.LevelType" aria-expanded="false" 
+                                                        aria-controls="collapse-@level.LevelType">
+                                                    @level.LevelType
+                                                </button>
+                                            </h2>
+                                            <div id="collapse-@level.LevelType" class="accordion-collapse collapse" 
+                                                aria-labelledby="heading-@level.LevelType" data-bs-parent="#levelsAccordion">
+                                                <div class="accordion-body">
+                                                    <div class="d-flex justify-content-between mb-3">
+                                                        <h5 class="text-secondary">Courses</h5>
+                                                        <button class="btn btn-danger btn-sm" @onclick="() => ConfirmRemoveLevel(level.LevelType)">
+                                                            <i class="bi bi-trash"></i> Remove Level
+                                                        </button>
+                                                    </div>
+                                                    
+                                                    <div class="mb-3">
+                                                        <div class="input-group">
+                                                            <input type="text" class="form-control" placeholder="Course ID" 
+                                                                @bind="_newCourseId" />
+                                                            <button class="btn btn-outline-primary" type="button" 
+                                                                @onclick="() => AddCourseToLevel(level.LevelType)">
+                                                                Add Course
+                                                            </button>
+                                                        </div>
+                                                    </div>
+
+                                                    @if (level.CourseIds.Count == 0)
+                                                    {
+                                                        <p class="text-tertiary">No courses assigned to this level.</p>
+                                                    }
+                                                    else
+                                                    {
+                                                        <div class="list-group">
+                                                            @foreach (var courseId in level.CourseIds)
+                                                            {
+                                                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                                                    <span>@courseId</span>
+                                                                    <button class="btn btn-danger btn-sm" 
+                                                                        @onclick="() => RemoveCourseFromLevel(level.LevelType, courseId)">
+                                                                        <i class="bi bi-x"></i>
+                                                                    </button>
+                                                                </div>
+                                                            }
+                                                        </div>
+                                                    }
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+</div>
+
+@if (_showDeleteConfirmation)
+{
+    <div class="modal fade show" style="display: block; background-color: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content bg-secondary">
+                <div class="modal-header">
+                    <h5 class="modal-title text-primary">Confirm Delete</h5>
+                    <button type="button" class="btn-close" @onclick="CancelDelete"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-primary">Are you sure you want to delete the department "@_departmentToDelete?.Name"?</p>
+                    <p class="text-danger">This action cannot be undone!</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CancelDelete">Cancel</button>
+                    <button type="button" class="btn btn-danger" @onclick="DeleteDepartment">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (_showRemoveLevelConfirmation)
+{
+    <div class="modal fade show" style="display: block; background-color: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content bg-secondary">
+                <div class="modal-header">
+                    <h5 class="modal-title text-primary">Confirm Remove Level</h5>
+                    <button type="button" class="btn-close" @onclick="CancelRemoveLevel"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-primary">Are you sure you want to remove the level "@_levelTypeToRemove" from department "@_selectedDepartment?.Name"?</p>
+                    <p class="text-danger">This will also remove all courses associated with this level!</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CancelRemoveLevel">Cancel</button>
+                    <button type="button" class="btn btn-danger" @onclick="RemoveLevel">Remove</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}

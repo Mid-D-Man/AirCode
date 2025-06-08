@@ -1,0 +1,9 @@
+duplicate Course definitions - one in Domain/Entities and another in Models/Core. This is a common pattern in Clean Architecture but needs proper implementation:
+
+Domain Entities: Should represent your business entities and rules - the core domain objects of your system.
+Models: Should be DTOs (Data Transfer Objects) used for specific contexts like API responses or UI.
+
+This is blazor wasm app with pwa for secure attendnance tracking using qr codes for higher institutions with emphesis on
+preserving data integrity functions both offline and online has lecturers and course reps as admins with diffrent roles
+and superior admin that manages all and add stuff like courses and generates admin ids for other admins e.t.c
+

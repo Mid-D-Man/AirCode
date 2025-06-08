@@ -1,0 +1,469 @@
+@page "/Admin/ManageAdmins"
+@layout SuperiorAdminLayout
+@using System.Text
+@using System.Security.Cryptography
+@using AirCode.Components.SharedPrefabs.Cards
+@using AirCode.Layout.AdminLayout.Superior
+<div class="container">
+    <!-- Notification component -->
+    <NotificationComponent @ref="notificationComponent" Position="NotificationComponent.NotificationPosition.TopRight" />
+
+    <div class="admin-header">
+        <h2 class="text-primary">Admin Management</h2>
+        <button class="btn btn-primary" @onclick="ShowCreateAdminModal">Create New Admin ID</button>
+    </div>
+
+    @if (loading)
+    {
+        <div class="loading-container">
+            <div class="spinner"></div>
+            <p>Loading admin data...</p>
+        </div>
+    }
+    else if (adminIds == null || !adminIds.Any())
+    {
+        <div class="empty-state">
+            <i class="fas fa-users-cog fa-3x"></i>
+            <p>No admin IDs found. Create one to get started.</p>
+        </div>
+    }
+    else
+    {
+        <div class="admin-list">
+            @foreach (var admin in adminIds)
+            {
+                <div class="admin-card @(admin.IsRevoked ? "revoked" : "")">
+                    <div class="admin-card-header">
+                        <div class="admin-id">@admin.AdminId</div>
+                        <div class="admin-type">@admin.AdminType</div>
+                    </div>
+                    <div class="admin-card-body">
+                        <div class="admin-details">
+                            <div class="detail-row">
+                                <span class="detail-label">Created:</span>
+                                <span class="detail-value">@admin.CreatedAt.ToString("dd MMM yyyy HH:mm")</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Max Users:</span>
+                                <span class="detail-value">@admin.MaxUsers</span>
+                                <button class="btn btn-sm btn-outline-primary" @onclick="() => ShowMaxUsersModal(admin)">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Status:</span>
+                                <span class="detail-value @(admin.IsRevoked ? "text-danger" : "text-success")">
+                                    @(admin.IsRevoked ? "Revoked" : "Active")
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="admin-users">
+                            <h5>Assigned Users (@admin.Users.Count/@admin.MaxUsers)</h5>
+                            @if (admin.Users.Any())
+                            {
+                                <ul class="user-list">
+                                    @foreach (var user in admin.Users)
+                                    {
+                                        <li class="user-item">
+                                            <span class="user-id">@user</span>
+                                            <button class="btn btn-sm btn-danger" @onclick="() => ShowRemoveUserModal(admin, user)">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                            else
+                            {
+                                <p class="no-users">No users assigned</p>
+                            }
+                        </div>
+                    </div>
+                    <div class="admin-card-footer">
+                        <button class="btn @(admin.IsRevoked ? "btn-success" : "btn-danger")" @onclick="() => ShowRevokeModal(admin)">
+                            @(admin.IsRevoked ? "Restore Access" : "Revoke Access")
+                        </button>
+                        <button class="btn btn-secondary" @onclick="() => CopyToClipboard(admin.AdminId)">
+                            <i class="fas fa-copy"></i> Copy ID
+                        </button>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<!-- Create Admin Modal -->
+<div class="modal @(showCreateModal ? "show" : "")" tabindex="-1" style="display: @(showCreateModal ? "block" : "none")">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Create New Admin ID</h5>
+                <button type="button" class="btn-close" @onclick="CloseModals"></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group mb-3">
+                    <label for="adminType">Admin Type</label>
+                    <select id="adminType" class="form-control" @bind="newAdminType">
+                        <option value="Lecturer">Lecturer</option>
+                        <option value="CourseRep">Course Rep</option>
+                    </select>
+                </div>
+                <div class="form-group mb-3">
+                    <label for="maxUsers">Maximum Users (Default: 2)</label>
+                    <input type="number" id="maxUsers" class="form-control" @bind="newMaxUsers" min="1" max="5" />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" @onclick="CloseModals">Cancel</button>
+                <button type="button" class="btn btn-primary" @onclick="CreateAdminId">Create</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Max Users Modal -->
+<div class="modal @(showMaxUsersModal ? "show" : "")" tabindex="-1" style="display: @(showMaxUsersModal ? "block" : "none")">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Update Maximum Users</h5>
+                <button type="button" class="btn-close" @onclick="CloseModals"></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="updateMaxUsers">Maximum Users</label>
+                    <input type="number" id="updateMaxUsers" class="form-control" @bind="updateMaxUsers" min="1" max="5" />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" @onclick="CloseModals">Cancel</button>
+                <button type="button" class="btn btn-primary" @onclick="UpdateMaxUsers">Update</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Revoke Modal -->
+<div class="modal @(showRevokeModal ? "show" : "")" tabindex="-1" style="display: @(showRevokeModal ? "block" : "none")">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@(selectedAdmin?.IsRevoked == true ? "Restore" : "Revoke") Admin Access</h5>
+                <button type="button" class="btn-close" @onclick="CloseModals"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to @(selectedAdmin?.IsRevoked == true ? "restore" : "revoke") access for this admin ID?</p>
+                <p class="text-danger">@(selectedAdmin?.IsRevoked == true ? "This will allow users to use this admin ID again." : "This will prevent all users from using this admin ID.")</p>
+                @if (selectedAdmin != null)
+                {
+                    <div class="alert alert-info">
+                        <strong>Admin ID:</strong> @selectedAdmin.AdminId
+                    </div>
+                }
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" @onclick="CloseModals">Cancel</button>
+                <button type="button" class="btn @(selectedAdmin?.IsRevoked == true ? "btn-success" : "btn-danger")" @onclick="ToggleAdminAccess">
+                    @(selectedAdmin?.IsRevoked == true ? "Restore Access" : "Revoke Access")
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Remove User Modal -->
+<div class="modal @(showRemoveUserModal ? "show" : "")" tabindex="-1" style="display: @(showRemoveUserModal ? "block" : "none")">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Remove User</h5>
+                <button type="button" class="btn-close" @onclick="CloseModals"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to remove this user from the admin ID?</p>
+                @if (selectedAdmin != null && !string.IsNullOrEmpty(selectedUserId))
+                {
+                    <div class="alert alert-info">
+                        <strong>Admin ID:</strong> @selectedAdmin.AdminId<br />
+                        <strong>User ID:</strong> @selectedUserId
+                    </div>
+                }
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" @onclick="CloseModals">Cancel</button>
+                <button type="button" class="btn btn-danger" @onclick="RemoveUser">Remove User</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal backdrop -->
+@if (showCreateModal || showMaxUsersModal || showRevokeModal || showRemoveUserModal)
+{
+    <div class="modal-backdrop fade show"></div>
+}
+
+@code {
+    private List<AdminIdModel> adminIds;
+    private bool loading = true;
+    
+    // Modal states
+    private bool showCreateModal = false;
+    private bool showMaxUsersModal = false;
+    private bool showRevokeModal = false;
+    private bool showRemoveUserModal = false;
+    
+    // Form fields
+    private string newAdminType = "Lecturer";
+    private int newMaxUsers = 2;
+    private int updateMaxUsers = 2;
+    
+    // Selected items
+    private AdminIdModel selectedAdmin;
+    private string selectedUserId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAdminIds();
+    }
+
+    private async Task LoadAdminIds()
+    {
+        try
+        {
+            loading = true;
+            // Placeholder for actual implementation
+            // adminIds = await AdminService.GetAllAdminIdsAsync();
+            
+            // Simulated data for now
+            adminIds = new List<AdminIdModel>
+            {
+                new AdminIdModel 
+                { 
+                    AdminId = "AIR-X8P2-Y7W3-Z5Q9-A1B2.c4VSyGhDklJFPws689TmLr3nXBx0pqZ+", 
+                    AdminType = "Lecturer", 
+                    CreatedAt = DateTime.Now.AddDays(-10),
+                    IsRevoked = false,
+                    MaxUsers = 2,
+                    Users = new List<string> { "user123", "user456" }
+                },
+                new AdminIdModel 
+                { 
+                    AdminId = "AIR-C4D5-E6F7-G8H9-J1K2.pQ7RsTuVwXyZ0123456789ABCDEFGHIJKLm", 
+                    AdminType = "CourseRep", 
+                    CreatedAt = DateTime.Now.AddDays(-5),
+                    IsRevoked = false,
+                    MaxUsers = 1,
+                    Users = new List<string> { "user789" }
+                },
+                new AdminIdModel 
+                { 
+                    AdminId = "AIR-L2M3-N4P5-Q6R7-S8T9.nOPqRsTuVwXyZ0123456789ABCDEFGHIJKLm", 
+                    AdminType = "Lecturer", 
+                    CreatedAt = DateTime.Now.AddMonths(-1),
+                    IsRevoked = true,
+                    MaxUsers = 2,
+                    Users = new List<string>()
+                }
+            };
+        }
+        catch (Exception ex)
+        {
+            notificationComponent?.ShowError($"Error loading admin IDs: {ex.Message}");
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private void ShowCreateAdminModal()
+    {
+        newAdminType = "Lecturer";
+        newMaxUsers = 2;
+        showCreateModal = true;
+    }
+
+    private void ShowMaxUsersModal(AdminIdModel admin)
+    {
+        selectedAdmin = admin;
+        updateMaxUsers = admin.MaxUsers;
+        showMaxUsersModal = true;
+    }
+
+    private void ShowRevokeModal(AdminIdModel admin)
+    {
+        selectedAdmin = admin;
+        showRevokeModal = true;
+    }
+
+    private void ShowRemoveUserModal(AdminIdModel admin, string userId)
+    {
+        selectedAdmin = admin;
+        selectedUserId = userId;
+        showRemoveUserModal = true;
+    }
+
+    private void CloseModals()
+    {
+        showCreateModal = false;
+        showMaxUsersModal = false;
+        showRevokeModal = false;
+        showRemoveUserModal = false;
+        selectedAdmin = null;
+        selectedUserId = null;
+    }
+
+    private async Task CreateAdminId()
+    {
+        try
+        {
+            var newAdminId = GenerateAdminId(newAdminType);
+            
+            // This would be the actual implementation
+            // await AdminService.CreateAdminIdAsync(newAdminId, newAdminType, newMaxUsers);
+            
+            // For demonstration, we'll just add it to the local list
+            adminIds.Add(new AdminIdModel
+            {
+                AdminId = newAdminId,
+                AdminType = newAdminType,
+                CreatedAt = DateTime.Now,
+                IsRevoked = false,
+                MaxUsers = newMaxUsers,
+                Users = new List<string>()
+            });
+            
+            notificationComponent?.ShowSuccess("Admin ID created successfully!");
+            CloseModals();
+        }
+        catch (Exception ex)
+        {
+            notificationComponent?.ShowError($"Error creating admin ID: {ex.Message}");
+        }
+    }
+
+    private async Task UpdateMaxUsers()
+    {
+        try
+        {
+            if (selectedAdmin != null)
+            {
+                // This would be the actual implementation
+                // await AdminService.UpdateMaxUsersAsync(selectedAdmin.AdminId, updateMaxUsers);
+                
+                // For demonstration, we'll update the local object
+                selectedAdmin.MaxUsers = updateMaxUsers;
+                
+                notificationComponent?.ShowSuccess("Maximum users updated successfully!");
+                CloseModals();
+            }
+        }
+        catch (Exception ex)
+        {
+            notificationComponent?.ShowError($"Error updating maximum users: {ex.Message}");
+        }
+    }
+
+    private async Task ToggleAdminAccess()
+    {
+        try
+        {
+            if (selectedAdmin != null)
+            {
+                // This would be the actual implementation
+                // if (selectedAdmin.IsRevoked)
+                //     await AdminService.RestoreAdminAccessAsync(selectedAdmin.AdminId);
+                // else
+                //     await AdminService.RevokeAdminAccessAsync(selectedAdmin.AdminId);
+                
+                // For demonstration, we'll update the local object
+                selectedAdmin.IsRevoked = !selectedAdmin.IsRevoked;
+                
+                notificationComponent?.ShowSuccess($"Admin access {(selectedAdmin.IsRevoked ? "revoked" : "restored")} successfully!");
+                CloseModals();
+            }
+        }
+        catch (Exception ex)
+        {
+            notificationComponent?.ShowError($"Error {(selectedAdmin.IsRevoked ? "restoring" : "revoking")} admin access: {ex.Message}");
+        }
+    }
+
+    private async Task RemoveUser()
+    {
+        try
+        {
+            if (selectedAdmin != null && !string.IsNullOrEmpty(selectedUserId))
+            {
+                // This would be the actual implementation
+                // await AdminService.RemoveUserFromAdminIdAsync(selectedAdmin.AdminId, selectedUserId);
+                
+                // For demonstration, we'll update the local object
+                selectedAdmin.Users.Remove(selectedUserId);
+                
+                notificationComponent?.ShowSuccess("User removed successfully!");
+                CloseModals();
+            }
+        }
+        catch (Exception ex)
+        {
+            notificationComponent?.ShowError($"Error removing user: {ex.Message}");
+        }
+    }
+
+    private string GenerateAdminId(string adminType)
+    {
+        // Generate 4 random salt components
+        var salts = new string[4];
+        for (int i = 0; i < 4; i++)
+        {
+            salts[i] = GenerateRandomSalt();
+        }
+        
+        // Create the base admin ID
+        var adminIdBase = $"AIR-{salts[0]}-{salts[1]}-{salts[2]}-{salts[3]}";
+        
+        // Generate a random base64 component for additional security
+        var randomBytes = new byte[32]; // 32 bytes will give us a reasonable length base64 string
+        using (var rng = RandomNumberGenerator.Create())
+        {
+            rng.GetBytes(randomBytes);
+        }
+        var base64Part = Convert.ToBase64String(randomBytes);
+        
+        // Combine all parts
+        return $"{adminIdBase}.{base64Part}";
+    }
+
+    private string GenerateRandomSalt()
+    {
+        // Generate a 4-character alphanumeric salt
+        const string chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // Excluded potentially confusing characters like O, 0, I, 1
+        var random = new Random();
+        return new string(Enumerable.Repeat(chars, 4)
+            .Select(s => s[random.Next(s.Length)]).ToArray());
+    }
+
+    private void CopyToClipboard(string text)
+    {
+        // This would require JavaScript interop in actual implementation
+        notificationComponent?.ShowInfo("Admin ID copied to clipboard!");
+    }
+
+    // Reference to the notification component
+    private NotificationComponent notificationComponent;
+
+    // Model class for Admin IDs
+    public class AdminIdModel
+    {
+        public string AdminId { get; set; }
+        public string AdminType { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public bool IsRevoked { get; set; }
+        public int MaxUsers { get; set; }
+        public List<string> Users { get; set; } = new List<string>();
+    }
+}

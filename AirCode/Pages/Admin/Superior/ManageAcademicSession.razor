@@ -1,0 +1,243 @@
+@page "/Admin/ManageAcademicSession"
+@using AirCode.Domain.Entities
+@using AirCode.Domain.Enums
+@using AirCode.Layout.AdminLayout.Superior
+@layout SuperiorAdminLayout
+
+<div class="academic-session-container">
+    <div class="page-header">
+        <h2 class="text-secondary">Manage Academic Sessions</h2>
+        <div class="actions">
+            <button class="btn-primary" @onclick="() => ShowModal(ManageAcademicSession.ModalType.CreateSession)">
+                <span class="icon">+</span> New Academic Session
+            </button>
+        </div>
+    </div>
+
+    @if (currentSession != null)
+    {
+        <div class="current-session-card">
+            <div class="card-header">
+                <h3>Current Academic Session</h3>
+                <div class="session-status @(IsSessionActive(currentSession) ? "active" : "inactive")">
+                    @(IsSessionActive(currentSession) ? "Active" : "Archived")
+                </div>
+            </div>
+            <div class="session-details">
+                <div class="session-title">@currentSession.YearStart - @currentSession.YearEnd</div>
+                <div class="session-countdown">
+                    @if (IsSessionActive(currentSession))
+                    {
+                        <div class="countdown-container">
+                            <div class="countdown-label">Ends in:</div>
+                            <div class="countdown-timer">@GetRemainingTime(GetEndDate(currentSession))</div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="session-archived">Archived on @GetEndDate(currentSession).ToShortDateString()</div>
+                    }
+                </div>
+            </div>
+            <div class="semester-cards">
+                @foreach (var semester in currentSession.Semesters)
+                {
+                    <div class="semester-card @(IsCurrentSemester(semester) ? "current-semester" : "")">
+                        <div class="semester-header">
+                            <h4>@GetSemesterName(semester.Type)</h4>
+                            <div class="semester-status @(IsActiveSemester(semester) ? "active" : "inactive")">
+                                @(IsActiveSemester(semester) ? "Active" : 
+                                  IsFutureSemester(semester) ? "Upcoming" : "Completed")
+                            </div>
+                        </div>
+                        <div class="semester-dates">
+                            <div><strong>Start:</strong> @semester.StartDate.ToShortDateString()</div>
+                            <div><strong>End:</strong> @semester.EndDate.ToShortDateString()</div>
+                        </div>
+                        @if (IsActiveSemester(semester))
+                        {
+                            <div class="semester-countdown">
+                                <div class="countdown-label">Ends in:</div>
+                                <div class="countdown-timer">@GetRemainingTime(semester.EndDate)</div>
+                            </div>
+                        }
+                    </div>
+                }
+                @if (currentSession.Semesters.Count < 2)
+                {
+                    <div class="add-semester-card" @onclick="() => ShowModal(ManageAcademicSession.ModalType.CreateSemester)">
+                        <div class="add-icon">+</div>
+                        <div>Add Semester</div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    <div class="archived-sessions-section">
+        <h3>Archived Sessions</h3>
+        @if (archivedSessions.Count > 0)
+        {
+            <div class="archived-sessions-grid">
+                @foreach (var session in archivedSessions)
+                {
+                    <div class="archived-session-card" @onclick="() => ViewSessionDetails(session)">
+                        <div class="session-year">@session.YearStart - @session.YearEnd</div>
+                        <div class="session-semesters">@session.Semesters.Count Semester(s)</div>
+                        <div class="archived-date">Archived: @GetEndDate(session).ToShortDateString()</div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="no-archived-sessions">
+                <p>No archived sessions available.</p>
+            </div>
+        }
+    </div>
+
+    @if (nextSession != null)
+    {
+        <div class="upcoming-session-card">
+            <div class="card-header">
+                <h3>Next Academic Session</h3>
+                <div class="session-status upcoming">Upcoming</div>
+            </div>
+            <div class="session-details">
+                <div class="session-title">@nextSession.YearStart - @nextSession.YearEnd</div>
+                <div class="session-countdown">
+                    <div class="countdown-container">
+                        <div class="countdown-label">Starts in:</div>
+                        <div class="countdown-timer">@GetRemainingTime(GetStartDate(nextSession))</div>
+                    </div>
+                </div>
+            </div>
+            <div class="semester-cards">
+                @foreach (var semester in nextSession.Semesters)
+                {
+                    <div class="semester-card">
+                        <div class="semester-header">
+                            <h4>@GetSemesterName(semester.Type)</h4>
+                            <div class="semester-status upcoming">Upcoming</div>
+                        </div>
+                        <div class="semester-dates">
+                            <div><strong>Start:</strong> @semester.StartDate.ToShortDateString()</div>
+                            <div><strong>End:</strong> @semester.EndDate.ToShortDateString()</div>
+                        </div>
+                    </div>
+                }
+                @if (nextSession.Semesters.Count < 2)
+                {
+                    <div class="add-semester-card" @onclick="() => ShowModal(ManageAcademicSession.ModalType.CreateSemester, nextSession.SessionId)">
+                        <div class="add-icon">+</div>
+                        <div>Add Semester</div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+    else if (currentSession != null)
+    {
+        <div class="create-next-session">
+            <button class="btn-primary" @onclick="() => ShowModal(ManageAcademicSession.ModalType.CreateSession)">
+                Create Next Academic Session
+            </button>
+            <p>Prepare for the upcoming academic year by creating the next session.</p>
+        </div>
+    }
+
+    @if (showModal)
+    {
+        <div class="modal-overlay" @onclick="CloseModal">
+            <div class="modal-container" @onclick:stopPropagation="true">
+                <div class="modal-header">
+                    <h3>@GetModalTitle()</h3>
+                    <button class="close-btn" @onclick="CloseModal">×</button>
+                </div>
+                <div class="modal-body">
+                    @if (activeModal == ManageAcademicSession.ModalType.CreateSession)
+                    {
+                        <div class="form-group">
+                            <label for="yearStart">Start Year</label>
+                            <input type="number" 
+                                   id="yearStart" 
+                                   @bind="sessionForm.YearStart" 
+                                   class="form-control" 
+                                   min="@GetMinAllowedStartYear()" 
+                                   max="@GetMaxAllowedEndYear()" />
+                            <small class="form-text">Academic session can span up to 4 years for degree programs</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="yearEnd">End Year</label>
+                            <input type="number" 
+                                   id="yearEnd" 
+                                   @bind="sessionForm.YearEnd" 
+                                   class="form-control" 
+                                   min="@(sessionForm.YearStart + 1)" 
+                                   max="@(sessionForm.YearStart + 4)" />
+                            <small class="form-text">Maximum 4 years from start year</small>
+                        </div>
+                        <div class="form-group">
+                            <label>Include First Semester</label>
+                            <div class="toggle-switch">
+                                <input type="checkbox" id="includeFirstSemester" @bind="includeFirstSemester" />
+                                <label for="includeFirstSemester"></label>
+                            </div>
+                        </div>
+                        @if (includeFirstSemester)
+                        {
+                            <div class="form-group">
+                                <label for="firstSemesterStart">First Semester Start Date</label>
+                                <input type="date" id="firstSemesterStart" @bind="firstSemesterForm.StartDate" class="form-control" />
+                            </div>
+                            <div class="form-group">
+                                <label for="firstSemesterEnd">First Semester End Date</label>
+                                <input type="date" id="firstSemesterEnd" @bind="firstSemesterForm.EndDate" class="form-control" />
+                            </div>
+                        }
+                    }
+                    else if (activeModal == ManageAcademicSession.ModalType.CreateSemester)
+                    {
+                        <div class="form-group">
+                            <label for="semesterType">Semester Type</label>
+                            <select id="semesterType" @bind="semesterForm.Type" class="form-control">
+                                @foreach (SemesterType type in Enum.GetValues(typeof(SemesterType)))
+                                {
+                                    <option value="@type">@GetSemesterName(type)</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="semesterStart">Start Date</label>
+                            <input type="date" id="semesterStart" @bind="semesterForm.StartDate" class="form-control" />
+                        </div>
+                        <div class="form-group">
+                            <label for="semesterEnd">End Date</label>
+                            <input type="date" id="semesterEnd" @bind="semesterForm.EndDate" class="form-control" />
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-secondary" @onclick="CloseModal">Cancel</button>
+                    <button class="btn-primary" @onclick="SaveModal">Save</button>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (showWarning)
+    {
+        <div class="warning-banner">
+            <div class="warning-icon">⚠️</div>
+            <div class="warning-message">
+                <strong>Warning:</strong> No upcoming academic session has been configured. 
+                Please create a new session before the current one ends to ensure continuity.
+            </div>
+            <button class="btn-primary" @onclick="() => ShowModal(ManageAcademicSession.ModalType.CreateSession)">
+                Create Session
+            </button>
+            <button class="close-warning" @onclick="DismissWarning">×</button>
+        </div>
+    }
+</div>

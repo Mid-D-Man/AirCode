@@ -1,0 +1,146 @@
+@* Pages/Lecturer/LecturerCoursesPage.razor *@
+@page "/Admin/Lecturer/Courses"
+@using AirCode.Domain.Entities
+@using AirCode.Services.Courses
+@using AirCode.Components.SharedPrefabs.Others
+
+@using AirCode.Layout.AdminLayout.Superior
+@layout SuperiorAdminLayout
+@inject ICourseService CourseService
+
+<div class="lecturer-courses-page">
+    <div class="page-header">
+        <h2>My Courses</h2>
+        <p class="lecturer-info">Lecturer ID: @MockLecturerId</p>
+    </div>
+
+    @if (IsInitialLoading)
+    {
+        <div class="loading-container">
+            <p>Loading your courses...</p>
+        </div>
+    }
+    else
+    {
+        <CourseManagementComponent 
+            AssignedCourses="@AssignedCourses"
+            UserId="@MockLecturerId"
+            SectionTitle="Courses You Handle"
+            AddButtonText="Add Course to Handle"
+            OnCourseAdded="@HandleCourseAdded"
+            OnCourseRemoved="@HandleCourseRemoved" />
+    }
+
+    @if (!string.IsNullOrEmpty(StatusMessage))
+    {
+        <div class="status-message @(IsError ? "error" : "success")">
+            @StatusMessage
+        </div>
+    }
+</div>
+
+@code {
+    private const string MockLecturerId = "LEC001"; // Mock lecturer ID for testing
+    
+    private List<Course> AssignedCourses = new();
+    private bool IsInitialLoading = true;
+    private string StatusMessage = "";
+    private bool IsError = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadLecturerCourses();
+    }
+
+    private async Task LoadLecturerCourses()
+    {
+        IsInitialLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            AssignedCourses = await CourseService.GetCoursesByLecturerAsync(MockLecturerId) ?? new();
+            ClearStatusMessage();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading lecturer courses: {ex.Message}");
+            ShowStatusMessage("Error loading courses. Please try again.", true);
+            AssignedCourses = new();
+        }
+        finally
+        {
+            IsInitialLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleCourseAdded(string courseCode)
+    {
+        try
+        {
+            var success = await CourseService.AssignLecturerToCourseAsync(courseCode, MockLecturerId);
+            
+            if (success)
+            {
+                ShowStatusMessage($"Successfully added to course {courseCode}", false);
+                await LoadLecturerCourses(); // Refresh the list
+            }
+            else
+            {
+                ShowStatusMessage($"Failed to add course {courseCode}. Please try again.", true);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error adding course {courseCode}: {ex.Message}");
+            ShowStatusMessage($"Error adding course {courseCode}. Please try again.", true);
+        }
+    }
+
+    private async Task HandleCourseRemoved(string courseCode)
+    {
+        try
+        {
+            var success = await CourseService.RemoveLecturerFromCourseAsync(courseCode, MockLecturerId);
+            
+            if (success)
+            {
+                ShowStatusMessage($"Successfully removed from course {courseCode}", false);
+                await LoadLecturerCourses(); // Refresh the list
+            }
+            else
+            {
+                ShowStatusMessage($"Failed to remove course {courseCode}. Please try again.", true);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error removing course {courseCode}: {ex.Message}");
+            ShowStatusMessage($"Error removing course {courseCode}. Please try again.", true);
+        }
+    }
+
+    private void ShowStatusMessage(string message, bool isError)
+    {
+        StatusMessage = message;
+        IsError = isError;
+        StateHasChanged();
+
+        // Auto-hide message after 5 seconds
+        _ = Task.Delay(5000).ContinueWith(_ => 
+        {
+            InvokeAsync(() => 
+            {
+                ClearStatusMessage();
+                StateHasChanged();
+            });
+        });
+    }
+
+    private void ClearStatusMessage()
+    {
+        StatusMessage = "";
+        IsError = false;
+    }
+}

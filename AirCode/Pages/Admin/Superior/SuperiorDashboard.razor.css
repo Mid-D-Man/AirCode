@@ -1,0 +1,39 @@
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    padding: 1.5rem;
+}
+
+.activity-item {
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.activity-item:last-child {
+    border-bottom: none;
+}
+
+.activity-item i {
+    font-size: 1.25rem;
+    margin-right: 1rem;
+    color: #4a5568;
+}
+
+.activity-details {
+    display: flex;
+    flex-direction: column;
+}
+
+.activity-title {
+    font-weight: 500;
+    color: #2d3748;
+}
+
+.activity-time {
+    font-size: 0.875rem;
+    color: #718096;
+}

@@ -26,7 +26,6 @@
 
     <ItemGroup>
       <Folder Include="Layout\" />
-      <Folder Include="Services\Scanner\" />
     </ItemGroup>
 
     <ItemGroup>
