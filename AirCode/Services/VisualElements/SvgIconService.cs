@@ -93,7 +93,7 @@ namespace AirCode.Services.VisualElements
             }
 
             // Build the URL using the configured HttpClient base address
-            string url = $"{_httpClient.BaseAddress.ToString().TrimEnd('/')}AirCode/{SvgFolder}{fileName}";
+            string url = $"{_httpClient.BaseAddress.ToString().TrimEnd('/')}/AirCode/{SvgFolder}{fileName}";
 
             try
             {
