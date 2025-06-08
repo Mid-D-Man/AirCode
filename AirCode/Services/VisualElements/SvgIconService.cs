@@ -92,9 +92,9 @@ namespace AirCode.Services.VisualElements
                 fileName += SvgExtension;
             }
 
-            // Build the full URL using NavigationManager's ToAbsoluteUri
+            // Build the URL relative to the application base
             string relativePath = SvgFolder + fileName;
-            string url = _navigationManager.ToAbsoluteUri(relativePath).ToString();
+            string url = new Uri(new Uri(_navigationManager.BaseUri), relativePath).ToString();
 
             try
             {
