@@ -8,19 +8,13 @@ public class NavItem
 
        
         // Constructor for navigation items with path
-        public NavItem(string iconName, string label, string path)
+        public NavItem(string iconName, string label, string? path = null)
         {
             IconName = iconName;
             Label = label;
             Path = path;
         }
-        //constructor
-        public NavItem(string iconName, string label, string? path = null,bool protect =false)
-        {
-            IconName = iconName;
-            Label = label;
-            Path = path;
-        }
+      
         // Constructor for action items (like bottom items)
         public NavItem(string iconName, string label, Action action)
         {

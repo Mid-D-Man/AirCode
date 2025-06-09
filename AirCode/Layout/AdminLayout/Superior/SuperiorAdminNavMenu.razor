@@ -68,6 +68,6 @@
     {
         new("settings", "Settings", "/Admin/Settings"),
         new("contact", "Contact", "/Admin/Contact"),
-        new("logout", "Logout", null,false) { Action = HandleLogout } // Use action instead of path for logout
+        new("logout", "Logout", HandleLogout) // Use action instead of path for logout
     };
 }
