@@ -16,17 +16,17 @@
     <div class="nav-tabs-container">
         <ul class="nav nav-tabs">
             <li class="nav-item">
-                <button class="nav-link @(activeTab == "students" ? "active" : "")" @onclick="() => SetActiveTab(\"students\")">
+                <button class="nav-link @(activeTab == "students" ? "active" : "")" @onclick="() => SetActiveTab(STUDENT_ID)">
                     Students (@(students?.Count ?? 0))
                 </button>
             </li>
             <li class="nav-item">
-                <button class="nav-link @(activeTab == "lecturers" ? "active" : "")" @onclick="() => SetActiveTab(\"lecturers\")">
+                <button class="nav-link @(activeTab == "lecturers" ? "active" : "")" @onclick="() => SetActiveTab(LECTURER_ID)">
                     Lecturers (@(lecturers?.Count ?? 0))
                 </button>
             </li>
             <li class="nav-item">
-                <button class="nav-link @(activeTab == "coursereps" ? "active" : "")" @onclick="() => SetActiveTab(\"coursereps\")">
+                <button class="nav-link @(activeTab == "coursereps" ? "active" : "")" @onclick="() => SetActiveTab(COURSEREP_ID)">
                     Course Reps (@(courseReps?.Count ?? 0))
                 </button>
             </li>
@@ -83,7 +83,7 @@
                                 </div>
                             </div>
                             <div class="user-card-footer">
-                                <button class="btn btn-danger" @onclick="() => ShowDeleteUserModal(student, \"student\")">
+                                <button class="btn btn-danger" @onclick="() => ShowDeleteUserModal(student, STUDENT_ID)">
                                     <i class="fas fa-trash"></i> Delete
                                 </button>
                                 <button class="btn btn-secondary" @onclick="() => CopyToClipboard(student.MatricNumber)">
@@ -124,7 +124,7 @@
                                     <div class="detail-row">
                                         <span class="detail-label">Usage:</span>
                                         <span class="detail-value">@lecturer.CurrentUsage/@lecturer.MaxUsage</span>
-                                        <button class="btn btn-sm btn-outline-primary" @onclick="() => ShowMaxUsageModal(lecturer, \"lecturer\")">
+                                        <button class="btn btn-sm btn-outline-primary" @onclick="() => ShowMaxUsageModal(lecturer, LECTURER_ID)">
                                             <i class="fas fa-edit"></i>
                                         </button>
                                     </div>
@@ -139,7 +139,7 @@
                                             {
                                                 <li class="user-item-compact">
                                                     <span class="user-id-compact">@userId</span>
-                                                    <button class="btn btn-sm btn-danger" @onclick="() => ShowRemoveUserModal(lecturer, userId, \"lecturer\")">
+                                                    <button class="btn btn-sm btn-danger" @onclick="() => ShowRemoveUserModal(lecturer, userId, LECTURER_ID)">
                                                         <i class="fas fa-times"></i>
                                                     </button>
                                                 </li>
@@ -149,7 +149,7 @@
                                 }
                             </div>
                             <div class="user-card-footer">
-                                <button class="btn btn-danger" @onclick="() => ShowDeleteUserModal(lecturer, \"lecturer\")">
+                                <button class="btn btn-danger" @onclick="() => ShowDeleteUserModal(lecturer,LECTURER_ID)">
                                     <i class="fas fa-trash"></i> Delete
                                 </button>
                                 <button class="btn btn-secondary" @onclick="() => CopyToClipboard(lecturer.AdminId)">
@@ -190,7 +190,7 @@
                                     <div class="detail-row">
                                         <span class="detail-label">Usage:</span>
                                         <span class="detail-value">@courseRep.AdminInfo.CurrentUsage/@courseRep.AdminInfo.MaxUsage</span>
-                                        <button class="btn btn-sm btn-outline-primary" @onclick="() => ShowMaxUsageModal(courseRep.AdminInfo, \"courserep\")">
+                                        <button class="btn btn-sm btn-outline-primary" @onclick="() => ShowMaxUsageModal(courseRep.AdminInfo, COURSEREP_ID)">
                                             <i class="fas fa-edit"></i>
                                         </button>
                                     </div>
@@ -211,7 +211,7 @@
                                             {
                                                 <li class="user-item-compact">
                                                     <span class="user-id-compact">@userId</span>
-                                                    <button class="btn btn-sm btn-danger" @onclick="() => ShowRemoveUserModal(courseRep.AdminInfo, userId, \"courserep\")">
+                                                    <button class="btn btn-sm btn-danger" @onclick="() => ShowRemoveUserModal(courseRep.AdminInfo, userId, COURSEREP_ID)">
                                                         <i class="fas fa-times"></i>
                                                     </button>
                                                 </li>
@@ -221,7 +221,7 @@
                                 }
                             </div>
                             <div class="user-card-footer">
-                                <button class="btn btn-danger" @onclick="() => ShowDeleteUserModal(courseRep, \"courserep\")">
+                                <button class="btn btn-danger" @onclick="() => ShowDeleteUserModal(courseRep, COURSEREP_ID)">
                                     <i class="fas fa-trash"></i> Delete
                                 </button>
                                 <button class="btn btn-secondary" @onclick="() => CopyToClipboard(courseRep.AdminInfo.AdminId)">
