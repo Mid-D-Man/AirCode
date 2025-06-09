@@ -3,8 +3,6 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.Rendering
 @using AirCode.Services.Permissions
-@using AirCode.Components.SharedPrefabs.Others
-@using AirCode.Components.SharedPrefabs.Spinner
 @inherits ComponentBase
 @implements IComponent
 @inject IPermissionService PermissionService
@@ -12,7 +10,9 @@
 
 @if (IsLoading)
 {
-    <LoadingSpinner Title="Authenticating..." Subtitle="Verifying your credentials and permissions." />
+    <div class="auth-loading">
+        <p>Loading...</p>
+    </div>
 }
 else if (Authorized)
 {
@@ -20,7 +20,9 @@ else if (Authorized)
 }
 else if (IsRedirecting)
 {
-    <LoadingSpinner Title="Redirecting..." Subtitle="Taking you to the login page." />
+    <div class="auth-loading">
+        <p>Redirecting...</p>
+    </div>
 }
 else
 {
@@ -42,7 +44,7 @@ else
     private bool IsRedirecting { get; set; }
     private bool IsLoading { get; set; } = true;
 
-    protected new async Task OnInitializedAsync()
+    protected override async Task OnInitializedAsync()
     {
         Console.WriteLine($"[AuthorizeRouteView] URI: {NavigationManager.Uri}");
         Console.WriteLine($"[AuthorizeRouteView] Page Type: {RouteData?.PageType?.Name}");
@@ -68,32 +70,44 @@ else
             Console.WriteLine("[AuthorizeRouteView] AuthenticationState is null");
             Authorized = false;
             IsLoading = false;
+            StateHasChanged();
             return;
         }
 
-        var authState = await AuthenticationState;
-        var user = authState.User;
-        Console.WriteLine($"[AuthorizeRouteView] User authenticated: {user?.Identity?.IsAuthenticated}");
-
-        // Check authentication first
-        if (!user.Identity?.IsAuthenticated ?? true)
+        try
         {
-            Console.WriteLine("[AuthorizeRouteView] User not authenticated - redirecting to login");
-            IsRedirecting = true;
+            var authState = await AuthenticationState;
+            var user = authState.User;
+            Console.WriteLine($"[AuthorizeRouteView] User authenticated: {user?.Identity?.IsAuthenticated}");
+
+            // Check authentication first
+            if (!user.Identity?.IsAuthenticated ?? true)
+            {
+                Console.WriteLine("[AuthorizeRouteView] User not authenticated - redirecting to login");
+                IsRedirecting = true;
+                IsLoading = false;
+                StateHasChanged();
+                
+                var returnUrl = Uri.EscapeDataString(NavigationManager.Uri);
+                NavigationManager.NavigateTo($"/authentication/login?returnUrl={returnUrl}");
+                return;
+            }
+
+            // Check authorization
+            Console.WriteLine("[AuthorizeRouteView] Checking authorization");
+            Authorized = await CheckAuthorizationAsync(user);
+            Console.WriteLine($"[AuthorizeRouteView] Authorization result: {Authorized}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[AuthorizeRouteView] Error during auth check: {ex.Message}");
+            Authorized = false;
+        }
+        finally
+        {
             IsLoading = false;
             StateHasChanged();
-            
-            var returnUrl = Uri.EscapeDataString(NavigationManager.Uri);
-            NavigationManager.NavigateTo($"/authentication/login?returnUrl={returnUrl}");
-            return;
         }
-
-        // Check authorization
-        Console.WriteLine("[AuthorizeRouteView] Checking authorization");
-        Authorized = await CheckAuthorizationAsync(user);
-        Console.WriteLine($"[AuthorizeRouteView] Authorization result: {Authorized}");
-        IsLoading = false;
-        StateHasChanged();
     }
 
     private async Task<bool> CheckAuthorizationAsync(ClaimsPrincipal user)
