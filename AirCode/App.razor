@@ -13,7 +13,7 @@
             @{
                 Console.WriteLine($"[App.razor] Route found: {routeData.PageType.Name}");
             }
-            <AuthorizeRouteViewComponent RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
+            <AppAuthorizeRouteViewComponent RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
             <FocusOnNavigate RouteData="@routeData" Selector="h1" />
         </Found>
         <NotFound>
