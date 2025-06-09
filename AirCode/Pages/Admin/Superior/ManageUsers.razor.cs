@@ -9,7 +9,7 @@ namespace AirCode.Pages.Admin.Superior;
 
 public partial class ManageUsers : ComponentBase
 {
-    Inject] private IFirestoreService FirestoreService { get; set; }
+    [Inject] private IFirestoreService FirestoreService { get; set; }
         
         // Collections
         private const string STUDENTS_COLLECTION = "STUDENTS_MATRICULATION_NUMBERS";
