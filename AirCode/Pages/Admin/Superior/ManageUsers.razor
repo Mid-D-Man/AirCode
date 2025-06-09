@@ -247,7 +247,7 @@
             <div class="modal-body">
                 <div class="form-group mb-3">
                     <label for="userType">User Type</label>
-                    <select id="userType" class="form-control" @bind="newUserType" @onchange="OnUserTypeChanged">
+                    <select id="userType" class="form-control" @bind="newUserType" @bind:event="onchange">
                         <option value="Student">Student</option>
                         <option value="Lecturer">Lecturer</option>
                         <option value="CourseRep">Course Rep</option>

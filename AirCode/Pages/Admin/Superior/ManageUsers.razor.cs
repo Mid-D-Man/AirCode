@@ -247,7 +247,11 @@ public partial class ManageUsers : ComponentBase
             
         StateHasChanged();
     }
-    
+    private void OnUserTypeChangedWithBinding(ChangeEventArgs e)
+    {
+        newUserType = e.Value?.ToString() ?? "Student";
+        OnUserTypeChanged(e); // Call existing logic
+    }
     private void ResetCreateForm()
     {
         newUserType = "Student";
