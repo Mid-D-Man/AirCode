@@ -89,7 +89,7 @@ else
                 StateHasChanged();
                 
                 var returnUrl = Uri.EscapeDataString(NavigationManager.Uri);
-                NavigationManager.NavigateTo($"/authentication/login?returnUrl={returnUrl}");
+                NavigationManager.NavigateTo($"authentication/login?returnUrl={returnUrl}");
                 return;
             }
 

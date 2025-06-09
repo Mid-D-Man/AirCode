@@ -46,8 +46,8 @@
             }
             else
             {
-                // Session expired, redirect to login
-                Navigation.NavigateTo("/authentication/login", forceLoad: true);
+                // Session expired, redirect to login always remove / cause we github boy
+                Navigation.NavigateTo("authentication/login", forceLoad: true);
             }
         }
         catch (Exception ex)
