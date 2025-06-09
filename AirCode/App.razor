@@ -12,20 +12,8 @@
         <Found Context="routeData">
             @{
                 Console.WriteLine($"[App.razor] Route found: {routeData.PageType.Name}");
-                var currentPath = new Uri(Navigation.Uri).AbsolutePath;
-                var isIndexPage = currentPath == "/" || currentPath == "/AirCode/" || 
-                                  currentPath.EndsWith("/index") || routeData.PageType.Name == "Index";
             }
-            
-            @if (isIndexPage)
-            {
-                <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
-            }
-            else
-            {
-                <AppAuthorizeRouteViewComponent RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
-            }
-            
+            <AppAuthorizeRouteViewComponent RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
             <FocusOnNavigate RouteData="@routeData" Selector="h1" />
         </Found>
         <NotFound>
@@ -39,7 +27,3 @@
         </NotFound>
     </Router>
 </CascadingAuthenticationState>
-
-@code {
-    [Inject] private NavigationManager Navigation { get; set; } = default!;
-}
