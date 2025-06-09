@@ -39,7 +39,6 @@ namespace AirCode.Pages.Admin.Superior
 
         // Firebase constants
         private const string ACADEMIC_SESSIONS_COLLECTION = "ACADEMIC_SESSIONS";
-        private const string ACADEMIC_SESSIONS_DOCUMENT = "AcademicSessions";
         #endregion
 
         #region Component Lifecycle
@@ -81,25 +80,30 @@ namespace AirCode.Pages.Admin.Superior
             {
                 Console.WriteLine($"Loading sessions from Firebase collection: {ACADEMIC_SESSIONS_COLLECTION}");
                 
-                // Get the document containing all academic sessions
-                var sessionsData = await GetFirebaseDocument();
+                var allSessions = await GetAllSessionsFromFirebase();
                 
-                if (sessionsData != null && sessionsData.Any())
+                if (allSessions != null && allSessions.Any())
                 {
-                    Console.WriteLine($"Successfully loaded {sessionsData.Count} sessions from Firebase");
-                    ProcessLoadedSessions(sessionsData);
+                    Console.WriteLine($"Successfully loaded {allSessions.Count} sessions from Firebase");
+                    ProcessLoadedSessions(allSessions);
                 }
                 else
                 {
-                    Console.WriteLine("No sessions found in Firebase, creating demo data");
-                    CreateDemoData();
+                    Console.WriteLine("No sessions found in Firebase");
+                    // Initialize empty lists - no demo data creation
+                    currentSession = null;
+                    nextSession = null;
+                    archivedSessions = new List<AcademicSession>();
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Error loading sessions: {ex.Message}");
                 Console.WriteLine($"Stack trace: {ex.StackTrace}");
-                CreateDemoData();
+                // Initialize empty state on error
+                currentSession = null;
+                nextSession = null;
+                archivedSessions = new List<AcademicSession>();
             }
         }
 
@@ -116,83 +120,29 @@ namespace AirCode.Pages.Admin.Superior
                 nextSession = allSessions.FirstOrDefault(s => GetStartDate(s) > now);
                 archivedSessions = allSessions.Where(s => GetEndDate(s) < now).ToList();
 
-                Console.WriteLine($"Current session: {(currentSession != null ? $"{currentSession.YearStart}-{currentSession.YearEnd}" : "None")}");
-                Console.WriteLine($"Next session: {(nextSession != null ? $"{nextSession.YearStart}-{nextSession.YearEnd}" : "None")}");
+                Console.WriteLine($"Current session: {(currentSession != null ? currentSession.SessionId : "None")}");
+                Console.WriteLine($"Next session: {(nextSession != null ? nextSession.SessionId : "None")}");
                 Console.WriteLine($"Archived sessions: {archivedSessions.Count}");
             }
         }
+        #endregion
 
-        private void CreateDemoData()
+        #region Session ID Generation
+        private string GenerateSessionId(int yearStart, int yearEnd)
         {
-            Console.WriteLine("Creating demo data for academic sessions");
-            
-            // Demo current session
-            currentSession = new AcademicSession
-            {
-                SessionId = Guid.NewGuid().ToString(),
-                YearStart = 2024,
-                YearEnd = 2025,
-                SecurityToken = Guid.NewGuid().ToString(),
-                LastModified = DateTime.Now,
-                ModifiedBy = "System",
-                Semesters = new List<Semester>
-                {
-                    new Semester
-                    {
-                        SemesterId = Guid.NewGuid().ToString(),
-                        Type = SemesterType.FirstSemester,
-                        SessionId = Guid.NewGuid().ToString(),
-                        StartDate = new DateTime(2024, 9, 1),
-                        EndDate = new DateTime(2025, 1, 31),
-                        SecurityToken = Guid.NewGuid().ToString(),
-                        LastModified = DateTime.Now,
-                        ModifiedBy = "System"
-                    }
-                }
-            };
-            
-            // Demo archived session
-            archivedSessions.Add(CreateDemoArchivedSession());
-            
-            Console.WriteLine("Demo data created successfully");
+            return $"{yearStart}_{yearEnd}_Session";
         }
 
-        private AcademicSession CreateDemoArchivedSession()
+        private string GenerateSemesterId(string sessionId, SemesterType semesterType)
         {
-            return new AcademicSession
-            {
-                SessionId = Guid.NewGuid().ToString(),
-                YearStart = 2023,
-                YearEnd = 2024,
-                SecurityToken = Guid.NewGuid().ToString(),
-                LastModified = DateTime.Now.AddYears(-1),
-                ModifiedBy = "System",
-                Semesters = new List<Semester>
-                {
-                    new Semester
-                    {
-                        SemesterId = Guid.NewGuid().ToString(),
-                        Type = SemesterType.FirstSemester,
-                        SessionId = Guid.NewGuid().ToString(),
-                        StartDate = new DateTime(2023, 9, 1),
-                        EndDate = new DateTime(2024, 1, 31),
-                        SecurityToken = Guid.NewGuid().ToString(),
-                        LastModified = DateTime.Now.AddYears(-1),
-                        ModifiedBy = "System"
-                    },
-                    new Semester
-                    {
-                        SemesterId = Guid.NewGuid().ToString(),
-                        Type = SemesterType.SecondSemester,
-                        SessionId = Guid.NewGuid().ToString(),
-                        StartDate = new DateTime(2024, 2, 1),
-                        EndDate = new DateTime(2024, 6, 30),
-                        SecurityToken = Guid.NewGuid().ToString(),
-                        LastModified = DateTime.Now.AddYears(-1),
-                        ModifiedBy = "System"
-                    }
-                }
-            };
+            string semesterCode = semesterType == SemesterType.FirstSemester ? "S1" : "S2";
+            return $"{sessionId}_{semesterCode}";
+        }
+
+        private string GenerateSecurityToken()
+        {
+            // Generate a more readable security token while maintaining uniqueness
+            return $"SEC_{DateTime.Now:yyyyMMdd}_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
         }
         #endregion
 
@@ -325,12 +275,14 @@ namespace AirCode.Pages.Admin.Superior
         {
             Console.WriteLine("Creating new academic session");
             
+            string sessionId = GenerateSessionId(sessionForm.YearStart, sessionForm.YearEnd);
+            
             var newSession = new AcademicSession
             {
-                SessionId = Guid.NewGuid().ToString(),
+                SessionId = sessionId,
                 YearStart = sessionForm.YearStart,
                 YearEnd = sessionForm.YearEnd,
-                SecurityToken = Guid.NewGuid().ToString(),
+                SecurityToken = GenerateSecurityToken(),
                 LastModified = DateTime.Now,
                 ModifiedBy = "System",
                 Semesters = new List<Semester>()
@@ -342,27 +294,27 @@ namespace AirCode.Pages.Admin.Superior
             }
             
             CategorizeNewSession(newSession);
-            await SaveAllSessionsToFirebase();
+            await SaveSessionToFirebase(newSession);
             
-            Console.WriteLine($"New session created: {newSession.YearStart}-{newSession.YearEnd}");
+            Console.WriteLine($"New session created: {newSession.SessionId}");
         }
 
         private void AddFirstSemester(AcademicSession session)
         {
             var newSemester = new Semester
             {
-                SemesterId = Guid.NewGuid().ToString(),
+                SemesterId = GenerateSemesterId(session.SessionId, SemesterType.FirstSemester),
                 Type = SemesterType.FirstSemester,
                 SessionId = session.SessionId,
                 StartDate = firstSemesterForm.StartDate,
                 EndDate = firstSemesterForm.EndDate,
-                SecurityToken = Guid.NewGuid().ToString(),
+                SecurityToken = GenerateSecurityToken(),
                 LastModified = DateTime.Now,
                 ModifiedBy = "System"
             };
             
             session.Semesters.Add(newSemester);
-            Console.WriteLine($"Added first semester to session: {session.YearStart}-{session.YearEnd}");
+            Console.WriteLine($"Added first semester to session: {session.SessionId}");
         }
 
         private void CategorizeNewSession(AcademicSession newSession)
@@ -373,15 +325,15 @@ namespace AirCode.Pages.Admin.Superior
                 if (currentSession != null)
                 {
                     archivedSessions.Add(currentSession);
-                    Console.WriteLine($"Moved current session to archived: {currentSession.YearStart}-{currentSession.YearEnd}");
+                    Console.WriteLine($"Moved current session to archived: {currentSession.SessionId}");
                 }
                 currentSession = newSession;
-                Console.WriteLine($"Set as current session: {newSession.YearStart}-{newSession.YearEnd}");
+                Console.WriteLine($"Set as current session: {newSession.SessionId}");
             }
             else
             {
                 nextSession = newSession;
-                Console.WriteLine($"Set as next session: {newSession.YearStart}-{newSession.YearEnd}");
+                Console.WriteLine($"Set as next session: {newSession.SessionId}");
             }
         }
 
@@ -393,12 +345,12 @@ namespace AirCode.Pages.Admin.Superior
             
             var newSemester = new Semester
             {
-                SemesterId = Guid.NewGuid().ToString(),
+                SemesterId = GenerateSemesterId(targetSession.SessionId, semesterForm.Type),
                 Type = semesterForm.Type,
                 SessionId = targetSession.SessionId,
                 StartDate = semesterForm.StartDate,
                 EndDate = semesterForm.EndDate,
-                SecurityToken = Guid.NewGuid().ToString(),
+                SecurityToken = GenerateSecurityToken(),
                 LastModified = DateTime.Now,
                 ModifiedBy = "System"
             };
@@ -407,9 +359,9 @@ namespace AirCode.Pages.Admin.Superior
             AcademicSession updatedSession = targetSession with { Semesters = updatedSemesters };
             
             UpdateSessionReference(targetSession, updatedSession);
-            await SaveAllSessionsToFirebase();
+            await SaveSessionToFirebase(updatedSession);
             
-            Console.WriteLine($"New semester created for session: {targetSession.YearStart}-{targetSession.YearEnd}");
+            Console.WriteLine($"New semester created for session: {targetSession.SessionId}");
         }
 
         private void UpdateSessionReference(AcademicSession originalSession, AcademicSession updatedSession)
@@ -532,7 +484,7 @@ namespace AirCode.Pages.Admin.Superior
 
         public void ViewSessionDetails(AcademicSession session)
         {
-            Console.WriteLine($"Viewing details for session {session.YearStart}-{session.YearEnd}");
+            Console.WriteLine($"Viewing details for session {session.SessionId}");
         }
 
         public short GetMaxAllowedEndYear()
@@ -562,110 +514,82 @@ namespace AirCode.Pages.Admin.Superior
         #endregion
 
         #region Firebase Operations
-        private async Task<List<AcademicSession>> GetFirebaseDocument()
+        private async Task<List<AcademicSession>> GetAllSessionsFromFirebase()
         {
             try
             {
-                Console.WriteLine($"Attempting to get document from collection: {ACADEMIC_SESSIONS_COLLECTION}, document: {ACADEMIC_SESSIONS_DOCUMENT}");
+                Console.WriteLine($"Retrieving all sessions from collection: {ACADEMIC_SESSIONS_COLLECTION}");
         
-                var result = await FirestoreService.GetDocumentAsync<AcademicSessionsContainer>(
-                    ACADEMIC_SESSIONS_COLLECTION, 
-                    ACADEMIC_SESSIONS_DOCUMENT
-                );
-        
-                if (result?.Sessions != null)
+                var allSessions = await FirestoreService.GetCollectionAsync<AcademicSession>(ACADEMIC_SESSIONS_COLLECTION);
+                
+                if (allSessions != null && allSessions.Any())
                 {
-                    Console.WriteLine($"Successfully retrieved {result.Sessions.Count} sessions from Firebase");
-                    return result.Sessions;
+                    Console.WriteLine($"Successfully retrieved {allSessions.Count} sessions from Firebase");
+                    return allSessions;
                 }
                 else
                 {
-                    Console.WriteLine($"Document '{ACADEMIC_SESSIONS_DOCUMENT}' not found or contains no sessions in collection '{ACADEMIC_SESSIONS_COLLECTION}'");
+                    Console.WriteLine($"No sessions found in collection '{ACADEMIC_SESSIONS_COLLECTION}'");
                     return new List<AcademicSession>();
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error retrieving Firebase document: {ex.Message}");
-                Console.WriteLine($"Collection: {ACADEMIC_SESSIONS_COLLECTION}, Document: {ACADEMIC_SESSIONS_DOCUMENT}");
+                Console.WriteLine($"Error retrieving sessions from Firebase: {ex.Message}");
+                Console.WriteLine($"Collection: {ACADEMIC_SESSIONS_COLLECTION}");
                 Console.WriteLine($"Stack trace: {ex.StackTrace}");
                 return new List<AcademicSession>();
             }
         }
         
-        private async Task SaveAllSessionsToFirebase()
-{
-    try
-    {
-        var allSessions = GetAllSessions();
-        Console.WriteLine($"Saving {allSessions.Count} sessions to Firebase");
-        
-        // Wrap the sessions list in a container object
-        var sessionContainer = new AcademicSessionsContainer
+        private async Task SaveSessionToFirebase(AcademicSession session)
         {
-            Sessions = allSessions,
-            LastUpdated = DateTime.Now,
-            UpdatedBy = "System"
-        };
-        
-        // Use consistent JSON settings
-        var settings = new JsonSerializerSettings
-        {
-            TypeNameHandling = TypeNameHandling.None,
-            NullValueHandling = NullValueHandling.Ignore,
-            ReferenceLoopHandling = ReferenceLoopHandling.Ignore
-        };
-        
-        // Try to update existing document first
-        bool updateSuccess = await FirestoreService.UpdateDocumentAsync<AcademicSessionsContainer>(
-            ACADEMIC_SESSIONS_COLLECTION,
-            ACADEMIC_SESSIONS_DOCUMENT,
-            sessionContainer
-        );
-        
-        if (updateSuccess)
-        {
-            Console.WriteLine("Successfully updated academic sessions in Firebase");
-        }
-        else
-        {
-            // If update fails, try to add as new document
-            Console.WriteLine("Update failed, attempting to create new document");
-            
-            var documentId = await FirestoreService.AddDocumentAsync<AcademicSessionsContainer>(
-                ACADEMIC_SESSIONS_COLLECTION,
-                sessionContainer
-            );
-            
-            if (!string.IsNullOrEmpty(documentId))
+            try
             {
-                Console.WriteLine($"Successfully created new academic sessions document: {documentId}");
+                Console.WriteLine($"Saving session {session.SessionId} to Firebase");
+                
+                // Use session ID as document ID for readable Firebase structure
+                var documentId = await FirestoreService.AddDocumentAsync<AcademicSession>(
+                    ACADEMIC_SESSIONS_COLLECTION,
+                    session,
+                    session.SessionId // Use session ID as custom document ID
+                );
+                
+                if (!string.IsNullOrEmpty(documentId))
+                {
+                    Console.WriteLine($"Successfully saved session: {session.SessionId}");
+                }
+                else
+                {
+                    // If add fails, try update (session might already exist)
+                    bool updateSuccess = await FirestoreService.UpdateDocumentAsync<AcademicSession>(
+                        ACADEMIC_SESSIONS_COLLECTION,
+                        session.SessionId,
+                        session
+                    );
+                    
+                    if (updateSuccess)
+                    {
+                        Console.WriteLine($"Successfully updated existing session: {session.SessionId}");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Failed to save or update session: {session.SessionId}");
+                        throw new Exception($"Failed to save session {session.SessionId} to Firebase");
+                    }
+                }
             }
-            else
+            catch (Exception ex)
             {
-                Console.WriteLine("Failed to create new academic sessions document");
-                throw new Exception("Failed to save academic sessions to Firebase");
+                Console.WriteLine($"Error saving session to Firebase: {ex.Message}");
+                Console.WriteLine($"Session ID: {session.SessionId}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                throw; // Re-throw to allow calling method to handle
             }
         }
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"Error saving academic sessions to Firebase: {ex.Message}");
-        Console.WriteLine($"Collection: {ACADEMIC_SESSIONS_COLLECTION}, Document: {ACADEMIC_SESSIONS_DOCUMENT}");
-        Console.WriteLine($"Stack trace: {ex.StackTrace}");
-        throw; // Re-throw to allow calling method to handle
-    }
-}
         #endregion
 
         #region Form Models and Enums
-        // Add this class to your ManageAcademicSession.cs file
-        public class AcademicSessionsContainer
-        {
-            public List<AcademicSession> Sessions { get; set; } = new List<AcademicSession>();
-            public DateTime LastUpdated { get; set; } = DateTime.Now;
-            public string UpdatedBy { get; set; } = "System";
-        }
         public class SessionFormModel
         {
             public short YearStart { get; set; }
