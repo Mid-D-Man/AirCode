@@ -1,28 +1,43 @@
 ﻿@using AirCode.Layout.Main
 @using Microsoft.AspNetCore.Components.Authorization
-@using AirCode.Components.Guards
-
-@* Debug logging *@
-@{
-    Console.WriteLine($"[App.razor] Application started at: {DateTime.Now}");
-}
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@using AirCode.Components.SharedPrefabs.Spinner
 
 <CascadingAuthenticationState>
     <Router AppAssembly="@typeof(App).Assembly">
         <Found Context="routeData">
-            @{
-                Console.WriteLine($"[App.razor] Route found: {routeData.PageType.Name}");
-            }
-            <AppAuthorizeRouteViewComponent RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
+            <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
+                <Authorizing>
+                    <LoadingSpinner Title="Authenticating..." Subtitle="Verifying your credentials, please wait." />
+                </Authorizing>
+                <NotAuthorized>
+                    @if (context.User.Identity?.IsAuthenticated != true)
+                    {
+                        <LoadingSpinner Title="Redirecting to Login..." Subtitle="Taking you to the authentication page." />
+                        <RedirectToLogin />
+                    }
+                    else
+                    {
+                        <div class="unauthorized-access">
+                            <div class="access-denied-icon">🚫</div>
+                            <h3>Access Denied</h3>
+                            <p>You don't have permission to access this page.</p>
+                            <button class="btn-return" onclick="history.back()">Go Back</button>
+                        </div>
+                    }
+                </NotAuthorized>
+            </AuthorizeRouteView>
             <FocusOnNavigate RouteData="@routeData" Selector="h1" />
         </Found>
         <NotFound>
-            @{
-                Console.WriteLine("[App.razor] Route not found");
-            }
             <PageTitle>Not found</PageTitle>
             <LayoutView Layout="@typeof(MainLayout)">
-                <p role="alert">Sorry, there's nothing at this address.</p>
+                <div class="not-found-container">
+                    <div class="not-found-icon">🔍</div>
+                    <h2>Page Not Found</h2>
+                    <p role="alert">Sorry, there's nothing at this address.</p>
+                    <button class="btn-return" onclick="window.location.href='/'">Return Home</button>
+                </div>
             </LayoutView>
         </NotFound>
     </Router>
