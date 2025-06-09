@@ -17,17 +17,17 @@
         <ul class="nav nav-tabs">
             <li class="nav-item">
                 <button class="nav-link @(activeTab == "students" ? "active" : "")" @onclick="() => SetActiveTab(STUDENT_ID)">
-                    Students (@(students?.Count ?? 0))
+                    Students (@(_collections.Students?.Count ?? 0))
                 </button>
             </li>
             <li class="nav-item">
                 <button class="nav-link @(activeTab == "lecturers" ? "active" : "")" @onclick="() => SetActiveTab(LECTURER_ID)">
-                    Lecturers (@(lecturers?.Count ?? 0))
+                    Lecturers (@(_collections.Lecturers?.Count ?? 0))
                 </button>
             </li>
             <li class="nav-item">
                 <button class="nav-link @(activeTab == "coursereps" ? "active" : "")" @onclick="() => SetActiveTab(COURSEREP_ID)">
-                    Course Reps (@(courseReps?.Count ?? 0))
+                    Course Reps (@(_collections.CourseReps?.Count ?? 0))
                 </button>
             </li>
         </ul>
@@ -44,7 +44,7 @@
     {
         <!-- Students Tab -->
         <div class="tab-content @(activeTab == "students" ? "active" : "")">
-            @if (students == null || !students.Any())
+            @if (_collections.Students == null || !_collections.Students.Any())
             {
                 <div class="empty-state">
                     <i class="fas fa-user-graduate fa-3x"></i>
@@ -54,7 +54,10 @@
             else
             {
                 <div class="user-list">
-                    @foreach (var student in students)
+                    @{
+                        var studentsCurrentPage = _paginationState.StudentsCurrentPage;
+                    }
+                    @foreach (var student in GetPagedItems(_collections.Students, ref studentsCurrentPage))
                     {
                         <div class="user-card @(student.IsCurrentlyInUse ? "in-use" : "")">
                             <div class="user-card-header">
@@ -93,12 +96,29 @@
                         </div>
                     }
                 </div>
+
+                <!-- Pagination for Students -->
+                @if (_collections.Students.Count > ITEMS_PER_PAGE)
+                {
+                    <div class="pagination-container">
+                        <nav>
+                            <ul class="pagination justify-content-center">
+                                @for (int i = 1; i <= GetTotalPages(_collections.Students.Count); i++)
+                                {
+                                    <li class="page-item @(_paginationState.StudentsCurrentPage == i ? "active" : "")">
+                                        <button class="page-link" @onclick="() => NavigateToPage(STUDENT_ID, i)">@i</button>
+                                    </li>
+                                }
+                            </ul>
+                        </nav>
+                    </div>
+                }
             }
         </div>
 
         <!-- Lecturers Tab -->
         <div class="tab-content @(activeTab == "lecturers" ? "active" : "")">
-            @if (lecturers == null || !lecturers.Any())
+            @if (_collections.Lecturers == null || !_collections.Lecturers.Any())
             {
                 <div class="empty-state">
                     <i class="fas fa-chalkboard-teacher fa-3x"></i>
@@ -108,7 +128,10 @@
             else
             {
                 <div class="user-list">
-                    @foreach (var lecturer in lecturers)
+                    @{
+                        var lecturersCurrentPage = _paginationState.LecturersCurrentPage;
+                    }
+                    @foreach (var lecturer in GetPagedItems(_collections.Lecturers, ref lecturersCurrentPage))
                     {
                         <div class="user-card">
                             <div class="user-card-header">
@@ -159,12 +182,29 @@
                         </div>
                     }
                 </div>
+
+                <!-- Pagination for Lecturers -->
+                @if (_collections.Lecturers.Count > ITEMS_PER_PAGE)
+                {
+                    <div class="pagination-container">
+                        <nav>
+                            <ul class="pagination justify-content-center">
+                                @for (int i = 1; i <= GetTotalPages(_collections.Lecturers.Count); i++)
+                                {
+                                    <li class="page-item @(_paginationState.LecturersCurrentPage == i ? "active" : "")">
+                                        <button class="page-link" @onclick="() => NavigateToPage(LECTURER_ID, i)">@i</button>
+                                    </li>
+                                }
+                            </ul>
+                        </nav>
+                    </div>
+                }
             }
         </div>
 
         <!-- Course Reps Tab -->
         <div class="tab-content @(activeTab == "coursereps" ? "active" : "")">
-            @if (courseReps == null || !courseReps.Any())
+            @if (_collections.CourseReps == null || !_collections.CourseReps.Any())
             {
                 <div class="empty-state">
                     <i class="fas fa-users fa-3x"></i>
@@ -174,7 +214,10 @@
             else
             {
                 <div class="user-list">
-                    @foreach (var courseRep in courseReps)
+                    @{
+                        var courseRepsCurrentPage = _paginationState.CourseRepsCurrentPage;
+                    }
+                    @foreach (var courseRep in GetPagedItems(_collections.CourseReps, ref courseRepsCurrentPage))
                     {
                         <div class="user-card @(courseRep.StudentInfo.IsCurrentlyInUse ? "in-use" : "")">
                             <div class="user-card-header">
@@ -231,6 +274,23 @@
                         </div>
                     }
                 </div>
+
+                <!-- Pagination for Course Reps -->
+                @if (_collections.CourseReps.Count > ITEMS_PER_PAGE)
+                {
+                    <div class="pagination-container">
+                        <nav>
+                            <ul class="pagination justify-content-center">
+                                @for (int i = 1; i <= GetTotalPages(_collections.CourseReps.Count); i++)
+                                {
+                                    <li class="page-item @(_paginationState.CourseRepsCurrentPage == i ? "active" : "")">
+                                        <button class="page-link" @onclick="() => NavigateToPage(COURSEREP_ID, i)">@i</button>
+                                    </li>
+                                }
+                            </ul>
+                        </nav>
+                    </div>
+                }
             }
         </div>
     }
