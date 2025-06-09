@@ -37,18 +37,22 @@ else
     private bool Authorized { get; set; }
     private bool IsRedirecting { get; set; }
 
-    protected async Task OnInitializedAsync()
+    protected new async Task OnInitializedAsync()
     {
         // Allow access to index page without authentication
         var currentPath = new Uri(NavigationManager.Uri).AbsolutePath;
-        if (currentPath == "/" || currentPath == "/AirCode/" || currentPath.EndsWith("/index.html"))
+        if (currentPath == "/" || currentPath == "/AirCode/" || currentPath.EndsWith("/index") || RouteData.PageType.Name == "Index")
         {
             Authorized = true;
             StateHasChanged();
             return;
         }
 
-        if (AuthenticationState == null) return;
+        if (AuthenticationState == null) 
+        {
+            Authorized = false;
+            return;
+        }
 
         var authState = await AuthenticationState;
         var user = authState.User;
@@ -97,9 +101,10 @@ else
 
     private async Task<bool> CheckPolicyAsync(ClaimsPrincipal user, string policy)
     {
+        
         var userId = user.FindFirst("sub")?.Value ?? user.FindFirst("id")?.Value;
         if (string.IsNullOrEmpty(userId)) return false;
-
+        await Task.CompletedTask;
         return policy switch
         {
             "SuperiorAdmin" => user.IsInRole("superioradmin"),
