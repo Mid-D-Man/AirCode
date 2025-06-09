@@ -39,6 +39,15 @@ else
 
     protected async Task OnInitializedAsync()
     {
+        // Allow access to index page without authentication
+        var currentPath = new Uri(NavigationManager.Uri).AbsolutePath;
+        if (currentPath == "/" || currentPath == "/AirCode/" || currentPath.EndsWith("/index.html"))
+        {
+            Authorized = true;
+            StateHasChanged();
+            return;
+        }
+
         if (AuthenticationState == null) return;
 
         var authState = await AuthenticationState;
