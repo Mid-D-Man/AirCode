@@ -24,11 +24,11 @@
                 // If user is already authenticated, redirect them based on their role
                 _ = RedirectAuthenticatedUser();
             }
-            <div class="welcome-section">
-                <h1 class="welcome-title">Welcome back!</h1>
-                <p class="welcome-subtitle">Redirecting you to your dashboard...</p>
+            <div class="auth-loading">
+                <div class="loading-spinner"></div>
+                <h2 class="loading-title">Welcome back!</h2>
+                <p class="loading-subtitle">Redirecting you to your dashboard...</p>
             </div>
-            
         </Authorized>
         <NotAuthorized>
             <div class="welcome-section">
