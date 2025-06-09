@@ -26,28 +26,28 @@
         {
             // Check if user is authenticated
             var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-            
+
             if (authState.User.Identity?.IsAuthenticated == true)
             {
                 // Clear offline credentials
                 await OfflineCredentialsService.ClearCredentialsAsync();
-                
-                // Clear any local storage data probably clear only specific
+
+                // Clear local storage
                 await LocalStorageService.ClearAsync();
-                
+
                 // Initiate Auth0 logout
                 var authority = $"https://{Configuration["Auth0:Domain"]}";
                 var clientId = Configuration["Auth0:ClientId"];
                 var returnUrl = Navigation.BaseUri;
-                
-                // Navigate to Auth0 logout endpoint
+
+                // Ensure returnTo URL is valid
                 var logoutUrl = $"{authority}/v2/logout?client_id={clientId}&returnTo={returnUrl}";
                 Navigation.NavigateTo(logoutUrl, forceLoad: true);
             }
             else
             {
-                // User not authenticated, redirect to home
-                Navigation.NavigateTo("/", forceLoad: false);
+                // Session expired, redirect to login
+                Navigation.NavigateTo("/authentication/login", forceLoad: true);
             }
         }
         catch (Exception ex)
