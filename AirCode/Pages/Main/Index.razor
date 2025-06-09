@@ -8,6 +8,7 @@
 @using AirCode.Services.Auth.Offline
 @using AirCode.Utilities.HelperScripts
 @using Microsoft.AspNetCore.Components.Authorization
+@using AirCode.Components.SharedPrefabs.Spinner
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
 @inject IOfflineCredentialsService OfflineCredentialService
@@ -24,11 +25,7 @@
                 // If user is already authenticated, redirect them based on their role
                 _ = RedirectAuthenticatedUser();
             }
-            <div class="auth-loading">
-                <div class="loading-spinner"></div>
-                <h2 class="loading-title">Welcome back!</h2>
-                <p class="loading-subtitle">Redirecting you to your dashboard...</p>
-            </div>
+            <LoadingSpinner Title="Welcome back!" Subtitle="Redirecting you to your dashboard..." />
         </Authorized>
         <NotAuthorized>
             <div class="welcome-section">
