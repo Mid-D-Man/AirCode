@@ -1,6 +1,59 @@
-@page "/LogoutPage"
-<h3>LogoutPage</h3>
+@page "/logout"
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@using Microsoft.AspNetCore.Components.Authorization
+@using AirCode.Services.Auth.Offline
+@using AirCode.Services.Storage
+@using AirCode.Components.SharedPrefabs.Spinner
+@inject NavigationManager Navigation
+@inject SignOutSessionStateManager SignOutManager
+@inject IConfiguration Configuration
+@inject IOfflineCredentialsService OfflineCredentialsService
+@inject IBlazorAppLocalStorageService LocalStorageService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IJSRuntime JSRuntime
+
+<LoadingSpinner Title="Logging out..." Subtitle="Please wait while we sign you out securely." />
 
 @code {
-    
+    protected override async Task OnInitializedAsync()
+    {
+        await InitiateLogout();
+    }
+
+    private async Task InitiateLogout()
+    {
+        try
+        {
+            // Check if user is authenticated
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            
+            if (authState.User.Identity?.IsAuthenticated == true)
+            {
+                // Clear offline credentials
+                await OfflineCredentialsService.ClearCredentialsAsync();
+                
+                // Clear any local storage data probably clear only specific
+                await LocalStorageService.ClearAsync();
+                
+                // Initiate Auth0 logout
+                var authority = $"https://{Configuration["Auth0:Domain"]}";
+                var clientId = Configuration["Auth0:ClientId"];
+                var returnUrl = Navigation.BaseUri;
+                
+                // Navigate to Auth0 logout endpoint
+                var logoutUrl = $"{authority}/v2/logout?client_id={clientId}&returnTo={returnUrl}";
+                Navigation.NavigateTo(logoutUrl, forceLoad: true);
+            }
+            else
+            {
+                // User not authenticated, redirect to home
+                Navigation.NavigateTo("/", forceLoad: false);
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("console.error", $"Logout error: {ex.Message}");
+            Navigation.NavigateTo("/", forceLoad: false);
+        }
+    }
 }

@@ -49,24 +49,25 @@
 
     private void HandleSettings() => NavigationManager.NavigateTo("/admin/settings");
     private void HandleContact() => NavigationManager.NavigateTo("/admin/contact");
-    private void HandleLogout() => NavigationManager.NavigateTo("/auth");
+    private void HandleLogout() => NavigationManager.NavigateTo("logout"); // Updated to use proper logout page
     
     private List<NavItem> NavigationItems => new()
     {
         new("home", "Dashboard", "Admin/Dashboard"),
         new("qrcode", "Attendance Event", "Admin/CreateSession"),
         new("users", "Session Management", "Admin/ManageAcademicSession"),
-        new("admin", "Manage Departments", "Admin/ManageDepartments"),new("courses", "Manage Users", "Admin/ManageUsers"),
+        new("admin", "Manage Departments", "Admin/ManageDepartments"),
+        new("courses", "Manage Users", "Admin/ManageUsers"),
         new("courses", "Manage Courses", "Admin/ManageCourses"),
         new("report", "Student Test", "student/courses"),
         new("stats", "Lecturer Test", "Admin/lecturer/courses")
     };
 
-    // Modified to use the same structure as NavigationItems
+    // Updated to use proper logout path
     private List<NavItem> BottomItems => new()
     {
         new("settings", "Settings", "/Admin/Settings"),
         new("contact", "Contact", "/Admin/Contact"),
-        new("logout", "Logout", "/auth")
+        new("logout", "Logout", null,false) { Action = HandleLogout } // Use action instead of path for logout
     };
 }

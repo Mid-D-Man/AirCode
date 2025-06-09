@@ -592,7 +592,7 @@ private async Task CreateCourseRepSkeleton()
     {
         var docName = $"StudentLevel{student.Level}";
         var levelDoc = await FirestoreService.GetDocumentAsync<StudentLevelDocument>(STUDENTS_COLLECTION, docName);
-        
+        //remember update document dosent work for some reason
         if (levelDoc?.ValidStudentMatricNumbers != null)
         {
             levelDoc.ValidStudentMatricNumbers.RemoveAll(s => s.MatricNumber.Equals(student.MatricNumber, StringComparison.OrdinalIgnoreCase));
