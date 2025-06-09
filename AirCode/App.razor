@@ -1,13 +1,25 @@
 ﻿@using AirCode.Layout.Main
 @using Microsoft.AspNetCore.Components.Authorization
 @using AirCode.Components.Guards
+
+@* Debug logging *@
+@{
+    Console.WriteLine($"[App.razor] Application started at: {DateTime.Now}");
+}
+
 <CascadingAuthenticationState>
     <Router AppAssembly="@typeof(App).Assembly">
         <Found Context="routeData">
-            <AppAuthorizeRouteViewComponent RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
+            @{
+                Console.WriteLine($"[App.razor] Route found: {routeData.PageType.Name}");
+            }
+            <AuthorizeRouteViewComponent RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
             <FocusOnNavigate RouteData="@routeData" Selector="h1" />
         </Found>
         <NotFound>
+            @{
+                Console.WriteLine("[App.razor] Route not found");
+            }
             <PageTitle>Not found</PageTitle>
             <LayoutView Layout="@typeof(MainLayout)">
                 <p role="alert">Sorry, there's nothing at this address.</p>

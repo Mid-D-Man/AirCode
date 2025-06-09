@@ -39,27 +39,39 @@ else
 
     protected new async Task OnInitializedAsync()
     {
-        // Allow access to index page without authentication
+        Console.WriteLine($"[AuthorizeRouteView] URI: {NavigationManager.Uri}");
+        Console.WriteLine($"[AuthorizeRouteView] Page Type: {RouteData?.PageType?.Name}");
+        
         var currentPath = new Uri(NavigationManager.Uri).AbsolutePath;
-        if (currentPath == "/" || currentPath == "/AirCode/" || currentPath.EndsWith("/index") || RouteData.PageType.Name == "Index")
+        Console.WriteLine($"[AuthorizeRouteView] Current Path: {currentPath}");
+        
+        // Allow access to index page without authentication
+        if (currentPath == "/" || currentPath == "/AirCode/" || currentPath.EndsWith("/index") || 
+            RouteData?.PageType?.Name == "Index")
         {
+            Console.WriteLine("[AuthorizeRouteView] Index page detected - allowing access");
             Authorized = true;
             StateHasChanged();
             return;
         }
 
+        Console.WriteLine("[AuthorizeRouteView] Not index page - checking authentication");
+
         if (AuthenticationState == null) 
         {
+            Console.WriteLine("[AuthorizeRouteView] AuthenticationState is null");
             Authorized = false;
             return;
         }
 
         var authState = await AuthenticationState;
         var user = authState.User;
+        Console.WriteLine($"[AuthorizeRouteView] User authenticated: {user?.Identity?.IsAuthenticated}");
 
         // Check authentication first
         if (!user.Identity?.IsAuthenticated ?? true)
         {
+            Console.WriteLine("[AuthorizeRouteView] User not authenticated - redirecting to login");
             IsRedirecting = true;
             var returnUrl = Uri.EscapeDataString(NavigationManager.Uri);
             NavigationManager.NavigateTo($"/authentication/login?returnUrl={returnUrl}");
@@ -67,7 +79,9 @@ else
         }
 
         // Check authorization
+        Console.WriteLine("[AuthorizeRouteView] Checking authorization");
         Authorized = await CheckAuthorizationAsync(user);
+        Console.WriteLine($"[AuthorizeRouteView] Authorization result: {Authorized}");
         StateHasChanged();
     }
 
@@ -101,10 +115,9 @@ else
 
     private async Task<bool> CheckPolicyAsync(ClaimsPrincipal user, string policy)
     {
-        
         var userId = user.FindFirst("sub")?.Value ?? user.FindFirst("id")?.Value;
         if (string.IsNullOrEmpty(userId)) return false;
-        await Task.CompletedTask;
+
         return policy switch
         {
             "SuperiorAdmin" => user.IsInRole("superioradmin"),
