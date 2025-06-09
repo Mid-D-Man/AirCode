@@ -1,6 +1,371 @@
-@page "/ManageUsers"
-<h3>ManageUsers</h3>
+@page "/Admin/ManageUsers"
+@layout SuperiorAdminLayout
+@using AirCode.Components.SharedPrefabs.Cards
+@using AirCode.Layout.AdminLayout.Superior
 
-@code {
-    
+<div class="container">
+    <!-- Notification component -->
+    <NotificationComponent @ref="notificationComponent" Position="NotificationComponent.NotificationPosition.TopRight" />
+
+    <div class="admin-header">
+        <h2 class="text-primary">User Management</h2>
+        <button class="btn btn-primary" @onclick="ShowCreateUserModal">Create New Skeleton User</button>
+    </div>
+
+    <!-- Tab Navigation -->
+    <div class="nav-tabs-container">
+        <ul class="nav nav-tabs">
+            <li class="nav-item">
+                <button class="nav-link @(activeTab == "students" ? "active" : "")" @onclick="() => SetActiveTab(\"students\")">
+                    Students (@(students?.Count ?? 0))
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link @(activeTab == "lecturers" ? "active" : "")" @onclick="() => SetActiveTab(\"lecturers\")">
+                    Lecturers (@(lecturers?.Count ?? 0))
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link @(activeTab == "coursereps" ? "active" : "")" @onclick="() => SetActiveTab(\"coursereps\")">
+                    Course Reps (@(courseReps?.Count ?? 0))
+                </button>
+            </li>
+        </ul>
+    </div>
+
+    @if (loading)
+    {
+        <div class="loading-container">
+            <div class="spinner"></div>
+            <p>Loading user data...</p>
+        </div>
+    }
+    else
+    {
+        <!-- Students Tab -->
+        <div class="tab-content @(activeTab == "students" ? "active" : "")">
+            @if (students == null || !students.Any())
+            {
+                <div class="empty-state">
+                    <i class="fas fa-user-graduate fa-3x"></i>
+                    <p>No student skeleton users found. Create one to get started.</p>
+                </div>
+            }
+            else
+            {
+                <div class="user-list">
+                    @foreach (var student in students)
+                    {
+                        <div class="user-card @(student.IsCurrentlyInUse ? "in-use" : "")">
+                            <div class="user-card-header">
+                                <div class="user-id">@student.MatricNumber</div>
+                                <div class="user-type">Level @student.Level</div>
+                            </div>
+                            <div class="user-card-body">
+                                <div class="user-details">
+                                    <div class="detail-row">
+                                        <span class="detail-label">Level:</span>
+                                        <span class="detail-value">@student.Level</span>
+                                    </div>
+                                    <div class="detail-row">
+                                        <span class="detail-label">Status:</span>
+                                        <span class="detail-value @(student.IsCurrentlyInUse ? "text-success" : "text-secondary")">
+                                            @(student.IsCurrentlyInUse ? "In Use" : "Available")
+                                        </span>
+                                    </div>
+                                    @if (!string.IsNullOrEmpty(student.CurrentUserId))
+                                    {
+                                        <div class="detail-row">
+                                            <span class="detail-label">User ID:</span>
+                                            <span class="detail-value">@student.CurrentUserId</span>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                            <div class="user-card-footer">
+                                <button class="btn btn-danger" @onclick="() => ShowDeleteUserModal(student, \"student\")">
+                                    <i class="fas fa-trash"></i> Delete
+                                </button>
+                                <button class="btn btn-secondary" @onclick="() => CopyToClipboard(student.MatricNumber)">
+                                    <i class="fas fa-copy"></i> Copy
+                                </button>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+
+        <!-- Lecturers Tab -->
+        <div class="tab-content @(activeTab == "lecturers" ? "active" : "")">
+            @if (lecturers == null || !lecturers.Any())
+            {
+                <div class="empty-state">
+                    <i class="fas fa-chalkboard-teacher fa-3x"></i>
+                    <p>No lecturer skeleton users found. Create one to get started.</p>
+                </div>
+            }
+            else
+            {
+                <div class="user-list">
+                    @foreach (var lecturer in lecturers)
+                    {
+                        <div class="user-card">
+                            <div class="user-card-header">
+                                <div class="user-id">@lecturer.LecturerId</div>
+                                <div class="user-type">Lecturer</div>
+                            </div>
+                            <div class="user-card-body">
+                                <div class="user-details">
+                                    <div class="detail-row">
+                                        <span class="detail-label">Admin ID:</span>
+                                        <span class="detail-value admin-id-text">@lecturer.AdminId</span>
+                                    </div>
+                                    <div class="detail-row">
+                                        <span class="detail-label">Usage:</span>
+                                        <span class="detail-value">@lecturer.CurrentUsage/@lecturer.MaxUsage</span>
+                                        <button class="btn btn-sm btn-outline-primary" @onclick="() => ShowMaxUsageModal(lecturer, \"lecturer\")">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                @if (lecturer.UserIds.Any())
+                                {
+                                    <div class="assigned-users">
+                                        <h6>Assigned Users:</h6>
+                                        <ul class="user-list-compact">
+                                            @foreach (var userId in lecturer.UserIds)
+                                            {
+                                                <li class="user-item-compact">
+                                                    <span class="user-id-compact">@userId</span>
+                                                    <button class="btn btn-sm btn-danger" @onclick="() => ShowRemoveUserModal(lecturer, userId, \"lecturer\")">
+                                                        <i class="fas fa-times"></i>
+                                                    </button>
+                                                </li>
+                                            }
+                                        </ul>
+                                    </div>
+                                }
+                            </div>
+                            <div class="user-card-footer">
+                                <button class="btn btn-danger" @onclick="() => ShowDeleteUserModal(lecturer, \"lecturer\")">
+                                    <i class="fas fa-trash"></i> Delete
+                                </button>
+                                <button class="btn btn-secondary" @onclick="() => CopyToClipboard(lecturer.AdminId)">
+                                    <i class="fas fa-copy"></i> Copy Admin ID
+                                </button>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+
+        <!-- Course Reps Tab -->
+        <div class="tab-content @(activeTab == "coursereps" ? "active" : "")">
+            @if (courseReps == null || !courseReps.Any())
+            {
+                <div class="empty-state">
+                    <i class="fas fa-users fa-3x"></i>
+                    <p>No course rep skeleton users found. Create one to get started.</p>
+                </div>
+            }
+            else
+            {
+                <div class="user-list">
+                    @foreach (var courseRep in courseReps)
+                    {
+                        <div class="user-card @(courseRep.StudentInfo.IsCurrentlyInUse ? "in-use" : "")">
+                            <div class="user-card-header">
+                                <div class="user-id">@courseRep.StudentInfo.MatricNumber</div>
+                                <div class="user-type">Course Rep - Level @courseRep.StudentInfo.Level</div>
+                            </div>
+                            <div class="user-card-body">
+                                <div class="user-details">
+                                    <div class="detail-row">
+                                        <span class="detail-label">Admin ID:</span>
+                                        <span class="detail-value admin-id-text">@courseRep.AdminInfo.AdminId</span>
+                                    </div>
+                                    <div class="detail-row">
+                                        <span class="detail-label">Usage:</span>
+                                        <span class="detail-value">@courseRep.AdminInfo.CurrentUsage/@courseRep.AdminInfo.MaxUsage</span>
+                                        <button class="btn btn-sm btn-outline-primary" @onclick="() => ShowMaxUsageModal(courseRep.AdminInfo, \"courserep\")">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                    </div>
+                                    <div class="detail-row">
+                                        <span class="detail-label">Student Status:</span>
+                                        <span class="detail-value @(courseRep.StudentInfo.IsCurrentlyInUse ? "text-success" : "text-secondary")">
+                                            @(courseRep.StudentInfo.IsCurrentlyInUse ? "In Use" : "Available")
+                                        </span>
+                                    </div>
+                                </div>
+
+                                @if (courseRep.AdminInfo.UserIds.Any())
+                                {
+                                    <div class="assigned-users">
+                                        <h6>Assigned Users:</h6>
+                                        <ul class="user-list-compact">
+                                            @foreach (var userId in courseRep.AdminInfo.UserIds)
+                                            {
+                                                <li class="user-item-compact">
+                                                    <span class="user-id-compact">@userId</span>
+                                                    <button class="btn btn-sm btn-danger" @onclick="() => ShowRemoveUserModal(courseRep.AdminInfo, userId, \"courserep\")">
+                                                        <i class="fas fa-times"></i>
+                                                    </button>
+                                                </li>
+                                            }
+                                        </ul>
+                                    </div>
+                                }
+                            </div>
+                            <div class="user-card-footer">
+                                <button class="btn btn-danger" @onclick="() => ShowDeleteUserModal(courseRep, \"courserep\")">
+                                    <i class="fas fa-trash"></i> Delete
+                                </button>
+                                <button class="btn btn-secondary" @onclick="() => CopyToClipboard(courseRep.AdminInfo.AdminId)">
+                                    <i class="fas fa-copy"></i> Copy Admin ID
+                                </button>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<!-- Create User Modal -->
+<div class="modal @(showCreateModal ? "show" : "")" tabindex="-1" style="display: @(showCreateModal ? "block" : "none")">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Create New Skeleton User</h5>
+                <button type="button" class="btn-close" @onclick="CloseModals"></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group mb-3">
+                    <label for="userType">User Type</label>
+                    <select id="userType" class="form-control" @bind="newUserType" @onchange="OnUserTypeChanged">
+                        <option value="Student">Student</option>
+                        <option value="Lecturer">Lecturer</option>
+                        <option value="CourseRep">Course Rep</option>
+                    </select>
+                </div>
+
+                @if (newUserType == "Student" || newUserType == "CourseRep")
+                {
+                    <div class="form-group mb-3">
+                        <label for="matricNumber">Matriculation Number</label>
+                        <input type="text" id="matricNumber" class="form-control" @bind="newMatricNumber" 
+                               placeholder="e.g., U21CYS1083" />
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="level">Level</label>
+                        <select id="level" class="form-control" @bind="newLevel">
+                            <option value="100">100</option>
+                            <option value="200">200</option>
+                            <option value="300">300</option>
+                            <option value="400">400</option>
+                            <option value="500">500</option>
+                        </select>
+                    </div>
+                }
+
+                @if (newUserType == "Lecturer" || newUserType == "CourseRep")
+                {
+                    <div class="form-group mb-3">
+                        <label for="maxUsage">Maximum Usage</label>
+                        <input type="number" id="maxUsage" class="form-control" @bind="newMaxUsage" 
+                               min="1" max="@(newUserType == "Lecturer" ? "1" : "2")" 
+                               disabled="@(newUserType == "Lecturer")" />
+                        <small class="form-text text-muted">
+                            @(newUserType == "Lecturer" ? "Lecturers have a fixed maximum of 1 user" : "Course Reps can have up to 2 users")
+                        </small>
+                    </div>
+                }
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" @onclick="CloseModals">Cancel</button>
+                <button type="button" class="btn btn-primary" @onclick="CreateSkeletonUser">Create</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Max Usage Modal -->
+<div class="modal @(showMaxUsageModal ? "show" : "")" tabindex="-1" style="display: @(showMaxUsageModal ? "block" : "none")">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Update Maximum Usage</h5>
+                <button type="button" class="btn-close" @onclick="CloseModals"></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="updateMaxUsage">Maximum Usage</label>
+                    <input type="number" id="updateMaxUsage" class="form-control" @bind="updateMaxUsage" 
+                           min="1" max="@(selectedUserType == "lecturer" ? "1" : "2")" />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" @onclick="CloseModals">Cancel</button>
+                <button type="button" class="btn btn-primary" @onclick="UpdateMaxUsage">Update</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete User Modal -->
+<div class="modal @(showDeleteModal ? "show" : "")" tabindex="-1" style="display: @(showDeleteModal ? "block" : "none")">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Delete Skeleton User</h5>
+                <button type="button" class="btn-close" @onclick="CloseModals"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete this skeleton user?</p>
+                <div class="alert alert-warning">
+                    <strong>Warning:</strong> This action cannot be undone. This will permanently remove the skeleton user from the system.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" @onclick="CloseModals">Cancel</button>
+                <button type="button" class="btn btn-danger" @onclick="DeleteSkeletonUser">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Remove User Modal -->
+<div class="modal @(showRemoveUserModal ? "show" : "")" tabindex="-1" style="display: @(showRemoveUserModal ? "block" : "none")">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Remove Assigned User</h5>
+                <button type="button" class="btn-close" @onclick="CloseModals"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to remove this assigned user?</p>
+                @if (!string.IsNullOrEmpty(selectedAssignedUserId))
+                {
+                    <div class="alert alert-info">
+                        <strong>User ID:</strong> @selectedAssignedUserId
+                    </div>
+                }
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" @onclick="CloseModals">Cancel</button>
+                <button type="button" class="btn btn-danger" @onclick="RemoveAssignedUser">Remove</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal backdrop -->
+@if (showCreateModal || showMaxUsageModal || showDeleteModal || showRemoveUserModal)
+{
+    <div class="modal-backdrop fade show"></div>
 }
