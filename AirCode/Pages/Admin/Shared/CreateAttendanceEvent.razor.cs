@@ -162,7 +162,11 @@ using SessionData = AirCode.Services.Attendance.SessionData;
                 sessionModel.SessionId = Guid.NewGuid().ToString("N");
 
                 qrCodePayload = await GenerateQrCodePayload();
+                
+                
                 sessionEndTime = DateTime.UtcNow.AddMinutes(sessionModel.Duration);
+
+                await ProcessAttendanceCode(qrCodePayload);
 
                 // Create Firebase attendance event document
                 await CreateFirebaseAttendanceEvent();
@@ -247,8 +251,7 @@ using SessionData = AirCode.Services.Attendance.SessionData;
                     // Add new event as a field within existing document
                     var eventFieldName = $"Event_{sessionModel.SessionId}_{sessionModel.StartTime:yyyyMMdd}";
                     await FirestoreService.AddOrUpdateFieldAsync("ATTENDANCE_EVENTS", documentId, eventFieldName, attendanceEventData);
-                    await ProcessAttendanceCode(JsonHelper.Serialize(attendanceEventData));
-
+                   
                 }
                 else
                 {
@@ -263,8 +266,7 @@ using SessionData = AirCode.Services.Attendance.SessionData;
                     };
 
                     await FirestoreService.AddDocumentAsync("ATTENDANCE_EVENTS", courseEventDocument, documentId);
-                    await ProcessAttendanceCode(JsonHelper.Serialize(attendanceEventData));
-
+                
                 }
             }
             catch (Exception ex)
