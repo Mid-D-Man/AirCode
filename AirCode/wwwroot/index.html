@@ -86,7 +86,51 @@
 <script src="js/cameraUtil.js"></script>
  <script src="js/floatingQrDrag.js"></script>
 <script src="js/firestoreModule.js"></script>
-<script type="module" src="js/qrCodeModule.js"></script>
+
+<!-- Load modules -->
+<script type="module" src="/wasm/qr_code_generator.js" onerror="console.warn('WASM QR generator not found')"></script>
+<script type="module" src="/js/qrCodeModule.js"></script>
+<script>
+    // Camera utility functions for QR scanner
+    window.getCameraStream = async (constraints) => {
+        try {
+            return await navigator.mediaDevices.getUserMedia(constraints);
+        } catch (error) {
+            console.error('Camera access error:', error);
+            throw error;
+        }
+    };
+    window.stopMediaStream = (stream) => {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+        }
+    };
+    // Check camera permissions
+    window.checkCameraPermission = async () => {
+        try {
+            const result = await navigator.permissions.query({ name: 'camera' });
+            return result.state;
+        } catch (error) {
+            return 'unknown';
+        }
+    };
+</script>
+<script>
+    // Add this to debug WASM loading
+    window.addEventListener('load', async () => {
+        try {
+            const wasmUrl = './wasm/qr_code_generator_bg.wasm';
+            const response = await fetch(wasmUrl);
+            console.log('WASM fetch response:', {
+                status: response.status,
+                contentType: response.headers.get('content-type'),
+                url: response.url
+            });
+        } catch (error) {
+            console.error('WASM fetch failed:', error);
+        }
+    });
+</script>
 
 <!-- Firebase Configuration -->
 <script>
