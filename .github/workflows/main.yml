@@ -97,3 +97,13 @@ jobs:
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4
+        
+# Include WASM files in the build
+include:
+  - wasm
+
+# Set proper MIME types (if supported by your hosting)
+webrick:
+  headers:
+    wasm: application/wasm
+    js: application/javascript        
