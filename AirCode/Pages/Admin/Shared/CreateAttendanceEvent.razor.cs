@@ -1,4 +1,6 @@
+using AirCode.Services.SupaBase;
 using AirCode.Utilities.DataStructures;
+using AirCode.Utilities.HelperScripts;
 using Microsoft.AspNetCore.Components;
 
 namespace AirCode.Pages.Admin.Shared;
@@ -11,7 +13,6 @@ using AirCode.Services.Courses;
 using AirCode.Services.Firebase;
 using AirCode.Domain.Entities;
 using SessionData = AirCode.Services.Attendance.SessionData;
-
     public partial class CreateAttendanceEvent : ComponentBase, IDisposable
     {
         [Inject] private IJSRuntime JS { get; set; }
@@ -19,6 +20,8 @@ using SessionData = AirCode.Services.Attendance.SessionData;
         [Inject] private SessionStateService SessionStateService { get; set; }
         [Inject] private ICourseService CourseService { get; set; }
         [Inject] private IFirestoreService FirestoreService { get; set; }
+//for testing
+        [Inject] private ISupabaseEdgeFunctionService EdgeService { get; set; }
 
         private SessionData sessionModel = new();
         private bool isSessionStarted = false;
@@ -244,6 +247,8 @@ using SessionData = AirCode.Services.Attendance.SessionData;
                     // Add new event as a field within existing document
                     var eventFieldName = $"Event_{sessionModel.SessionId}_{sessionModel.StartTime:yyyyMMdd}";
                     await FirestoreService.AddOrUpdateFieldAsync("ATTENDANCE_EVENTS", documentId, eventFieldName, attendanceEventData);
+                    await ProcessAttendanceCode(JsonHelper.Serialize(attendanceEventData));
+
                 }
                 else
                 {
@@ -304,6 +309,8 @@ using SessionData = AirCode.Services.Attendance.SessionData;
 
                 await FirestoreService.AddOrUpdateFieldAsync("ATTENDANCE_EVENTS", documentId, statusFieldName, status);
                 await FirestoreService.AddOrUpdateFieldAsync("ATTENDANCE_EVENTS", documentId, endTimeFieldName, DateTime.UtcNow);
+                
+                
             }
             catch (Exception ex)
             {
@@ -441,9 +448,35 @@ using SessionData = AirCode.Services.Attendance.SessionData;
         private Task HandleQRCodeGenerated(QRCodeData qrCode)
         {
             generatedQRCode = qrCode;
+         
             return Task.CompletedTask;
         }
-
+        private async Task ProcessAttendanceCode(string qrCode)
+        {
+            try
+            {
+                // Add your attendance processing logic here
+                // This could involve:
+                // 1. Decrypting the QR code data
+                // 2. Validating the session
+                // 3. Recording attendance
+                // 4. Showing success/failure feedback
+                var randomguy = new AttendanceRecord
+                {
+                    MatricNumber = "SukaBlak",
+                    HasScannedAttendance = true,
+                    IsOnlineScan = true
+                };
+                var result =  await EdgeService.ProcessAttendanceAsync(qrCode,randomguy);
+            
+                Console.WriteLine($"Processing attendance code: {qrCode}, and found result {result.ToString()}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error processing attendance: {ex.Message}");
+              
+            }
+        }
         public void Dispose()
         {
             countdownTimer?.Dispose();
