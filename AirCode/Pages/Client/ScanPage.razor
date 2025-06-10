@@ -185,26 +185,34 @@
     {
         try
         {
-            // Add your attendance processing logic here
-            // This could involve:
-            // 1. Decrypting the QR code data
-            // 2. Validating the session
-            // 3. Recording attendance
-            // 4. Showing success/failure feedback
-              var randomguy = new AttendanceRecord
-              {
-        MatricNumber = "SukaBlak",
-        HasScannedAttendance = true,
-        IsOnlineScan = true
-              };
-          var result =  await EdgeService.ProcessAttendanceAsync(qrCode,randomguy);
-            
-            Console.WriteLine($"Processing attendance code: {qrCode}, and found result {result.ToString()}");
+            Console.WriteLine($"Processing QR Code: {qrCode}");
+        
+            var attendanceRecord = new AttendanceRecord
+            {
+                MatricNumber = "SukaBlak", // Use actual user data
+                HasScannedAttendance = true,
+                IsOnlineScan = true
+            };
+        
+            Console.WriteLine($"Attendance Record: {attendanceRecord}");
+        
+            var result = await EdgeService.ProcessAttendanceAsync(qrCode, attendanceRecord);
+        
+            Console.WriteLine($"Result: {result}");
+        
+            if (result.Success)
+            {
+                ShowAlert("Attendance recorded successfully!", false);
+            }
+            else
+            {
+                ShowAlert($"Failed: {result.Message}");
+            }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error processing attendance: {ex.Message}");
-            ShowAlert($"Processing failed: {ex.Message}");
+            Console.WriteLine($"Error: {ex}");
+            ShowAlert($"Error: {ex.Message}");
         }
     }
 

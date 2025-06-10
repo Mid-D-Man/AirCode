@@ -7,6 +7,7 @@ using AirCode.Utilities.HelperScripts;
 
 namespace AirCode.Services.SupaBase;
 
+
 public class SupabaseEdgeFunctionService : ISupabaseEdgeFunctionService
 {
     private readonly HttpClient _httpClient;
@@ -31,17 +32,29 @@ public class SupabaseEdgeFunctionService : ISupabaseEdgeFunctionService
     {
         try
         {
+            // Convert to the format expected by the edge function
             var requestPayload = new
             {
                 qrCodePayload,
-                attendanceData
+                attendanceData = new
+                {
+                    matricNumber = attendanceData.MatricNumber, // Match edge function expectation
+                    hasScannedAttendance = attendanceData.HasScannedAttendance,
+                    isOnlineScan = attendanceData.IsOnlineScan
+                }
             };
+
+            Console.WriteLine($"Sending payload: {JsonSerializer.Serialize(requestPayload, _jsonOptions)}");
 
             var response = await SendEdgeFunctionRequestAsync("process-attendance-data", requestPayload);
             
+            var responseContent = await response.Content.ReadAsStringAsync();
+            Console.WriteLine($"Response Status: {response.StatusCode}");
+            Console.WriteLine($"Response Content: {responseContent}");
+            
             if (response.IsSuccessStatusCode)
             {
-                var result = await response.Content.ReadFromJsonAsync<AttendanceProcessingResult>(_jsonOptions);
+                var result = JsonSerializer.Deserialize<AttendanceProcessingResult>(responseContent, _jsonOptions);
                 return result ?? new AttendanceProcessingResult 
                 { 
                     Success = false, 
@@ -49,16 +62,16 @@ public class SupabaseEdgeFunctionService : ISupabaseEdgeFunctionService
                 };
             }
 
-            var errorContent = await response.Content.ReadAsStringAsync();
             return new AttendanceProcessingResult
             {
                 Success = false,
                 Message = $"Request failed: {response.StatusCode}",
-                ErrorDetails = errorContent
+                ErrorDetails = responseContent
             };
         }
         catch (HttpRequestException ex)
         {
+            Console.WriteLine($"HTTP Request Exception: {ex}");
             return new AttendanceProcessingResult
             {
                 Success = false,
@@ -68,6 +81,7 @@ public class SupabaseEdgeFunctionService : ISupabaseEdgeFunctionService
         }
         catch (Exception ex)
         {
+            Console.WriteLine($"General Exception: {ex}");
             return new AttendanceProcessingResult
             {
                 Success = false,
@@ -82,7 +96,7 @@ public class SupabaseEdgeFunctionService : ISupabaseEdgeFunctionService
         try
         {
             var requestPayload = new { qrCodePayload };
-            var response = await SendEdgeFunctionRequestAsync("process-attendance-data", requestPayload);
+            var response = await SendEdgeFunctionRequestAsync("validate-qr-code", requestPayload);
             
             if (response.IsSuccessStatusCode)
             {
@@ -139,16 +153,11 @@ public class SupabaseEdgeFunctionService : ISupabaseEdgeFunctionService
         
         var request = new HttpRequestMessage(method, $"{_supabaseUrl}/functions/v1/{functionName}");
         
-        // Add authorization header if a Supabase key is provided
         if (!string.IsNullOrEmpty(_supabaseKey))
         {
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _supabaseKey);
         }
 
-        // Removed: The manual addition of "Content-Type" header is unnecessary and causes errors
-        // request.Headers.Add("Content-Type", "application/json");
-
-        // Add payload when necessary (POST requests)
         if (payload != null && method == HttpMethod.Post)
         {
             request.Content = JsonContent.Create(payload, options: _jsonOptions);
@@ -169,7 +178,7 @@ public class AttendanceProcessingResult
 
     public override string ToString()
     {
-        return MID_HelperFunctions.GetStructOrClassMemberValues(this);
+        return JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
     }
 }
 
@@ -180,9 +189,10 @@ public class QRValidationResult
     public DecodedSessionData SessionData { get; set; }
     public DateTime? ExpirationTime { get; set; }
     public bool IsExpired { get; set; }
+    
     public override string ToString()
     {
-        return JsonHelper.Serialize(this, false);
+        return JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
     }
 }
 
@@ -196,9 +206,10 @@ public class DecodedSessionData
     public DateTime ExpirationTime { get; set; }
     public string Nonce { get; set; } = string.Empty;
     public string LectureId { get; set; } = string.Empty;
+    
     public override string ToString()
     {
-        return JsonHelper.Serialize(this, false);
+        return JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
     }
 }
 
@@ -210,7 +221,7 @@ public class AttendanceRecord
 
     public override string ToString()
     {
-        return JsonHelper.Serialize(this, false);
+        return JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
     }
 }
 

@@ -99,7 +99,7 @@ namespace AirCode.Utilities.HelperScripts
                     Console.WriteLine($"{prefix} INFO: {message}");
                     break;
                 default:
-                    Console.WriteLine($"{prefix} LOG: {message}");
+                    Console.WriteLine($"{prefix} LOG: {message} ");
                     break;
             }
 

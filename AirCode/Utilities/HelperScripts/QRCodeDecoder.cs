@@ -15,7 +15,7 @@ namespace AirCode.Utilities.DataStructures
     {
         private const string APP_SIGNATURE = "AIRCODE";
         private const string URL_PREFIX = "https://example.com/s/";
-        
+        //move here https://mid-d-man.github.io/AirCode/ or even the main page
         // Use proper 256-bit AES key (32 bytes) and 128-bit IV (16 bytes)
         private const string ENCRYPTION_KEY = "AirCodeSecretKey1234567890123456"; // 32 characters for AES-256
         private const string INITIALIZATION_VECTOR = "AirCodeInitVectr"; // 16 characters for AES
