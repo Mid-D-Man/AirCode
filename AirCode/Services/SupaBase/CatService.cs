@@ -62,8 +62,3 @@ public class CatService:ICatService
         }
     }
 }
-
-public class CatResponse
-{
-    public string ImageUrl { get; set; } = string.Empty;
-}

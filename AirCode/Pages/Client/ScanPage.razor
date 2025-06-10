@@ -1,7 +1,10 @@
 @page "/Client/ScanAttendance"
 @layout AirCode.Layout.ClientLayout.ClientLayout
 @inject IJSRuntime JSRuntime
+@using AirCode.Services.SupaBase
 @using ReactorBlazorQRCodeScanner
+
+@inject ISupabaseEdgeFunctionService EdgeService
 
 <div class="scan-attendance-page">
     <div class="scan-header">
@@ -188,8 +191,15 @@
             // 2. Validating the session
             // 3. Recording attendance
             // 4. Showing success/failure feedback
+              var randomguy = new AttendanceRecord
+              {
+        MatricNumber = "SukaBlak",
+        HasScannedAttendance = true,
+        IsOnlineScan = true
+              };
+          var result =  await EdgeService.ProcessAttendanceAsync(qrCode,randomguy);
             
-            Console.WriteLine($"Processing attendance code: {qrCode}");
+            Console.WriteLine($"Processing attendance code: {qrCode}, and found result {result.ToString()}");
         }
         catch (Exception ex)
         {
