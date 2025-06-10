@@ -11,21 +11,21 @@
             Text="Stats"
             ButtonClass="@GetButtonClass("stats")"
             IsActive="@(currentPage == "stats")"
-            OnClick="@(() => NavigateTo("stats"))" />
+            OnClick="@(() => NavigateTo("Client/Stats"))" />
         
         <CircularNavigationButton 
             IconSvgContent="@scanIconSvg"
             Text="Scan"
             ButtonClass="@GetPrimaryButtonClass("scan")"
             IsActive="@(currentPage == "scan")"
-            OnClick="@(() => NavigateTo("scan"))" />
+            OnClick="@(() => NavigateTo("Client/ScanAttendance"))" />
         
         <CircularNavigationButton 
             IconSvgContent="@settingsIconSvg"
             Text="Settings"
             ButtonClass="@GetButtonClass("settings")"
             IsActive="@(currentPage == "settings")"
-            OnClick="@(() => NavigateTo("settings"))" />
+            OnClick="@(() => NavigateTo("Client/Settings"))" />
     </div>
 </div>
 
@@ -41,12 +41,12 @@
         var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
         var path = uri.AbsolutePath;
         
-        if (path.Contains("stats"))
-            currentPage = "stats";
-        else if (path.Contains("settings"))
-            currentPage = "settings";
+        if (path.Contains("Stats"))
+            currentPage = "Client/Stats";
+        else if (path.Contains("Settings"))
+            currentPage = "Client/Settings";
         else
-            currentPage = "scan";
+            currentPage = "Client/ScanAttendance";
 
         // Load SVG icons
         await LoadIcons();
@@ -86,13 +86,13 @@
         switch (page)
         {
             case "stats":
-                NavigationManager.NavigateTo("/Client/Stats");
+                NavigationManager.NavigateTo("Client/Stats");
                 break;
             case "settings":
-                NavigationManager.NavigateTo("/Client/Settings");
+                NavigationManager.NavigateTo("Client/Settings");
                 break;
             default:
-                NavigationManager.NavigateTo("/Client/ScanPage");
+                NavigationManager.NavigateTo("Client/ScanPage");
                 break;
         }
     }

@@ -19,6 +19,7 @@ using AirCode.Services.Search;
 using AirCode.Services.Storage;
 using AirCode.Services.VisualElements;
 using AirCode.Utilities.DataStructures;
+using AirCode.Utilities.HelperScripts;
 
 // ============================================================================
 // AirCode Blazor WebAssembly Application Configuration

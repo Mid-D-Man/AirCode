@@ -173,7 +173,7 @@ public class AttendanceProcessingResult
     public bool Success { get; set; }
     public string Message { get; set; } = string.Empty;
     public string ErrorDetails { get; set; } = string.Empty;
-    public DecodedSessionData SessionData { get; set; }
+    public QRCodeDecoder.DecodedSessionData SessionData { get; set; }
     public AttendanceRecord ProcessedAttendance { get; set; }
 
     public override string ToString()
@@ -186,26 +186,9 @@ public class QRValidationResult
 {
     public bool IsValid { get; set; }
     public string Message { get; set; } = string.Empty;
-    public DecodedSessionData SessionData { get; set; }
+    public QRCodeDecoder.DecodedSessionData SessionData { get; set; }
     public DateTime? ExpirationTime { get; set; }
     public bool IsExpired { get; set; }
-    
-    public override string ToString()
-    {
-        return JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
-    }
-}
-
-public class DecodedSessionData
-{
-    public string SessionId { get; set; } = string.Empty;
-    public string CourseCode { get; set; } = string.Empty;
-    public DateTime StartTime { get; set; }
-    public int Duration { get; set; }
-    public DateTime GeneratedTime { get; set; }
-    public DateTime ExpirationTime { get; set; }
-    public string Nonce { get; set; } = string.Empty;
-    public string LectureId { get; set; } = string.Empty;
     
     public override string ToString()
     {

@@ -1,0 +1,129 @@
+@using AirCode.Domain.Enums
+
+<div class="course-card @(IsCarryOver ? "carry-over" : "")" @onclick="HandleCardClick">
+    <div class="course-header">
+        <div class="course-title">
+            <h4>@CourseName</h4>
+            <span class="course-code">@CourseCode</span>
+        </div>
+        <div class="course-badges">
+            @if (IsCarryOver)
+            {
+                <span class="carry-over-badge">Carry Over</span>
+            }
+            @if (AttendancePercentage >= 85)
+            {
+                <span class="attendance-badge excellent">Excellent</span>
+            }
+            else if (AttendancePercentage >= 75)
+            {
+                <span class="attendance-badge good">Good</span>
+            }
+            else if (AttendancePercentage >= 65)
+            {
+                <span class="attendance-badge average">Average</span>
+            }
+            else
+            {
+                <span class="attendance-badge poor">Poor</span>
+            }
+        </div>
+    </div>
+
+    <div class="course-info">
+        <div class="info-item">
+            <span class="info-label">Department:</span>
+            <span class="info-value">@DepartmentId</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">Credit Units:</span>
+            <span class="info-value">@CreditUnits</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">Level:</span>
+            <span class="info-value">@Level</span>
+        </div>
+    </div>
+
+    <div class="course-stats">
+        <div class="stat-item">
+            <span class="stat-label">Attendance Rate</span>
+            <div class="progress-container">
+                <div class="progress-bar">
+                    <div class="progress @GetAttendanceClass()"
+                         style="width: @(AttendancePercentage)%"></div>
+                </div>
+                <span class="stat-value">@(AttendancePercentage)%</span>
+            </div>
+        </div>
+
+        <div class="stat-row">
+            <div class="stat-item">
+                <span class="stat-label">Classes Attended</span>
+                <span class="stat-value">@(ClassesAttended)/@(TotalClasses)</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Last Attendance</span>
+                <span class="stat-value">@(LastAttendanceDate?.ToString("MMM dd") ?? "N/A")</span>
+            </div>
+        </div>
+    </div>
+
+    @if (ShowQuickActions)
+    {
+        <div class="course-actions">
+            <button class="action-btn primary" @onclick="HandleViewDetails" @onclick:stopPropagation="true">
+                <i class="oi oi-eye"></i>
+                View Details
+            </button>
+            <button class="action-btn secondary" @onclick="HandleViewSchedule" @onclick:stopPropagation="true">
+                <i class="oi oi-calendar"></i>
+                Schedule
+            </button>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public string CourseCode { get; set; } = string.Empty;
+    [Parameter] public string CourseName { get; set; } = string.Empty;
+    [Parameter] public string DepartmentId { get; set; } = string.Empty;
+    [Parameter] public LevelType Level { get; set; }
+    [Parameter] public byte CreditUnits { get; set; }
+    [Parameter] public double AttendancePercentage { get; set; }
+    [Parameter] public int ClassesAttended { get; set; }
+    [Parameter] public int TotalClasses { get; set; }
+    [Parameter] public bool IsCarryOver { get; set; }
+    [Parameter] public DateTime? LastAttendanceDate { get; set; }
+    [Parameter] public bool ShowQuickActions { get; set; } = true;
+
+    [Parameter] public EventCallback<string> OnCourseClick { get; set; }
+    [Parameter] public EventCallback<string> OnViewDetails { get; set; }
+    [Parameter] public EventCallback<string> OnViewSchedule { get; set; }
+
+    private async Task HandleCardClick()
+    {
+        await OnCourseClick.InvokeAsync(CourseCode);
+    }
+
+    private async Task HandleViewDetails()
+    {
+        await OnViewDetails.InvokeAsync(CourseCode);
+    }
+
+    private async Task HandleViewSchedule()
+    {
+        await OnViewSchedule.InvokeAsync(CourseCode);
+    }
+
+    private string GetAttendanceClass()
+    {
+        return AttendancePercentage switch
+        {
+            >= 85 => "excellent",
+            >= 75 => "good",
+            >= 65 => "average",
+            _ => "poor"
+        };
+    }
+}

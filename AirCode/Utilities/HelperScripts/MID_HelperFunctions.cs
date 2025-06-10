@@ -2,11 +2,16 @@ using System;
 using System.Collections;
 using System.Text.RegularExpressions;
 using System.Diagnostics;
+using System;
+using System.Collections;
+using System.Text.RegularExpressions;
+using System.Diagnostics;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Serialization;
 using Newtonsoft.Json;
+using Microsoft.JSInterop;
 
 namespace AirCode.Utilities.HelperScripts
 {
@@ -29,6 +34,16 @@ namespace AirCode.Utilities.HelperScripts
     {
         // Set this to false in production environment
         private static bool IsDebugMode = true;
+        private static IJSRuntime _jsRuntime;
+
+        /// <summary>
+        /// Initialize the helper functions with JSRuntime for browser console logging
+        /// </summary>
+        /// <param name="jsRuntime">IJSRuntime instance for browser interop</param>
+        public static void Initialize(IJSRuntime jsRuntime)
+        {
+            _jsRuntime = jsRuntime;
+        }
 
         /// <summary>
         /// Validates if a string is not null, empty, or variations of "NULL"
@@ -44,8 +59,7 @@ namespace AirCode.Utilities.HelperScripts
             string upperInput = input.ToUpper().Trim();
             if (upperInput == "NULL" || upperInput == "UNDEFINED" || upperInput == "NONE")
                 return false;
-//we should also add checks for bad words for valid string to prevent any un professional words cause ya go never sabi the kind bullshit
-//pikins go use as username
+
             return true;
         }
 
@@ -72,7 +86,7 @@ namespace AirCode.Utilities.HelperScripts
         }
 
         /// <summary>
-        /// Prints debug messages based on debug mode setting
+        /// Prints debug messages with color support for both console and browser
         /// </summary>
         /// <param name="message">The message to print</param>
         /// <param name="debugClass">The type of debug message</param>
@@ -84,26 +98,156 @@ namespace AirCode.Utilities.HelperScripts
             string timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
             string prefix = $"[{timestamp}] [{debugClass}]";
 
-            switch (debugClass)
+            // Console logging with colors (server-side)
+            ConsoleColor originalColor = Console.ForegroundColor;
+            
+            try
             {
-                case DebugClass.Warning:
-                    Console.WriteLine($"{prefix} WARNING: {message}");
-                    break;
-                case DebugClass.Error:
-                    Console.WriteLine($"{prefix} ERROR: {message}");
-                    break;
-                case DebugClass.Exception:
-                    Console.WriteLine($"{prefix} EXCEPTION: {message}");
-                    break;
-                case DebugClass.Info:
-                    Console.WriteLine($"{prefix} INFO: {message}");
-                    break;
-                default:
-                    Console.WriteLine($"{prefix} LOG: {message} ");
-                    break;
+                switch (debugClass)
+                {
+                    case DebugClass.Warning:
+                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        Console.WriteLine($"{prefix} WARNING: {message}");
+                        break;
+                    case DebugClass.Error:
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine($"{prefix} ERROR: {message}");
+                        break;
+                    case DebugClass.Exception:
+                        Console.ForegroundColor = ConsoleColor.DarkRed;
+                        Console.WriteLine($"{prefix} EXCEPTION: {message}");
+                        break;
+                    case DebugClass.Info:
+                        Console.ForegroundColor = ConsoleColor.Cyan;
+                        Console.WriteLine($"{prefix} INFO: {message}");
+                        break;
+                    default:
+                        Console.ForegroundColor = ConsoleColor.White;
+                        Console.WriteLine($"{prefix} LOG: {message}");
+                        break;
+                }
+            }
+            finally
+            {
+                Console.ForegroundColor = originalColor;
             }
 
-            // Add additional logging to file or service if needed
+            // Browser console logging with colors (client-side)
+            if (_jsRuntime != null)
+            {
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        string color = GetBrowserConsoleColor(debugClass);
+                        string consoleMethod = GetBrowserConsoleMethod(debugClass);
+                        
+                        await _jsRuntime.InvokeVoidAsync($"console.{consoleMethod}", 
+                            $"%c{prefix} {GetDebugPrefix(debugClass)}: {message}",
+                            $"color: {color}; font-weight: bold;");
+                    }
+                    catch
+                    {
+                        // Ignore JS interop errors during logging
+                    }
+                });
+            }
+        }
+
+        /// <summary>
+        /// Gets the appropriate browser console color for the debug class
+        /// </summary>
+        private static string GetBrowserConsoleColor(DebugClass debugClass)
+        {
+            return debugClass switch
+            {
+                DebugClass.Warning => "#FFA500",  // Orange
+                DebugClass.Error => "#FF4444",    // Red
+                DebugClass.Exception => "#8B0000", // Dark Red
+                DebugClass.Info => "#00CED1",     // Dark Turquoise
+                _ => "#FFFFFF"                    // White
+            };
+        }
+
+        /// <summary>
+        /// Gets the appropriate browser console method for the debug class
+        /// </summary>
+        private static string GetBrowserConsoleMethod(DebugClass debugClass)
+        {
+            return debugClass switch
+            {
+                DebugClass.Warning => "warn",
+                DebugClass.Error => "error",
+                DebugClass.Exception => "error",
+                DebugClass.Info => "info",
+                _ => "log"
+            };
+        }
+
+        /// <summary>
+        /// Gets the debug prefix for the message
+        /// </summary>
+        private static string GetDebugPrefix(DebugClass debugClass)
+        {
+            return debugClass switch
+            {
+                DebugClass.Warning => "⚠️ WARNING",
+                DebugClass.Error => "❌ ERROR",
+                DebugClass.Exception => "💥 EXCEPTION",
+                DebugClass.Info => "ℹ️ INFO",
+                _ => "📝 LOG"
+            };
+        }
+
+        /// <summary>
+        /// Logs a message with custom color to browser console
+        /// </summary>
+        /// <param name="message">The message to log</param>
+        /// <param name="color">Hex color code (e.g., "#FF0000")</param>
+        /// <param name="fontSize">Font size (e.g., "12px")</param>
+        /// <param name="fontWeight">Font weight (e.g., "bold")</param>
+        public static async Task LogWithColorAsync(string message, string color = "#FFFFFF", 
+            string fontSize = "12px", string fontWeight = "normal")
+        {
+            if (_jsRuntime != null && IsDebugMode)
+            {
+                try
+                {
+                    await _jsRuntime.InvokeVoidAsync("console.log", 
+                        $"%c{message}",
+                        $"color: {color}; font-size: {fontSize}; font-weight: {fontWeight};");
+                }
+                catch
+                {
+                    // Fallback to standard console
+                    Console.WriteLine(message);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Creates a styled banner message in the browser console
+        /// </summary>
+        /// <param name="message">The banner message</param>
+        /// <param name="backgroundColor">Background color</param>
+        /// <param name="textColor">Text color</param>
+        public static async Task LogBannerAsync(string message, string backgroundColor = "#007ACC", 
+            string textColor = "#FFFFFF")
+        {
+            if (_jsRuntime != null && IsDebugMode)
+            {
+                try
+                {
+                    await _jsRuntime.InvokeVoidAsync("console.log", 
+                        $"%c {message} ",
+                        $"background: {backgroundColor}; color: {textColor}; font-size: 16px; " +
+                        $"font-weight: bold; padding: 4px 8px; border-radius: 4px;");
+                }
+                catch
+                {
+                    Console.WriteLine($"=== {message} ===");
+                }
+            }
         }
 
         /// <summary>
@@ -311,7 +455,6 @@ namespace AirCode.Utilities.HelperScripts
         }
         catch (Exception ex)
         {
-            // Replace Unity-specific debug method with standard logging
             DebugMessage($"Failed to serialize object to JSON: {ex.Message}",DebugClass.Exception);
             return "{}";
         }
@@ -331,7 +474,6 @@ namespace AirCode.Utilities.HelperScripts
         }
         catch (Exception ex)
         {
-            // Replace Unity-specific debug method with standard logging
             DebugMessage($"Failed to serialize object to XML: {ex.Message}",DebugClass.Exception);
             return "<error>Failed to serialize</error>";
         }

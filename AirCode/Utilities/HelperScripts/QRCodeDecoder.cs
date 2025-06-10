@@ -4,7 +4,7 @@ using System.Text;
 using System.Text.Json;
 using AirCode.Services.Cryptography;
 
-namespace AirCode.Utilities.DataStructures
+namespace AirCode.Utilities.HelperScripts
 {
     /// <summary>
     /// Class for encoding and decoding secure QR codes with dual-purpose functionality:
@@ -14,7 +14,7 @@ namespace AirCode.Utilities.DataStructures
     public class QRCodeDecoder
     {
         private const string APP_SIGNATURE = "AIRCODE";
-        private const string URL_PREFIX = "https://example.com/s/";
+        private const string URL_PREFIX = "https://mid-d-man.github.io/";
         //move here https://mid-d-man.github.io/AirCode/ or even the main page
         // Use proper 256-bit AES key (32 bytes) and 128-bit IV (16 bytes)
         private const string ENCRYPTION_KEY = "AirCodeSecretKey1234567890123456"; // 32 characters for AES-256
@@ -30,18 +30,23 @@ namespace AirCode.Utilities.DataStructures
         /// <summary>
         /// Represents the decoded session data from a QR code.
         /// </summary>
+       
         public class DecodedSessionData
         {
-            public string SessionId { get; set; }
-            public string CourseCode { get; set; }
+            public string SessionId { get; set; } = string.Empty;
+            public string CourseCode { get; set; } = string.Empty;
             public DateTime StartTime { get; set; }
             public int Duration { get; set; }
             public DateTime GeneratedTime { get; set; }
             public DateTime ExpirationTime { get; set; }
-            public string Nonce { get; set; } // To prevent replay attacks
-            public string LectureId { get; set; } // Additional context for the session though .replace with initiator name (so people know who)
+            public string Nonce { get; set; } = string.Empty;// To prevent replay attacks
+            public string LectureId { get; set; } = string.Empty;// Additional context for the session though .replace with initiator name (so people know who)
+    
+            public override string ToString()
+            {
+                return JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
+            }
         }
-
         /// <summary>
         /// Asynchronously encodes session data into a QR code payload.
         /// Format: https://example.com/s/SESSION_ID#APP_SIGNATURE:ENCRYPTED_DATA:SIGNATURE

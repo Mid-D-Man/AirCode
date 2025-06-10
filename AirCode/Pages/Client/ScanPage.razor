@@ -3,8 +3,11 @@
 @inject IJSRuntime JSRuntime
 @using AirCode.Services.SupaBase
 @using ReactorBlazorQRCodeScanner
+@using AirCode.Utilities.DataStructures
+@using AirCode.Utilities.HelperScripts
 
 @inject ISupabaseEdgeFunctionService EdgeService
+@inject QRCodeDecoder QRDecoder
 
 <div class="scan-attendance-page">
     <div class="scan-header">
@@ -34,8 +37,16 @@
 
         @if (showAlert && !string.IsNullOrEmpty(alertMessage))
         {
-            <div class="scanner-error">
-                @alertMessage
+            <div class="scanner-alert @(isErrorAlert ? "scanner-error" : "scanner-success")">
+                @((MarkupString)alertMessage)
+            </div>
+        }
+
+        @if (isProcessing)
+        {
+            <div class="processing-indicator">
+                <div class="spinner"></div>
+                <span>Processing QR Code...</span>
             </div>
         }
     </div>
@@ -51,18 +62,51 @@
                 <button class="popup-close" @onclick="ClosePopup">&times;</button>
             </div>
             <div class="popup-body">
-                <div class="qr-result">
-                    <div class="result-label">Scanned Content:</div>
-                    <div class="result-content">@lastScannedCode</div>
-                </div>
+                @if (decodedSessionData != null)
+                {
+                    <div class="session-info">
+                        <div class="info-row">
+                            <span class="label">Course:</span>
+                            <span class="value">@decodedSessionData.CourseCode</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Session:</span>
+                            <span class="value">@decodedSessionData.SessionId</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Lecture:</span>
+                            <span class="value">@(decodedSessionData.LectureId ?? "General")</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Expires:</span>
+                            <span class="value">@decodedSessionData.ExpirationTime.ToString("HH:mm:ss")</span>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="qr-result">
+                        <div class="result-label">Scanned Content:</div>
+                        <div class="result-content">@lastScannedCode</div>
+                    </div>
+                }
                 <div class="scan-timestamp">
                     Scanned at: @scanTimestamp.ToString("MMM dd, yyyy HH:mm:ss")
                 </div>
             </div>
             <div class="popup-footer">
-                <button class="btn btn-primary" @onclick="CopyToClipboard">
-                    Copy Content
-                </button>
+                @if (attendanceProcessed)
+                {
+                    <button class="btn btn-success" disabled>
+                        ✓ Attendance Recorded
+                    </button>
+                }
+                else
+                {
+                    <button class="btn btn-primary" @onclick="CopyToClipboard">
+                        Copy Content
+                    </button>
+                }
                 <button class="btn btn-secondary" @onclick="ClosePopup">
                     Continue Scanning
                 </button>
@@ -76,10 +120,17 @@
     private Action<string>? _onQrCodeScanAction;
     private bool showPopup = false;
     private bool isScanning = true;
+    private bool isProcessing = false;
+    private bool attendanceProcessed = false;
     private string lastScannedCode = string.Empty;
     private DateTime scanTimestamp;
     private bool showAlert = false;
+    private bool isErrorAlert = true;
     private string alertMessage = string.Empty;
+    private QRCodeDecoder.DecodedSessionData decodedSessionData;
+
+    // TODO: Get actual user data from authentication service
+    private string currentUserMatricNumber = "SukaBlak"; // Replace with actual user data
 
     protected override async Task OnInitializedAsync()
     {
@@ -89,38 +140,103 @@
         try
         {
             await _qrCodeScannerJsInterop.Init(_onQrCodeScanAction);
+            MID_HelperFunctions.DebugMessage("QR Scanner initialized successfully", DebugClass.Info);
         }
         catch (Exception ex)
         {
+            MID_HelperFunctions.DebugMessage($"Failed to initialize scanner: {ex.Message}", DebugClass.Exception);
             ShowAlert($"Failed to initialize scanner: {ex.Message}");
         }
     }
 
     private async void OnQrCodeScan(string code)
     {
-        if (!string.IsNullOrEmpty(code) && !showPopup)
+        if (!string.IsNullOrEmpty(code) && !showPopup && !isProcessing)
         {
-            // Stop scanning to prevent multiple detections
+            MID_HelperFunctions.DebugMessage($"QR Code detected: {code}", DebugClass.Info);
+            
+            // Stop scanning and show processing state
             await PauseScanning();
+            isProcessing = true;
+            StateHasChanged();
             
             // Update UI with scanned data
             lastScannedCode = code;
             scanTimestamp = DateTime.Now;
+            attendanceProcessed = false;
+            
+            try
+            {
+                // First, try to decode as AirCode QR
+                decodedSessionData = await QRDecoder.DecodeSessionDataAsync(code);
+                
+                if (decodedSessionData != null)
+                {
+                    MID_HelperFunctions.DebugMessage($"Valid AirCode QR detected for course: {decodedSessionData.CourseCode}", DebugClass.Info);
+                    
+                    // Process attendance with decoded session data
+                    await ProcessAttendanceCode(code);
+                }
+                else
+                {
+                    MID_HelperFunctions.DebugMessage("QR code is not a valid AirCode attendance QR", DebugClass.Warning);
+                    ShowAlert("Invalid attendance QR code format");
+                }
+            }
+            catch (Exception ex)
+            {
+                MID_HelperFunctions.DebugMessage($"Error processing QR code: {ex.Message}", DebugClass.Exception);
+                ShowAlert($"Error processing QR code: {ex.Message}");
+            }
+            
+            isProcessing = false;
             showPopup = true;
-            
-            // Process the scanned QR code (e.g., validate attendance)
-            await ProcessAttendanceCode(code);
-            
-            // Force UI update
             await InvokeAsync(StateHasChanged);
-            
-            Console.WriteLine($"QR Code Detected: {code}");
+        }
+    }
+
+    private async Task ProcessAttendanceCode(string qrCode)
+    {
+        try
+        {
+            MID_HelperFunctions.DebugMessage($"Processing attendance for QR: {qrCode}", DebugClass.Info);
+        
+            var attendanceRecord = new AttendanceRecord
+            {
+                MatricNumber = currentUserMatricNumber,
+                HasScannedAttendance = true,
+                IsOnlineScan = true
+            };
+        
+            MID_HelperFunctions.DebugMessage($"Attendance record: {MID_HelperFunctions.ToJson(attendanceRecord)}", DebugClass.Log);
+        
+            var result = await EdgeService.ProcessAttendanceAsync(qrCode, attendanceRecord);
+        
+            MID_HelperFunctions.DebugMessage($"Edge function result: {MID_HelperFunctions.ToJson(result)}", DebugClass.Log);
+        
+            if (result.Success)
+            {
+                attendanceProcessed = true;
+                ShowAlert($"<span style='color: #28a745; font-weight: bold;'>✓ Attendance recorded successfully!</span>", false);
+                MID_HelperFunctions.DebugMessage("Attendance processed successfully", DebugClass.Info);
+            }
+            else
+            {
+                ShowAlert($"<span style='color: #dc3545; font-weight: bold;'>✗ Failed:</span> {result.Message}");
+                MID_HelperFunctions.DebugMessage($"Attendance processing failed: {result.Message}", DebugClass.Warning);
+            }
+        }
+        catch (Exception ex)
+        {
+            MID_HelperFunctions.DebugMessage($"Exception in ProcessAttendanceCode: {ex}", DebugClass.Exception);
+            ShowAlert($"<span style='color: #dc3545; font-weight: bold;'>Error:</span> {ex.Message}");
         }
     }
 
     private async Task ClosePopup()
     {
         showPopup = false;
+        decodedSessionData = null;
         await ResumeScanning();
         StateHasChanged();
     }
@@ -133,9 +249,11 @@
             {
                 await _qrCodeScannerJsInterop.StopRecording();
                 isScanning = false;
+                MID_HelperFunctions.DebugMessage("Scanner paused", DebugClass.Log);
             }
             catch (Exception ex)
             {
+                MID_HelperFunctions.DebugMessage($"Failed to pause scanner: {ex.Message}", DebugClass.Exception);
                 ShowAlert($"Failed to pause scanner: {ex.Message}");
             }
         }
@@ -150,9 +268,11 @@
                 await _qrCodeScannerJsInterop.Init(_onQrCodeScanAction);
                 isScanning = true;
                 HideAlert();
+                MID_HelperFunctions.DebugMessage("Scanner resumed", DebugClass.Log);
             }
             catch (Exception ex)
             {
+                MID_HelperFunctions.DebugMessage($"Failed to resume scanner: {ex.Message}", DebugClass.Exception);
                 ShowAlert($"Failed to resume scanner: {ex.Message}");
             }
         }
@@ -173,57 +293,25 @@
         try
         {
             await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", lastScannedCode);
-            ShowAlert("Content copied to clipboard!", isError: false);
-        }
-        catch (Exception)
-        {
-            ShowAlert("Failed to copy to clipboard");
-        }
-    }
-
-    private async Task ProcessAttendanceCode(string qrCode)
-    {
-        try
-        {
-            Console.WriteLine($"Processing QR Code: {qrCode}");
-        
-            var attendanceRecord = new AttendanceRecord
-            {
-                MatricNumber = "SukaBlak", // Use actual user data
-                HasScannedAttendance = true,
-                IsOnlineScan = true
-            };
-        
-            Console.WriteLine($"Attendance Record: {attendanceRecord}");
-        
-            var result = await EdgeService.ProcessAttendanceAsync(qrCode, attendanceRecord);
-        
-            Console.WriteLine($"Result: {result}");
-        
-            if (result.Success)
-            {
-                ShowAlert("Attendance recorded successfully!", false);
-            }
-            else
-            {
-                ShowAlert($"Failed: {result.Message}");
-            }
+            ShowAlert("<span style='color: #17a2b8;'>📋 Content copied to clipboard!</span>", false);
+            MID_HelperFunctions.DebugMessage("Content copied to clipboard", DebugClass.Info);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error: {ex}");
-            ShowAlert($"Error: {ex.Message}");
+            MID_HelperFunctions.DebugMessage($"Failed to copy to clipboard: {ex.Message}", DebugClass.Exception);
+            ShowAlert("Failed to copy to clipboard");
         }
     }
 
     private void ShowAlert(string message, bool isError = true)
     {
         alertMessage = message;
+        isErrorAlert = isError;
         showAlert = true;
         StateHasChanged();
 
-        // Auto-hide alert after 3 seconds
-        _ = Task.Delay(3000).ContinueWith(_ => HideAlert());
+        // Auto-hide alert after 4 seconds
+        _ = Task.Delay(4000).ContinueWith(_ => HideAlert());
     }
 
     private void HideAlert()
@@ -239,6 +327,7 @@
             try
             {
                 await _qrCodeScannerJsInterop.StopRecording();
+                MID_HelperFunctions.DebugMessage("Scanner disposed", DebugClass.Log);
             }
             catch
             {
