@@ -88,8 +88,9 @@
 <script src="js/firestoreModule.js"></script>
 
 <!-- Load modules -->
-<script type="module" src="/wasm/qr_code_generator.js" onerror="console.warn('WASM QR generator not found')"></script>
-<script type="module" src="/js/qrCodeModule.js"></script>
+<script src="js/firestoreModule.js"></script>
+<script src="js/qrCodeModule.js"></script>
+
 <script>
     // Camera utility functions for QR scanner
     window.getCameraStream = async (constraints) => {
