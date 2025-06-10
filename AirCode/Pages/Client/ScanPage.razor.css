@@ -1,11 +1,11 @@
-/* Enhanced ScanPage.razor.css - Fixed Desktop Display & Mobile Sizing */
+/* Updated ScanPage.razor.css - 60% Scanner Size */
 
 .scan-attendance-page {
     display: flex;
     flex-direction: column;
-    height: 100vh; /* Changed from 100% to 100vh for better desktop behavior */
+    height: 100vh;
     width: 100%;
-    padding: 1rem; /* Added base padding */
+    padding: 1rem;
     overflow-y: auto;
     background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
     box-sizing: border-box;
@@ -13,7 +13,7 @@
 
 .scan-header {
     text-align: center;
-    margin-bottom: 1.5rem;
+    margin-bottom: 2rem;
     padding: 0 1rem;
 }
 
@@ -34,83 +34,7 @@
     opacity: 0.8;
 }
 
-/* Scanner options with glass morphism */
-.scanner-options {
-    display: flex;
-    justify-content: center;
-    margin-bottom: 2rem;
-    padding: 0 1rem;
-}
-
-.scanner-toggle {
-    display: flex;
-    align-items: center;
-    cursor: pointer;
-    user-select: none;
-    padding: 12px 20px;
-    background: rgba(255, 255, 255, 0.25);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: 16px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-    transition: all 0.3s ease;
-}
-
-.scanner-toggle:hover {
-    background: rgba(255, 255, 255, 0.35);
-    transform: translateY(-2px);
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
-}
-
-.scanner-toggle input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-}
-
-.slider {
-    position: relative;
-    display: inline-block;
-    width: 54px;
-    height: 28px;
-    background: rgba(156, 163, 175, 0.3);
-    border-radius: 28px;
-    margin-right: 12px;
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.slider:before {
-    position: absolute;
-    content: "";
-    height: 22px;
-    width: 22px;
-    left: 3px;
-    bottom: 2px;
-    background: white;
-    border-radius: 50%;
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
-
-input:checked + .slider {
-    background: linear-gradient(135deg, var(--secondary-400) 0%, var(--secondary-600) 100%);
-    box-shadow: 0 0 20px rgba(156, 39, 176, 0.3);
-}
-
-input:checked + .slider:before {
-    transform: translateX(26px);
-    box-shadow: 0 4px 16px rgba(156, 39, 176, 0.4);
-}
-
-.toggle-label {
-    font-size: 0.95rem;
-    color: var(--primary-700);
-    font-weight: 500;
-}
-
-/* CRITICAL FIX: Scanner container sizing with proper responsive behavior */
+/* MAIN SCANNER CONTAINER - 60% of viewport */
 .scan-container {
     position: relative;
     display: flex;
@@ -128,11 +52,13 @@ input:checked + .slider:before {
             inset 0 1px 0 rgba(255, 255, 255, 0.6);
     transition: all 0.3s ease;
 
-    /* FIXED SIZING - Progressive sizing for different screen sizes */
-    width: min(90vw, 500px);
-    height: min(90vw, 500px);
-    min-width: 280px;
-    min-height: 280px;
+    /* 60% of viewport width and height */
+    width: 60vw;
+    height: 60vh;
+    min-width: 300px;
+    min-height: 300px;
+    max-width: 600px;
+    max-height: 600px;
 }
 
 .scan-container::before {
@@ -167,7 +93,7 @@ input:checked + .slider:before {
     50% { opacity: 0.8; transform: scale(1.02); }
 }
 
-/* CRITICAL FIX: QR Scanner container must fill parent properly */
+/* QR Scanner container must fill parent properly */
 .qr-scanner-container {
     position: relative;
     width: 100% !important;
@@ -176,10 +102,13 @@ input:checked + .slider:before {
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.02) 0%, rgba(0, 0, 0, 0.05) 100%);
+    border-radius: inherit;
+    overflow: hidden;
     z-index: 3;
 }
 
-/* CRITICAL FIX: Video container sizing */
+/* Video container sizing */
 .video-container {
     position: relative;
     width: 100% !important;
@@ -188,102 +117,50 @@ input:checked + .slider:before {
     align-items: center;
     justify-content: center;
     overflow: hidden;
+    background: #000;
+    border-radius: inherit;
 }
 
-/* CRITICAL FIX: Video element sizing */
+/* Video element sizing for both desktop and mobile */
 .video-container video {
     width: 100% !important;
     height: 100% !important;
     object-fit: cover !important;
     border-radius: inherit;
     background: #000;
+    display: block !important;
 }
 
-/* Canvas element (hidden but properly sized) */
+/* Canvas element - hidden but properly configured */
 .video-container canvas {
     display: none !important;
+    position: absolute;
+    top: 0;
+    left: 0;
     width: 100%;
     height: 100%;
 }
 
-/* Scanner placeholder styles */
-.scanner-placeholder {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    height: 100%;
-    padding: 2rem;
-    text-align: center;
-    color: var(--text-secondary);
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 2px dashed rgba(156, 39, 176, 0.3);
-    border-radius: 16px;
-    transition: all 0.3s ease;
+/* Deep selectors for external library compatibility */
+::deep(.qr-scanner) {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    border-radius: inherit;
+    display: block !important;
 }
 
-.scanner-placeholder:hover {
-    border-color: rgba(156, 39, 176, 0.5);
-    background: rgba(255, 255, 255, 0.15);
+::deep(.qr-scanner video) {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    border-radius: inherit;
+    display: block !important;
+    background: #000;
 }
 
-.scanner-icon {
-    font-size: 4rem;
-    margin-bottom: 1rem;
-    color: var(--secondary-400);
-    opacity: 0.7;
-    animation: scanIconPulse 2s infinite ease-in-out;
-}
-
-@keyframes scanIconPulse {
-    0%, 100% {
-        opacity: 0.4;
-        transform: scale(1);
-    }
-    50% {
-        opacity: 0.8;
-        transform: scale(1.05);
-    }
-}
-
-.scanner-placeholder p {
-    margin-bottom: 1.5rem;
-    font-size: 1.1rem;
-    font-weight: 500;
-    opacity: 0.8;
-}
-
-.start-scanner-btn {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 12px 24px;
-    background: linear-gradient(135deg, var(--secondary-400) 0%, var(--secondary-600) 100%);
-    color: white;
-    border: none;
-    border-radius: 12px;
-    font-size: 1rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 16px rgba(156, 39, 176, 0.3);
-}
-
-.start-scanner-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(156, 39, 176, 0.4);
-    background: linear-gradient(135deg, var(--secondary-500) 0%, var(--secondary-700) 100%);
-}
-
-.start-scanner-btn:active {
-    transform: translateY(0);
-}
-
-/* Scanner controls */
-.scanner-controls {
+/* Scanner controls - positioned at bottom of scanner */
+.scan-controls {
     position: absolute;
     bottom: 20px;
     left: 50%;
@@ -291,6 +168,10 @@ input:checked + .slider:before {
     display: flex;
     gap: 12px;
     z-index: 10;
+    padding: 0 20px;
+    width: calc(100% - 40px);
+    justify-content: center;
+    flex-wrap: wrap;
 }
 
 .control-btn {
@@ -309,6 +190,9 @@ input:checked + .slider:before {
     cursor: pointer;
     transition: all 0.3s ease;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    min-width: 80px;
+    justify-content: center;
+    flex: 0 0 auto;
 }
 
 .control-btn:hover {
@@ -322,7 +206,7 @@ input:checked + .slider:before {
     transform: translateY(0);
 }
 
-/* Scanner error styles */
+/* Scanner error - positioned at top of scanner */
 .scanner-error {
     position: absolute;
     top: 20px;
@@ -353,113 +237,6 @@ input:checked + .slider:before {
     to {
         opacity: 1;
         transform: translateX(-50%) translateY(0);
-    }
-}
-
-/* Scan history with glass morphism */
-.scan-history {
-    padding: 1.5rem;
-    background: rgba(255, 255, 255, 0.3);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: 20px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
-    margin: 0 1rem;
-    flex-shrink: 0;
-}
-
-.scan-history h4 {
-    color: var(--primary-700);
-    margin-bottom: 1rem;
-    font-size: 1.1rem;
-    font-weight: 600;
-}
-
-.scan-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-}
-
-.scan-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem;
-    background: rgba(255, 255, 255, 0.4);
-    backdrop-filter: blur(15px);
-    -webkit-backdrop-filter: blur(15px);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: 12px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
-    animation: slideInFromBottom 0.4s ease-out;
-    transition: all 0.3s ease;
-}
-
-.scan-item:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-}
-
-.scan-item.success {
-    border-left: 4px solid var(--success);
-    background: rgba(76, 175, 80, 0.1);
-}
-
-.scan-item.error {
-    border-left: 4px solid var(--error);
-    background: rgba(244, 67, 54, 0.1);
-}
-
-.scan-info {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-}
-
-.scan-time {
-    font-size: 0.8rem;
-    color: var(--text-secondary);
-    margin-bottom: 4px;
-    font-weight: 500;
-}
-
-.scan-data {
-    font-size: 0.95rem;
-    color: var(--text-primary);
-    font-weight: 500;
-}
-
-.scan-status-icon {
-    font-size: 1.4rem;
-    margin-left: 1rem;
-}
-
-.scan-item.success .scan-status-icon {
-    color: var(--success);
-}
-
-.scan-item.error .scan-status-icon {
-    color: var(--error);
-}
-
-.no-scans {
-    color: var(--text-secondary);
-    text-align: center;
-    padding: 2rem;
-    font-style: italic;
-    opacity: 0.7;
-}
-
-@keyframes slideInFromBottom {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
     }
 }
 
@@ -609,14 +386,13 @@ input:checked + .slider:before {
     }
 }
 
-/* Responsive breakpoints with improved sizing */
+/* Responsive breakpoints - maintaining 60% sizing but with constraints */
 @media (max-width: 480px) {
     .scan-container {
-        width: min(85vw, 320px);
-        height: min(85vw, 320px);
-        min-width: 250px;
-        min-height: 250px;
-        margin: 0 auto 1.5rem;
+        width: 85vw;
+        height: 50vh;
+        min-width: 280px;
+        min-height: 280px;
     }
 
     .scan-header h3 {
@@ -627,20 +403,7 @@ input:checked + .slider:before {
         font-size: 0.9rem;
     }
 
-    .scanner-options {
-        margin-bottom: 1.5rem;
-    }
-
-    .scan-history {
-        margin: 0 0.75rem;
-        padding: 1rem;
-    }
-
-    .scan-item {
-        padding: 0.75rem;
-    }
-
-    .scanner-controls {
+    .scan-controls {
         bottom: 10px;
         gap: 8px;
     }
@@ -650,42 +413,34 @@ input:checked + .slider:before {
         font-size: 0.8rem;
     }
 
-    .scanner-icon {
-        font-size: 3rem;
-    }
-
-    .scanner-placeholder p {
-        font-size: 1rem;
-    }
-
-    .start-scanner-btn {
-        padding: 10px 20px;
-        font-size: 0.9rem;
-    }
-
     .scanner-error {
-        top: 15px;
+        top: 10px;
         padding: 10px 14px;
         font-size: 0.85rem;
         max-width: calc(100% - 30px);
+    }
+
+    .popup-content {
+        max-width: 95vw;
+        width: 350px;
     }
 }
 
 @media (min-width: 481px) and (max-width: 767px) {
     .scan-container {
-        width: min(70vw, 400px);
-        height: min(70vw, 400px);
-        min-width: 300px;
-        min-height: 300px;
+        width: 70vw;
+        height: 55vh;
+        min-width: 320px;
+        min-height: 320px;
     }
 }
 
 @media (min-width: 768px) and (max-width: 1024px) {
     .scan-container {
-        width: min(60vw, 450px);
-        height: min(60vw, 450px);
-        min-width: 350px;
-        min-height: 350px;
+        width: 60vw;
+        height: 60vh;
+        min-width: 400px;
+        min-height: 400px;
     }
 
     .scan-header h3 {
@@ -695,10 +450,12 @@ input:checked + .slider:before {
 
 @media (min-width: 1025px) {
     .scan-container {
-        width: min(50vw, 500px);
-        height: min(50vw, 500px);
-        min-width: 400px;
-        min-height: 400px;
+        width: 60vw;
+        height: 60vh;
+        min-width: 450px;
+        min-height: 450px;
+        max-width: 700px;
+        max-height: 700px;
     }
 
     .scan-header h3 {
@@ -713,13 +470,7 @@ input:checked + .slider:before {
         padding: 2rem;
     }
 
-    .scan-history {
-        margin: 0;
-        max-width: 600px;
-        margin: 0 auto;
-    }
-
-    .scanner-controls {
+    .scan-controls {
         bottom: 30px;
         gap: 16px;
     }
