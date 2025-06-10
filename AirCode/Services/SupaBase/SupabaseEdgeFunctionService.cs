@@ -139,16 +139,16 @@ public class SupabaseEdgeFunctionService : ISupabaseEdgeFunctionService
         
         var request = new HttpRequestMessage(method, $"{_supabaseUrl}/functions/v1/{functionName}");
         
-        // Add authorization header
+        // Add authorization header if a Supabase key is provided
         if (!string.IsNullOrEmpty(_supabaseKey))
         {
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _supabaseKey);
         }
 
-        // Add content type header
-        request.Headers.Add("Content-Type", "application/json");
+        // Removed: The manual addition of "Content-Type" header is unnecessary and causes errors
+        // request.Headers.Add("Content-Type", "application/json");
 
-        // Add payload for POST requests
+        // Add payload when necessary (POST requests)
         if (payload != null && method == HttpMethod.Post)
         {
             request.Content = JsonContent.Create(payload, options: _jsonOptions);
