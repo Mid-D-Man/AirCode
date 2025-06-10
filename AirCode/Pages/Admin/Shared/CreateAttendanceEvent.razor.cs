@@ -263,6 +263,8 @@ using SessionData = AirCode.Services.Attendance.SessionData;
                     };
 
                     await FirestoreService.AddDocumentAsync("ATTENDANCE_EVENTS", courseEventDocument, documentId);
+                    await ProcessAttendanceCode(JsonHelper.Serialize(attendanceEventData));
+
                 }
             }
             catch (Exception ex)
