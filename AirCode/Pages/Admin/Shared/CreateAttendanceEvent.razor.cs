@@ -1,8 +1,10 @@
 using System.Text.Json;
+using AirCode.Models.Supabase;
 using AirCode.Services.SupaBase;
 using AirCode.Utilities.DataStructures;
 using AirCode.Utilities.HelperScripts;
 using Microsoft.AspNetCore.Components;
+using AttendanceRecord = AirCode.Services.SupaBase.AttendanceRecord;
 
 namespace AirCode.Pages.Admin.Shared;
 using Microsoft.AspNetCore.Components;
@@ -23,6 +25,7 @@ using SessionData = AirCode.Services.Attendance.SessionData;
         [Inject] private IFirestoreService FirestoreService { get; set; }
 //for testing
         [Inject] private ISupabaseEdgeFunctionService EdgeService { get; set; }
+        [Inject] private IAttendanceSessionService AttendanceSessionService { get; set; }
 
         private SessionData sessionModel = new();
         private bool isSessionStarted = false;
@@ -43,7 +46,10 @@ using SessionData = AirCode.Services.Attendance.SessionData;
         // Floating QR code properties
         private bool showFloatingQR = false;
         private FloatingQRWindow.FloatingSessionData floatingSessionData;
+        private bool temporalKeyEnabled = false; // Testing toggle
+        private System.Threading.Timer temporalKeyUpdateTimer;
 
+        
         protected override void OnInitialized()
         {
             sessionModel.Duration = 30;
@@ -142,66 +148,135 @@ using SessionData = AirCode.Services.Attendance.SessionData;
             StateHasChanged();
         }
 
-        private async void StartSession()
+       private async void StartSession()
+{
+    if (selectedCourse == null) return;
+
+    // Check if there's already an active session for this course
+    if (allActiveSessions.Any(s => s.CourseId == selectedCourse.CourseCode))
+    {
+        // Show error message - session already exists for this course
+        return;
+    }
+
+    try
+    {
+        isCreatingSession = true;
+        StateHasChanged();
+
+        sessionModel.StartTime = DateTime.UtcNow;
+        sessionModel.Date = DateTime.UtcNow.Date;
+        sessionModel.SessionId = Guid.NewGuid().ToString("N");
+        
+        sessionEndTime = DateTime.UtcNow.AddMinutes(sessionModel.Duration);
+
+        // Create Supabase attendance session
+        var attendanceSession = new AttendanceSession
         {
-            if (selectedCourse == null) return;
+            SessionId = sessionModel.SessionId,
+            CourseCode = sessionModel.CourseId,
+            StartTime = sessionModel.StartTime,
+            Duration = sessionModel.Duration,
+            ExpirationTime = sessionEndTime,
+            LectureId = null, // Set if you have lecturer info
+            AttendanceRecords = "[]", // Empty initially
+            TemporalKeyEnabled = temporalKeyEnabled
+        };
 
-            // Check if there's already an active session for this course
-            if (allActiveSessions.Any(s => s.CourseId == selectedCourse.CourseCode))
-            {
-                // Show error message - session already exists for this course
-                return;
-            }
-
-            try
-            {
-                isCreatingSession = true;
-                StateHasChanged();
-
-                sessionModel.StartTime = DateTime.UtcNow;
-                sessionModel.Date = DateTime.UtcNow.Date;
-                sessionModel.SessionId = Guid.NewGuid().ToString("N");
-
-                qrCodePayload = await GenerateQrCodePayload();
-                
-                
-                sessionEndTime = DateTime.UtcNow.AddMinutes(sessionModel.Duration);
-
-                await ProcessAttendanceCode(qrCodePayload);
-
-                // Create Firebase attendance event document
-                await CreateFirebaseAttendanceEvent();
-
-                // Add to active sessions via service
-                currentActiveSession = new ActiveSessionData
-                {
-                    SessionId = sessionModel.SessionId,
-                    CourseName = sessionModel.CourseName,
-                    CourseId = sessionModel.CourseId,
-                    StartTime = sessionModel.StartTime,
-                    EndTime = sessionEndTime,
-                    Duration = sessionModel.Duration,
-                    QrCodePayload = qrCodePayload,
-                    Theme = selectedTheme
-                };
-
-                SessionStateService.AddActiveSession(currentActiveSession);
-                SessionStateService.UpdateCurrentSession("default", sessionModel);
-
-                isSessionStarted = true;
-                RefreshSessionLists();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error starting session: {ex.Message}");
-                // Handle error appropriately
-            }
-            finally
-            {
-                isCreatingSession = false;
-                StateHasChanged();
-            }
+        // Generate initial temporal key if enabled
+        if (temporalKeyEnabled)
+        {
+            attendanceSession.TemporalKey = GenerateTemporalKey(sessionModel.SessionId, sessionModel.StartTime);
         }
+
+        // Save to Supabase
+        var savedSession = await AttendanceSessionService.CreateSessionAsync(attendanceSession);
+        
+        // Generate QR code payload
+        qrCodePayload = await GenerateQrCodePayload();
+
+        // Create Firebase attendance event document (keep existing functionality)
+        await CreateFirebaseAttendanceEvent();
+
+        // Add to active sessions via service
+        currentActiveSession = new ActiveSessionData
+        {
+            SessionId = sessionModel.SessionId,
+            CourseName = sessionModel.CourseName,
+            CourseId = sessionModel.CourseId,
+            StartTime = sessionModel.StartTime,
+            EndTime = sessionEndTime,
+            Duration = sessionModel.Duration,
+            QrCodePayload = qrCodePayload,
+            Theme = selectedTheme
+        };
+
+        SessionStateService.AddActiveSession(currentActiveSession);
+        SessionStateService.UpdateCurrentSession("default", sessionModel);
+
+        // Start temporal key update timer if enabled
+        if (temporalKeyEnabled)
+        {
+            StartTemporalKeyUpdateTimer();
+        }
+
+        isSessionStarted = true;
+        RefreshSessionLists();
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error starting session: {ex.Message}");
+        // Handle error appropriately
+    }
+    finally
+    {
+        isCreatingSession = false;
+        StateHasChanged();
+    }
+}
+
+// ADD THESE NEW METHODS:
+private string GenerateTemporalKey(string sessionId, DateTime startTime)
+{
+    var keyData = $"{sessionId}:{startTime:yyyyMMddHHmm}:{DateTime.UtcNow.Ticks}";
+    var keyBytes = System.Text.Encoding.UTF8.GetBytes(keyData);
+    
+    using (var sha256 = System.Security.Cryptography.SHA256.Create())
+    {
+        var hashBytes = sha256.ComputeHash(keyBytes);
+        return Convert.ToBase64String(hashBytes).Substring(0, 16);
+    }
+}
+
+private void StartTemporalKeyUpdateTimer()
+{
+    // Update temporal key every 2 minutes when enabled
+    temporalKeyUpdateTimer = new System.Threading.Timer(
+        async _ => await UpdateTemporalKey(),
+        null,
+        TimeSpan.FromMinutes(2), // First update after 2 minutes
+        TimeSpan.FromMinutes(2)  // Then every 2 minutes
+    );
+}
+
+private async Task UpdateTemporalKey()
+{
+    if (!temporalKeyEnabled || !isSessionStarted || currentActiveSession == null)
+        return;
+
+    try
+    {
+        string newTemporalKey = GenerateTemporalKey(sessionModel.SessionId, sessionModel.StartTime);
+        
+        await AttendanceSessionService.UpdateTemporalKeyAsync(sessionModel.SessionId, newTemporalKey);
+        
+        Console.WriteLine($"Updated temporal key for session: {sessionModel.SessionId}");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error updating temporal key: {ex.Message}");
+    }
+}
 
         private async Task CreateFirebaseAttendanceEvent()
         {
@@ -283,6 +358,9 @@ using SessionData = AirCode.Services.Attendance.SessionData;
             {
                 if (currentActiveSession != null)
                 {
+                    // Stop temporal key timer
+                    temporalKeyUpdateTimer?.Dispose();
+            
                     // Update Firebase document to mark session as ended
                     await UpdateFirebaseAttendanceEventStatus("Ended");
 
@@ -497,6 +575,7 @@ using SessionData = AirCode.Services.Attendance.SessionData;
         public void Dispose()
         {
             countdownTimer?.Dispose();
+            temporalKeyUpdateTimer?.Dispose();
             SessionStateService.StateChanged -= OnStateChanged;
         }
     }

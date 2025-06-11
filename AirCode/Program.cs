@@ -147,7 +147,7 @@ builder.Services.AddScoped<AirCode.Services.Firebase.IFirestoreService, AirCode.
 
 // Supabase integration for backend services
 builder.Services.AddSupabaseServices();
-
+builder.Services.AddScoped<IAttendanceSessionService, AttendanceSessionService>();
 // Supabase client configuration optimized for WebAssembly
 builder.Services.AddScoped<Supabase.Client>(provider =>
 {
