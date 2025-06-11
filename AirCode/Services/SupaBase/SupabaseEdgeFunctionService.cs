@@ -4,211 +4,249 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using AirCode.Models.Supabase;
 using AirCode.Utilities.HelperScripts;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using AirCode.Models.Supabase;
+using AirCode.Models.QRCode;
+using AirCode.Utilities.HelperScripts;
 
-namespace AirCode.Services.SupaBase;
-
-
-public class SupabaseEdgeFunctionService : ISupabaseEdgeFunctionService
+namespace AirCode.Services.SupaBase
 {
-    private readonly HttpClient _httpClient;
-    private readonly string _supabaseUrl;
-    private readonly string _supabaseKey;
-    private readonly JsonSerializerOptions _jsonOptions;
-
-    public SupabaseEdgeFunctionService(HttpClient httpClient, IConfiguration configuration)
+    public class SupabaseEdgeFunctionService : ISupabaseEdgeFunctionService
     {
-        _httpClient = httpClient;
-        _supabaseUrl = configuration["Supabase:Url"] ?? "https://bjwbwcbumfqcdmrsbtkf.supabase.co";
-        _supabaseKey = configuration["Supabase:AnonKey"] ?? string.Empty;
-        
-        _jsonOptions = new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-        };
-    }
+        private readonly HttpClient _httpClient;
+        private readonly string _supabaseUrl;
+        private readonly string _supabaseKey;
+        private readonly JsonSerializerOptions _jsonOptions;
+        private readonly QRCodeDecoder _qrCodeDecoder;
 
-    public async Task<AttendanceProcessingResult> ProcessAttendanceAsync(string qrCodePayload, AttendanceRecord attendanceData)
-    {
-        try
+        public SupabaseEdgeFunctionService(
+            HttpClient httpClient, 
+            IConfiguration configuration,
+            QRCodeDecoder qrCodeDecoder)
         {
-            // Convert to the format expected by the edge function
-            var requestPayload = new
+            _httpClient = httpClient;
+            _supabaseUrl = configuration["Supabase:Url"] ?? "https://bjwbwcbumfqcdmrsbtkf.supabase.co";
+            _supabaseKey = configuration["Supabase:AnonKey"] ?? string.Empty;
+            _qrCodeDecoder = qrCodeDecoder;
+            
+            _jsonOptions = new JsonSerializerOptions
             {
-                qrCodePayload,
-                attendanceData = new
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+            };
+        }
+
+        /// <summary>
+        /// Processes attendance using the new unencrypted payload format
+        /// </summary>
+        public async Task<AttendanceProcessingResult> ProcessAttendanceAsync(
+            string qrCodeContent, 
+            AttendanceRecord attendanceData)
+        {
+            try
+            {
+                // Create the edge function request with unencrypted payload
+                var edgeFunctionRequest = await _qrCodeDecoder.CreateEdgeFunctionRequestAsync(
+                    qrCodeContent, attendanceData);
+
+                if (edgeFunctionRequest == null)
                 {
-                    matricNumber = attendanceData.MatricNumber, // Match edge function expectation
-                    hasScannedAttendance = attendanceData.HasScannedAttendance,
-                    isOnlineScan = attendanceData.IsOnlineScan
+                    return new AttendanceProcessingResult
+                    {
+                        Success = false,
+                        Message = "Invalid or expired QR code"
+                    };
                 }
-            };
 
-            Console.WriteLine($"Sending payload: {JsonSerializer.Serialize(requestPayload, _jsonOptions)}");
+                Console.WriteLine($"Sending unencrypted payload: {JsonSerializer.Serialize(edgeFunctionRequest, _jsonOptions)}");
 
-            var response = await SendEdgeFunctionRequestAsync("process-attendance-data", requestPayload);
-            
-            var responseContent = await response.Content.ReadAsStringAsync();
-            Console.WriteLine($"Response Status: {response.StatusCode}");
-            Console.WriteLine($"Response Content: {responseContent}");
-            
-            if (response.IsSuccessStatusCode)
-            {
-                var result = JsonSerializer.Deserialize<AttendanceProcessingResult>(responseContent, _jsonOptions);
-                return result ?? new AttendanceProcessingResult 
-                { 
-                    Success = false, 
-                    Message = "Invalid response format" 
+                var response = await SendEdgeFunctionRequestAsync("process-attendance-data", edgeFunctionRequest);
+                
+                var responseContent = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"Response Status: {response.StatusCode}");
+                Console.WriteLine($"Response Content: {responseContent}");
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    var result = JsonSerializer.Deserialize<AttendanceProcessingResult>(responseContent, _jsonOptions);
+                    return result ?? new AttendanceProcessingResult 
+                    { 
+                        Success = false, 
+                        Message = "Invalid response format" 
+                    };
+                }
+
+                return new AttendanceProcessingResult
+                {
+                    Success = false,
+                    Message = $"Request failed: {response.StatusCode}",
+                    ErrorDetails = responseContent
                 };
             }
-
-            return new AttendanceProcessingResult
+            catch (HttpRequestException ex)
             {
-                Success = false,
-                Message = $"Request failed: {response.StatusCode}",
-                ErrorDetails = responseContent
-            };
-        }
-        catch (HttpRequestException ex)
-        {
-            Console.WriteLine($"HTTP Request Exception: {ex}");
-            return new AttendanceProcessingResult
-            {
-                Success = false,
-                Message = $"Network error: {ex.Message}",
-                ErrorDetails = ex.ToString()
-            };
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"General Exception: {ex}");
-            return new AttendanceProcessingResult
-            {
-                Success = false,
-                Message = $"Processing error: {ex.Message}",
-                ErrorDetails = ex.ToString()
-            };
-        }
-    }
-
-    public async Task<QRValidationResult> ValidateQRCodeAsync(string qrCodePayload)
-    {
-        try
-        {
-            var requestPayload = new { qrCodePayload };
-            var response = await SendEdgeFunctionRequestAsync("validate-qr-code", requestPayload);
-            
-            if (response.IsSuccessStatusCode)
-            {
-                var result = await response.Content.ReadFromJsonAsync<QRValidationResult>(_jsonOptions);
-                return result ?? new QRValidationResult 
-                { 
-                    IsValid = false, 
-                    Message = "Invalid response format" 
+                Console.WriteLine($"HTTP Request Exception: {ex}");
+                return new AttendanceProcessingResult
+                {
+                    Success = false,
+                    Message = $"Network error: {ex.Message}",
+                    ErrorDetails = ex.ToString()
                 };
             }
-
-            return new QRValidationResult
+            catch (Exception ex)
             {
-                IsValid = false,
-                Message = $"Validation failed: {response.StatusCode}"
-            };
+                Console.WriteLine($"General Exception: {ex}");
+                return new AttendanceProcessingResult
+                {
+                    Success = false,
+                    Message = $"Processing error: {ex.Message}",
+                    ErrorDetails = ex.ToString()
+                };
+            }
         }
-        catch (Exception ex)
-        {
-            return new QRValidationResult
-            {
-                IsValid = false,
-                Message = $"Validation error: {ex.Message}"
-            };
-        }
-    }
 
-    public async Task<string> GetRandomCatImageAsync()
-    {
-        try
+        /// <summary>
+        /// Validates QR code using partial payload data
+        /// </summary>
+        public async Task<QRValidationResult> ValidateQRCodeAsync(string qrCodeContent)
         {
-            var response = await SendEdgeFunctionRequestAsync("get-random-cat", null, HttpMethod.Get);
+            try
+            {
+                // Extract partial payload for validation
+                var payloadData = await _qrCodeDecoder.ExtractPayloadDataAsync(qrCodeContent);
+                if (payloadData == null)
+                {
+                    return new QRValidationResult
+                    {
+                        IsValid = false,
+                        Message = "Invalid QR code format or expired"
+                    };
+                }
+
+                // Create validation request
+                var validationRequest = new
+                {
+                    qrCodePayload = payloadData,
+                    validationOnly = true
+                };
+
+                var response = await SendEdgeFunctionRequestAsync("validate-qr-code", validationRequest);
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    var result = await response.Content.ReadFromJsonAsync<QRValidationResult>(_jsonOptions);
+                    return result ?? new QRValidationResult 
+                    { 
+                        IsValid = false, 
+                        Message = "Invalid response format" 
+                    };
+                }
+
+                return new QRValidationResult
+                {
+                    IsValid = false,
+                    Message = $"Validation failed: {response.StatusCode}"
+                };
+            }
+            catch (Exception ex)
+            {
+                return new QRValidationResult
+                {
+                    IsValid = false,
+                    Message = $"Validation error: {ex.Message}"
+                };
+            }
+        }
+
+        public async Task<string> GetRandomCatImageAsync()
+        {
+            try
+            {
+                var response = await SendEdgeFunctionRequestAsync("get-random-cat", null, HttpMethod.Get);
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    var catResponse = await response.Content.ReadFromJsonAsync<CatResponse>(_jsonOptions);
+                    return catResponse?.ImageUrl ?? "No image found";
+                }
+
+                return $"Failed to get cat image: {response.StatusCode}";
+            }
+            catch (Exception ex)
+            {
+                return $"Error getting cat image: {ex.Message}";
+            }
+        }
+
+        private async Task<HttpResponseMessage> SendEdgeFunctionRequestAsync(
+            string functionName, 
+            object payload = null, 
+            HttpMethod method = null)
+        {
+            method ??= HttpMethod.Post;
             
-            if (response.IsSuccessStatusCode)
+            var request = new HttpRequestMessage(method, $"{_supabaseUrl}/functions/v1/{functionName}");
+            
+            if (!string.IsNullOrEmpty(_supabaseKey))
             {
-                var catResponse = await response.Content.ReadFromJsonAsync<CatResponse>(_jsonOptions);
-                return catResponse?.ImageUrl ?? "No image found";
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _supabaseKey);
             }
 
-            return $"Failed to get cat image: {response.StatusCode}";
-        }
-        catch (Exception ex)
-        {
-            return $"Error getting cat image: {ex.Message}";
+            if (payload != null && method == HttpMethod.Post)
+            {
+                request.Content = JsonContent.Create(payload, options: _jsonOptions);
+            }
+
+            return await _httpClient.SendAsync(request);
         }
     }
 
-    private async Task<HttpResponseMessage> SendEdgeFunctionRequestAsync(
-        string functionName, 
-        object payload = null, 
-        HttpMethod method = null)
+    // Updated Response Models
+    public class AttendanceProcessingResult
     {
-        method ??= HttpMethod.Post;
+        public bool Success { get; set; }
+        public string Message { get; set; } = string.Empty;
+        public string ErrorDetails { get; set; } = string.Empty;
+        public QRCodePayloadData SessionData { get; set; } // Changed from DecodedSessionData
+        public AttendanceRecord ProcessedAttendance { get; set; }
+
+        public override string ToString()
+        {
+            return JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
+        }
+    }
+
+    public class QRValidationResult
+    {
+        public bool IsValid { get; set; }
+        public string Message { get; set; } = string.Empty;
+        public QRCodePayloadData SessionData { get; set; } // Changed from DecodedSessionData
+        public DateTime? ExpirationTime { get; set; }
+        public bool IsExpired { get; set; }
         
-        var request = new HttpRequestMessage(method, $"{_supabaseUrl}/functions/v1/{functionName}");
-        
-        if (!string.IsNullOrEmpty(_supabaseKey))
+        public override string ToString()
         {
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _supabaseKey);
+            return JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
         }
+    }
 
-        if (payload != null && method == HttpMethod.Post)
+    public class AttendanceRecord
+    {
+        public string MatricNumber { get; set; } = string.Empty;
+        public bool HasScannedAttendance { get; set; }
+        public bool IsOnlineScan { get; set; }
+
+        public override string ToString()
         {
-            request.Content = JsonContent.Create(payload, options: _jsonOptions);
+            return JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
         }
-
-        return await _httpClient.SendAsync(request);
     }
-}
 
-// Response Models
-public class AttendanceProcessingResult
-{
-    public bool Success { get; set; }
-    public string Message { get; set; } = string.Empty;
-    public string ErrorDetails { get; set; } = string.Empty;
-    public QRCodeDecoder.DecodedSessionData SessionData { get; set; }
-    public AttendanceRecord ProcessedAttendance { get; set; }
-
-    public override string ToString()
+    public class CatResponse
     {
-        return JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
+        public string ImageUrl { get; set; } = string.Empty;
     }
-}
-
-public class QRValidationResult
-{
-    public bool IsValid { get; set; }
-    public string Message { get; set; } = string.Empty;
-    public QRCodeDecoder.DecodedSessionData SessionData { get; set; }
-    public DateTime? ExpirationTime { get; set; }
-    public bool IsExpired { get; set; }
-    
-    public override string ToString()
-    {
-        return JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
-    }
-}
-
-public class AttendanceRecord
-{
-    public string MatricNumber { get; set; } = string.Empty;
-    public bool HasScannedAttendance { get; set; }
-    public bool IsOnlineScan { get; set; }
-
-    public override string ToString()
-    {
-        return JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
-    }
-}
-
-public class CatResponse
-{
-    public string ImageUrl { get; set; } = string.Empty;
 }

@@ -23,9 +23,9 @@
         <CircularNavigationButton 
             IconSvgContent="@settingsIconSvg"
             Text="Settings"
-            ButtonClass="@GetButtonClass("settings")"
-            IsActive="@(currentPage == "settings")"
-            OnClick="@(() => NavigateTo("Client/Settings"))" />
+            ButtonClass="@GetButtonClass("courses")"
+            IsActive="@(currentPage == "courses")"
+            OnClick="@(() => NavigateTo("Client/Courses"))" />
     </div>
 </div>
 
@@ -44,7 +44,7 @@
         if (path.Contains("Stats"))
             currentPage = "Client/Stats";
         else if (path.Contains("Settings"))
-            currentPage = "Client/Settings";
+            currentPage = "Client/Courses";
         else
             currentPage = "Client/ScanAttendance";
 
@@ -89,10 +89,10 @@
                 NavigationManager.NavigateTo("Client/Stats");
                 break;
             case "settings":
-                NavigationManager.NavigateTo("Client/Settings");
+                NavigationManager.NavigateTo("Client/Courses");
                 break;
             default:
-                NavigationManager.NavigateTo("Client/ScanPage");
+                NavigationManager.NavigateTo("Client/ScanAttendance");
                 break;
         }
     }

@@ -26,6 +26,7 @@
 
     <ItemGroup>
       <Folder Include="Layout\" />
+      <Folder Include="Models\QRCode\" />
     </ItemGroup>
 
     <ItemGroup>

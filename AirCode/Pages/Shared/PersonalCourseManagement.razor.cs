@@ -12,7 +12,7 @@ public partial class PersonalCourseManagement : ComponentBase
     private bool IsProcessing = false;
     private string ErrorMessage = string.Empty;
     private string SuccessMessage = string.Empty;
-
+  
     //using matric num if user above level and course below enrol as carry over
     // Student Data
     [Parameter] public string CurrentMatricNumber { get; set; } = "U21CYS1083"; // This should come from auth context
