@@ -5,6 +5,7 @@
 @using ReactorBlazorQRCodeScanner
 @using AirCode.Utilities.DataStructures
 @using AirCode.Utilities.HelperScripts
+@using AirCode.Models.QRCode
 
 @inject ISupabaseEdgeFunctionService EdgeService
 @inject QRCodeDecoder QRDecoder
@@ -74,13 +75,20 @@
                             <span class="value">@decodedSessionData.SessionId</span>
                         </div>
                         <div class="info-row">
-                            <span class="label">Lecture:</span>
-                            <span class="value">@(decodedSessionData.LectureId ?? "General")</span>
+                            <span class="label">Duration:</span>
+                            <span class="value">@decodedSessionData.Duration minutes</span>
                         </div>
                         <div class="info-row">
                             <span class="label">Expires:</span>
                             <span class="value">@decodedSessionData.ExpirationTime.ToString("HH:mm:ss")</span>
                         </div>
+                        @if (decodedSessionData.AdvanceSecurityModeEnabled)
+                        {
+                            <div class="info-row">
+                                <span class="label">Security:</span>
+                                <span class="value security-enabled">🔒 Advanced Mode</span>
+                            </div>
+                        }
                     </div>
                 }
                 else
@@ -127,7 +135,7 @@
     private bool showAlert = false;
     private bool isErrorAlert = true;
     private string alertMessage = string.Empty;
-    private QRCodeDecoder.DecodedSessionData decodedSessionData;
+    private DecodedSessionData decodedSessionData;
 
     // TODO: Get actual user data from authentication service
     private string currentUserMatricNumber = "SukaBlak"; // Replace with actual user data
@@ -167,15 +175,15 @@
             
             try
             {
-                // First, try to decode as AirCode QR
+                // Decode the full session data for display purposes
                 decodedSessionData = await QRDecoder.DecodeSessionDataAsync(code);
                 
                 if (decodedSessionData != null)
                 {
                     MID_HelperFunctions.DebugMessage($"Valid AirCode QR detected for course: {decodedSessionData.CourseCode}", DebugClass.Info);
                     
-                    // Process attendance with decoded session data
-                    await ProcessAttendanceCode(code);
+                    // Process attendance with the new payload structure
+                    await ProcessAttendanceWithNewPayload(code);
                 }
                 else
                 {
@@ -195,11 +203,11 @@
         }
     }
 
-    private async Task ProcessAttendanceCode(string qrCode)
+    private async Task ProcessAttendanceWithNewPayload(string qrCode)
     {
         try
         {
-            MID_HelperFunctions.DebugMessage($"Processing attendance for QR: {qrCode}", DebugClass.Info);
+            MID_HelperFunctions.DebugMessage($"Processing attendance with new payload structure for QR: {qrCode}", DebugClass.Info);
         
             var attendanceRecord = new AttendanceRecord
             {
@@ -210,7 +218,19 @@
         
             MID_HelperFunctions.DebugMessage($"Attendance record: {MID_HelperFunctions.ToJson(attendanceRecord)}", DebugClass.Log);
         
-            var result = await EdgeService.ProcessAttendanceAsync(qrCode, attendanceRecord);
+            // Create the Edge Function request with unencrypted payload
+            var edgeFunctionRequest = await QRDecoder.CreateEdgeFunctionRequestAsync(qrCode, attendanceRecord);
+            
+            if (edgeFunctionRequest == null)
+            {
+                ShowAlert("Failed to create valid request payload");
+                return;
+            }
+
+            MID_HelperFunctions.DebugMessage($"Edge function request: {MID_HelperFunctions.ToJson(edgeFunctionRequest)}", DebugClass.Log);
+        
+            // Process attendance with the new payload structure
+            var result = await EdgeService.ProcessAttendanceWithPayloadAsync(edgeFunctionRequest);
         
             MID_HelperFunctions.DebugMessage($"Edge function result: {MID_HelperFunctions.ToJson(result)}", DebugClass.Log);
         
@@ -228,7 +248,7 @@
         }
         catch (Exception ex)
         {
-            MID_HelperFunctions.DebugMessage($"Exception in ProcessAttendanceCode: {ex}", DebugClass.Exception);
+            MID_HelperFunctions.DebugMessage($"Exception in ProcessAttendanceWithNewPayload: {ex}", DebugClass.Exception);
             ShowAlert($"<span style='color: #dc3545; font-weight: bold;'>Error:</span> {ex.Message}");
         }
     }

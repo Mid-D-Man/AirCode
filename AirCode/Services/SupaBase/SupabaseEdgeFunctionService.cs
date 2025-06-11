@@ -3,12 +3,6 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using AirCode.Models.Supabase;
-using AirCode.Utilities.HelperScripts;
-using System.Net.Http.Headers;
-using System.Net.Http.Json;
-using System.Text.Json;
-using System.Text.Json.Serialization;
-using AirCode.Models.Supabase;
 using AirCode.Models.QRCode;
 using AirCode.Utilities.HelperScripts;
 
@@ -40,30 +34,15 @@ namespace AirCode.Services.SupaBase
         }
 
         /// <summary>
-        /// Processes attendance using the new unencrypted payload format
+        /// Process attendance with unencrypted payload structure
         /// </summary>
-        public async Task<AttendanceProcessingResult> ProcessAttendanceAsync(
-            string qrCodeContent, 
-            AttendanceRecord attendanceData)
+        public async Task<AttendanceProcessingResult> ProcessAttendanceWithPayloadAsync(EdgeFunctionRequest request)
         {
             try
             {
-                // Create the edge function request with unencrypted payload
-                var edgeFunctionRequest = await _qrCodeDecoder.CreateEdgeFunctionRequestAsync(
-                    qrCodeContent, attendanceData);
+                Console.WriteLine($"Sending edge function request: {JsonSerializer.Serialize(request, _jsonOptions)}");
 
-                if (edgeFunctionRequest == null)
-                {
-                    return new AttendanceProcessingResult
-                    {
-                        Success = false,
-                        Message = "Invalid or expired QR code"
-                    };
-                }
-
-                Console.WriteLine($"Sending unencrypted payload: {JsonSerializer.Serialize(edgeFunctionRequest, _jsonOptions)}");
-
-                var response = await SendEdgeFunctionRequestAsync("process-attendance-data", edgeFunctionRequest);
+                var response = await SendEdgeFunctionRequestAsync("process-attendance-data", request);
                 
                 var responseContent = await response.Content.ReadAsStringAsync();
                 Console.WriteLine($"Response Status: {response.StatusCode}");
@@ -109,13 +88,90 @@ namespace AirCode.Services.SupaBase
         }
 
         /// <summary>
-        /// Validates QR code using partial payload data
+        /// Validate QR code payload data with signature verification
         /// </summary>
+        public async Task<QRValidationResult> ValidateQRPayloadAsync(QRCodePayloadData payloadData, string signature)
+        {
+            try
+            {
+                var validationRequest = new
+                {
+                    payloadData = payloadData,
+                    signature = signature,
+                    validationOnly = true
+                };
+
+                var response = await SendEdgeFunctionRequestAsync("validate-qr-payload", validationRequest);
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    var result = await response.Content.ReadFromJsonAsync<QRValidationResult>(_jsonOptions);
+                    return result ?? new QRValidationResult 
+                    { 
+                        IsValid = false, 
+                        Message = "Invalid response format" 
+                    };
+                }
+
+                return new QRValidationResult
+                {
+                    IsValid = false,
+                    Message = $"Validation failed: {response.StatusCode}"
+                };
+            }
+            catch (Exception ex)
+            {
+                return new QRValidationResult
+                {
+                    IsValid = false,
+                    Message = $"Validation error: {ex.Message}"
+                };
+            }
+        }
+
+        /// <summary>
+        /// Legacy method - deprecated, use ProcessAttendanceWithPayloadAsync instead
+        /// </summary>
+        [Obsolete("Use ProcessAttendanceWithPayloadAsync for new payload structure")]
+        public async Task<AttendanceProcessingResult> ProcessAttendanceAsync(
+            string qrCodeContent, 
+            AttendanceRecord attendanceData)
+        {
+            try
+            {
+                var edgeFunctionRequest = await _qrCodeDecoder.CreateEdgeFunctionRequestAsync(
+                    qrCodeContent, attendanceData);
+
+                if (edgeFunctionRequest == null)
+                {
+                    return new AttendanceProcessingResult
+                    {
+                        Success = false,
+                        Message = "Invalid or expired QR code"
+                    };
+                }
+
+                return await ProcessAttendanceWithPayloadAsync(edgeFunctionRequest);
+            }
+            catch (Exception ex)
+            {
+                return new AttendanceProcessingResult
+                {
+                    Success = false,
+                    Message = $"Processing error: {ex.Message}",
+                    ErrorDetails = ex.ToString()
+                };
+            }
+        }
+
+        /// <summary>
+        /// Legacy QR validation - deprecated
+        /// </summary>
+        [Obsolete("Use ValidateQRPayloadAsync for new payload structure")]
         public async Task<QRValidationResult> ValidateQRCodeAsync(string qrCodeContent)
         {
             try
             {
-                // Extract partial payload for validation
                 var payloadData = await _qrCodeDecoder.ExtractPayloadDataAsync(qrCodeContent);
                 if (payloadData == null)
                 {
@@ -126,7 +182,6 @@ namespace AirCode.Services.SupaBase
                     };
                 }
 
-                // Create validation request
                 var validationRequest = new
                 {
                     qrCodePayload = payloadData,
@@ -204,13 +259,13 @@ namespace AirCode.Services.SupaBase
         }
     }
 
-    // Updated Response Models
+    // Response Models remain the same
     public class AttendanceProcessingResult
     {
         public bool Success { get; set; }
         public string Message { get; set; } = string.Empty;
         public string ErrorDetails { get; set; } = string.Empty;
-        public QRCodePayloadData SessionData { get; set; } // Changed from DecodedSessionData
+        public QRCodePayloadData SessionData { get; set; }
         public AttendanceRecord ProcessedAttendance { get; set; }
 
         public override string ToString()
@@ -223,7 +278,7 @@ namespace AirCode.Services.SupaBase
     {
         public bool IsValid { get; set; }
         public string Message { get; set; } = string.Empty;
-        public QRCodePayloadData SessionData { get; set; } // Changed from DecodedSessionData
+        public QRCodePayloadData SessionData { get; set; }
         public DateTime? ExpirationTime { get; set; }
         public bool IsExpired { get; set; }
         

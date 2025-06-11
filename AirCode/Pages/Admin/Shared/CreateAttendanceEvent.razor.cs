@@ -1,3 +1,4 @@
+using System.Text.Json;
 using AirCode.Services.SupaBase;
 using AirCode.Utilities.DataStructures;
 using AirCode.Utilities.HelperScripts;
@@ -459,26 +460,38 @@ using SessionData = AirCode.Services.Attendance.SessionData;
         {
             try
             {
-                // Add your attendance processing logic here
-                // This could involve:
-                // 1. Decrypting the QR code data
-                // 2. Validating the session
-                // 3. Recording attendance
-                // 4. Showing success/failure feedback
-                var randomguy = new AttendanceRecord
+                // Create the main attendance session data for Supabase
+                var attendanceSessionData = new
                 {
-                    MatricNumber = "SukaBlak",
+                    session_id = sessionModel.SessionId,
+                    course_code = sessionModel.CourseId,
+                    start_time = sessionModel.StartTime,
+                    duration = sessionModel.Duration,
+                    expiration_time = sessionEndTime,
+                    lecture_id = (string)null, // Set to null or assign if you have lecturer info
+                    attendance_records = new List<object>(), // Empty initially, will be populated as students scan
+                    created_at = DateTime.UtcNow,
+                    updated_at = DateTime.UtcNow
+                };
+
+                Console.WriteLine($"Attendance session data to be saved: {JsonSerializer.Serialize(attendanceSessionData, new JsonSerializerOptions { WriteIndented = true })}");
+
+                // For testing - create a sample attendance record
+                var testAttendanceRecord = new AttendanceRecord
+                {
+                    MatricNumber = "TEST001",
                     HasScannedAttendance = true,
                     IsOnlineScan = true
                 };
-                var result =  await EdgeService.ProcessAttendanceAsync(qrCode,randomguy);
-            
-                Console.WriteLine($"Processing attendance code: {qrCode}, and found result {result.ToString()}");
+
+                // Test with legacy method (will be replaced with new payload structure)
+                var result = await EdgeService.ProcessAttendanceAsync(qrCode, testAttendanceRecord);
+        
+                Console.WriteLine($"Processing attendance code: {qrCode}, result: {result.ToString()}");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Error processing attendance: {ex.Message}");
-              
             }
         }
         public void Dispose()
