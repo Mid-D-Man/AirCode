@@ -7,21 +7,45 @@
 @inject IConfiguration Configuration
 @inject IAuthService AuthService
 
-<RemoteAuthenticatorView Action="@Action" OnLogInSucceeded="HandleLoginSuccess">
-    <LoggingIn>
-        <p>Redirecting to Auth0 login...</p>
-    </LoggingIn>
-    <CompletingLoggingIn>
-        <p>Completing login process...</p>
-    </CompletingLoggingIn>
-    <LogOut>
-        @{
-            var authority = $"https://{Configuration["Auth0:Domain"]}";
-            var clientId = Configuration["Auth0:ClientId"];
-            Navigation.NavigateTo($"{authority}/v2/logout?client_id={clientId}");
-        }
-    </LogOut>
-</RemoteAuthenticatorView>
+<div class="auth-container">
+    <RemoteAuthenticatorView Action="@Action" OnLogInSucceeded="HandleLoginSuccess">
+        <LoggingIn>
+            <div class="auth-content">
+                <div class="auth-status">
+                    <div class="auth-icon">
+                        <svg fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/>
+                        </svg>
+                    </div>
+                    <h2 class="auth-title">Connecting to AirCode</h2>
+                    <p class="auth-subtitle">Redirecting to secure authentication...</p>
+                    <div class="auth-spinner"></div>
+                </div>
+            </div>
+        </LoggingIn>
+        <CompletingLoggingIn>
+            <div class="auth-content">
+                <div class="auth-status">
+                    <div class="auth-icon">
+                        <svg fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/>
+                        </svg>
+                    </div>
+                    <h2 class="auth-title">Authentication Successful</h2>
+                    <p class="auth-subtitle">Completing login process and setting up your session...</p>
+                    <div class="auth-spinner"></div>
+                </div>
+            </div>
+        </CompletingLoggingIn>
+        <LogOut>
+            @{
+                var authority = $"https://{Configuration["Auth0:Domain"]}";
+                var clientId = Configuration["Auth0:ClientId"];
+                Navigation.NavigateTo($"{authority}/v2/logout?client_id={clientId}");
+            }
+        </LogOut>
+    </RemoteAuthenticatorView>
+</div>
 
 @code{
     [Parameter] public string Action { get; set; }

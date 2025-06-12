@@ -104,50 +104,6 @@
     }
 }
 
-<script>
-    window.initializeAttendanceChart = (canvasId, data, type) => {
-        const ctx = document.getElementById(canvasId).getContext('2d');
-        
-        new Chart(ctx, {
-            type: type,
-            data: data,
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        max: 100,
-                        ticks: {
-                            callback: function(value) {
-                                return value + '%';
-                            }
-                        }
-                    }
-                },
-                elements: {
-                    point: {
-                        radius: 4,
-                        hoverRadius: 6
-                    }
-                }
-            }
-        });
-    };
-
-    window.updateAttendanceChart = (canvasId, data) => {
-        const canvas = document.getElementById(canvasId);
-        if (canvas && canvas.chart) {
-            canvas.chart.data = data;
-            canvas.chart.update();
-        }
-    };
-</script>
 
 @code {
     public class AttendanceChartData

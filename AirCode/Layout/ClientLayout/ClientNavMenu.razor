@@ -11,21 +11,21 @@
             Text="Stats"
             ButtonClass="@GetButtonClass("stats")"
             IsActive="@(currentPage == "stats")"
-            OnClick="@(() => NavigateTo("Client/Stats"))" />
+            OnClick="@(() => NavigateTo("stats"))" />
         
         <CircularNavigationButton 
             IconSvgContent="@scanIconSvg"
             Text="Scan"
             ButtonClass="@GetPrimaryButtonClass("scan")"
             IsActive="@(currentPage == "scan")"
-            OnClick="@(() => NavigateTo("Client/ScanAttendance"))" />
+            OnClick="@(() => NavigateTo("scan"))" />
         
         <CircularNavigationButton 
             IconSvgContent="@settingsIconSvg"
             Text="Settings"
-            ButtonClass="@GetButtonClass("courses")"
-            IsActive="@(currentPage == "courses")"
-            OnClick="@(() => NavigateTo("Client/Courses"))" />
+            ButtonClass="@GetButtonClass("settings")"
+            IsActive="@(currentPage == "settings")"
+            OnClick="@(() => NavigateTo("settings"))" />
     </div>
 </div>
 
@@ -42,14 +42,37 @@
         var path = uri.AbsolutePath;
         
         if (path.Contains("Stats"))
-            currentPage = "Client/Stats";
-        else if (path.Contains("Settings"))
-            currentPage = "Client/Courses";
+            currentPage = "stats";
+        else if (path.Contains("Courses"))
+            currentPage = "settings";
         else
-            currentPage = "Client/ScanAttendance";
+            currentPage = "scan";
 
         // Load SVG icons
         await LoadIcons();
+        
+        // Listen for navigation changes
+        NavigationManager.LocationChanged += OnLocationChanged;
+    }
+    
+    private void OnLocationChanged(object sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        var uri = NavigationManager.ToAbsoluteUri(e.Location);
+        var path = uri.AbsolutePath;
+        
+        if (path.Contains("Stats"))
+            currentPage = "stats";
+        else if (path.Contains("Courses"))
+            currentPage = "settings";
+        else
+            currentPage = "scan";
+            
+        InvokeAsync(StateHasChanged);
+    }
+    
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= OnLocationChanged;
     }
 
     private async Task LoadIcons()
@@ -81,8 +104,6 @@
 
     private void NavigateTo(string page)
     {
-        currentPage = page;
-        
         switch (page)
         {
             case "stats":
@@ -91,6 +112,7 @@
             case "settings":
                 NavigationManager.NavigateTo("Client/Courses");
                 break;
+            case "scan":
             default:
                 NavigationManager.NavigateTo("Client/ScanAttendance");
                 break;

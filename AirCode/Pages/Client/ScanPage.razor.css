@@ -1,70 +1,62 @@
-/* Updated ScanPage.razor.css - Mobile-optimized scanner */
+/* Updated ScanPage.razor.css - Full page scanner */
 
 .scan-attendance-page {
     display: flex;
     flex-direction: column;
     height: 100vh;
     width: 100%;
-    padding: 1rem;
+    padding: 0;
+    margin: 0;
     overflow: hidden;
-    background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+    background: #000;
     box-sizing: border-box;
+    position: relative;
 }
 
 .scan-header {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
     text-align: center;
-    margin-bottom: 1.5rem;
-    padding: 0 1rem;
-    z-index: 5;
+    padding: 1rem;
+    z-index: 15;
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.4) 70%, transparent 100%);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
 }
 
 .scan-header h3 {
     color: #ffffff;
-    margin-bottom: 0.5rem;
-    font-size: 1.8rem;
+    margin: 0 0 0.5rem 0;
+    font-size: 1.5rem;
     font-weight: 700;
-    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
 }
 
 .scan-header p {
-    color: rgba(255, 255, 255, 0.7);
-    font-size: 1rem;
-    opacity: 0.9;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.9rem;
+    margin: 0;
+    text-shadow: 0 1px 5px rgba(0, 0, 0, 0.8);
 }
 
-/* MAIN SCANNER CONTAINER - 70% width, 80% height for mobile-first */
+/* MAIN SCANNER CONTAINER - Full page */
 .scan-container {
     position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin: 0 auto;
-    border-radius: 24px;
+    width: 100%;
+    height: 100%;
     overflow: hidden;
-    background: rgba(0, 0, 0, 0.3);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 2px solid rgba(255, 255, 255, 0.1);
-    box-shadow:
-            0 25px 80px rgba(0, 0, 0, 0.4),
-            inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    background: #000;
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-
-    /* Mobile-first sizing - 70% width, 80% height */
-    width: 70vw;
-    height: 80vh;
-    min-width: 280px;
-    min-height: 350px;
-    max-width: 500px;
-    max-height: 700px;
 }
 
 /* Processing state animation */
 .scan-container.processing {
     transform: scale(0.98);
-    box-shadow:
-            0 30px 100px rgba(0, 0, 0, 0.6),
-            inset 0 0 50px rgba(255, 255, 255, 0.1);
 }
 
 /* Scan complete state with closing animation */
@@ -76,17 +68,19 @@
     0% { transform: scale(1); }
     50% {
         transform: scale(1.02);
-        box-shadow: 0 0 0 4px rgba(76, 175, 80, 0.5);
+        box-shadow: inset 0 0 0 4px rgba(76, 175, 80, 0.5);
     }
     100% {
         transform: scale(1);
-        box-shadow: 0 0 0 0 rgba(76, 175, 80, 0);
+        box-shadow: inset 0 0 0 0 rgba(76, 175, 80, 0);
     }
 }
 
 /* QR Scanner container */
 .qr-scanner-container {
-    position: relative;
+    position: absolute;
+    top: 0;
+    left: 0;
     width: 100% !important;
     height: 100% !important;
     display: flex;
@@ -94,7 +88,6 @@
     align-items: center;
     justify-content: center;
     background: #000;
-    border-radius: inherit;
     overflow: hidden;
     z-index: 3;
 }
@@ -111,7 +104,6 @@
     justify-content: center;
     overflow: hidden;
     background: #000;
-    border-radius: inherit;
 }
 
 /* Video element - maintain aspect ratio and prevent shifting */
@@ -125,7 +117,6 @@
     width: auto !important;
     height: auto !important;
     object-fit: cover !important;
-    border-radius: inherit;
     background: #000;
     display: block !important;
 }
@@ -148,7 +139,6 @@
     width: 100% !important;
     height: 100% !important;
     object-fit: cover !important;
-    border-radius: inherit;
     display: block !important;
 }
 
@@ -162,7 +152,6 @@
     width: auto !important;
     height: auto !important;
     object-fit: cover !important;
-    border-radius: inherit;
     display: block !important;
     background: #000;
 }
@@ -170,10 +159,10 @@
 /* Scan frame overlay with corners */
 .scan-frame {
     position: absolute;
-    top: 15%;
-    left: 15%;
-    right: 15%;
-    bottom: 15%;
+    top: 20%;
+    left: 20%;
+    right: 20%;
+    bottom: 20%;
     z-index: 10;
     pointer-events: none;
 }
@@ -251,7 +240,6 @@
     align-items: center;
     justify-content: center;
     z-index: 20;
-    border-radius: inherit;
 }
 
 .processing-overlay span {
@@ -288,7 +276,6 @@
     align-items: center;
     justify-content: center;
     z-index: 25;
-    border-radius: inherit;
     backdrop-filter: blur(15px);
     -webkit-backdrop-filter: blur(15px);
     animation: resultSlideIn 0.4s ease-out;
@@ -395,7 +382,7 @@
 /* Scanner controls */
 .scan-controls {
     position: absolute;
-    bottom: 20px;
+    bottom: 100px;
     left: 50%;
     transform: translateX(-50%);
     display: flex;
@@ -432,33 +419,30 @@
     font-size: 0.8rem;
 }
 
-/* Mobile Portrait - Extra Small Screens */
+/* Mobile adjustments */
 @media (max-width: 480px) {
-    .scan-attendance-page {
-        padding: 0.5rem;
-    }
-
-    .scan-container {
-        width: 85vw;
-        height: 75vh;
-        min-width: 280px;
-        min-height: 350px;
-    }
-
-    .scan-header {
-        margin-bottom: 1rem;
-    }
-
     .scan-header h3 {
-        font-size: 1.5rem;
+        font-size: 1.3rem;
     }
 
     .scan-header p {
-        font-size: 0.9rem;
+        font-size: 0.8rem;
+    }
+
+    .scan-frame {
+        top: 25%;
+        left: 25%;
+        right: 25%;
+        bottom: 25%;
+    }
+
+    .corner {
+        width: 25px;
+        height: 25px;
     }
 
     .scan-controls {
-        bottom: 15px;
+        bottom: 80px;
     }
 
     .control-btn {
@@ -473,85 +457,5 @@
 
     .result-icon {
         font-size: 3rem;
-    }
-}
-
-/* Mobile Landscape - Small Screens */
-@media (min-width: 481px) and (max-width: 767px) {
-    .scan-container {
-        width: 75vw;
-        height: 80vh;
-        min-width: 320px;
-        min-height: 400px;
-    }
-
-    .scan-header h3 {
-        font-size: 1.6rem;
-    }
-}
-
-/* Tablet Portrait - Medium Screens */
-@media (min-width: 768px) and (max-width: 1024px) {
-    .scan-container {
-        width: 60vw;
-        height: 70vh;
-        min-width: 400px;
-        min-height: 450px;
-        max-width: 600px;
-    }
-
-    .scan-header h3 {
-        font-size: 2rem;
-    }
-
-    .control-btn {
-        padding: 14px 24px;
-        font-size: 1rem;
-    }
-}
-
-/* Desktop - Large Screens */
-@media (min-width: 1025px) {
-    .scan-attendance-page {
-        padding: 2rem;
-    }
-
-    .scan-container {
-        width: 50vw;
-        height: 65vh;
-        min-width: 450px;
-        min-height: 500px;
-        max-width: 700px;
-        max-height: 800px;
-    }
-
-    .scan-header {
-        margin-bottom: 2rem;
-    }
-
-    .scan-header h3 {
-        font-size: 2.2rem;
-    }
-
-    .scan-header p {
-        font-size: 1.1rem;
-    }
-
-    .scan-controls {
-        bottom: 30px;
-        gap: 16px;
-    }
-
-    .control-btn {
-        padding: 16px 28px;
-        font-size: 1rem;
-    }
-
-    .result-message {
-        font-size: 1.3rem;
-    }
-
-    .result-icon {
-        font-size: 5rem;
     }
 }
