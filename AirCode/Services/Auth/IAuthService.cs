@@ -378,8 +378,8 @@ namespace AirCode.Services.Auth
                         }
                     }
 
-                    // Navigate based on role
-                    await NavigateByRole(userRole);
+                    // Navigate based on role let index page handle navigation
+                 //   await NavigateByRole(userRole);
                 }
                 else
                 {
@@ -512,7 +512,7 @@ namespace AirCode.Services.Auth
         private async Task NavigateByRole(string userRole)
         {
             await LogAuthenticationMessageAsync($"Navigating based on role: {userRole}");
-            
+            //dosent work used default method
             switch (userRole?.ToLower())
             {
                 case "superioradmin":
