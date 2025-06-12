@@ -7,7 +7,7 @@ namespace AirCode.Pages.Shared;
 
 public partial class PersonalCourseManagement : ComponentBase
 {
-    // Component State
+    // Component State ... removed from layout since its general shared page for now though
     private bool IsLoading = true;
     private bool IsProcessing = false;
     private string ErrorMessage = string.Empty;
