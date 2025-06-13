@@ -1,6 +1,6 @@
 .nav-menu {
     width: 250px;
-    background: linear-gradient(135deg,
+    background: linear-gradient(90deg,
     var(--nav-background) 0%,
     var(--nav-hover) 25%,
     rgba(255, 255, 255, 0.05) 50%,
@@ -273,7 +273,7 @@
 
 /* Dark mode specific adjustments */
 body.dark-mode .nav-menu {
-    background: linear-gradient(135deg,
+    background: linear-gradient(-90deg,
     var(--nav-background) 0%,
     var(--nav-hover) 25%,
     rgba(0, 0, 0, 0.1) 50%,
