@@ -151,7 +151,34 @@ window.offlineCredentialsHandler = {
                     console.log('[OfflineCredentials] No additional data needed for role:', role);
             }
 
-            // Store the key and IV for later decryption
+            // Validate and convert key/IV format for Web Crypto API
+            let cryptoKey, cryptoIV;
+            try {
+                // If key/IV are base64 encoded, decode them first
+                const keyBytes = typeof key === 'string' ?
+                    new Uint8Array(atob(key).split('').map(c => c.charCodeAt(0))) : key;
+                const ivBytes = typeof iv === 'string' ?
+                    new Uint8Array(atob(iv).split('').map(c => c.charCodeAt(0))) : iv;
+
+                // Validate key length (should be 32 bytes for AES-256)
+                if (keyBytes.length !== 32) {
+                    throw new Error(`Invalid key length: ${keyBytes.length}, expected 32 bytes`);
+                }
+
+                // Validate IV length (should be 16 bytes for AES)
+                if (ivBytes.length !== 16) {
+                    throw new Error(`Invalid IV length: ${ivBytes.length}, expected 16 bytes`);
+                }
+
+                cryptoKey = keyBytes;
+                cryptoIV = ivBytes;
+
+            } catch (decodeError) {
+                console.error('[OfflineCredentials] Key/IV format error:', decodeError);
+                throw new Error('Invalid key or IV format: ' + decodeError.message);
+            }
+
+            // Store the key and IV for later decryption (keep as base64 strings)
             localStorage.setItem(this.STORAGE_KEYS.AUTH_KEY, key);
             localStorage.setItem(this.STORAGE_KEYS.AUTH_IV, iv);
 
@@ -180,11 +207,11 @@ window.offlineCredentialsHandler = {
                 signature: signature
             };
 
-            // Encrypt the signed credentials
+            // Encrypt the signed credentials using the validated key and IV
             const encryptedCredentials = await window.cryptographyHandler.encryptData(
                 JSON.stringify(signedCredentials),
-                key,
-                iv
+                cryptoKey,  // Pass the raw bytes
+                cryptoIV    // Pass the raw bytes
             );
 
             // Store encrypted credentials
