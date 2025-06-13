@@ -36,6 +36,7 @@
     stroke-dasharray: 12 63;
 }
 
+/* When checked (expanded), show X */
 .burger input:checked + label svg {
     transform: rotate(-45deg);
 }
@@ -45,3 +46,12 @@
     stroke-dashoffset: -32.42;
 }
 
+/* When not checked (collapsed), show hamburger */
+.burger input:not(:checked) + label svg {
+    transform: rotate(0deg);
+}
+
+.burger input:not(:checked) + label svg .line-top-bottom {
+    stroke-dasharray: 12 63;
+    stroke-dashoffset: 0;
+}

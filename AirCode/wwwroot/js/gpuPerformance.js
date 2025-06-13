@@ -4,13 +4,11 @@ console.log("gpuPerformance.js loaded");
 window.enableGPUAcceleration = function(element) {
     if (!element) return;
 
-    // Apply GPU acceleration styles
     element.style.transform = 'translateZ(0)';
     element.style.backfaceVisibility = 'hidden';
     element.style.perspective = '1000px';
     element.style.willChange = 'transform, opacity';
 
-    // Enable hardware acceleration for children
     const children = element.querySelectorAll('*');
     children.forEach(child => {
         child.style.transform = 'translateZ(0)';
@@ -24,7 +22,6 @@ window.optimizeScrolling = function(element) {
     let ticking = false;
 
     function updateScrollPosition() {
-        // Use transform instead of changing scroll position directly
         element.style.willChange = 'scroll-position';
         ticking = false;
     }
@@ -49,30 +46,58 @@ window.debounce = function(func, wait) {
     };
 };
 
-// Enhanced connectivity checker with performance optimizations
+// Connectivity checker with proper initialization
 window.connectivityChecker = {
-    ...window.connectivityChecker,
+    isOnline: navigator.onLine,
+    dotNetRef: null,
 
-    // Override the existing checkConnectivity with optimized version
-    checkConnectivity: window.debounce(function() {
-        const currentStatus = navigator.onLine;
-        if (this.isOnline !== currentStatus) {
-            console.log("checkConnectivity: status changed from", this.isOnline, "to", currentStatus);
-            this.isOnline = currentStatus;
-            this.notifyDotNet(currentStatus);
+    init: function(dotNetRef) {
+        console.log("connectivityChecker.init called");
+        this.dotNetRef = dotNetRef;
+        this.isOnline = navigator.onLine;
+
+        // Add event listeners
+        window.addEventListener('online', () => this.handleConnectivityChange(true));
+        window.addEventListener('offline', () => this.handleConnectivityChange(false));
+
+        // Initial check
+        this.optimizeForConnection();
+    },
+
+    handleConnectivityChange: function(isOnline) {
+        console.log("Connectivity changed to:", isOnline);
+        this.isOnline = isOnline;
+        this.optimizeForConnection();
+        this.notifyDotNet(isOnline);
+    },
+
+    notifyDotNet: function(isOnline) {
+        if (this.dotNetRef) {
+            try {
+                this.dotNetRef.invokeMethodAsync('OnConnectivityChanged', isOnline);
+            } catch (error) {
+                console.error("Error notifying .NET:", error);
+            }
         }
-    }, 1000), // Debounce to prevent excessive calls
+    },
 
-    // Add method to optimize network requests
+    getOnlineStatus: function() {
+        return this.isOnline;
+    },
+
     optimizeForConnection: function() {
         if (this.isOnline) {
-            // Online optimizations
             document.documentElement.classList.add('online-mode');
             document.documentElement.classList.remove('offline-mode');
         } else {
-            // Offline optimizations
             document.documentElement.classList.add('offline-mode');
             document.documentElement.classList.remove('online-mode');
         }
+    },
+
+    dispose: function() {
+        window.removeEventListener('online', this.handleConnectivityChange);
+        window.removeEventListener('offline', this.handleConnectivityChange);
+        this.dotNetRef = null;
     }
 };
