@@ -8,12 +8,12 @@ using AirCode.Services.SupaBase;
 namespace AirCode.Utilities.HelperScripts
 {
     /// <summary>
-    /// Updated QR Code decoder with temporal key security and simplified payload structure
+    /// Enhanced QR Code decoder with dual-purpose URL generation for external scanners and GitHub Pages integration
     /// </summary>
     public class QRCodeDecoder
     {
         private const string APP_SIGNATURE = "AIRCODE";
-        private const string URL_PREFIX = "https://mid-d-man.github.io/";
+        private const string GITHUB_BASE_URL = "https://mid-d-man.github.io/AirCode/";
         private const string ENCRYPTION_KEY = "AirCodeSecretKey1234567890123456"; // 32 characters for AES-256
         private const string INITIALIZATION_VECTOR = "AirCodeInitVectr"; // 16 characters for AES
         
@@ -25,7 +25,8 @@ namespace AirCode.Utilities.HelperScripts
         }
 
         /// <summary>
-        /// Encodes session data into a QR code payload (still encrypted for full security)
+        /// Encodes session data into a QR code payload with GitHub Pages compatibility
+        /// External scanners get redirected to GitHub Pages with payload in URL fragment
         /// </summary>
         public async Task<string> EncodeSessionDataAsync(
             string sessionId,
@@ -34,8 +35,7 @@ namespace AirCode.Utilities.HelperScripts
             int duration,
             bool advanceSecurityModeEnabled = false)
         {
-            // Generate temporal key - this acts as a time-based unique identifier
-            // Think of it like a temporary password that expires with the session
+            // Generate temporal key for session authenticity
             string temporalKey = GenerateTemporalKey(sessionId, startTime);
 
             var sessionData = new DecodedSessionData
@@ -48,7 +48,6 @@ namespace AirCode.Utilities.HelperScripts
                 ExpirationTime = DateTime.UtcNow.AddMinutes(duration),
                 TemporalKey = temporalKey,
                 AdvanceSecurityModeEnabled = advanceSecurityModeEnabled
-                // Removed LectureId and Nonce as requested
             };
 
             string jsonData = JsonSerializer.Serialize(sessionData, new JsonSerializerOptions
@@ -66,22 +65,43 @@ namespace AirCode.Utilities.HelperScripts
             string signature = await _cryptographyService.SignData(
                 encryptedData, ENCRYPTION_KEY);
 
-            return $"{URL_PREFIX}{sessionId}#{APP_SIGNATURE}:{encryptedData}:{signature}";
+            // Create payload for URL fragment
+            string payload = $"{APP_SIGNATURE}:{encryptedData}:{signature}";
+            string encodedPayload = Convert.ToBase64String(Encoding.UTF8.GetBytes(payload));
+
+            // Return GitHub Pages URL with payload in fragment for external scanners
+            return $"{GITHUB_BASE_URL}?session={sessionId}#{encodedPayload}";
         }
 
         /// <summary>
         /// Decodes QR code to extract full session data (for internal app use)
+        /// Handles both legacy format and new GitHub Pages format
         /// </summary>
         public async Task<DecodedSessionData> DecodeSessionDataAsync(string qrCodeContent)
         {
             try
             {
-                int signatureIndex = qrCodeContent.IndexOf($"#{APP_SIGNATURE}:");
-                if (signatureIndex == -1)
+                string payload = ExtractPayloadFromQRCode(qrCodeContent);
+                if (string.IsNullOrEmpty(payload))
                     return null;
 
-                string payload = qrCodeContent.Substring(signatureIndex + APP_SIGNATURE.Length + 2);
-                string[] components = payload.Split(':');
+                // Decode the Base64 encoded payload
+                string decodedPayload;
+                try
+                {
+                    byte[] payloadBytes = Convert.FromBase64String(payload);
+                    decodedPayload = Encoding.UTF8.GetString(payloadBytes);
+                }
+                catch
+                {
+                    // Fallback for legacy format
+                    decodedPayload = payload;
+                }
+
+                if (!decodedPayload.StartsWith(APP_SIGNATURE + ":"))
+                    return null;
+
+                string[] components = decodedPayload.Substring(APP_SIGNATURE.Length + 1).Split(':');
                 if (components.Length != 2)
                     return null;
 
@@ -107,7 +127,7 @@ namespace AirCode.Utilities.HelperScripts
                         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
                     });
 
-                // Validate expiration and temporal key
+                // Security validations
                 if (DateTime.UtcNow > sessionData.ExpirationTime)
                     return null;
 
@@ -127,23 +147,46 @@ namespace AirCode.Utilities.HelperScripts
         }
 
         /// <summary>
+        /// Extracts payload from QR code content, handling both GitHub Pages and legacy formats
+        /// </summary>
+        private string ExtractPayloadFromQRCode(string qrCodeContent)
+        {
+            // Handle GitHub Pages format: https://mid-d-man.github.io/AirCode/?session=123#encodedPayload
+            if (qrCodeContent.StartsWith(GITHUB_BASE_URL))
+            {
+                int fragmentIndex = qrCodeContent.IndexOf('#');
+                if (fragmentIndex > 0 && fragmentIndex < qrCodeContent.Length - 1)
+                {
+                    return qrCodeContent.Substring(fragmentIndex + 1);
+                }
+                return null;
+            }
+
+            // Handle legacy format with signature
+            int signatureIndex = qrCodeContent.IndexOf($"#{APP_SIGNATURE}:");
+            if (signatureIndex != -1)
+            {
+                return qrCodeContent.Substring(signatureIndex + 1); // Remove the '#'
+            }
+
+            return null;
+        }
+
+        /// <summary>
         /// Extracts partial payload data for Supabase Edge Function
-        /// This creates the unencrypted payload with signature
         /// </summary>
         public async Task<QRCodePayloadData> ExtractPayloadDataAsync(string qrCodeContent)
         {
-            // First decode the full session data
             var sessionData = await DecodeSessionDataAsync(qrCodeContent);
             if (sessionData == null)
                 return null;
 
-            // Create the partial payload (unencrypted)
             var payloadData = new QRCodePayloadData
             {
                 SessionId = sessionData.SessionId,
                 CourseCode = sessionData.CourseCode,
                 StartTime = sessionData.StartTime,
-                EndTime = sessionData.ExpirationTime, // Using ExpirationTime as EndTime
+                EndTime = sessionData.ExpirationTime,
                 TemporalKey = sessionData.TemporalKey,
                 AdvanceSecurityModeEnabled = sessionData.AdvanceSecurityModeEnabled
             };
@@ -162,7 +205,6 @@ namespace AirCode.Utilities.HelperScripts
             if (payloadData == null)
                 return null;
 
-            // Sign the payload data for integrity (not encryption)
             string payloadJson = JsonSerializer.Serialize(payloadData);
             string signature = await _cryptographyService.SignData(payloadJson, ENCRYPTION_KEY);
 
@@ -177,26 +219,22 @@ namespace AirCode.Utilities.HelperScripts
         #region Temporal Key Methods
 
         /// <summary>
-        /// Generates a temporal key based on session and time
-        /// Think of this like a time-locked combination that only works during the session
+        /// Generates temporal key for session authenticity and replay attack prevention
         /// </summary>
         private string GenerateTemporalKey(string sessionId, DateTime startTime)
         {
-            // Create a time-based key that incorporates session info
             var keyData = $"{sessionId}:{startTime:yyyyMMddHHmm}:TEMPORAL";
             var keyBytes = Encoding.UTF8.GetBytes(keyData);
             
-            // Use SHA256 to create a consistent temporal key
             using (var sha256 = System.Security.Cryptography.SHA256.Create())
             {
                 var hashBytes = sha256.ComputeHash(keyBytes);
-                return Convert.ToBase64String(hashBytes).Substring(0, 16); // 16 char key
+                return Convert.ToBase64String(hashBytes).Substring(0, 16);
             }
         }
 
         /// <summary>
-        /// Validates that the temporal key matches the expected value
-        /// This prevents replay attacks and ensures session authenticity
+        /// Validates temporal key against expected value
         /// </summary>
         private bool ValidateTemporalKey(string providedKey, string sessionId, DateTime startTime)
         {
@@ -208,23 +246,45 @@ namespace AirCode.Utilities.HelperScripts
 
         #region Helper Methods
 
+        /// <summary>
+        /// Validates QR code format and authenticity
+        /// </summary>
         public async Task<bool> IsValidAppQrCodeAsync(string qrCodeContent)
         {
             var decodedData = await DecodeSessionDataAsync(qrCodeContent);
             return decodedData != null;
         }
 
+        /// <summary>
+        /// Extracts session ID from GitHub Pages URL format
+        /// </summary>
         public static string ExtractSessionIdFromUrl(string qrCodeContent)
         {
-            if (!qrCodeContent.StartsWith(URL_PREFIX))
+            if (qrCodeContent.StartsWith(GITHUB_BASE_URL))
+            {
+                var uri = new Uri(qrCodeContent);
+                var queryParams = System.Web.HttpUtility.ParseQueryString(uri.Query);
+                return queryParams["session"];
+            }
+
+            // Legacy format fallback
+            if (!qrCodeContent.Contains("/"))
                 return null;
 
             int hashIndex = qrCodeContent.IndexOf('#');
+            int lastSlashIndex = qrCodeContent.LastIndexOf('/', hashIndex > 0 ? hashIndex : qrCodeContent.Length);
+            
+            if (lastSlashIndex < 0)
+                return null;
+
             return hashIndex > 0
-                ? qrCodeContent.Substring(URL_PREFIX.Length, hashIndex - URL_PREFIX.Length)
-                : qrCodeContent.Substring(URL_PREFIX.Length);
+                ? qrCodeContent.Substring(lastSlashIndex + 1, hashIndex - lastSlashIndex - 1)
+                : qrCodeContent.Substring(lastSlashIndex + 1);
         }
 
+        /// <summary>
+        /// Validates session time window
+        /// </summary>
         public async Task<bool> IsWithinValidTimeWindow(string qrCodeContent)
         {
             var sessionData = await DecodeSessionDataAsync(qrCodeContent);
