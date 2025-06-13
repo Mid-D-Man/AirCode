@@ -2,7 +2,7 @@ namespace AirCode.Services.Auth;
 
 using Microsoft.AspNetCore.Components.Authorization;
 using System.Security.Claims;
-
+//dont use
 /// <summary>
 /// Custom authentication state provider that supports both online and offline authentication
 /// </summary>

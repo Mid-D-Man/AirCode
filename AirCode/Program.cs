@@ -9,7 +9,6 @@ using AirCode;
 using AirCode.Extensions;
 using AirCode.Services.Attendance;
 using AirCode.Services.Auth;
-using AirCode.Services.Auth.Offline;
 using AirCode.Services.Courses;
 using AirCode.Services.Cryptography;
 using AirCode.Services.Department;

@@ -1,4 +1,5 @@
-using AirCode.Services.Auth.Offline;
+using AirCode.Services.Auth;
+using AirCode.Services.Auth;
 using AirCode.Services.Cryptography;
 
 namespace AirCode.Extensions;

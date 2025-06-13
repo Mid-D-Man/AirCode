@@ -1,5 +1,4 @@
-namespace AirCode.Services.Auth.Offline;
-
+namespace AirCode.Services.Auth;
 /// <summary>
 /// Service for managing offline user credentials in AirCode app
 /// </summary>
@@ -14,6 +13,16 @@ public interface IOfflineCredentialsService
     /// Stores offline credentials using test key and IV (for development only)
     /// </summary>
     Task<bool> StoreCredentialsWithTestKeyAsync(string userId, string role, int expirationDays = 14);
+
+    /// <summary>
+    /// Creates offline credentials from the current authenticated user using test keys
+    /// </summary>
+    Task<bool> CreateOfflineCredentialsFromCurrentUserAsync();
+
+    /// <summary>
+    /// Generates and stores offline credentials with proper encryption
+    /// </summary>
+    Task<(bool Success, string Key, string IV)> GenerateAndStoreCredentialsAsync(string userId, string role, int expirationDays = 14);
         
     /// <summary>
     /// Retrieves user credentials if available and valid
@@ -35,6 +44,7 @@ public interface IOfflineCredentialsService
     /// </summary>
     Task<bool> ClearCredentialsAsync();
 }
+
 /// <summary>
 /// User credentials model
 /// </summary>
