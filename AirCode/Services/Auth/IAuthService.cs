@@ -4,6 +4,7 @@ using Microsoft.JSInterop;
 using System.Text.Json;
 using AirCode.Services.Auth.Offline;
 using AirCode.Services.Cryptography;
+using AirCode.Utilities.HelperScripts;
 using Microsoft.AspNetCore.Components;
 
 namespace AirCode.Services.Auth
@@ -88,7 +89,7 @@ namespace AirCode.Services.Auth
 
         public void LogAuthenticationMessage(string message)
         {
-            _jsRuntime.InvokeVoidAsync("console.log", $"[Auth] {message}");
+            MID_HelperFunctions.DebugMessage($"[Auth] {message}",DebugClass.Log);
         }
 
         public async Task LogAuthenticationMessageAsync(string message)
@@ -137,8 +138,8 @@ namespace AirCode.Services.Auth
             if (roleClaim != null)
                 return roleClaim.Value;
                 
-            // Default role
-            return "user";
+            // return default role if no role found
+            return "default";
         }
 
         public async Task<string> GetUserIdAsync()
@@ -219,66 +220,101 @@ namespace AirCode.Services.Auth
             return string.Empty;
         }
 
-        public async Task<string> GetDeviceIdAsync()
+       public async Task<string> GetDeviceIdAsync()
+{
+    try
+    {
+        // Try to get existing device ID from localStorage
+        var existingDeviceId = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", "AirCode_device_id");
+        
+        if (!string.IsNullOrEmpty(existingDeviceId))
         {
-            try
-            {
-                // Try to get existing device ID from localStorage
-                var existingDeviceId = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", "AirCode_device_id");
-                
-                if (!string.IsNullOrEmpty(existingDeviceId))
-                {
-                    return existingDeviceId;
+            return existingDeviceId;
+        }
+        //not really needed cause we can just call the func
+        // Generate new device ID using simplified JavaScript fingerprinting
+        var deviceId = await _jsRuntime.InvokeAsync<string>("eval", @"
+            (function() {
+                // Get or create persistent GUID
+                function getOrCreateDeviceGuid() {
+                    let deviceGuid = localStorage.getItem('AirCode_device_guid');
+                    
+                    if (!deviceGuid) {
+                        // Generate a new GUID
+                        deviceGuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                            const r = Math.random() * 16 | 0;
+                            const v = c === 'x' ? r : (r & 0x3 | 0x8);
+                            return v.toString(16);
+                        });
+                        
+                        localStorage.setItem('AirCode_device_guid', deviceGuid);
+                    }
+                    
+                    return deviceGuid;
                 }
 
-                // Generate new device ID using JavaScript fingerprinting
-                var deviceId = await _jsRuntime.InvokeAsync<string>("eval", @"
-                    (function() {
-                        // Create device fingerprint from multiple sources
-                        const canvas = document.createElement('canvas');
-                        const ctx = canvas.getContext('2d');
-                        ctx.textBaseline = 'top';
-                        ctx.font = '14px Arial';
-                        ctx.fillText('Device fingerprint', 2, 2);
-                        
-                        const fingerprint = {
-                            userAgent: navigator.userAgent,
-                            language: navigator.language,
-                            platform: navigator.platform,
-                            screenResolution: screen.width + 'x' + screen.height,
-                            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-                            canvas: canvas.toDataURL(),
-                            timestamp: Date.now()
-                        };
-                        
-                        // Create hash-like ID from fingerprint
-                        const fingerprintStr = JSON.stringify(fingerprint);
-                        let hash = 0;
-                        for (let i = 0; i < fingerprintStr.length; i++) {
-                            const char = fingerprintStr.charCodeAt(i);
-                            hash = ((hash << 5) - hash) + char;
-                            hash = hash & hash; // Convert to 32-bit integer
-                        }
-                        
-                        return 'device_' + Math.abs(hash).toString(16) + '_' + Date.now().toString(16);
-                    })()
-                ");
-
-                // Store the generated device ID
-                await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "AirCode_device_id", deviceId);
+                // Create stable device fingerprint
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                ctx.textBaseline = 'top';
+                ctx.font = '14px Arial';
+                ctx.fillText('AirCode Device', 2, 2);
                 
-                return deviceId;
-            }
-            catch (Exception ex)
-            {
-                await LogAuthenticationMessageAsync($"Error generating device ID: {ex.Message}");
-                // Fallback to simple timestamp-based ID
-                var fallbackId = $"device_fallback_{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
-                await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "AirCode_device_id", fallbackId);
-                return fallbackId;
-            }
-        }
+                const deviceGuid = getOrCreateDeviceGuid();
+                
+                // Collect minimal, stable device info (no deprecated navigator.platform)
+                const fingerprint = {
+                    userAgent: navigator.userAgent || 'unknown',
+                    language: navigator.language || 'en',
+                    screenResolution: screen.width + 'x' + screen.height,
+                    colorDepth: screen.colorDepth || 24,
+                    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+                    canvas: canvas.toDataURL(),
+                    hardwareConcurrency: navigator.hardwareConcurrency || 4,
+                    deviceGuid: deviceGuid
+                };
+                
+                // Create deterministic hash from fingerprint
+                const fingerprintStr = JSON.stringify(fingerprint);
+                let hash = 0;
+                for (let i = 0; i < fingerprintStr.length; i++) {
+                    const char = fingerprintStr.charCodeAt(i);
+                    hash = ((hash << 5) - hash) + char;
+                    hash = hash & hash; // Convert to 32-bit integer
+                }
+                
+                // Create stable device ID using GUID prefix for uniqueness
+                const guidPrefix = deviceGuid.substring(0, 8);
+                return 'device_' + guidPrefix + '_' + Math.abs(hash).toString(16);
+            })()
+        ");
 
+        // Store the generated device ID
+        await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "AirCode_device_id", deviceId);
+        
+        return deviceId;
+    }
+    catch (Exception ex)
+    {
+        await LogAuthenticationMessageAsync($"Error generating device ID: {ex.Message}");
+        
+        // Fallback: create a simple GUID-based ID
+        var fallbackGuid = Guid.NewGuid().ToString("N")[..16]; // First 16 chars of GUID
+        var fallbackId = $"device_fallback_{fallbackGuid}";
+        
+        try
+        {
+            await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "AirCode_device_id", fallbackId);
+        }
+        catch
+        {
+            // If even localStorage fails, return a temporary ID
+        }
+        
+        return fallbackId;
+    }
+}
+//device id should not be time dependent and also platform is depricated remove it later
         public async Task ProcessSuccessfulLoginAsync()
         {
             try
@@ -291,7 +327,7 @@ namespace AirCode.Services.Auth
                 {
                     await LogAuthenticationMessageAsync($"JWT retrieved successfully. Length: {token.Value.Length} chars");
             
-                    // Store token for debugging
+                    // Store token for debugging...probably remove this later on though
                     await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "auth_debug_token", token.Value);
                     
                     // Extract user information
@@ -379,7 +415,8 @@ namespace AirCode.Services.Auth
                     }
 
                     // Navigate based on role let index page handle navigation
-                 //   await NavigateByRole(userRole);
+                    //also auth info page is now gone so if error occure well send to some page called
+                    //u u u something go wrong we go fix am
                 }
                 else
                 {
@@ -509,34 +546,5 @@ namespace AirCode.Services.Auth
             return (userId, userRole, lecturerId, matricNumber);
         }
 
-        private async Task NavigateByRole(string userRole)
-        {
-            await LogAuthenticationMessageAsync($"Navigating based on role: {userRole}");
-            //dosent work used default method
-            switch (userRole?.ToLower())
-            {
-                case "superioradmin":
-                    await LogAuthenticationMessageAsync("Redirecting to Superior Admin Dashboard");
-                    _navigationManager.NavigateTo("Admin/SuperiorDashboard", forceLoad: false);
-                    break;
-                case "lectureradmin":
-                    await LogAuthenticationMessageAsync("Redirecting to Lecturer Admin Dashboard");
-                    _navigationManager.NavigateTo("Admin/SuperiorDashboard", forceLoad: false);
-                    break;
-                case "courseadmin":
-                    await LogAuthenticationMessageAsync("Redirecting to Course Admin Dashboard");
-                    _navigationManager.NavigateTo("Admin/SuperiorDashboard", forceLoad: false);
-                    break;
-                case "student":
-                    await LogAuthenticationMessageAsync("Redirecting to Student Dashboard");
-                    _navigationManager.NavigateTo("Client/Dashboard", forceLoad: false);
-                    break;
-                default:
-                    // If we can't determine the role, go to auth-info for debugging
-                    await LogAuthenticationMessageAsync($"Unknown role '{userRole}', redirecting to auth-info");
-                    _navigationManager.NavigateTo("auth-info", forceLoad: false);
-                    break;
-            }
-        }
     }
 }

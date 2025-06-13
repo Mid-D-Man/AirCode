@@ -485,7 +485,7 @@ private async Task UpdateTemporalKey()
                     LightColor = "#FFFFFF",
                     ErrorLevel = ErrorCorrectionLevel.H,
                     Margin = 4,
-                    LogoUrl = "/icon-192.png",
+                    LogoUrl = "icon-192.png",
                     LogoSizeRatio = 0.2f,
                     AddLogoBorder = true,
                     LogoBorderColor = "#FFFFFF",
