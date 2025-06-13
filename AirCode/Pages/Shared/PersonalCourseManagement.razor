@@ -54,6 +54,14 @@
                 {
                 var course = AvailableCourses.FirstOrDefault(c => c.CourseCode == courseRef.CourseCode);
                 <div class="course-card enrolled-card status-@courseRef.CourseEnrollmentStatus.ToString().ToLower()">
+                    @* Carryover Banner - Conditional Visual Identifier *@
+                    @if (courseRef.CourseEnrollmentStatus == CourseEnrollmentStatus.Carryover)
+                    {
+                        <div class="carryover-banner">
+                            Carryover
+                        </div>
+                    }
+                    
                     <div class="course-header">
                         <h4 class="course-code">@courseRef.CourseCode</h4>
                         <div class="course-status">
