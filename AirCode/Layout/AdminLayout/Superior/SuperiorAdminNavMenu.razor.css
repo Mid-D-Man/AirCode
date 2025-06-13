@@ -3,8 +3,8 @@
     background: linear-gradient(90deg,
     var(--nav-background) 0%,
     var(--nav-hover) 25%,
-    rgba(255, 255, 255, 0.65) 50%,
-    var(--nav-background) 75%,
+    rgba(255, 255, 255, 0.65) 100%,
+    var(--nav-background) 100%,
     var(--nav-hover) 100%);
     display: flex;
     flex-direction: column;
@@ -260,8 +260,8 @@ body.dark-mode .nav-menu {
     background: linear-gradient(90deg,
     var(--nav-background) 0%,
     var(--nav-hover) 25%,
-    rgba(255, 255, 255, 0.65) 50%,
-    var(--nav-background) 75%,
+    rgba(255, 255, 255, 0.65) 100%,
+    var(--nav-background) 100%,
     var(--nav-hover) 100%);
     box-shadow:
             0 10px 25px rgba(0, 0, 0, 0.3),
