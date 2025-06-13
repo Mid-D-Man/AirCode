@@ -2,7 +2,7 @@
 @layout MainLayout
 @using AirCode.Components.SharedPrefabs.Others
 @using AirCode.Components.SharedPrefabs.Buttons
-@using AirCode.Domain.Enums
+@using AirCode.Components.SharedPrefabs.Cards
 @using AirCode.Layout.Main
 @using AirCode.Services.Auth
 @using AirCode.Utilities.HelperScripts
@@ -16,6 +16,7 @@
 @implements IDisposable
 
 <BlobBackground />
+<NotificationComponent @ref="notificationComponent" Position="NotificationComponent.NotificationPosition.TopRight" />
 
 <div class="main-container">
     <AuthorizeView>
@@ -72,6 +73,7 @@
     private bool isOfflineLoading = false;
     private bool isOnline = true;
     private DotNetObjectReference<Index> objRef;
+    private NotificationComponent notificationComponent;
     
     protected override async Task OnInitializedAsync()
     {
@@ -87,6 +89,16 @@
     public void OnConnectivityChanged(bool online)
     {
         isOnline = online;
+        
+        if (!online)
+        {
+            notificationComponent?.ShowError("You are currently offline. Some features may be limited.");
+        }
+        else
+        {
+            notificationComponent?.ShowSuccess("Connection restored. All features are now available.");
+        }
+        
         StateHasChanged();
     }
 
@@ -95,9 +107,17 @@
        //yap this is indeed the way
         try
         {
+            // Check online status for authenticated users
+            if (!isOnline)
+            {
+                notificationComponent?.ShowError("You are currently offline. Please check your internet connection.");
+                return;
+            }
+
             // Get the user's role
             string userRole = await AuthService.GetUserRoleAsync();
             MID_HelperFunctions.DebugMessage($"[auth] Login in user with role {userRole} auto ");
+            
             // Navigate based on the role
             switch (userRole?.ToLower())
             {
@@ -106,9 +126,11 @@
                     break;
                 case "lectureradmin":
                     NavigationManager.NavigateTo("Admin/Dashboard", forceLoad: false);
-                  
                     break;
-                case "courseadmin":
+                case "courserepadmin":
+                    NavigationManager.NavigateTo("Admin/Dashboard", forceLoad: false);
+                    break;
+                case "assistantcourserep":
                     NavigationManager.NavigateTo("Admin/Dashboard", forceLoad: false);
                     break;
                 case "student":
@@ -122,7 +144,9 @@
         }
         catch (Exception ex)
         {
+       
             await JSRuntime.InvokeVoidAsync("console.error", $"Error redirecting authenticated user: {ex.Message}");
+            notificationComponent?.ShowError("Error redirecting to dashboard. Please try again.");
         }
     }
 
@@ -132,7 +156,7 @@
 
         if (!isOnline)
         {
-            await JSRuntime.InvokeVoidAsync("alert", "You are currently offline. Please check your internet connection and try again.");
+            notificationComponent?.ShowError("You are currently offline. Please check your internet connection and try again.");
             isOnlineLoading = false;
             return;
         }
@@ -147,13 +171,14 @@
     {
         isOfflineLoading = true;
 
-        try {
+        try 
+        {
             // Check if offline credentials exist
             var offlineCredentials = await OfflineCredentialService.GetCredentialsAsync();
 
             if (offlineCredentials == null)
             {
-                await JSRuntime.InvokeVoidAsync("alert", "No offline credentials found. Please login online at least once for credentials to be created.");
+                notificationComponent?.ShowError("No offline credentials found. Please login online at least once for credentials to be created.");
                 isOfflineLoading = false;
                 return;
             }
@@ -164,34 +189,46 @@
 
             if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(userRole))
             {
-                await JSRuntime.InvokeVoidAsync("alert", "Invalid offline credentials. Please login online.");
+                notificationComponent?.ShowError("Invalid offline credentials. Please login online to refresh your credentials.");
                 isOfflineLoading = false;
                 return;
             }
 
-            // Navigate based on role
+            // Check if user role supports offline mode (superior admin doesn't)
+            if (userRole.ToLower() == "superioradmin")
+            {
+                notificationComponent?.ShowError("Superior admin accounts do not support offline mode. Please login online.");
+                isOfflineLoading = false;
+                return;
+            }
+
+            // Navigate to dedicated offline pages based on role
             switch (userRole.ToLower())
             {
                 case "lectureradmin":
-                    NavigationManager.NavigateTo("supaBaseTest", forceLoad: false);
-
+                    NavigationManager.NavigateTo("/Offline/LecturerDashboard", forceLoad: false);
                     break;
-                case "courseadmin":
-                    NavigationManager.NavigateTo("/Admin/Dashboard");
+                case "courserepadmin":
+                    NavigationManager.NavigateTo("/Offline/CourseRepDashboard", forceLoad: false);
+                    break;
+                case "assistantcourserep":
+                    NavigationManager.NavigateTo("/Offline/AssistantDashboard", forceLoad: false);
                     break;
                 case "student":
-                    NavigationManager.NavigateTo("/Client/Dashboard");
+                    NavigationManager.NavigateTo("/Offline/StudentDashboard", forceLoad: false);
                     break;
                 default:
-                    await JSRuntime.InvokeVoidAsync("alert", "Unable to determine user role. Please login online.");
+                    notificationComponent?.ShowError("Unable to determine user role for offline mode. Please login online.");
                     break;
             }
         }
         catch (Exception ex)
         {
-            await JSRuntime.InvokeVoidAsync("alert", $"Error accessing offline credentials: {ex.Message}");
+            notificationComponent?.ShowError($"Error accessing offline credentials: {ex.Message}");
+            await JSRuntime.InvokeVoidAsync("console.error", $"Offline login error: {ex.Message}");
         }
-        finally {
+        finally 
+        {
             isOfflineLoading = false;
         }
     }
