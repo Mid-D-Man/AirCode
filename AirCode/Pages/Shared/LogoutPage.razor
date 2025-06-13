@@ -5,23 +5,51 @@
 @using AirCode.Components.SharedPrefabs.Spinner
 @using AirCode.Services.Auth
 @inject NavigationManager Navigation
-@inject SignOutSessionStateManager SignOutManager
 @inject IConfiguration Configuration
 @inject IOfflineCredentialsService OfflineCredentialsService
 @inject IBlazorAppLocalStorageService LocalStorageService
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IAccessTokenProvider TokenProvider
 @inject IJSRuntime JSRuntime
 
-<LoadingSpinner Title="Logging out..." Subtitle="Please wait while we sign you out securely." />
+@if (showConfirmation)
+{
+    <div class="logout-confirmation-container">
+        <div class="logout-confirmation-card">
+            <div class="logout-icon">
+                <svg fill="currentColor" viewBox="0 0 24 24" width="48" height="48">
+                    <path d="M17,7L15.59,8.41L18.17,11H8V13H18.17L15.59,15.59L17,17L22,12L17,7M4,5H12V3H4C2.89,3 2,3.89 2,5V19A2,2 0 0,0 4,21H12V19H4V5Z"/>
+                </svg>
+            </div>
+            <h2>Confirm Logout</h2>
+            <p>Are you sure you want to sign out of AirCode?</p>
+            <div class="logout-buttons">
+                <button class="btn btn-secondary" @onclick="CancelLogout">Cancel</button>
+                <button class="btn btn-primary" @onclick="ConfirmLogout">Sign Out</button>
+            </div>
+        </div>
+    </div>
+}
+else if (isLoggingOut)
+{
+    <LoadingSpinner Title="Logging out..." Subtitle="Please wait while we sign you out securely." />
+}
 
 @code {
-    protected override async Task OnInitializedAsync()
+    private bool showConfirmation = true;
+    private bool isLoggingOut = false;
+
+    private void CancelLogout()
     {
-        await InitiateLogout();
+        Navigation.NavigateTo("/", forceLoad: false);
     }
 
-    private async Task InitiateLogout()
+    private async Task ConfirmLogout()
     {
+        showConfirmation = false;
+        isLoggingOut = true;
+        StateHasChanged();
+
         try
         {
             // Check if user is authenticated
@@ -35,25 +63,62 @@
                 // Clear local storage
                 await LocalStorageService.ClearAsync();
 
-                // Initiate Auth0 logout
+                // Clear session storage
+                await JSRuntime.InvokeVoidAsync("sessionStorage.clear");
+
+                // Get the ID token for proper OIDC logout
+                var tokenResult = await TokenProvider.RequestAccessToken();
+                string idTokenHint = null;
+
+                if (tokenResult.TryGetToken(out var token))
+                {
+                    // Try to get the ID token from the token result
+                    if (token.Value.Contains("id_token"))
+                    {
+                        var tokenParts = token.Value.Split('&');
+                        var idTokenPart = tokenParts.FirstOrDefault(p => p.StartsWith("id_token="));
+                        if (idTokenPart != null)
+                        {
+                            idTokenHint = idTokenPart.Substring("id_token=".Length);
+                        }
+                    }
+                }
+
+                // Build OIDC logout URL
                 var authority = $"https://{Configuration["Auth0:Domain"]}";
                 var clientId = Configuration["Auth0:ClientId"];
-                var returnUrl = Navigation.BaseUri;
+                var returnUrl = Uri.EscapeDataString(Navigation.BaseUri);
+                
+                string logoutUrl;
+                if (!string.IsNullOrEmpty(idTokenHint))
+                {
+                    // Use OIDC logout with ID token hint
+                    logoutUrl = $"{authority}/oidc/logout?id_token_hint={idTokenHint}&post_logout_redirect_uri={returnUrl}";
+                }
+                else
+                {
+                    // Fallback to Auth0 v2 logout
+                    logoutUrl = $"{authority}/v2/logout?client_id={clientId}&returnTo={returnUrl}";
+                }
 
-                // Ensure returnTo URL is valid
-                var logoutUrl = $"{authority}/v2/logout?client_id={clientId}&returnTo={returnUrl}";
+                // Redirect to logout URL
                 Navigation.NavigateTo(logoutUrl, forceLoad: true);
             }
             else
             {
-                // Session expired, redirect to login always remove / cause we github boy
-                Navigation.NavigateTo("authentication/login", forceLoad: true);
+                // User not authenticated, redirect to home
+                Navigation.NavigateTo("/", forceLoad: true);
             }
         }
         catch (Exception ex)
         {
             await JSRuntime.InvokeVoidAsync("console.error", $"Logout error: {ex.Message}");
-            Navigation.NavigateTo("/", forceLoad: false);
+            // Fallback logout method
+            var authority = $"https://{Configuration["Auth0:Domain"]}";
+            var clientId = Configuration["Auth0:ClientId"];
+            var returnUrl = Uri.EscapeDataString(Navigation.BaseUri);
+            var logoutUrl = $"{authority}/v2/logout?client_id={clientId}&returnTo={returnUrl}";
+            Navigation.NavigateTo(logoutUrl, forceLoad: true);
         }
     }
 }

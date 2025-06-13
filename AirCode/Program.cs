@@ -59,6 +59,13 @@ builder.Services.AddOidcAuthentication(options =>
     // GitHub Pages deployment URIs
     options.ProviderOptions.RedirectUri = "https://mid-d-man.github.io/AirCode/authentication/login-callback";
     options.ProviderOptions.PostLogoutRedirectUri = "https://mid-d-man.github.io/AirCode/";
+    
+    // Add after existing OIDC configuration
+    options.ProviderOptions.PostLogoutRedirectUri = "https://mid-d-man.github.io/AirCode/authentication/logout-callback";
+
+// Add logout callback URI
+    options.ProviderOptions.AdditionalProviderParameters.Add("post_logout_redirect_uri", 
+        "https://mid-d-man.github.io/AirCode/authentication/logout-callback");
 });
 
 // Preserve original JWT claim names from Auth0 (prevent automatic claim mapping)

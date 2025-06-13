@@ -8,6 +8,7 @@
     <div class="nav-buttons">
         <CircularNavigationButton 
             IconSvgContent="@statsIconSvg"
+            IconPath="@(string.IsNullOrEmpty(statsIconSvg) ? "svgs/stats.svg" : "")"
             Text="Stats"
             ButtonClass="@GetButtonClass("stats")"
             IsActive="@(currentPage == "stats")"
@@ -15,6 +16,7 @@
         
         <CircularNavigationButton 
             IconSvgContent="@scanIconSvg"
+            IconPath="@(string.IsNullOrEmpty(scanIconSvg) ? "svgs/scan_qrcode.svg" : "")"
             Text="Scan"
             ButtonClass="@GetPrimaryButtonClass("scan")"
             IsActive="@(currentPage == "scan")"
@@ -22,6 +24,7 @@
         
         <CircularNavigationButton 
             IconSvgContent="@settingsIconSvg"
+            IconPath="@(string.IsNullOrEmpty(settingsIconSvg) ? "svgs/settings.svg" : "")"
             Text="Settings"
             ButtonClass="@GetButtonClass("settings")"
             IsActive="@(currentPage == "settings")"
@@ -48,7 +51,7 @@
         else
             currentPage = "scan";
 
-        // Load SVG icons
+        // Load SVG icons with fallback handling
         await LoadIcons();
         
         // Listen for navigation changes
@@ -79,15 +82,29 @@
     {
         try
         {
-            statsIconSvg = await SvgIconService.GetSvgContentAsync("stats") ?? string.Empty;
-            scanIconSvg = await SvgIconService.GetSvgContentAsync("scan_qrcode") ?? string.Empty;
-            settingsIconSvg = await SvgIconService.GetSvgContentAsync("settings") ?? string.Empty;
+            // Load with explicit error handling for each icon
+            var statsTask = SvgIconService.GetSvgContentAsync("stats");
+            var scanTask = SvgIconService.GetSvgContentAsync("scan_qrcode");
+            var settingsTask = SvgIconService.GetSvgContentAsync("settings");
+
+            var results = await Task.WhenAll(statsTask, scanTask, settingsTask);
+            
+            statsIconSvg = results[0] ?? string.Empty;
+            scanIconSvg = results[1] ?? string.Empty;
+            settingsIconSvg = results[2] ?? string.Empty;
+
+            // Debug logging
+            Console.WriteLine($"Stats SVG loaded: {!string.IsNullOrEmpty(statsIconSvg)}");
+            Console.WriteLine($"Scan SVG loaded: {!string.IsNullOrEmpty(scanIconSvg)}");
+            Console.WriteLine($"Settings SVG loaded: {!string.IsNullOrEmpty(settingsIconSvg)}");
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error loading navigation icons: {ex.Message}");
-            // Icons will remain empty strings, component should handle gracefully
+            // Icons remain empty, fallback to IconPath will be used
         }
+        
+        StateHasChanged();
     }
 
     private string GetButtonClass(string page)

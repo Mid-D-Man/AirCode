@@ -8,7 +8,7 @@
 @inject IAuthService AuthService
 
 <div class="auth-container">
-    <RemoteAuthenticatorView Action="@Action" OnLogInSucceeded="HandleLoginSuccess">
+    <RemoteAuthenticatorView Action="@Action" OnLogInSucceeded="HandleLoginSuccess" OnLogOutSucceeded="HandleLogoutSuccess">
         <LoggingIn>
             <div class="auth-content">
                 <div class="auth-status">
@@ -38,12 +38,33 @@
             </div>
         </CompletingLoggingIn>
         <LogOut>
-            @{
-                var authority = $"https://{Configuration["Auth0:Domain"]}";
-                var clientId = Configuration["Auth0:ClientId"];
-                Navigation.NavigateTo($"{authority}/v2/logout?client_id={clientId}");
-            }
+            <div class="auth-content">
+                <div class="auth-status">
+                    <div class="auth-icon">
+                        <svg fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M17,7L15.59,8.41L18.17,11H8V13H18.17L15.59,15.59L17,17L22,12L17,7M4,5H12V3H4C2.89,3 2,3.89 2,5V19A2,2 0 0,0 4,21H12V19H4V5Z"/>
+                        </svg>
+                    </div>
+                    <h2 class="auth-title">Signing out...</h2>
+                    <p class="auth-subtitle">Please wait while we complete the logout process.</p>
+                    <div class="auth-spinner"></div>
+                </div>
+            </div>
         </LogOut>
+        <CompletingLogOut>
+            <div class="auth-content">
+                <div class="auth-status">
+                    <div class="auth-icon">
+                        <svg fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/>
+                        </svg>
+                    </div>
+                    <h2 class="auth-title">Logged out successfully</h2>
+                    <p class="auth-subtitle">Redirecting to home page...</p>
+                    <div class="auth-spinner"></div>
+                </div>
+            </div>
+        </CompletingLogOut>
     </RemoteAuthenticatorView>
 </div>
 
@@ -66,5 +87,11 @@
             await AuthService.LogAuthenticationMessageAsync($"Unhandled exception: {ex.Message}");
             Navigation.NavigateTo("/", forceLoad: false);
         }
+    }
+
+    private void HandleLogoutSuccess(RemoteAuthenticationState state)
+    {
+        // Navigate to home page after successful logout
+        Navigation.NavigateTo("/", forceLoad: true);
     }
 }
