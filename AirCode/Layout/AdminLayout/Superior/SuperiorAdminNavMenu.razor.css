@@ -1,102 +1,304 @@
 .nav-menu {
-    width: 30%;
-    width: 250px; /* Fixed expanded width */
-    background-color: var(--primary);
+    width: 250px;
+    background: linear-gradient(135deg, var(--nav-background), var(--nav-hover));
     display: flex;
     flex-direction: column;
     border-top-right-radius: 15px;
     border-bottom-right-radius: 15px;
-    color: var(--white);
-    transition: width 0.3s ease;
+    color: var(--nav-text);
     height: 100vh;
     padding: 0;
-    position: relative; /* Needed for absolute positioning of tooltips */
+    position: relative;
+    z-index: 1000;
+
+    /* GPU Acceleration */
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    perspective: 1000px;
+    will-change: width, transform;
+
+    /* Smooth transitions */
+    transition: width 0.35s cubic-bezier(0.4, 0.0, 0.2, 1);
+
+    /* Enhanced shadow */
+    box-shadow:
+            0 10px 25px rgba(0, 0, 0, 0.1),
+            0 4px 10px rgba(0, 0, 0, 0.05);
 }
 
 .nav-menu.collapsed {
     width: 80px;
-    min-width: 64px;
+    min-width: 80px;
 }
 
 .nav-top {
-    height: 20%;
-    height: 80px; /* Fixed height instead of percentage */
+    height: 80px;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
 }
 
 .nav-middle {
-    height: 50%;
-    flex: 1; /* Use flex instead of fixed height */
+    flex: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     gap: 0.5rem;
-    padding: 0.5rem;
-    overflow-y: auto; /* Allow scrolling if many menu items */
+    padding: 1rem 0.5rem;
+    overflow-y: auto;
+    overflow-x: hidden;
+
+    /* Custom scrollbar */
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+}
+
+.nav-middle::-webkit-scrollbar {
+    width: 4px;
+}
+
+.nav-middle::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.nav-middle::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 2px;
+}
+
+.nav-middle::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.5);
 }
 
 .nav-bottom {
-    height: 30%;
-    margin-top: auto; /* Push to bottom */
+    margin-top: auto;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    padding: 0.5rem;
     padding: 1rem 0.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
 }
 
 .nav-item {
-    width: fit-content;
     width: 100%;
     text-decoration: none;
     color: inherit;
-    position: relative; /* For tooltip positioning */
+    position: relative;
+    transform: translateZ(0);
+    transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
 }
 
-/* Add tooltip for collapsed menu items */
-.nav-menu.collapsed .nav-item:hover::after {
+.nav-item:hover {
+    transform: translateX(5px) translateZ(0);
+}
+
+/* Enhanced tooltip for collapsed menu */
+.nav-menu.collapsed .nav-item {
+    position: relative;
+}
+
+.nav-menu.collapsed .nav-item::before {
     content: attr(data-tooltip);
     position: absolute;
-    left: 100%;
+    left: calc(100% + 15px);
     top: 50%;
-    transform: translateY(-50%);
-    background-color: var(--dark-bg-secondary);
+    transform: translateY(-50%) translateX(-10px);
+    background: var(--dark-bg-secondary);
     color: var(--white);
-    padding: 0.5rem 0.75rem;
-    border-radius: 4px;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
     font-size: 0.875rem;
+    font-weight: 500;
     white-space: nowrap;
-    z-index: 100;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-    pointer-events: none;
+    z-index: 2000;
     opacity: 0;
-    animation: fadeIn 0.3s forwards;
-    animation-delay: 0.5s; /* Show after hovering for a moment */
+    visibility: hidden;
+    pointer-events: none;
+
+    /* Enhanced shadow for tooltip */
+    box-shadow:
+            0 10px 25px rgba(0, 0, 0, 0.2),
+            0 4px 10px rgba(0, 0, 0, 0.1);
+
+    transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
 }
 
-@keyframes fadeIn {
-    to {
-        opacity: 1;
+.nav-menu.collapsed .nav-item::after {
+    content: '';
+    position: absolute;
+    left: calc(100% + 5px);
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 8px 10px 8px 0;
+    border-color: transparent var(--dark-bg-secondary) transparent transparent;
+    z-index: 2000;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+.nav-menu.collapsed .nav-item:hover::before,
+.nav-menu.collapsed .nav-item:hover::after {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(-50%) translateX(0);
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+    .nav-menu {
+        width: 240px;
+    }
+
+    .nav-menu.collapsed {
+        width: 70px;
+        min-width: 70px;
     }
 }
 
-/* Ensure appropriate menu width on different screen sizes */
 @media (max-width: 768px) {
     .nav-menu {
-        width: 240px;
-        min-width: 64px;
+        width: 220px;
+        position: fixed;
+        left: 0;
+        top: 0;
+        z-index: 9999;
+        transform: translateX(-100%);
+        transition: transform 0.35s cubic-bezier(0.4, 0.0, 0.2, 1);
+    }
+
+    .nav-menu.expanded {
+        transform: translateX(0);
+    }
+
+    .nav-menu.collapsed {
+        width: 60px;
+        min-width: 60px;
+        transform: translateX(0);
+    }
+
+    /* Mobile backdrop */
+    .nav-menu.expanded::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 100%;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(4px);
+        z-index: -1;
     }
 }
 
 @media (max-width: 480px) {
     .nav-menu {
-        width: 220px;
-        min-width: 64px;
+        width: 200px;
+        border-radius: 0;
     }
+
+    .nav-menu.collapsed {
+        width: 50px;
+        min-width: 50px;
+    }
+
+    .nav-top {
+        height: 60px;
+        padding: 0.5rem;
+    }
+
+    .nav-middle,
+    .nav-bottom {
+        padding: 0.5rem 0.25rem;
+    }
+
+    /* Smaller tooltips on mobile */
+    .nav-menu.collapsed .nav-item::before {
+        font-size: 0.75rem;
+        padding: 0.5rem 0.75rem;
+    }
+}
+
+/* High DPI display optimizations */
+@media (min-resolution: 192dpi), (min-resolution: 2dppx) {
+    .nav-menu {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+    .nav-menu,
+    .nav-item,
+    .nav-menu.collapsed .nav-item::before,
+    .nav-menu.collapsed .nav-item::after {
+        transition: none;
+    }
+}
+
+/* Dark mode specific adjustments */
+body.dark-mode .nav-menu {
+    background: linear-gradient(135deg, var(--nav-background), var(--nav-hover));
+    box-shadow:
+            0 10px 25px rgba(0, 0, 0, 0.3),
+            0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+body.dark-mode .nav-menu.collapsed .nav-item::before {
+    background: var(--gold-700);
+    color: var(--dark-text-primary);
+    box-shadow:
+            0 10px 25px rgba(0, 0, 0, 0.4),
+            0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-mode .nav-menu.collapsed .nav-item::after {
+    border-color: transparent var(--gold-700) transparent transparent;
+}
+
+/* Animation keyframes */
+@keyframes slideIn {
+    from {
+        transform: translateX(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOut {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(-100%);
+        opacity: 0;
+    }
+}
+
+/* Performance optimizations */
+.nav-menu * {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+}
+
+/* Focus styles for accessibility */
+.nav-item:focus-visible {
+    outline: 2px solid var(--button-primary);
+    outline-offset: 2px;
+    border-radius: 4px;
 }

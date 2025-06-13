@@ -2,28 +2,35 @@
 @using AirCode.Components.Admin.Shared
 @using AirCode.Utilities.DataStructures
 @using Aircode.Components.Admin.Shared
+@using Microsoft.AspNetCore.Components.Authorization
+@using AirCode.Services.Auth
+@inject IJSRuntime JSRuntime
+@inject IAuthService AuthService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@implements IDisposable
 
-<div class="nav-menu @(IsExpanded ? "expanded" : "collapsed")">
+<div class="nav-menu @(IsExpanded ? "expanded" : "collapsed")" @ref="navMenuRef">
     <div class="nav-top">
         <Burger OnToggle="ToggleNavMenu" />
     </div>
 
     <div class="nav-middle">
-        @foreach (var item in NavigationItems)
+        @foreach (var item in FilteredNavigationItems)
         {
             <NavLink href="@item.Path" class="nav-item" data-tooltip="@item.Label">
                 <NavMenuButton
                     IconName="@item.IconName"
                     Label="@item.Label"
                     IsExpanded="IsExpanded"
-                    OnClick="@(() => NavigationManager.NavigateTo(item.Path,false))"
+                    OnClick="@(() => NavigationManager.NavigateTo(item.Path, false))"
+                    IsDisabled="@(!item.IsAvailable)"
                 />
             </NavLink>
         }
     </div>
 
     <div class="nav-bottom">
-        @foreach (var item in BottomItems)
+        @foreach (var item in FilteredBottomItems)
         {
             <NavLink href="@(item.Path ?? "#")" class="nav-item" data-tooltip="@item.Label">
                 <NavMenuButton
@@ -31,6 +38,7 @@
                     Label="@item.Label"
                     IsExpanded="IsExpanded"
                     OnClick="@(item.Action ?? (() => {}))"
+                    IsDisabled="@(!item.IsAvailable)"
                 />
             </NavLink>
         }
@@ -39,35 +47,109 @@
 
 @code {
     private bool IsExpanded { get; set; } = true;
+    private bool IsOnline { get; set; } = true;
+    private string UserRole { get; set; } = string.Empty;
+    private ElementReference navMenuRef;
+    private DotNetObjectReference<SuperiorAdminNavMenu> objRef;
+
     [Inject]
     private NavigationManager NavigationManager { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Initialize connectivity checker
+        objRef = DotNetObjectReference.Create(this);
+        await JSRuntime.InvokeVoidAsync("connectivityChecker.init", objRef);
+
+        // Get initial online status
+        IsOnline = await JSRuntime.InvokeAsync<bool>("connectivityChecker.getOnlineStatus");
+
+        // Get user role
+        try
+        {
+            UserRole = await AuthService.GetUserRoleAsync() ?? string.Empty;
+        }
+        catch
+        {
+            UserRole = string.Empty;
+        }
+
+        // Enable GPU acceleration
+        await JSRuntime.InvokeVoidAsync("enableGPUAcceleration", navMenuRef);
+    }
+
+    [JSInvokable]
+    public void OnConnectivityChanged(bool online)
+    {
+        IsOnline = online;
+        StateHasChanged();
+    }
 
     private void ToggleNavMenu(bool isChecked)
     {
         IsExpanded = isChecked;
+        StateHasChanged();
     }
 
     private void HandleSettings() => NavigationManager.NavigateTo("/admin/settings");
     private void HandleContact() => NavigationManager.NavigateTo("/admin/contact");
-    private void HandleLogout() => NavigationManager.NavigateTo("logout"); // Updated to use proper logout page
-    
-    private List<NavItem> NavigationItems => new()
+    private void HandleLogout() => NavigationManager.NavigateTo("logout");
+
+    private List<NavItemExtended> NavigationItems => new()
     {
-        new("home", "Dashboard", "Admin/Dashboard"),
-        new("qrcode", "Attendance Event", "Admin/CreateSession"),
-        new("users", "Session Management", "Admin/ManageAcademicSession"),
-        new("admin", "Manage Departments", "Admin/ManageDepartments"),
-        new("courses", "Manage Users", "Admin/ManageUsers"),
-        new("courses", "Manage Courses", "Admin/ManageCourses"),
-        new("report", "Student Test", "student/courses"),
-        new("stats", "Lecturer Test", "Admin/lecturer/courses")
+        new("home", "Dashboard", "Admin/Dashboard", true, new[] { "superioradmin", "lectureradmin", "courserepadmin", "assistantcourserep" }),
+        new("qrcode", "Attendance Event", "Admin/CreateSession", true, new[] { "superioradmin", "lectureradmin", "courserepadmin" }),
+        new("users", "Session Management", "Admin/ManageAcademicSession", true, new[] { "superioradmin", "lectureradmin" }),
+        new("admin", "Manage Departments", "Admin/ManageDepartments", true, new[] { "superioradmin" }),
+        new("courses", "Manage Users", "Admin/ManageUsers", true, new[] { "superioradmin" }),
+        new("courses", "Manage Courses", "Admin/ManageCourses", true, new[] { "superioradmin", "lectureradmin" }),
+        new("report", "Student Test", "student/courses", false, new[] { "superioradmin" }),
+        new("stats", "Lecturer Test", "Admin/lecturer/courses", false, new[] { "superioradmin" })
     };
 
-    // Updated to use proper logout path
-    private List<NavItem> BottomItems => new()
+    private List<NavItemExtended> BottomItems => new()
     {
-        new("settings", "Settings", "/Admin/Settings"),
-        new("contact", "Contact", "/Admin/Contact"),
-        new("logout", "Logout", HandleLogout) // Use action instead of path for logout
+        new("settings", "Settings", "/Admin/Settings", false, new[] { "superioradmin", "lectureradmin", "courserepadmin", "assistantcourserep" }),
+        new("contact", "Contact", "/Admin/Contact", false, new[] { "superioradmin", "lectureradmin", "courserepadmin", "assistantcourserep" }),
+        new("logout", "Logout", null, false, new[] { "superioradmin", "lectureradmin", "courserepadmin", "assistantcourserep" }, HandleLogout)
     };
+
+    private List<NavItemExtended> FilteredNavigationItems => 
+        NavigationItems.Where(item => 
+            item.AllowedRoles.Contains(UserRole.ToLower()) && 
+            (IsOnline || !item.RequiresOnline)
+        ).ToList();
+
+    private List<NavItemExtended> FilteredBottomItems => 
+        BottomItems.Where(item => 
+            item.AllowedRoles.Contains(UserRole.ToLower()) && 
+            (IsOnline || !item.RequiresOnline)
+        ).ToList();
+
+    public void Dispose()
+    {
+        JSRuntime.InvokeVoidAsync("connectivityChecker.dispose");
+        objRef?.Dispose();
+    }
+
+    private class NavItemExtended
+    {
+        public string IconName { get; set; }
+        public string Label { get; set; }
+        public string? Path { get; set; }
+        public bool RequiresOnline { get; set; }
+        public string[] AllowedRoles { get; set; }
+        public Action? Action { get; set; }
+        public bool IsAvailable => true; // Can be extended for more complex logic
+
+        public NavItemExtended(string iconName, string label, string? path, bool requiresOnline, string[] allowedRoles, Action? action = null)
+        {
+            IconName = iconName;
+            Label = label;
+            Path = path;
+            RequiresOnline = requiresOnline;
+            AllowedRoles = allowedRoles;
+            Action = action;
+        }
+    }
 }
