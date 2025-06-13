@@ -2,10 +2,305 @@
 @using AirCode.Layout.AdminLayout
 @using AirCode.Layout.AdminLayout.Superior
 @using Microsoft.AspNetCore.Authorization
+@using AirCode.Domain.Entities
+@using AirCode.Domain.Enums
+@using AirCode.Services.Courses
+@using AirCode.Components.Admin.Shared
 @layout SuperiorAdminLayout
 @attribute [Authorize(Roles = "LecturerAdmin")]
-//continue from here
-<PageTitle>Admin Dashboard</PageTitle>
+@inject ICourseService CourseService
+@inject IJSRuntime JSRuntime
 
-<h1>Dashboard</h1>
-// Dashboard content
+<PageTitle>Lecturer Dashboard</PageTitle>
+
+<div class="dashboard-container">
+    <div class="dashboard-header">
+        <h1 class="dashboard-title">Lecturer Dashboard</h1>
+        <div class="dashboard-date">@DateTime.Now.ToString("dddd, MMMM dd, yyyy")</div>
+    </div>
+
+    <div class="dashboard-grid">
+        <!-- Quick Stats Section -->
+        <div class="stats-section">
+            <AdminCard Title="My Teaching Load">
+                <Content>
+                    <div class="stats-grid">
+                        <StatCard 
+                            Title="My Courses" 
+                            Value="@_myCourses.Count.ToString()" 
+                            Icon="fas fa-book" 
+                            Trend="stable" />
+                        <StatCard 
+                            Title="Total Students" 
+                            Value="@_totalStudents.ToString()" 
+                            Icon="fas fa-users" 
+                            Trend="up" />
+                        <StatCard 
+                            Title="Active Enrollments" 
+                            Value="@_activeEnrollments.ToString()" 
+                            Icon="fas fa-user-check" 
+                            Trend="up" />
+                    </div>
+                </Content>
+            </AdminCard>
+        </div>
+
+        <!-- My Courses Section -->
+        <div class="courses-section">
+            <AdminCard Title="My Courses">
+                <Content>
+                    @if (_myCourses.Any())
+                    {
+                        <div class="courses-list">
+                            @foreach (var course in _myCourses.Take(6))
+                            {
+                                <div class="course-item">
+                                    <div class="course-header">
+                                        <span class="course-code">@course.CourseCode</span>
+                                        <span class="course-level">@course.Level.ToString().Replace("Level", "L")</span>
+                                    </div>
+                                    <div class="course-name">@course.Name</div>
+                                    <div class="course-details">
+                                        <span class="credit-units">@course.CreditUnits CU</span>
+                                        <span class="semester">@course.Semester</span>
+                                    </div>
+                                    <div class="course-stats">
+                                        <span class="enrolled-count">@GetEnrolledStudentsCount(course.CourseCode) students</span>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                        @if (_myCourses.Count > 6)
+                        {
+                            <div class="view-all-link">
+                                <a href="/Admin/Courses">View All Courses (@_myCourses.Count)</a>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="empty-state">
+                            <i class="fas fa-book-open"></i>
+                            <p>No courses assigned yet</p>
+                        </div>
+                    }
+                </Content>
+            </AdminCard>
+        </div>
+
+        <!-- Student Enrollments Section -->
+        <div class="enrollments-section">
+            <AdminCard Title="Recent Student Activities">
+                <Content>
+                    <div class="activities-list">
+                        @foreach (var activity in _recentActivities.Take(8))
+                        {
+                            <div class="activity-item">
+                                <div class="activity-icon @GetActivityIconClass(activity.Type)">
+                                    <i class="@GetActivityIcon(activity.Type)"></i>
+                                </div>
+                                <div class="activity-details">
+                                    <div class="activity-title">@activity.Title</div>
+                                    <div class="activity-meta">
+                                        <span class="course-code">@activity.CourseCode</span>
+                                        <span class="activity-time">@activity.Time.ToString("MMM dd, HH:mm")</span>
+                                    </div>
+                                </div>
+                                <div class="activity-status @activity.Status.ToString().ToLower()">
+                                    @activity.Status
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </Content>
+            </AdminCard>
+        </div>
+
+        <!-- Course Schedule Section -->
+        <div class="schedule-section">
+            <AdminCard Title="Today's Schedule">
+                <Content>
+                    @if (_todaySchedule.Any())
+                    {
+                        <div class="schedule-list">
+                            @foreach (var schedule in _todaySchedule)
+                            {
+                                <div class="schedule-item">
+                                    <div class="schedule-time">
+                                        <span class="time-range">@schedule.StartTime.ToString(@"hh\:mm") - @schedule.EndTime.ToString(@"hh\:mm")</span>
+                                    </div>
+                                    <div class="schedule-details">
+                                        <div class="course-info">@schedule.CourseCode - @schedule.CourseName</div>
+                                        <div class="location">@schedule.Location</div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="empty-state">
+                            <i class="fas fa-calendar-check"></i>
+                            <p>No classes scheduled for today</p>
+                        </div>
+                    }
+                </Content>
+            </AdminCard>
+        </div>
+
+        <!-- Quick Actions Section -->
+       
+    </div>
+</div>
+
+@code {
+    private List<Course> _myCourses = new();
+    private List<StudentCourse> _allStudentCourses = new();
+    private List<ActivityItem> _recentActivities = new();
+    private List<ScheduleItem> _todaySchedule = new();
+    
+    private int _totalStudents;
+    private int _activeEnrollments;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDashboardData();
+    }
+
+    private async Task LoadDashboardData()
+    {
+        try
+        {
+            // Load lecturer's courses - in real implementation, filter by current lecturer ID
+            _myCourses = await CourseService.GetAllCoursesAsync() ?? new List<Course>();
+            
+            // Load student courses for enrollment data
+            _allStudentCourses = await CourseService.GetAllStudentCoursesAsync() ?? new List<StudentCourse>();
+            
+            // Calculate stats
+            CalculateStats();
+            
+            // Generate mock activities and schedule
+            GenerateRecentActivities();
+            GenerateTodaySchedule();
+        }
+        catch (Exception ex)
+        {
+            // Handle error - could show notification
+            Console.WriteLine($"Error loading dashboard data: {ex.Message}");
+        }
+    }
+
+    private void CalculateStats()
+    {
+        var myCourseCodes = _myCourses.Select(c => c.CourseCode).ToHashSet();
+        
+        // Count unique students enrolled in lecturer's courses
+        var studentsInMyCourses = _allStudentCourses
+            .Where(sc => sc.StudentCoursesRefs?.Any(cr => myCourseCodes.Contains(cr.CourseCode)) == true)
+            .ToList();
+            
+        _totalStudents = studentsInMyCourses.Count;
+        
+        // Count active enrollments
+        _activeEnrollments = _allStudentCourses
+            .SelectMany(sc => sc.StudentCoursesRefs ?? new List<CourseRefrence>())
+            .Count(cr => myCourseCodes.Contains(cr.CourseCode) && cr.CourseEnrollmentStatus == CourseEnrollmentStatus.Enrolled);
+    }
+
+    private int GetEnrolledStudentsCount(string courseCode)
+    {
+        return _allStudentCourses
+            .SelectMany(sc => sc.StudentCoursesRefs ?? new List<CourseRefrence>())
+            .Count(cr => cr.CourseCode == courseCode && cr.CourseEnrollmentStatus == CourseEnrollmentStatus.Enrolled);
+    }
+
+    private void GenerateRecentActivities()
+    {
+        var random = new Random();
+        var activities = new List<ActivityItem>();
+        var activityTypes = new[] { "Enrollment", "Carryover", "Dropped" };
+        
+        for (int i = 0; i < 10; i++)
+        {
+            var course = _myCourses.ElementAtOrDefault(random.Next(_myCourses.Count));
+            if (course != null)
+            {
+                var activityType = activityTypes[random.Next(activityTypes.Length)];
+                activities.Add(new ActivityItem
+                {
+                    Type = activityType,
+                    Title = $"Student {activityType.ToLower()}",
+                    CourseCode = course.CourseCode,
+                    Time = DateTime.Now.AddHours(-random.Next(1, 72)),
+                    Status = Enum.Parse<CourseEnrollmentStatus>(activityType == "Enrollment" ? "Enrolled" : activityType)
+                });
+            }
+        }
+        
+        _recentActivities = activities.OrderByDescending(a => a.Time).ToList();
+    }
+
+    private void GenerateTodaySchedule()
+    {
+        var today = DateTime.Now.DayOfWeek;
+        var scheduleItems = new List<ScheduleItem>();
+        
+        foreach (var course in _myCourses.Take(3))
+        {
+            if (course.Schedule.TimeSlots.Any(ts => ts.Day == today) == true)
+            {
+                var timeSlot = course.Schedule.TimeSlots.First(ts => ts.Day == today);
+                scheduleItems.Add(new ScheduleItem
+                {
+                    CourseCode = course.CourseCode,
+                    CourseName = course.Name,
+                    StartTime = timeSlot.StartTime,
+                    EndTime = timeSlot.EndTime,
+                    Location = timeSlot.Location
+                });
+            }
+        }
+        
+        _todaySchedule = scheduleItems.OrderBy(s => s.StartTime).ToList();
+    }
+
+    private string GetActivityIcon(string type) => type switch
+    {
+        "Enrollment" => "fas fa-user-plus",
+        "Carryover" => "fas fa-redo",
+        "Dropped" => "fas fa-user-minus",
+        _ => "fas fa-info-circle"
+    };
+
+    private string GetActivityIconClass(string type) => type switch
+    {
+        "Enrollment" => "success",
+        "Carryover" => "warning",
+        "Dropped" => "error",
+        _ => "info"
+    };
+
+    private async Task NavigateTo(string url)
+    {
+        await JSRuntime.InvokeVoidAsync("window.location.href", url);
+    }
+
+    private class ActivityItem
+    {
+        public string Type { get; set; } = "";
+        public string Title { get; set; } = "";
+        public string CourseCode { get; set; } = "";
+        public DateTime Time { get; set; }
+        public CourseEnrollmentStatus Status { get; set; }
+    }
+
+    private class ScheduleItem
+    {
+        public string CourseCode { get; set; } = "";
+        public string CourseName { get; set; } = "";
+        public TimeSpan StartTime { get; set; }
+        public TimeSpan EndTime { get; set; }
+        public string Location { get; set; } = "";
+    }
+}

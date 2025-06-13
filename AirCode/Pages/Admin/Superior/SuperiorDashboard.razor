@@ -1,71 +1,340 @@
-@* Pages/Admin/SuperiorDashboard.razor *@
+@* Pages/Admin/Superior/SuperiorDashboard.razor *@
 @page "/Admin/SuperiorDashboard"
-
 @attribute [Authorize(Roles = "LecturerAdmin")]
 @layout SuperiorAdminLayout
-@using AirCode.Layout.AdminLayout
 @using Microsoft.AspNetCore.Authorization
-@using AirCode.Components.Admin.Shared
 @using AirCode.Layout.AdminLayout.Superior
+@inject IJSRuntime JSRuntime
 
-<div class="dashboard-grid">
-    <AdminCard Title="System Overview">
-        <Content>
-            <StatCard 
-                Title="Total Users" 
-                Value="@_totalUsers.ToString()" 
-                Icon="fas fa-users" 
-                Trend="@_usersTrend" />
-            <StatCard 
-                Title="Active Sessions" 
-                Value="@_activeSessions.ToString()" 
-                Icon="fas fa-calendar-check" 
-                Trend="@_sessionsTrend" />
-        </Content>
-    </AdminCard>
+<PageTitle>Superior Admin Dashboard</PageTitle>
 
-    <AdminCard Title="Recent Activities">
-        <Content>
-            @foreach (var activity in _recentActivities)
-            {
-                <div class="activity-item">
-                    <i class="@activity.Icon"></i>
-                    <div class="activity-details">
-                        <span class="activity-title">@activity.Title</span>
-                        <span class="activity-time">@activity.Time.ToString("g")</span>
+<div class="superior-dashboard">
+    <!-- System Overview Cards -->
+    <div class="overview-grid">
+        <div class="metric-card primary">
+            <div class="metric-icon">
+                <i class="fas fa-users"></i>
+            </div>
+            <div class="metric-content">
+                <h3>@_totalUsers</h3>
+                <p>Total System Users</p>
+                <span class="trend @(_usersTrend == "up" ? "positive" : "negative")">
+                    <i class="fas fa-arrow-@(_usersTrend == "up" ? "up" : "down")"></i>
+                    @_usersChangePercent%
+                </span>
+            </div>
+        </div>
+
+        <div class="metric-card secondary">
+            <div class="metric-icon">
+                <i class="fas fa-graduation-cap"></i>
+            </div>
+            <div class="metric-content">
+                <h3>@_totalStudents</h3>
+                <p>Active Students</p>
+                <span class="trend positive">
+                    <i class="fas fa-arrow-up"></i>
+                    @_studentsChangePercent%
+                </span>
+            </div>
+        </div>
+
+        <div class="metric-card accent">
+            <div class="metric-icon">
+                <i class="fas fa-chalkboard-teacher"></i>
+            </div>
+            <div class="metric-content">
+                <h3>@_totalLecturers</h3>
+                <p>Active Lecturers</p>
+                <span class="trend neutral">
+                    <i class="fas fa-minus"></i>
+                    0%
+                </span>
+            </div>
+        </div>
+
+        <div class="metric-card warning">
+            <div class="metric-icon">
+                <i class="fas fa-book"></i>
+            </div>
+            <div class="metric-content">
+                <h3>@_totalCourses</h3>
+                <p>Total Courses</p>
+                <span class="trend positive">
+                    <i class="fas fa-arrow-up"></i>
+                    @_coursesChangePercent%
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Academic Sessions & System Health -->
+    <div class="content-grid">
+        <div class="dashboard-card">
+            <div class="card-header">
+                <h4><i class="fas fa-calendar-alt"></i> Academic Sessions</h4>
+                <button class="btn-link" @onclick="ManageSessions">
+                    <i class="fas fa-cog"></i> Manage
+                </button>
+            </div>
+            <div class="card-content">
+                @foreach (var session in _academicSessions)
+                {
+                    <div class="session-item @(session.IsActive ? "active" : "")">
+                        <div class="session-info">
+                            <span class="session-name">@session.Name</span>
+                            <span class="session-status">@session.Status</span>
+                        </div>
+                        <div class="session-stats">
+                            <small>@session.StudentCount students</small>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="dashboard-card">
+            <div class="card-header">
+                <h4><i class="fas fa-server"></i> System Health</h4>
+                <span class="health-indicator @_systemHealth.ToLower()">@_systemHealth</span>
+            </div>
+            <div class="card-content">
+                <div class="health-metrics">
+                    <div class="health-item">
+                        <span class="label">Database</span>
+                        <span class="status connected">Connected</span>
+                    </div>
+                    <div class="health-item">
+                        <span class="label">Firebase</span>
+                        <span class="status connected">Connected</span>
+                    </div>
+                    <div class="health-item">
+                        <span class="label">Background Tasks</span>
+                        <span class="status running">Running</span>
+                    </div>
+                    <div class="health-item">
+                        <span class="label">Memory Usage</span>
+                        <span class="value">@_memoryUsage MB</span>
                     </div>
                 </div>
-            }
-        </Content>
-    </AdminCard>
+            </div>
+        </div>
+
+        <div class="dashboard-card">
+            <div class="card-header">
+                <h4><i class="fas fa-chart-line"></i> Enrollment Analytics</h4>
+                <select @onchange="OnLevelFilterChange" class="filter-select">
+                    <option value="">All Levels</option>
+                    <option value="Level100">100 Level</option>
+                    <option value="Level200">200 Level</option>
+                    <option value="Level300">300 Level</option>
+                    <option value="Level400">400 Level</option>
+                    <option value="Level500">500 Level</option>
+                </select>
+            </div>
+            <div class="card-content">
+                <canvas id="enrollmentChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+
+        <div class="dashboard-card">
+            <div class="card-header">
+                <h4><i class="fas fa-exclamation-triangle"></i> System Alerts</h4>
+                <span class="alert-count">@_systemAlerts.Count</span>
+            </div>
+            <div class="card-content alerts-container">
+                @if (_systemAlerts.Any())
+                {
+                    @foreach (var alert in _systemAlerts.Take(5))
+                    {
+                        <div class="alert-item @alert.Severity.ToLower()">
+                            <i class="fas fa-@GetAlertIcon(alert.Severity)"></i>
+                            <div class="alert-content">
+                                <span class="alert-title">@alert.Title</span>
+                                <span class="alert-time">@alert.Timestamp.ToString("MMM dd, HH:mm")</span>
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="no-alerts">
+                        <i class="fas fa-check-circle"></i>
+                        <span>All systems operational</span>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="dashboard-card full-width">
+            <div class="card-header">
+                <h4><i class="fas fa-history"></i> Recent Administrative Activities</h4>
+                <button class="btn-link" @onclick="ViewAllActivities">View All</button>
+            </div>
+            <div class="card-content">
+                <div class="activities-list">
+                    @foreach (var activity in _recentActivities.Take(8))
+                    {
+                        <div class="activity-item">
+                            <div class="activity-icon @activity.Type.ToLower()">
+                                <i class="fas fa-@GetActivityIcon(activity.Type)"></i>
+                            </div>
+                            <div class="activity-details">
+                                <span class="activity-title">@activity.Title</span>
+                                <span class="activity-description">@activity.Description</span>
+                                <span class="activity-time">@activity.Timestamp.ToString("MMM dd, yyyy HH:mm")</span>
+                            </div>
+                            <div class="activity-user">
+                                <span>@activity.User</span>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="quick-actions">
+        <h4>Quick Actions</h4>
+        <div class="actions-grid">
+            <button class="action-btn" @onclick="CreateAcademicSession">
+                <i class="fas fa-plus"></i>
+                <span>New Academic Session</span>
+            </button>
+            <button class="action-btn" @onclick="ManageUsers">
+                <i class="fas fa-users-cog"></i>
+                <span>Manage Users</span>
+            </button>
+            <button class="action-btn" @onclick="SystemBackup">
+                <i class="fas fa-database"></i>
+                <span>System Backup</span>
+            </button>
+            <button class="action-btn" @onclick="GenerateReports">
+                <i class="fas fa-chart-bar"></i>
+                <span>Generate Reports</span>
+            </button>
+        </div>
+    </div>
 </div>
 
 @code {
-    private int _totalUsers;
-    private int _activeSessions;
-    private string _usersTrend = "";
-    private string _sessionsTrend = "";
-    private List<ActivityItem> _recentActivities = new();
+    // Metrics
+    private int _totalUsers = 1247;
+    private int _totalStudents = 1089;
+    private int _totalLecturers = 158;
+    private int _totalCourses = 312;
+    
+    private string _usersTrend = "up";
+    private decimal _usersChangePercent = 12.5m;
+    private decimal _studentsChangePercent = 8.3m;
+    private decimal _coursesChangePercent = 5.2m;
 
-    private class ActivityItem
-    {
-        public string Icon { get; set; } = "";
-        public string Title { get; set; } = "";
-        public DateTime Time { get; set; }
-    }
+    // System Health
+    private string _systemHealth = "Healthy";
+    private int _memoryUsage = 2048;
+
+    // Data Collections
+    private List<AcademicSessionSummary> _academicSessions = new();
+    private List<SystemAlert> _systemAlerts = new();
+    private List<AdminActivity> _recentActivities = new();
 
     protected override async Task OnInitializedAsync()
     {
-        // Sample data initialization
-        _totalUsers = 150;
-        _activeSessions = 25;
-        _usersTrend = "up";
-        _sessionsTrend = "down";
+        await LoadDashboardData();
+        await InitializeCharts();
+    }
 
-        _recentActivities = new List<ActivityItem>
+    private async Task LoadDashboardData()
+    {
+        // Load academic sessions
+        _academicSessions = new List<AcademicSessionSummary>
         {
-            new() { Icon = "fas fa-user-plus", Title = "New user registered", Time = DateTime.Now.AddHours(-1) },
-            new() { Icon = "fas fa-calendar-plus", Title = "New session created", Time = DateTime.Now.AddHours(-2) }
+            new() { Name = "2024/2025", Status = "Active", IsActive = true, StudentCount = 1089 },
+            new() { Name = "2023/2024", Status = "Completed", IsActive = false, StudentCount = 1156 },
+            new() { Name = "2025/2026", Status = "Planning", IsActive = false, StudentCount = 0 }
         };
+
+        // Load system alerts
+        _systemAlerts = new List<SystemAlert>
+        {
+            new() { Title = "High Memory Usage", Severity = "Warning", Timestamp = DateTime.Now.AddHours(-2) },
+            new() { Title = "Backup Completed Successfully", Severity = "Success", Timestamp = DateTime.Now.AddHours(-6) },
+            new() { Title = "Failed Login Attempts", Severity = "Critical", Timestamp = DateTime.Now.AddHours(-12) }
+        };
+
+        // Load recent activities
+        _recentActivities = new List<AdminActivity>
+        {
+            new() { Title = "New Academic Session Created", Description = "2025/2026 session initialized", 
+                   Type = "Create", User = "Dr. Adebayo", Timestamp = DateTime.Now.AddMinutes(-30) },
+            new() { Title = "Course Updated", Description = "CSC 201 - Data Structures modified", 
+                   Type = "Update", User = "Prof. Johnson", Timestamp = DateTime.Now.AddHours(-1) },
+            new() { Title = "User Account Deactivated", Description = "Student account STU/2020/001 deactivated", 
+                   Type = "Delete", User = "Admin System", Timestamp = DateTime.Now.AddHours(-2) },
+            new() { Title = "System Backup Initiated", Description = "Scheduled backup started", 
+                   Type = "System", User = "System", Timestamp = DateTime.Now.AddHours(-4) }
+        };
+    }
+
+    private async Task InitializeCharts()
+    {
+        await JSRuntime.InvokeVoidAsync("initializeEnrollmentChart");
+    }
+
+    private async Task OnLevelFilterChange(ChangeEventArgs e)
+    {
+        var selectedLevel = e.Value.ToString();
+        await JSRuntime.InvokeVoidAsync("updateEnrollmentChart", selectedLevel);
+    }
+
+    private string GetAlertIcon(string severity) => severity.ToLower() switch
+    {
+        "critical" => "exclamation-circle",
+        "warning" => "exclamation-triangle",
+        "success" => "check-circle",
+        _ => "info-circle"
+    };
+
+    private string GetActivityIcon(string type) => type.ToLower() switch
+    {
+        "create" => "plus",
+        "update" => "edit",
+        "delete" => "trash",
+        "system" => "cog",
+        _ => "circle"
+    };
+
+    // Action handlers
+    private async Task ManageSessions() => await JSRuntime.InvokeVoidAsync("location.assign", "/Admin/Sessions");
+    private async Task ManageUsers() => await JSRuntime.InvokeVoidAsync("location.assign", "/Admin/Users");
+    private async Task CreateAcademicSession() => await JSRuntime.InvokeVoidAsync("location.assign", "/Admin/Sessions/Create");
+    private async Task SystemBackup() => await JSRuntime.InvokeVoidAsync("showNotification", "System backup initiated");
+    private async Task GenerateReports() => await JSRuntime.InvokeVoidAsync("location.assign", "/Admin/Reports");
+    private async Task ViewAllActivities() => await JSRuntime.InvokeVoidAsync("location.assign", "/Admin/Activities");
+
+    // Data models
+    private class AcademicSessionSummary
+    {
+        public string Name { get; set; } = "";
+        public string Status { get; set; } = "";
+        public bool IsActive { get; set; }
+        public int StudentCount { get; set; }
+    }
+
+    private class SystemAlert
+    {
+        public string Title { get; set; } = "";
+        public string Severity { get; set; } = "";
+        public DateTime Timestamp { get; set; }
+    }
+
+    private class AdminActivity
+    {
+        public string Title { get; set; } = "";
+        public string Description { get; set; } = "";
+        public string Type { get; set; } = "";
+        public string User { get; set; } = "";
+        public DateTime Timestamp { get; set; }
     }
 }
