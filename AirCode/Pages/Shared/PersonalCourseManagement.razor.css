@@ -1,10 +1,10 @@
-/* Component-scoped styles for StudentCourseManagement.razor */
+/* Component-scoped styles for PersonalCourseManagement.razor */
 
 .student-course-container {
-    padding: 2rem;
+    padding: 1rem;
     max-width: 1400px;
     margin: 0 auto;
-    background: #f8fafc;
+    background: var(--bg-primary);
     min-height: 100vh;
 }
 
@@ -13,58 +13,60 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 2rem;
-    padding: 1.5rem;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: linear-gradient(135deg, var(--primary-500) 0%, var(--primary-700) 100%);
     border-radius: 12px;
-    color: white;
-    box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+    color: var(--nav-text);
+    box-shadow: 0 4px 20px rgba(15, 76, 117, 0.3);
 }
 
 .page-title {
     margin: 0;
-    font-size: 2rem;
+    font-size: 1.5rem;
     font-weight: 600;
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 0.5rem;
 }
 
 .icon-books::before {
     content: "📚";
-    font-size: 1.5rem;
+    font-size: 1.2rem;
 }
 
 .student-info {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 0.75rem;
+    flex-wrap: wrap;
 }
 
 .matric-number {
-    font-size: 1.1rem;
+    font-size: 0.9rem;
     font-weight: 500;
     background: rgba(255, 255, 255, 0.15);
-    padding: 0.5rem 1rem;
+    padding: 0.4rem 0.8rem;
     border-radius: 8px;
     backdrop-filter: blur(10px);
 }
 
 .level-badge {
-    padding: 0.5rem 1rem;
+    padding: 0.4rem 0.8rem;
     border-radius: 20px;
     font-weight: 600;
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    color: white;
 }
 
-.level-level100 { background: #10b981; }
-.level-level200 { background: #3b82f6; }
-.level-level300 { background: #8b5cf6; }
-.level-level400 { background: #f59e0b; }
-.level-level500 { background: #ef4444; }
-.level-levelextra { background: #6b7280; }
+.level-level100 { background: var(--success); }
+.level-level200 { background: var(--info); }
+.level-level300 { background: var(--secondary-500); }
+.level-level400 { background: var(--warning); }
+.level-level500 { background: var(--error); }
+.level-levelextra { background: var(--dark-text-tertiary); }
 
 /* Loading and Error States */
 .loading-container {
@@ -72,15 +74,15 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 4rem;
+    padding: 3rem 1rem;
     gap: 1rem;
 }
 
 .loading-spinner {
     width: 40px;
     height: 40px;
-    border: 4px solid #e5e7eb;
-    border-top: 4px solid #667eea;
+    border: 4px solid var(--border);
+    border-top: 4px solid var(--primary-500);
     border-radius: 50%;
     animation: spin 1s linear infinite;
 }
@@ -102,7 +104,7 @@
 
 .alert-error {
     background: #fef2f2;
-    color: #dc2626;
+    color: var(--error);
     border: 1px solid #fecaca;
 }
 
@@ -110,7 +112,7 @@
     content: "⚠️";
 }
 
-/* Main Grid Layout */
+/* Main Grid Layout - Desktop First */
 .course-management-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -125,72 +127,79 @@
     align-items: center;
     margin-bottom: 1.5rem;
     padding-bottom: 1rem;
-    border-bottom: 2px solid #e5e7eb;
+    border-bottom: 2px solid var(--border);
+    flex-wrap: wrap;
+    gap: 1rem;
 }
 
 .section-header h3 {
     margin: 0;
-    font-size: 1.5rem;
+    font-size: 1.3rem;
     font-weight: 600;
-    color: #1f2937;
+    color: var(--text-primary);
 }
 
 .course-count {
-    background: #f3f4f6;
-    color: #6b7280;
-    padding: 0.5rem 1rem;
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+    padding: 0.4rem 0.8rem;
     border-radius: 20px;
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     font-weight: 500;
 }
 
 /* Course Filters */
 .course-filters {
     display: flex;
-    gap: 1rem;
+    gap: 0.75rem;
     align-items: center;
+    flex-wrap: wrap;
+    width: 100%;
 }
 
 .filter-select, .search-input {
-    padding: 0.5rem 1rem;
-    border: 1px solid #d1d5db;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border);
     border-radius: 6px;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     transition: border-color 0.2s ease;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
 }
 
 .filter-select:focus, .search-input:focus {
     outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    border-color: var(--primary-500);
+    box-shadow: 0 0 0 3px rgba(15, 76, 117, 0.1);
 }
 
 .search-input {
-    min-width: 200px;
+    min-width: 180px;
+    flex: 1;
 }
 
-/* Course Grids */
+/* Course Grids - Responsive */
 .courses-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 1.5rem;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.25rem;
     margin-bottom: 2rem;
 }
 
-/* Course Cards */
+/* Course Cards - Enhanced */
 .course-card {
-    background: white;
+    background: var(--bg-secondary);
     border-radius: 12px;
-    padding: 1.5rem;
+    padding: 1.25rem;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     transition: all 0.3s ease;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--border);
     position: relative;
     overflow: hidden;
 }
 
 .course-card:hover {
-    transform: translateY(-4px);
+    transform: translateY(-2px);
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
 }
 
@@ -201,20 +210,41 @@
     left: 0;
     right: 0;
     height: 4px;
-    background: linear-gradient(90deg, #667eea, #764ba2);
+    background: linear-gradient(90deg, var(--primary-500), var(--primary-700));
+}
+
+/* Carryover Course Banner - NEW */
+.carryover-banner {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: linear-gradient(135deg, var(--warning) 0%, #d97706 100%);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom-left-radius: 8px;
+    z-index: 10;
+}
+
+.carryover-banner::before {
+    content: "🔄 ";
+    margin-right: 0.25rem;
 }
 
 /* Enrolled Course Card Statuses */
 .enrolled-card.status-enrolled::before {
-    background: linear-gradient(90deg, #10b981, #059669);
+    background: linear-gradient(90deg, var(--success), #059669);
 }
 
 .enrolled-card.status-carryover::before {
-    background: linear-gradient(90deg, #f59e0b, #d97706);
+    background: linear-gradient(90deg, var(--warning), #d97706);
 }
 
 .enrolled-card.status-dropped::before {
-    background: linear-gradient(90deg, #ef4444, #dc2626);
+    background: linear-gradient(90deg, var(--error), #dc2626);
 }
 
 .course-header {
@@ -222,19 +252,20 @@
     justify-content: space-between;
     align-items: flex-start;
     margin-bottom: 1rem;
+    position: relative;
 }
 
 .course-code {
     margin: 0;
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     font-weight: 700;
-    color: #1f2937;
+    color: var(--text-primary);
 }
 
 .course-status .status-badge {
-    padding: 0.25rem 0.75rem;
+    padding: 0.25rem 0.6rem;
     border-radius: 12px;
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -260,100 +291,103 @@
 }
 
 .course-name {
-    margin: 0 0 0.75rem 0;
-    font-size: 1.1rem;
+    margin: 0 0 0.6rem 0;
+    font-size: 1rem;
     font-weight: 600;
-    color: #374151;
+    color: var(--text-secondary);
     line-height: 1.4;
 }
 
 .course-info {
     display: flex;
-    gap: 1rem;
-    margin-bottom: 0.75rem;
+    gap: 0.75rem;
+    margin-bottom: 0.6rem;
+    flex-wrap: wrap;
 }
 
 .course-info span {
-    font-size: 0.85rem;
-    color: #6b7280;
-    background: #f9fafb;
-    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+    color: var(--text-tertiary);
+    background: var(--bg-tertiary);
+    padding: 0.2rem 0.4rem;
     border-radius: 4px;
 }
 
 .credit-units {
     font-weight: 600;
-    color: #374151 !important;
+    color: var(--text-secondary) !important;
 }
 
 /* Schedule Information */
 .schedule-info, .schedule-preview {
-    margin-top: 0.75rem;
+    margin-top: 0.6rem;
 }
 
 .time-slot, .schedule-item {
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
-    background: #f3f4f6;
-    padding: 0.25rem 0.5rem;
+    gap: 0.4rem;
+    background: var(--bg-tertiary);
+    padding: 0.2rem 0.4rem;
     border-radius: 4px;
-    font-size: 0.8rem;
-    margin-right: 0.5rem;
-    margin-bottom: 0.25rem;
+    font-size: 0.75rem;
+    margin-right: 0.4rem;
+    margin-bottom: 0.2rem;
 }
 
 .day {
     font-weight: 600;
-    color: #374151;
+    color: var(--text-secondary);
 }
 
 .time {
-    color: #6b7280;
+    color: var(--text-tertiary);
 }
 
 .more-schedule {
-    font-size: 0.75rem;
-    color: #6b7280;
+    font-size: 0.7rem;
+    color: var(--text-tertiary);
     font-style: italic;
 }
 
 /* Course Dates */
 .course-dates {
-    margin: 1rem 0;
-    padding-top: 0.75rem;
-    border-top: 1px solid #f3f4f6;
+    margin: 0.8rem 0;
+    padding-top: 0.6rem;
+    border-top: 1px solid var(--border);
 }
 
 .course-dates small {
     display: block;
-    color: #6b7280;
-    font-size: 0.8rem;
-    margin-bottom: 0.25rem;
+    color: var(--text-tertiary);
+    font-size: 0.75rem;
+    margin-bottom: 0.2rem;
 }
 
 .enrollment-date {
-    color: #059669 !important;
+    color: var(--success) !important;
 }
 
 .status-change {
-    color: #d97706 !important;
+    color: var(--warning) !important;
 }
 
 /* Course Actions */
 .course-actions {
     display: flex;
-    gap: 0.75rem;
+    gap: 0.5rem;
     margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 1px solid #f3f4f6;
+    padding-top: 0.8rem;
+    border-top: 1px solid var(--border);
+    flex-wrap: wrap;
 }
 
+/* Button Styles - Updated for Theme */
 .btn {
-    padding: 0.5rem 1rem;
+    padding: 0.4rem 0.8rem;
     border: none;
     border-radius: 6px;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -361,7 +395,9 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
+    gap: 0.4rem;
+    flex: 1;
+    min-width: fit-content;
 }
 
 .btn:disabled {
@@ -370,17 +406,17 @@
 }
 
 .btn-primary {
-    background: #667eea;
-    color: white;
+    background: var(--button-primary);
+    color: var(--button-text);
 }
 
 .btn-primary:hover:not(:disabled) {
-    background: #5a67d8;
+    background: var(--button-primary-hover);
     transform: translateY(-1px);
 }
 
 .btn-success {
-    background: #10b981;
+    background: var(--success);
     color: white;
 }
 
@@ -389,7 +425,7 @@
 }
 
 .btn-warning {
-    background: #f59e0b;
+    background: var(--warning);
     color: white;
 }
 
@@ -398,7 +434,7 @@
 }
 
 .btn-danger {
-    background: #ef4444;
+    background: var(--error);
     color: white;
 }
 
@@ -408,30 +444,387 @@
 
 .btn-outline {
     background: transparent;
-    color: #667eea;
-    border: 1px solid #667eea;
+    color: var(--primary-500);
+    border: 1px solid var(--primary-500);
 }
 
 .btn-outline:hover:not(:disabled) {
-    background: #667eea;
+    background: var(--primary-500);
     color: white;
 }
 
 .btn-sm {
-    padding: 0.375rem 0.75rem;
-    font-size: 0.8rem;
+    padding: 0.3rem 0.6rem;
+    font-size: 0.75rem;
 }
 
 /* Available Course Cards */
 .available-card.already-enrolled {
     opacity: 0.7;
-    background: #f9fafb;
+    background: var(--bg-tertiary);
 }
 
 .enrolled-indicator {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    color: #059669;
+    gap: 0.4rem;
+    color: var(--success);
     font-weight: 500;
-    font-size: 0.85rem;}
+    font-size: 0.8rem;
+}
+
+.icon-check::before {
+    content: "✓";
+}
+
+.icon-empty::before {
+    content: "📚";
+    font-size: 2rem;
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--text-secondary);
+}
+
+.empty-state h4 {
+    margin: 1rem 0 0.5rem 0;
+    color: var(--text-primary);
+}
+
+/* Load More Container */
+.load-more-container {
+    text-align: center;
+    margin-top: 1.5rem;
+}
+
+/* Course Statistics */
+.course-statistics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-top: 2rem;
+}
+
+.stat-card {
+    background: var(--bg-secondary);
+    padding: 1.5rem;
+    border-radius: 12px;
+    text-align: center;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--border);
+}
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--primary-500);
+    margin-bottom: 0.5rem;
+}
+
+.stat-label {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+/* Toast Messages */
+.toast {
+    position: fixed;
+    top: 2rem;
+    right: 2rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+}
+
+.toast-success {
+    border-left: 4px solid var(--success);
+}
+
+.toast-close {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    color: var(--text-tertiary);
+    margin-left: auto;
+}
+
+.icon-success::before {
+    content: "✅";
+}
+
+/* RESPONSIVE DESIGN - Mobile First Approach */
+
+/* Mobile Portrait - Extra Small Screens */
+@media (max-width: 480px) {
+    .student-course-container {
+        padding: 0.75rem;
+    }
+
+    .page-header {
+        flex-direction: column;
+        gap: 1rem;
+        text-align: center;
+        padding: 1rem;
+    }
+
+    .page-title {
+        font-size: 1.25rem;
+    }
+
+    .student-info {
+        justify-content: center;
+    }
+
+    .matric-number, .level-badge {
+        font-size: 0.8rem;
+        padding: 0.3rem 0.6rem;
+    }
+
+    /* Single column layout for mobile */
+    .course-management-grid {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+
+    .section-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+
+    .section-header h3 {
+        font-size: 1.1rem;
+    }
+
+    .course-filters {
+        width: 100%;
+        flex-direction: column;
+    }
+
+    .filter-select, .search-input {
+        width: 100%;
+    }
+
+    /* Mobile Card Layout - Horizontal Rectangle */
+    .courses-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .course-card {
+        padding: 1rem;
+        display: flex;
+        flex-direction: row;
+        align-items: flex-start;
+        gap: 1rem;
+        min-height: 120px;
+    }
+
+    .course-card::before {
+        height: 100%;
+        width: 4px;
+        top: 0;
+        left: 0;
+        right: auto;
+        bottom: 0;
+    }
+
+    .carryover-banner {
+        top: 0.5rem;
+        right: 0.5rem;
+        font-size: 0.6rem;
+        padding: 0.2rem 0.5rem;
+    }
+
+    .course-header {
+        margin-bottom: 0.5rem;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.25rem;
+        flex: 0 0 auto;
+        min-width: 80px;
+    }
+
+    .course-code {
+        font-size: 0.9rem;
+        font-weight: 700;
+    }
+
+    .course-status .status-badge {
+        font-size: 0.6rem;
+        padding: 0.2rem 0.4rem;
+    }
+
+    .course-details {
+        flex: 1;
+        margin-bottom: 0.5rem;
+    }
+
+    .course-name {
+        font-size: 0.9rem;
+        margin-bottom: 0.4rem;
+        line-height: 1.3;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .course-info {
+        gap: 0.5rem;
+        margin-bottom: 0.4rem;
+    }
+
+    .course-info span {
+        font-size: 0.7rem;
+        padding: 0.15rem 0.3rem;
+    }
+
+    .schedule-info, .schedule-preview {
+        display: none; /* Hide schedule on mobile for space */
+    }
+
+    .course-dates {
+        display: none; /* Hide dates on mobile for space */
+    }
+
+    .course-actions {
+        flex-direction: column;
+        gap: 0.4rem;
+        margin-top: 0.5rem;
+        padding-top: 0.5rem;
+        flex: 0 0 auto;
+        min-width: 80px;
+    }
+
+    .btn {
+        font-size: 0.7rem;
+        padding: 0.3rem 0.5rem;
+        width: 100%;
+    }
+
+    /* Statistics Grid - Mobile */
+    .course-statistics {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
+    }
+
+    .stat-card {
+        padding: 1rem;
+    }
+
+    .stat-number {
+        font-size: 1.5rem;
+    }
+
+    .stat-label {
+        font-size: 0.8rem;
+    }
+
+    /* Toast positioning for mobile */
+    .toast {
+        top: 1rem;
+        right: 1rem;
+        left: 1rem;
+        width: auto;
+    }
+}
+
+/* Mobile Landscape - Small Screens */
+@media (min-width: 481px) and (max-width: 767px) {
+    .student-course-container {
+        padding: 1rem;
+    }
+
+    .course-management-grid {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+
+    .courses-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+    }
+
+    .course-statistics {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Tablet Portrait - Medium Screens */
+@media (min-width: 768px) and (max-width: 1024px) {
+    .student-course-container {
+        padding: 1.25rem;
+    }
+
+    .course-management-grid {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+    }
+
+    .courses-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.25rem;
+    }
+
+    .section-header {
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+
+    .course-filters {
+        flex-direction: row;
+        width: auto;
+    }
+
+    .course-statistics {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+/* Tablet Landscape - Large Screens */
+@media (min-width: 1025px) and (max-width: 1279px) {
+    .student-course-container {
+        padding: 1.5rem;
+    }
+
+    .course-management-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+    }
+
+    .courses-grid {
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    }
+}
+
+/* Desktop - Extra Large Screens */
+@media (min-width: 1280px) {
+    .student-course-container {
+        padding: 2rem;
+    }
+
+    .courses-grid {
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .page-title {
+        font-size: 2rem;
+    }
+
+    .section-header h3 {
+        font-size: 1.5rem;
+    }
+}
