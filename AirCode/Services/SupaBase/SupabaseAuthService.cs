@@ -1,10 +1,10 @@
 using AirCode.Services.Storage;
 using Microsoft.AspNetCore.Components.Authorization;
-using Supabase.Gotrue;
+using System.Security.Claims;
+using System.Text.Json;
 
 namespace AirCode.Services.SupaBase
 {
-    
     public class SupabaseAuthService : ISupabaseAuthService
     {
         private readonly Supabase.Client _client;
@@ -19,122 +19,45 @@ namespace AirCode.Services.SupaBase
             ILogger<SupabaseAuthService> logger)
         {
             _logger = logger;
-            _logger.LogInformation("------------------- AUTH SERVICE CONSTRUCTOR -------------------");
             _client = client;
             _authStateProvider = authStateProvider;
             _localStorage = localStorage;
         }
 
+        // These methods are now redirected to Auth0 - they shouldn't be called directly
         public async Task<bool> LoginAsync(string email, string password)
         {
-            try
-            {
-                _logger.LogInformation("METHOD: LoginAsync - Attempting login for: {Email}", email);
-                
-                var session = await _client.Auth.SignIn(email, password);
-                
-                if (session?.User != null)
-                {
-                    _logger.LogInformation("------------------- User logged in successfully -------------------");
-                    _logger.LogInformation("User Email: {Email}", _client.Auth.CurrentUser?.Email);
-                    _logger.LogInformation("User ID: {UserId}", _client.Auth.CurrentUser?.Id);
-                    
-                    // Store session data locally for offline access
-                    await StoreSessionDataAsync(session);
-                    
-                    // Trigger authentication state update
-                    await _authStateProvider.GetAuthenticationStateAsync();
-                    
-                    return true;
-                }
-                
-                _logger.LogWarning("Login failed - No session or user returned");
-                return false;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Login failed for email: {Email}", email);
-                return false;
-            }
+            _logger.LogWarning("LoginAsync called - This should be handled by Auth0, not Supabase");
+            return false;
         }
 
         public async Task<bool> RegisterAsync(string email, string password, Dictionary<string, object>? userData = null)
         {
-            try
-            {
-                _logger.LogInformation("METHOD: RegisterAsync - Attempting registration for: {Email}", email);
-                
-                var options = new SignUpOptions();
-                if (userData != null)
-                {
-                    options.Data = userData;
-                }
-                
-                var session = await _client.Auth.SignUp(email, password, options);
-                
-                if (session?.User != null)
-                {
-                    _logger.LogInformation("User registered successfully: {Email}", email);
-                    
-                    // Store session data locally
-                    await StoreSessionDataAsync(session);
-                    
-                    // Trigger authentication state update
-                    await _authStateProvider.GetAuthenticationStateAsync();
-                    
-                    return true;
-                }
-                
-                _logger.LogWarning("Registration failed - No session or user returned");
-                return false;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Registration failed for email: {Email}", email);
-                return false;
-            }
+            _logger.LogWarning("RegisterAsync called - This should be handled by Auth0, not Supabase");
+            return false;
         }
 
         public async Task LogoutAsync()
         {
-            try
-            {
-                _logger.LogInformation("METHOD: LogoutAsync - Signing out user");
-                
-                await _client.Auth.SignOut();
-                
-                // Clear local session data
-                await ClearSessionDataAsync();
-                
-                // Trigger authentication state update
-                await _authStateProvider.GetAuthenticationStateAsync();
-                
-                _logger.LogInformation("User signed out successfully");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error during logout");
-                throw;
-            }
+            _logger.LogWarning("LogoutAsync called - This should be handled by Auth0, not Supabase");
         }
 
-        public async Task<User?> GetCurrentUserAsync()
+        // These methods bridge Auth0 authentication with Supabase operations
+        public async Task<Supabase.Gotrue.User?> GetCurrentUserAsync()
         {
             try
             {
-                var user = _client.Auth.CurrentUser;
-                if (user == null)
+                var authState = await _authStateProvider.GetAuthenticationStateAsync();
+                if (authState.User.Identity?.IsAuthenticated == true)
                 {
-                    // Try to restore from local storage if available
-                    await RestoreSessionFromStorageAsync();
-                    user = _client.Auth.CurrentUser;
+                    // Create a Supabase user object from Auth0 claims
+                    return CreateSupabaseUserFromAuth0Claims(authState.User);
                 }
-                
-                return user;
+                return null;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving current user");
+                _logger.LogError(ex, "Error retrieving current user from Auth0 state");
                 return null;
             }
         }
@@ -143,11 +66,8 @@ namespace AirCode.Services.SupaBase
         {
             try
             {
-                var user = await GetCurrentUserAsync();
-                var session = _client.Auth.CurrentSession;
-                
-                // Check if user exists and session is not expired
-                return user != null && session != null && session.ExpiresAt() > DateTime.UtcNow;
+                var authState = await _authStateProvider.GetAuthenticationStateAsync();
+                return authState.User.Identity?.IsAuthenticated == true;
             }
             catch (Exception ex)
             {
@@ -158,127 +78,136 @@ namespace AirCode.Services.SupaBase
 
         public async Task<bool> ResetPasswordAsync(string email)
         {
-            try
-            {
-                _logger.LogInformation("METHOD: ResetPasswordAsync for email: {Email}", email);
-                
-                await _client.Auth.ResetPasswordForEmail(email);
-                
-                _logger.LogInformation("Password reset email sent successfully");
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error sending password reset email to: {Email}", email);
-                return false;
-            }
+            _logger.LogWarning("ResetPasswordAsync called - This should be handled by Auth0, not Supabase");
+            return false;
         }
 
         public async Task<bool> UpdateUserProfileAsync(Dictionary<string, object> updates)
         {
-            try
-            {
-                _logger.LogInformation("METHOD: UpdateUserProfileAsync");
-                
-                var userAttributes = new UserAttributes();
-                foreach (var update in updates)
-                {
-                    userAttributes.Data.Add(update.Key, update.Value);
-                }
-                
-                var updatedUser = await _client.Auth.Update(userAttributes);
-                
-                if (updatedUser != null)
-                {
-                    _logger.LogInformation("User profile updated successfully");
-                    return true;
-                }
-                
-                return false;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error updating user profile");
-                return false;
-            }
+            _logger.LogWarning("UpdateUserProfileAsync called - This should be handled by Auth0, not Supabase");
+            return false;
         }
 
         public async Task<bool> RefreshSessionAsync()
         {
+            _logger.LogWarning("RefreshSessionAsync called - This should be handled by Auth0, not Supabase");
+            return false;
+        }
+
+        // New method to configure Supabase client with Auth0 token
+        public async Task<bool> ConfigureSupabaseWithAuth0TokenAsync()
+        {
             try
             {
-                _logger.LogInformation("METHOD: RefreshSessionAsync");
-                
-                var session = await _client.Auth.RefreshSession();
-                
-                if (session != null)
+                var authState = await _authStateProvider.GetAuthenticationStateAsync();
+                if (authState.User.Identity?.IsAuthenticated == true)
                 {
-                    await StoreSessionDataAsync(session);
-                    _logger.LogInformation("Session refreshed successfully");
-                    return true;
+                    var accessToken = await GetAuth0AccessTokenAsync();
+                    if (!string.IsNullOrEmpty(accessToken))
+                    {
+                        // Configure Supabase client to use Auth0 token
+                       // _client.Auth.SetAuth(accessToken);
+                        _logger.LogInformation("Supabase configured with Auth0 token");
+                        return true;
+                    }
                 }
-                
                 return false;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error refreshing session");
+                _logger.LogError(ex, "Error configuring Supabase with Auth0 token");
                 return false;
             }
         }
 
-        private async Task StoreSessionDataAsync(Session session)
+        // Helper method to get Auth0 access token
+        private async Task<string?> GetAuth0AccessTokenAsync()
         {
             try
             {
-                // Store essential session data for offline access and PWA functionality
-                var sessionData = new
+                var authState = await _authStateProvider.GetAuthenticationStateAsync();
+                var accessTokenClaim = authState.User.FindFirst("access_token");
+                return accessTokenClaim?.Value;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving Auth0 access token");
+                return null;
+            }
+        }
+
+        // Helper method to create Supabase user from Auth0 claims
+        private Supabase.Gotrue.User? CreateSupabaseUserFromAuth0Claims(ClaimsPrincipal auth0User)
+        {
+            try
+            {
+                var userId = auth0User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var email = auth0User.FindFirst(ClaimTypes.Email)?.Value;
+                var name = auth0User.FindFirst(ClaimTypes.Name)?.Value;
+                var roles = auth0User.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList();
+
+                if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(email))
                 {
-                    AccessToken = session.AccessToken,
-                    RefreshToken = session.RefreshToken,
-                    ExpiresAt = session.ExpiresAt(),
-                    UserId = session.User?.Id,
-                    UserEmail = session.User?.Email,
-                    UserRole = session.User?.UserMetadata?.ContainsKey("role") == true ? 
-                              session.User.UserMetadata["role"]?.ToString() : null
+                    return null;
+                }
+
+                // Create a user object that mimics Supabase's user structure
+                var userData = new Dictionary<string, object>
+                {
+                    ["id"] = userId,
+                    ["email"] = email,
+                    ["user_metadata"] = new Dictionary<string, object>
+                    {
+                        ["name"] = name ?? "",
+                        ["roles"] = roles
+                    }
                 };
-                
-                await _localStorage.SetItemAsync("supabase_session", sessionData);
-                _logger.LogDebug("Session data stored locally");
+
+                // Note: This is a simplified approach. You might need to adjust based on your exact needs
+                return JsonSerializer.Deserialize<Supabase.Gotrue.User>(JsonSerializer.Serialize(userData));
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error storing session data locally");
+                _logger.LogError(ex, "Error creating Supabase user from Auth0 claims");
+                return null;
             }
         }
 
-        private async Task ClearSessionDataAsync()
+        // Method to get user roles from Auth0 for Supabase RLS
+        public async Task<List<string>> GetUserRolesAsync()
         {
             try
             {
-                await _localStorage.RemoveItemAsync("supabase_session");
-                _logger.LogDebug("Local session data cleared");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error clearing local session data");
-            }
-        }
-
-        private async Task RestoreSessionFromStorageAsync()
-        {
-            try
-            {
-                var sessionData = await _localStorage.GetItemAsync<dynamic>("supabase_session");
-                if (sessionData != null && sessionData.ExpiresAt > DateTime.UtcNow)
+                var authState = await _authStateProvider.GetAuthenticationStateAsync();
+                if (authState.User.Identity?.IsAuthenticated == true)
                 {
-                    // Attempt to restore session using refresh token
-                    await RefreshSessionAsync();
+                    return authState.User.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList();
                 }
+                return new List<string>();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error restoring session from storage");
+                _logger.LogError(ex, "Error retrieving user roles");
+                return new List<string>();
+            }
+        }
+
+        // Method to get user ID for Supabase operations
+        public async Task<string?> GetUserIdAsync()
+        {
+            try
+            {
+                var authState = await _authStateProvider.GetAuthenticationStateAsync();
+                if (authState.User.Identity?.IsAuthenticated == true)
+                {
+                    return authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                }
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving user ID");
+                return null;
             }
         }
     }

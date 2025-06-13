@@ -14,17 +14,20 @@
             {
                 <div class="course-item">
                     <div class="course-info">
-                        <span class="course-code">@course.CourseCode</span>
-                        <span class="course-name">@course.Name</span>
+                        <div class="course-primary">
+                            <span class="course-code">@course.CourseCode</span>
+                            <span class="course-name">@course.Name</span>
+                        </div>
                         <div class="course-details">
                             <span>@course.DepartmentId</span>
                             <span>@course.CreditUnits units</span>
                             <span>Level @((int)course.Level + 100)</span>
                         </div>
                     </div>
-                    <button class="btn-remove" 
-                            @onclick="() => ShowRemoveConfirmation(course.CourseCode, course.Name)" 
-                            disabled="@IsLoading">
+                    <button class="btn-remove"
+                            @onclick="() => ShowRemoveConfirmation(course.CourseCode, course.Name)"
+                            disabled="@IsLoading"
+                            title="Remove @course.CourseCode">
                         @if (IsLoading && _loadingCourseCode == course.CourseCode)
                         {
                             <div class="loading-spinner"></div>
@@ -32,7 +35,7 @@
                         else
                         {
                             <i class="fas fa-trash-alt"></i>
-                            <span>Remove</span>
+                            <span class="btn-text">Remove</span>
                         }
                     </button>
                 </div>
