@@ -3,6 +3,7 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.Rendering
 @using AirCode.Services.Permissions
+@using Microsoft.AspNetCore.Components.Routing;
 @inherits ComponentBase
 @implements IComponent
 @inject IPermissionService PermissionService
@@ -39,7 +40,7 @@ else
     [Parameter] public RouteData RouteData { get; set; } = default!;
     [Parameter] public Type? DefaultLayout { get; set; }
     [CascadingParameter] private Task<AuthenticationState>? AuthenticationState { get; set; }
-
+    
     private bool Authorized { get; set; }
     private bool IsRedirecting { get; set; }
     private bool IsLoading { get; set; } = true;

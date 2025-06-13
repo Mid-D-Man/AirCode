@@ -9,8 +9,8 @@
 }
 
 .circular-button {
-    width: 60px;
-    height: 60px;
+    width: 66px; /* 10% increase from 60px */
+    height: 66px;
     border-radius: 50%;
     border: none;
     background-color: var(--secondary);
@@ -49,8 +49,8 @@
 
 .circular-button.primary {
     background-color: var(--primary-color);
-    width: 75px;
-    height: 75px;
+    width: 83px; /* 10% increase from 75px */
+    height: 83px;
     z-index: 2;
 }
 
@@ -81,27 +81,27 @@
 }
 
 .button-icon {
-    width: 24px;
-    height: 24px;
+    width: 26px; /* 10% increase from 24px */
+    height: 26px;
     transition: transform 0.3s ease;
 }
 
 .circular-button.primary .button-icon {
-    width: 32px;
-    height: 32px;
+    width: 35px; /* 10% increase from 32px */
+    height: 35px;
 }
 
 /* SVG icon styling */
 .button-content svg {
-    width: 24px;
-    height: 24px;
+    width: 26px;
+    height: 26px;
     transition: transform 0.3s ease;
     fill: currentColor;
 }
 
 .circular-button.primary .button-content svg {
-    width: 32px;
-    height: 32px;
+    width: 35px;
+    height: 35px;
 }
 
 .button-text {
@@ -145,14 +145,12 @@
     font-weight: 600;
 }
 
-/* Animation for hover */
 @keyframes pulse {
     0% { transform: translate(-50%, -50%) scale(1); opacity: 0.7; }
     50% { transform: translate(-50%, -50%) scale(1.05); opacity: 0.3; }
     100% { transform: translate(-50%, -50%) scale(1); opacity: 0.7; }
 }
 
-/* Animation for active state */
 @keyframes pop {
     0% { transform: scale(1); }
     50% { transform: scale(1.15); }
@@ -163,28 +161,28 @@
     animation: pop 0.3s ease-out;
 }
 
-/* Responsive adjustments */
+/* Mobile responsive adjustments */
 @media (max-width: 480px) {
     .circular-button {
-        width: 50px;
-        height: 50px;
+        width: 55px; /* 10% increase from 50px */
+        height: 55px;
     }
 
     .circular-button.primary {
-        width: 65px;
-        height: 65px;
+        width: 72px; /* 10% increase from 65px */
+        height: 72px;
     }
 
     .button-icon,
     .button-content svg {
-        width: 20px;
-        height: 20px;
+        width: 22px; /* 10% increase from 20px */
+        height: 22px;
     }
 
     .circular-button.primary .button-icon,
     .circular-button.primary .button-content svg {
-        width: 26px;
-        height: 26px;
+        width: 29px; /* 10% increase from 26px */
+        height: 29px;
     }
 
     .button-text {

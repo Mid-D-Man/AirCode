@@ -235,7 +235,31 @@ namespace AirCode.Services.SupaBase
                 return $"Error getting cat image: {ex.Message}";
             }
         }
+        /// <summary>
+        /// Get server time from Supabase edge function
+        /// </summary>
+        public async Task<string> GetServerTimeAsync(string timeType = "utc")
+        {
+            try
+            {
+                var response = await SendEdgeFunctionRequestAsync($"get-server-time?type={timeType}", null, HttpMethod.Get);
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    var timeResponse = await response.Content.ReadFromJsonAsync<ServerTimeResponse>(_jsonOptions);
+                    return timeResponse?.Time?.ToString() ?? DateTime.UtcNow.ToString("O");
+                }
 
+                // Fallback to local time if server call fails
+                return DateTime.UtcNow.ToString("O");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting server time: {ex.Message}");
+                // Fallback to local time
+                return DateTime.UtcNow.ToString("O");
+            }
+        }
         private async Task<HttpResponseMessage> SendEdgeFunctionRequestAsync(
             string functionName, 
             object payload = null, 
@@ -258,7 +282,12 @@ namespace AirCode.Services.SupaBase
             return await _httpClient.SendAsync(request);
         }
     }
-
+    
+    // Response model for server time
+    public class ServerTimeResponse
+    {
+        public object Time { get; set; }
+    }
     // Response Models remain the same
     public class AttendanceProcessingResult
     {

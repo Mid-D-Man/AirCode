@@ -1,6 +1,8 @@
 // File: wwwroot/js/offlineCredentialsHandler.js
 // Enhanced offline credentials handler for AirCode app
 // Now includes lecturer ID and matric number support
+// Enhanced offline credentials handler for AirCode app
+// recent changes mad => Simplified device fingerprinting - stable and consistent
 
 window.offlineCredentialsHandler = {
     // Storage keys
@@ -8,56 +10,86 @@ window.offlineCredentialsHandler = {
         CREDENTIALS: "AirCode_offline_credentials",
         AUTH_KEY: "aircode_auth_key",
         AUTH_IV: "aircode_auth_iv",
-        USER_SESSION: "AirCode_user_session", // Match AuthService
-        DEVICE_ID: "AirCode_device_id" // Match AuthService
+        USER_SESSION: "AirCode_user_session",
+        DEVICE_ID: "AirCode_device_id",
+        DEVICE_GUID: "AirCode_device_guid" // Persistent GUID
     },
 
-    // Collect comprehensive device information for fingerprinting
+    // Generate a persistent GUID for this device (only created once)
+    //not sure how this works but it does
+    getOrCreateDeviceGuid: function() {
+        let deviceGuid = localStorage.getItem(this.STORAGE_KEYS.DEVICE_GUID);
+
+        if (!deviceGuid) {
+            // Generate a new GUID
+            deviceGuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                const r = Math.random() * 16 | 0;
+                const v = c === 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+
+            localStorage.setItem(this.STORAGE_KEYS.DEVICE_GUID, deviceGuid);
+            console.log('[OfflineCredentials] Generated new device GUID:', deviceGuid);
+        }
+
+        return deviceGuid;
+    },
+
+    // Collect minimal, stable device information for fingerprinting
     collectDeviceInfo: function() {
         try {
-            // Create canvas fingerprint (similar to AuthService GetDeviceIdAsync)
+            // Create canvas fingerprint for hardware consistency
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
             ctx.textBaseline = 'top';
             ctx.font = '14px Arial';
-            ctx.fillText('Device fingerprint', 2, 2);
+            ctx.fillText('AirCode Device', 2, 2);
 
             return {
-                userAgent: navigator.userAgent,
-                language: navigator.language,
-                languages: navigator.languages ? navigator.languages.join(',') : '',
-                platform: navigator.platform,
-                screenWidth: window.screen.width,
-                screenHeight: window.screen.height,
-                screenResolution: screen.width + 'x' + screen.height,
-                colorDepth: screen.colorDepth,
-                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-                timezoneOffset: new Date().getTimezoneOffset(),
+                userAgent: navigator.userAgent || 'unknown',
+                language: navigator.language || 'en',
+                screenResolution: `${screen.width}x${screen.height}`,
+                colorDepth: screen.colorDepth || 24,
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
                 canvas: canvas.toDataURL(),
-                cookieEnabled: navigator.cookieEnabled,
-                doNotTrack: navigator.doNotTrack,
-                hardwareConcurrency: navigator.hardwareConcurrency || 'unknown'
+                hardwareConcurrency: navigator.hardwareConcurrency || 4,
+                deviceGuid: this.getOrCreateDeviceGuid() // Persistent GUID
             };
         } catch (error) {
             console.warn('Error collecting device info:', error);
             // Fallback minimal info
             return {
-                userAgent: navigator.userAgent || 'unknown',
-                language: navigator.language || 'en',
-                platform: navigator.platform || 'unknown',
-                screenWidth: window.screen.width || 0,
-                screenHeight: window.screen.height || 0,
-                timezone: 'UTC'
+                userAgent: 'unknown',
+                language: 'en',
+                screenResolution: '1920x1080',
+                colorDepth: 24,
+                timezone: 'UTC',
+                canvas: 'fallback',
+                hardwareConcurrency: 4,
+                deviceGuid: this.getOrCreateDeviceGuid()
             };
         }
     },
 
-    // Create a device fingerprint hash (similar to AuthService logic)
+    // Create a stable device fingerprint hash
     createDeviceFingerprint: async function() {
         const deviceInfo = this.collectDeviceInfo();
-        const deviceInfoStr = JSON.stringify(deviceInfo);
 
-        // Create hash similar to AuthService method
+        // Create deterministic string (excluding time-dependent data)
+        const deterministicInfo = {
+            userAgent: deviceInfo.userAgent,
+            language: deviceInfo.language,
+            screenResolution: deviceInfo.screenResolution,
+            colorDepth: deviceInfo.colorDepth,
+            timezone: deviceInfo.timezone,
+            canvas: deviceInfo.canvas,
+            hardwareConcurrency: deviceInfo.hardwareConcurrency,
+            deviceGuid: deviceInfo.deviceGuid
+        };
+
+        const deviceInfoStr = JSON.stringify(deterministicInfo);
+
+        // Create stable hash
         let hash = 0;
         for (let i = 0; i < deviceInfoStr.length; i++) {
             const char = deviceInfoStr.charCodeAt(i);
@@ -65,9 +97,12 @@ window.offlineCredentialsHandler = {
             hash = hash & hash; // Convert to 32-bit integer
         }
 
-        const fingerprintId = 'device_' + Math.abs(hash).toString(16) + '_' + Date.now().toString(16);
+        // Create fingerprint ID using GUID prefix for uniqueness
+        const deviceGuid = deviceInfo.deviceGuid;
+        const guidPrefix = deviceGuid.substring(0, 8); // First 8 chars of GUID
+        const fingerprintId = `device_${guidPrefix}_${Math.abs(hash).toString(16)}`;
 
-        // Store device ID in localStorage (matching AuthService)
+        // Store device ID in localStorage
         localStorage.setItem(this.STORAGE_KEYS.DEVICE_ID, fingerprintId);
 
         return fingerprintId;
@@ -78,24 +113,24 @@ window.offlineCredentialsHandler = {
         try {
             console.log('[OfflineCredentials] Storing credentials for user:', userId, 'role:', role);
 
-            // Generate device fingerprint
+            // Generate stable device fingerprint
             const deviceFingerprint = await this.createDeviceFingerprint();
 
-            // Calculate expiration date (hours instead of days to match AuthService)
+            // Calculate expiration date
             const expirationDate = new Date();
             expirationDate.setHours(expirationDate.getHours() + expirationHours);
 
             // Create base credentials object
             const credentials = {
                 userId: userId,
-                role: role.toLowerCase(), // Normalize role case
+                role: role.toLowerCase(),
                 deviceFingerprint: deviceFingerprint,
                 issuedAt: new Date().toISOString(),
                 expiresAt: expirationDate.toISOString(),
-                loginTimestamp: Math.floor(Date.now() / 1000) // Unix timestamp like AuthService
+                loginTimestamp: Math.floor(Date.now() / 1000)
             };
 
-            // Add role-specific data based on user role
+            // Add role-specific data
             switch (role.toLowerCase()) {
                 case 'lectureradmin':
                     if (additionalData.lecturerId) {
@@ -120,7 +155,7 @@ window.offlineCredentialsHandler = {
             localStorage.setItem(this.STORAGE_KEYS.AUTH_KEY, key);
             localStorage.setItem(this.STORAGE_KEYS.AUTH_IV, iv);
 
-            // Create user session data (matching AuthService structure)
+            // Create user session data
             const userData = {
                 userId: userId,
                 role: role.toLowerCase(),
@@ -192,16 +227,16 @@ window.offlineCredentialsHandler = {
 
             if (expiresAt < now) {
                 console.warn('[OfflineCredentials] Credentials have expired');
-                this.clearCredentials(); // Auto-cleanup expired credentials
+                this.clearCredentials();
                 return null;
             }
 
             // Get current device fingerprint for validation
             const currentDeviceFingerprint = await this.createDeviceFingerprint();
 
-            // Verify device hasn't changed significantly
+            // Verify device fingerprint matches
             if (signedCredentials.deviceFingerprint &&
-                !this.isDeviceFingerprintValid(currentDeviceFingerprint, signedCredentials.deviceFingerprint)) {
+                signedCredentials.deviceFingerprint !== currentDeviceFingerprint) {
                 console.warn('[OfflineCredentials] Device fingerprint validation failed');
                 return null;
             }
@@ -218,7 +253,7 @@ window.offlineCredentialsHandler = {
 
             if (!isValid) {
                 console.warn('[OfflineCredentials] Invalid signature on credentials');
-                this.clearCredentials(); // Auto-cleanup corrupted credentials
+                this.clearCredentials();
                 return null;
             }
 
@@ -244,23 +279,8 @@ window.offlineCredentialsHandler = {
 
         } catch (error) {
             console.error('[OfflineCredentials] Failed to retrieve credentials:', error);
-            this.clearCredentials(); // Cleanup on error
+            this.clearCredentials();
             return null;
-        }
-    },
-
-    // Device fingerprint validation with some tolerance for minor changes
-    isDeviceFingerprintValid: function(current, stored) {
-        if (current === stored) return true;
-
-        // Extract the hash part from device IDs for comparison
-        try {
-            const currentHash = current.split('_')[1];
-            const storedHash = stored.split('_')[1];
-            return currentHash === storedHash;
-        } catch (error) {
-            console.warn('[OfflineCredentials] Error comparing device fingerprints:', error);
-            return false;
         }
     },
 
@@ -300,7 +320,6 @@ window.offlineCredentialsHandler = {
 
             const parsedCredentials = JSON.parse(credentials);
 
-            // Only return lecturer ID for lecturer admin role
             if (parsedCredentials.role === 'lectureradmin') {
                 return parsedCredentials.lecturerId || null;
             }
@@ -320,7 +339,6 @@ window.offlineCredentialsHandler = {
 
             const parsedCredentials = JSON.parse(credentials);
 
-            // Only return matric number for student or course admin roles
             const allowedRoles = ['student', 'courseadmin'];
             if (allowedRoles.includes(parsedCredentials.role)) {
                 return parsedCredentials.matricNumber || null;
@@ -349,7 +367,12 @@ window.offlineCredentialsHandler = {
         }
     },
 
-    // Get user session data (matching AuthService structure)
+    // Get the persistent device GUID
+    getDeviceGuid: function() {
+        return this.getOrCreateDeviceGuid();
+    },
+
+    // Get user session data
     getUserSession: function() {
         try {
             const sessionData = localStorage.getItem(this.STORAGE_KEYS.USER_SESSION);
@@ -375,12 +398,12 @@ window.offlineCredentialsHandler = {
     clearCredentials: function() {
         console.log('[OfflineCredentials] Clearing all stored credentials');
 
-        // Remove all credential-related items
+        // Remove credential-related items
         localStorage.removeItem(this.STORAGE_KEYS.CREDENTIALS);
         localStorage.removeItem(this.STORAGE_KEYS.AUTH_KEY);
         localStorage.removeItem(this.STORAGE_KEYS.AUTH_IV);
         localStorage.removeItem(this.STORAGE_KEYS.USER_SESSION);
-        // Note: We keep DEVICE_ID as it should persist across sessions
+        // Note: We keep DEVICE_ID and DEVICE_GUID as they should persist
 
         return true;
     },
@@ -392,6 +415,7 @@ window.offlineCredentialsHandler = {
             const hasKey = localStorage.getItem(this.STORAGE_KEYS.AUTH_KEY) !== null;
             const hasIv = localStorage.getItem(this.STORAGE_KEYS.AUTH_IV) !== null;
             const hasSession = localStorage.getItem(this.STORAGE_KEYS.USER_SESSION) !== null;
+            const deviceGuid = this.getDeviceGuid();
 
             let credentialInfo = null;
             if (hasCredentials && hasKey && hasIv) {
@@ -414,6 +438,7 @@ window.offlineCredentialsHandler = {
                 hasIv,
                 hasSession,
                 isValid: credentialInfo !== null,
+                deviceGuid,
                 credentialInfo
             };
         } catch (error) {
@@ -424,6 +449,7 @@ window.offlineCredentialsHandler = {
                 hasIv: false,
                 hasSession: false,
                 isValid: false,
+                deviceGuid: this.getDeviceGuid(),
                 error: error.message
             };
         }

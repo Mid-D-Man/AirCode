@@ -1,0 +1,17 @@
+@using AirCode.Services.Guards
+
+@code{
+    
+public abstract class BusinessHoursComponent : ComponentBase
+{
+[Inject] protected IBusinessHoursGuard BusinessHoursGuard { get; set; } = default!;
+[Inject] protected NavigationManager Navigation { get; set; } = default!;
+
+protected override async Task OnInitializedAsync()
+{
+await BusinessHoursGuard.ValidateAccessAsync(Navigation);
+await base.OnInitializedAsync();
+}
+}
+
+}

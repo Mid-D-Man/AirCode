@@ -26,5 +26,9 @@ public interface ISupabaseEdgeFunctionService
     [Obsolete("Use ValidateQRPayloadAsync for new payload structure")]
     Task<QRValidationResult> ValidateQRCodeAsync(string qrCodePayload);
     
+    /// <summary>
+    /// Get server time from Supabase edge function
+    /// </summary>
+    Task<string> GetServerTimeAsync(string timeType = "utc");
     Task<string> GetRandomCatImageAsync();
 }

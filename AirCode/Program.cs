@@ -23,7 +23,6 @@ using AirCode.Utilities.HelperScripts;
 
 // ============================================================================
 // AirCode Blazor WebAssembly Application Configuration
-// Educational platform with multi-role authentication and real-time features
 // ============================================================================
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
@@ -147,6 +146,7 @@ builder.Services.AddScoped<AirCode.Services.Firebase.IFirestoreService, AirCode.
 
 // Supabase integration for backend services
 builder.Services.AddSupabaseServices();
+builder.Services.AddBusinessHoursGuard();
 builder.Services.AddScoped<IAttendanceSessionService, AttendanceSessionService>();
 // Supabase client configuration optimized for WebAssembly
 builder.Services.AddScoped<Supabase.Client>(provider =>
