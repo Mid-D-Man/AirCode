@@ -111,7 +111,7 @@
     {
         new("settings", "Settings", "/Admin/Settings", false, new[] { "superioradmin", "lectureradmin", "courserepadmin", "assistantcourserep" }),
         new("contact", "Contact", "/Admin/Contact", false, new[] { "superioradmin", "lectureradmin", "courserepadmin", "assistantcourserep" }),
-        new("logout", "Logout", null, false, new[] { "superioradmin", "lectureradmin", "courserepadmin", "assistantcourserep" }, HandleLogout)
+        new("logout", "logout", "logout", false, new[] { "superioradmin", "lectureradmin", "courserepadmin", "assistantcourserep" }, HandleLogout)
     };
 
     private List<NavItemExtended> FilteredNavigationItems => 

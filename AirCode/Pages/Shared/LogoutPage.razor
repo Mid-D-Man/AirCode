@@ -4,6 +4,7 @@
 @using AirCode.Services.Storage
 @using AirCode.Components.SharedPrefabs.Spinner
 @using AirCode.Services.Auth
+@using AirCode.Utilities.HelperScripts
 @inject NavigationManager Navigation
 @inject IConfiguration Configuration
 @inject IOfflineCredentialsService OfflineCredentialsService
@@ -52,6 +53,7 @@ else if (isLoggingOut)
 
         try
         {
+            MID_HelperFunctions.DebugMessage("Calling Logout...");
             // Check if user is authenticated
             var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
 
