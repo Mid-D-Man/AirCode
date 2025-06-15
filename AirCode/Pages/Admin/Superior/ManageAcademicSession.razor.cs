@@ -29,7 +29,8 @@ namespace AirCode.Pages.Admin.Superior
         private SemesterFormModel semesterForm = new();
         private SemesterFormModel firstSemesterForm = new();
         private bool includeFirstSemester = true;
-        
+        // Add this with other private fields
+private AirCode.Components.SharedPrefabs.Cards.NotificationComponent notificationComponent;
         // Timer for countdown
         private System.Threading.Timer timer;
         
@@ -40,7 +41,9 @@ namespace AirCode.Pages.Admin.Superior
         // Firebase constants
         private const string ACADEMIC_SESSIONS_COLLECTION = "ACADEMIC_SESSIONS";
         #endregion
-
+#region Component References
+[Parameter] public AirCode.Components.SharedPrefabs.Cards.NotificationComponent NotificationComponent { get; set; }
+#endregion
         #region Component Lifecycle
         protected override async Task OnInitializedAsync()
         {
@@ -74,39 +77,41 @@ namespace AirCode.Pages.Admin.Superior
         #endregion
 
         #region Data Loading
-        private async Task LoadSessions()
+private async Task LoadSessions()
+{
+    try
+    {
+        Console.WriteLine($"Loading sessions from Firebase collection: {ACADEMIC_SESSIONS_COLLECTION}");
+        
+        var allSessions = await GetAllSessionsFromFirebase();
+        
+        if (allSessions != null && allSessions.Any())
         {
-            try
-            {
-                Console.WriteLine($"Loading sessions from Firebase collection: {ACADEMIC_SESSIONS_COLLECTION}");
-                
-                var allSessions = await GetAllSessionsFromFirebase();
-                
-                if (allSessions != null && allSessions.Any())
-                {
-                    Console.WriteLine($"Successfully loaded {allSessions.Count} sessions from Firebase");
-                    ProcessLoadedSessions(allSessions);
-                }
-                else
-                {
-                    Console.WriteLine("No sessions found in Firebase");
-                    // Initialize empty lists - no demo data creation
-                    currentSession = null;
-                    nextSession = null;
-                    archivedSessions = new List<AcademicSession>();
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error loading sessions: {ex.Message}");
-                Console.WriteLine($"Stack trace: {ex.StackTrace}");
-                // Initialize empty state on error
-                currentSession = null;
-                nextSession = null;
-                archivedSessions = new List<AcademicSession>();
-            }
+            Console.WriteLine($"Successfully loaded {allSessions.Count} sessions from Firebase");
+            ProcessLoadedSessions(allSessions);
+            NotificationComponent?.ShowInfo($"Loaded {allSessions.Count} academic sessions");
         }
-
+        else
+        {
+            Console.WriteLine("No sessions found in Firebase");
+            // Initialize empty lists - no demo data creation
+            currentSession = null;
+            nextSession = null;
+            archivedSessions = new List<AcademicSession>();
+            NotificationComponent?.ShowInfo("No academic sessions found. Create your first session to get started.");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error loading sessions: {ex.Message}");
+        Console.WriteLine($"Stack trace: {ex.StackTrace}");
+        // Initialize empty state on error
+        currentSession = null;
+        nextSession = null;
+        archivedSessions = new List<AcademicSession>();
+        NotificationComponent?.ShowError($"Failed to load sessions: {ex.Message}");
+    }
+}
         private void ProcessLoadedSessions(List<AcademicSession> allSessions)
         {
             if (allSessions?.Count > 0)
@@ -244,32 +249,35 @@ namespace AirCode.Pages.Admin.Superior
         #endregion
 
         #region Session Management
-        public async Task SaveModal()
+  public async Task SaveModal()
+{
+    try
+    {
+        Console.WriteLine($"Saving modal data for {activeModal}");
+        
+        if (activeModal == ModalType.CreateSession)
         {
-            try
-            {
-                Console.WriteLine($"Saving modal data for {activeModal}");
-                
-                if (activeModal == ModalType.CreateSession)
-                {
-                    await CreateNewSession();
-                }
-                else if (activeModal == ModalType.CreateSemester)
-                {
-                    await CreateNewSemester();
-                }
-                
-                CloseModal();
-                CheckForWarnings();
-                
-                Console.WriteLine("Modal saved successfully");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error saving modal: {ex.Message}");
-                Console.WriteLine($"Stack trace: {ex.StackTrace}");
-            }
+            await CreateNewSession();
+            NotificationComponent?.ShowSuccess($"Academic session {sessionForm.YearStart}-{sessionForm.YearEnd} created successfully!");
         }
+        else if (activeModal == ModalType.CreateSemester)
+        {
+            await CreateNewSemester();
+            NotificationComponent?.ShowSuccess($"{GetSemesterName(semesterForm.Type)} added successfully!");
+        }
+        
+        CloseModal();
+        CheckForWarnings();
+        
+        Console.WriteLine("Modal saved successfully");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error saving modal: {ex.Message}");
+        Console.WriteLine($"Stack trace: {ex.StackTrace}");
+        NotificationComponent?.ShowError($"Failed to save: {ex.Message}");
+    }
+}
 
         private async Task CreateNewSession()
         {
@@ -379,19 +387,21 @@ namespace AirCode.Pages.Admin.Superior
 
         #region Warning System
         private void CheckForWarnings()
+{
+    if (currentSession != null && nextSession == null)
+    {
+        DateTime endDate = GetEndDate(currentSession);
+        TimeSpan timeRemaining = endDate - DateTime.Now;
+        
+        if (timeRemaining.TotalDays <= 30)
         {
-            if (currentSession != null && nextSession == null)
-            {
-                DateTime endDate = GetEndDate(currentSession);
-                TimeSpan timeRemaining = endDate - DateTime.Now;
-                
-                if (timeRemaining.TotalDays <= 30)
-                {
-                    showWarning = true;
-                    Console.WriteLine($"Warning: Current session ends in {timeRemaining.TotalDays} days");
-                }
-            }
+            showWarning = true;
+            Console.WriteLine($"Warning: Current session ends in {timeRemaining.TotalDays} days");
+            NotificationComponent?.ShowWarning(
+                $"Current academic session ends in {(int)timeRemaining.TotalDays} days. Consider creating the next session.");
         }
+    }
+}
 
         public void DismissWarning()
         {
@@ -542,51 +552,52 @@ namespace AirCode.Pages.Admin.Superior
             }
         }
         
-        private async Task SaveSessionToFirebase(AcademicSession session)
+    private async Task SaveSessionToFirebase(AcademicSession session)
+{
+    try
+    {
+        Console.WriteLine($"Saving session {session.SessionId} to Firebase");
+        
+        // Use session ID as document ID for readable Firebase structure
+        var documentId = await FirestoreService.AddDocumentAsync<AcademicSession>(
+            ACADEMIC_SESSIONS_COLLECTION,
+            session,
+            session.SessionId // Use session ID as custom document ID
+        );
+        
+        if (!string.IsNullOrEmpty(documentId))
         {
-            try
+            Console.WriteLine($"Successfully saved session: {session.SessionId}");
+        }
+        else
+        {
+            // If add fails, try update (session might already exist)
+            bool updateSuccess = await FirestoreService.UpdateDocumentAsync<AcademicSession>(
+                ACADEMIC_SESSIONS_COLLECTION,
+                session.SessionId,
+                session
+            );
+            
+            if (updateSuccess)
             {
-                Console.WriteLine($"Saving session {session.SessionId} to Firebase");
-                
-                // Use session ID as document ID for readable Firebase structure
-                var documentId = await FirestoreService.AddDocumentAsync<AcademicSession>(
-                    ACADEMIC_SESSIONS_COLLECTION,
-                    session,
-                    session.SessionId // Use session ID as custom document ID
-                );
-                
-                if (!string.IsNullOrEmpty(documentId))
-                {
-                    Console.WriteLine($"Successfully saved session: {session.SessionId}");
-                }
-                else
-                {
-                    // If add fails, try update (session might already exist)
-                    bool updateSuccess = await FirestoreService.UpdateDocumentAsync<AcademicSession>(
-                        ACADEMIC_SESSIONS_COLLECTION,
-                        session.SessionId,
-                        session
-                    );
-                    
-                    if (updateSuccess)
-                    {
-                        Console.WriteLine($"Successfully updated existing session: {session.SessionId}");
-                    }
-                    else
-                    {
-                        Console.WriteLine($"Failed to save or update session: {session.SessionId}");
-                        throw new Exception($"Failed to save session {session.SessionId} to Firebase");
-                    }
-                }
+                Console.WriteLine($"Successfully updated existing session: {session.SessionId}");
             }
-            catch (Exception ex)
+            else
             {
-                Console.WriteLine($"Error saving session to Firebase: {ex.Message}");
-                Console.WriteLine($"Session ID: {session.SessionId}");
-                Console.WriteLine($"Stack trace: {ex.StackTrace}");
-                throw; // Re-throw to allow calling method to handle
+                Console.WriteLine($"Failed to save or update session: {session.SessionId}");
+                throw new Exception($"Failed to save session {session.SessionId} to Firebase");
             }
         }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error saving session to Firebase: {ex.Message}");
+        Console.WriteLine($"Session ID: {session.SessionId}");
+        Console.WriteLine($"Stack trace: {ex.StackTrace}");
+        NotificationComponent?.ShowError($"Database error: Failed to save session {session.SessionId}");
+        throw; // Re-throw to allow calling method to handle
+    }
+}
         #endregion
 
         #region Form Models and Enums
