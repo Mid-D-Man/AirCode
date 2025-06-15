@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using Newtonsoft.Json;
 using System.ComponentModel;
-
+using AirCode.Components.SharedPrefabs.Cards;
 namespace AirCode.Pages.Admin.Superior
 {
     public partial class ManageAcademicSession : IDisposable
