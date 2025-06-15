@@ -1,0 +1,30 @@
+using System;
+
+namespace AirCode.Utilities.NotificationData
+{
+    public class NotificationItem
+    {
+        public Guid Id { get; set; }
+        public string Message { get; set; } = string.Empty;
+        public NotificationType Type { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public int Duration { get; set; } = 5000;
+        public bool IsRemoving { get; set; } = false;
+    }
+
+    public enum NotificationType
+    {
+        Success,
+        Error,
+        Info,
+        Warning
+    }
+
+    public enum NotificationPosition
+    {
+        TopRight,
+        TopLeft,
+        BottomRight,
+        BottomLeft
+    }
+}
