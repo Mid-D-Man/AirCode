@@ -19,6 +19,7 @@
             @bind-value="SearchTerm" 
             @bind-value:event="oninput"
             @onkeydown="HandleKeyDown"
+            @onkeydown:preventDefault="@(ShouldPreventDefaultKey)"
             @onfocus="HandleFocus"
             @onblur="HandleBlur"
             placeholder="@Placeholder"
@@ -242,15 +243,12 @@
         switch (e.Key)
         {
             case "ArrowDown":
-                e.PreventDefault();
                 MoveSelection(1);
                 break;
             case "ArrowUp":
-                e.PreventDefault();
                 MoveSelection(-1);
                 break;
             case "Enter":
-                e.PreventDefault();
                 await SelectCurrentItem();
                 break;
             case "Escape":
@@ -259,6 +257,11 @@
                 StateHasChanged();
                 break;
         }
+    }
+
+    private bool ShouldPreventDefaultKey(KeyboardEventArgs e)
+    {
+        return e.Key == "ArrowDown" || e.Key == "ArrowUp" || e.Key == "Enter";
     }
 
     private void MoveSelection(int direction)
