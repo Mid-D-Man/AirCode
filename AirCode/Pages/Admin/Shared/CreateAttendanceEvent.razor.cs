@@ -46,7 +46,7 @@ using SessionData = AirCode.Services.Attendance.SessionData;
         // Floating QR code properties
         private bool showFloatingQR = false;
         private FloatingQRWindow.FloatingSessionData floatingSessionData;
-        private bool temporalKeyEnabled = false; // Testing toggle
+      private bool useTemporalKeyRefresh = false; // Renamed from temporalKeyEnabled // Testing toggle
         private System.Threading.Timer temporalKeyUpdateTimer;
 
         
@@ -180,11 +180,11 @@ using SessionData = AirCode.Services.Attendance.SessionData;
             ExpirationTime = sessionEndTime,
             LectureId = null, // Set if you have lecturer info
             AttendanceRecords = "[]", // Empty initially
-            TemporalKeyEnabled = temporalKeyEnabled
+            UseTemporalKeyRefresh = useTemporalKeyRefresh
         };
 
         // Generate initial temporal key if enabled
-        if (temporalKeyEnabled)
+        if (useTemporalKeyRefresh)
         {
             attendanceSession.TemporalKey = GenerateTemporalKey(sessionModel.SessionId, sessionModel.StartTime);
         }
@@ -215,7 +215,7 @@ using SessionData = AirCode.Services.Attendance.SessionData;
         SessionStateService.UpdateCurrentSession("default", sessionModel);
 
         // Start temporal key update timer if enabled
-        if (temporalKeyEnabled)
+        if (useTemporalKeyRefresh)
         {
             StartTemporalKeyUpdateTimer();
         }
@@ -261,7 +261,7 @@ private void StartTemporalKeyUpdateTimer()
 
 private async Task UpdateTemporalKey()
 {
-    if (!temporalKeyEnabled || !isSessionStarted || currentActiveSession == null)
+    if (!useTemporalKeyRefresh || !isSessionStarted || currentActiveSession == null)
         return;
 
     try
