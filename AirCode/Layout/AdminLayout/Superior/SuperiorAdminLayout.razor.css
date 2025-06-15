@@ -20,7 +20,7 @@
     display: flex;
     flex-direction: column;
     height: 100vh;
-    margin-left: 1rem;
+    margin-left: 0.5rem;
     transition: margin-left 0.35s cubic-bezier(0.4, 0.0, 0.2, 1);
     transform: translateZ(0);
 }
@@ -30,10 +30,10 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0 2rem;
+    padding: 0 6rem 0 1rem;
     background-color: var(--bg-secondary);
     border: 1px solid var(--border);
-    margin: 1rem 1rem 0 0;
+    margin: 1rem 3rem 0 0;
     border-radius: 15px;
     backdrop-filter: blur(10px);
 
@@ -88,12 +88,12 @@
 
 .content-bottom {
     flex: 1;
-    padding: 2rem;
+    padding: 1rem 3rem 2rem 1rem;
     overflow-y: auto;
     overflow-x: hidden;
     background-color: var(--bg-secondary);
     border: 1px solid var(--border);
-    margin: 1rem 1rem 1rem 0;
+    margin: 1rem 3rem 1rem 0;
     border-radius: 15px;
     backdrop-filter: blur(10px);
 
@@ -127,40 +127,26 @@
     background: linear-gradient(180deg, var(--text-secondary), var(--text-primary));
 }
 
-/* Responsive adjustments for collapsed menu - INCREASED RIGHT MARGINS BY 3X */
+/* Responsive adjustments for collapsed menu */
 @media (min-width: 1025px) {
     .nav-menu.collapsed ~ .main-content {
-        margin-left: calc(80px + 1rem);
-    }
-    
-    .nav-menu.collapsed ~ .main-content .content-top {
-        margin-right: 3rem; /* Increased from 1rem to 3rem (3x) */
-    }
-    
-    .nav-menu.collapsed ~ .main-content .content-bottom {
-        margin-right: 3rem; /* Increased from 1rem to 3rem (3x) */
+        margin-left: calc(80px + 0.5rem);
     }
 }
 
 @media (min-width: 769px) and (max-width: 1024px) {
     .nav-menu.collapsed ~ .main-content {
-        margin-left: calc(70px + 1rem);
-    }
-    
-    .nav-menu.collapsed ~ .main-content .content-top {
-        margin-right: 4.5rem; /* Increased from 1.5rem to 4.5rem (3x) */
-    }
-    
-    .nav-menu.collapsed ~ .main-content .content-bottom {
-        margin-right: 4.5rem; /* Increased from 1.5rem to 4.5rem (3x) */
+        margin-left: calc(70px + 0.5rem);
     }
 
     .content-top {
-        padding: 0 1.5rem;
+        padding: 0 4.5rem 0 0.75rem;
+        margin-right: 2.25rem;
     }
 
     .content-bottom {
-        padding: 1.5rem;
+        padding: 0.75rem 2.25rem 1.5rem 0.75rem;
+        margin-right: 2.25rem;
     }
 
     .quick-stats {
@@ -179,15 +165,7 @@
     }
 
     .nav-menu.collapsed ~ .main-content {
-        margin-left: calc(60px + 0.5rem);
-    }
-    
-    .nav-menu.collapsed ~ .main-content .content-top {
-        margin-right: 3.75rem; /* Increased from 1.25rem to 3.75rem (3x) */
-    }
-    
-    .nav-menu.collapsed ~ .main-content .content-bottom {
-        margin-right: 3.75rem; /* Increased from 1.25rem to 3.75rem (3x) */
+        margin-left: calc(60px + 0.25rem);
     }
 
     .content-top {
@@ -195,13 +173,13 @@
         min-height: 80px;
         flex-direction: column;
         gap: 1rem;
-        padding: 1rem;
-        margin-right: 1.25rem; /* Increased by 2.5x (0.5rem * 2.5 = 1.25rem) */
+        padding: 1rem 3.75rem 1rem 0.5rem;
+        margin-right: 3.75rem;
     }
 
     .content-bottom {
-        margin-right: 1.25rem; /* Increased by 2.5x (0.5rem * 2.5 = 1.25rem) */
-        padding: 1rem;
+        margin-right: 3.75rem;
+        padding: 0.5rem 1.875rem 1rem 0.5rem;
     }
 
     .quick-stats {
@@ -237,27 +215,22 @@
     }
 
     .nav-menu.collapsed ~ .main-content {
-        margin-left: calc(50px + 0.25rem);
-    }
-    
-    .nav-menu.collapsed ~ .main-content .content-top,
-    .nav-menu.collapsed ~ .main-content .content-bottom {
-        margin-right: 3.75rem; /* Increased from 1.25rem to 3.75rem (3x) */
+        margin-left: calc(50px + 0.125rem);
     }
 
     .content-top,
     .content-bottom {
-        margin: 0.5rem 1.25rem 0.5rem 0.5rem; /* Right margin increased by 2.5x (0.5rem * 2.5 = 1.25rem) */
+        margin: 0.5rem 3.75rem 0.5rem 0.25rem;
         border-radius: 10px;
     }
 
     .content-top {
-        padding: 0.75rem;
+        padding: 0.75rem 1.875rem 0.75rem 0.375rem;
         min-height: 70px;
     }
 
     .content-bottom {
-        padding: 0.75rem;
+        padding: 0.375rem 1.125rem 0.75rem 0.375rem;
         margin-bottom: 0.5rem;
     }
 
