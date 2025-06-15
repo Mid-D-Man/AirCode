@@ -127,16 +127,32 @@
     background: linear-gradient(180deg, var(--text-secondary), var(--text-primary));
 }
 
-/* Responsive adjustments for collapsed menu */
+/* Responsive adjustments for collapsed menu - INCREASED RIGHT MARGINS BY 3X */
 @media (min-width: 1025px) {
     .nav-menu.collapsed ~ .main-content {
         margin-left: calc(80px + 1rem);
+    }
+    
+    .nav-menu.collapsed ~ .main-content .content-top {
+        margin-right: 3rem; /* Increased from 1rem to 3rem (3x) */
+    }
+    
+    .nav-menu.collapsed ~ .main-content .content-bottom {
+        margin-right: 3rem; /* Increased from 1rem to 3rem (3x) */
     }
 }
 
 @media (min-width: 769px) and (max-width: 1024px) {
     .nav-menu.collapsed ~ .main-content {
         margin-left: calc(70px + 1rem);
+    }
+    
+    .nav-menu.collapsed ~ .main-content .content-top {
+        margin-right: 4.5rem; /* Increased from 1.5rem to 4.5rem (3x) */
+    }
+    
+    .nav-menu.collapsed ~ .main-content .content-bottom {
+        margin-right: 4.5rem; /* Increased from 1.5rem to 4.5rem (3x) */
     }
 
     .content-top {
@@ -164,6 +180,14 @@
 
     .nav-menu.collapsed ~ .main-content {
         margin-left: calc(60px + 0.5rem);
+    }
+    
+    .nav-menu.collapsed ~ .main-content .content-top {
+        margin-right: 3.75rem; /* Increased from 1.25rem to 3.75rem (3x) */
+    }
+    
+    .nav-menu.collapsed ~ .main-content .content-bottom {
+        margin-right: 3.75rem; /* Increased from 1.25rem to 3.75rem (3x) */
     }
 
     .content-top {
@@ -214,6 +238,11 @@
 
     .nav-menu.collapsed ~ .main-content {
         margin-left: calc(50px + 0.25rem);
+    }
+    
+    .nav-menu.collapsed ~ .main-content .content-top,
+    .nav-menu.collapsed ~ .main-content .content-bottom {
+        margin-right: 3.75rem; /* Increased from 1.25rem to 3.75rem (3x) */
     }
 
     .content-top,
@@ -317,4 +346,4 @@ body.dark-mode .content-bottom::-webkit-scrollbar-thumb {
 .stat-item:focus-visible {
     outline: 2px solid var(--button-primary);
     outline-offset: 2px;
-    }
+}
