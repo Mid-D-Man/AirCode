@@ -19,7 +19,6 @@
             @bind-value="SearchTerm" 
             @bind-value:event="oninput"
             @onkeydown="HandleKeyDown"
-            @onkeydown:preventDefault="@(ShouldPreventDefaultKey)"
             @onfocus="HandleFocus"
             @onblur="HandleBlur"
             placeholder="@Placeholder"
@@ -142,8 +141,8 @@
     private SearchMode Mode = SearchMode.Suggestions;
     private ElementReference searchContainer;
     private ElementReference searchInput;
-    private Timer _debounceTimer;
-    private DotNetObjectReference<DynamicSearch> _dotNetRef;
+    private Timer? _debounceTimer;
+    private DotNetObjectReference<DynamicSearch>? _dotNetRef;
 
     private string SearchTerm
     {
@@ -172,7 +171,7 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        if (firstRender && _dotNetRef != null)
         {
             await JSRuntime.InvokeVoidAsync("setupClickOutside", searchContainer, _dotNetRef);
         }
@@ -240,6 +239,8 @@
 
     private async Task HandleKeyDown(KeyboardEventArgs e)
     {
+        var shouldPreventDefault = e.Key == "ArrowDown" || e.Key == "ArrowUp" || e.Key == "Enter";
+        
         switch (e.Key)
         {
             case "ArrowDown":
@@ -257,11 +258,6 @@
                 StateHasChanged();
                 break;
         }
-    }
-
-    private bool ShouldPreventDefaultKey(KeyboardEventArgs e)
-    {
-        return e.Key == "ArrowDown" || e.Key == "ArrowUp" || e.Key == "Enter";
     }
 
     private void MoveSelection(int direction)
@@ -370,7 +366,14 @@
         
         if (searchContainer.Context != null)
         {
-            await JSRuntime.InvokeVoidAsync("cleanupClickOutside", searchContainer);
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("cleanupClickOutside", searchContainer);
+            }
+            catch (JSDisconnectedException)
+            {
+                // Expected when the circuit is disconnected
+            }
         }
     }
 }
