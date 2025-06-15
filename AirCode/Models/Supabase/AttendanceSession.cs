@@ -26,8 +26,7 @@ namespace AirCode.Models.Supabase
         [Column("expiration_time")]
         public DateTime ExpirationTime { get; set; }
         
-        [Column("lecture_id")]
-        public string? LectureId { get; set; }
+     
         
         [Column("attendance_records")]
         public string AttendanceRecords { get; set; } = "[]";
@@ -74,5 +73,6 @@ public int SecurityFeatures { get; set; } = 0; // Maps to AdvancedSecurityFeatur
         public bool HasScannedAttendance { get; set; }
         public DateTime? ScanTime { get; set; }
         public bool IsOnlineScan { get; set; }
+        public string? DeviceGUID {get;set;} = string.Empty;
     }
 }
