@@ -1,10 +1,12 @@
 @using System.Timers
 @implements IDisposable
 
-<div class="notification-container @_positionClass">
+<div class="notification-container @_positionClass" style="--auto-dismiss-time: @(AutoDismissTime)ms">
     @foreach (var notification in _notifications)
     {
-        <div class="notification @notification.Type.ToString().ToLower()" @key="notification.Id">
+        <div class="notification @notification.Type.ToString().ToLower() @(notification.IsRemoving ? "removing" : "")" 
+             @key="notification.Id"
+             @onanimationend="@(() => OnAnimationEnd(notification))">
             <div class="notification-content">
                 <div class="notification-icon">
                     @switch (notification.Type)
@@ -23,9 +25,13 @@
                             break;
                     }
                 </div>
-                <div class="notification-message">@notification.Message</div>
+                <div class="notification-message">@((MarkupString)notification.Message)</div>
             </div>
-            <button class="notification-close" @onclick="() => RemoveNotification(notification.Id)">
+            <button class="notification-close" 
+                    @onclick="() => RemoveNotification(notification.Id)"
+                    @onclick:stopPropagation="true"
+                    aria-label="Close notification"
+                    title="Close notification">
                 <i class="fas fa-times"></i>
             </button>
         </div>
@@ -36,12 +42,22 @@
     private List<NotificationItem> _notifications = new();
     private string _positionClass = "top-right";
     private Timer _timer;
+    private readonly object _lockObject = new();
 
     [Parameter]
     public NotificationPosition Position { get; set; } = NotificationPosition.TopRight;
 
     [Parameter]
     public int AutoDismissTime { get; set; } = 5000; // time in milliseconds
+
+    [Parameter]
+    public int MaxNotifications { get; set; } = 5; // Maximum notifications to show
+
+    [Parameter]
+    public bool EnableProgressBar { get; set; } = true;
+
+    [Parameter]
+    public bool EnableSound { get; set; } = false;
 
     protected override void OnInitialized()
     {
@@ -54,60 +70,138 @@
             _ => "top-right"
         };
 
-        _timer = new Timer(500);
+        _timer = new Timer(100); // Check more frequently for smoother experience
         _timer.Elapsed += CheckNotificationsExpiry;
         _timer.AutoReset = true;
         _timer.Enabled = true;
     }
 
-    public void ShowNotification(string message, NotificationType type = NotificationType.Info)
+    public void ShowNotification(string message, NotificationType type = NotificationType.Info, int? customDuration = null)
     {
-        var notification = new NotificationItem
+        lock (_lockObject)
         {
-            Id = Guid.NewGuid(),
-            Message = message,
-            Type = type,
-            CreatedAt = DateTime.Now
-        };
+            // Remove oldest notifications if we exceed the maximum
+            while (_notifications.Count >= MaxNotifications)
+            {
+                var oldest = _notifications.FirstOrDefault(n => !n.IsRemoving);
+                if (oldest != null)
+                {
+                    RemoveNotificationInternal(oldest.Id);
+                }
+                else
+                {
+                    break;
+                }
+            }
 
-        _notifications.Add(notification);
-        StateHasChanged();
+            var notification = new NotificationItem
+            {
+                Id = Guid.NewGuid(),
+                Message = message,
+                Type = type,
+                CreatedAt = DateTime.Now,
+                Duration = customDuration ?? AutoDismissTime,
+                IsRemoving = false
+            };
+
+            _notifications.Add(notification);
+        }
+
+        InvokeAsync(StateHasChanged);
+
+        // Play sound if enabled
+        if (EnableSound)
+        {
+            PlayNotificationSound(type);
+        }
     }
 
-    public void ShowSuccess(string message) => ShowNotification(message, NotificationType.Success);
+    public void ShowSuccess(string message, int? duration = null) 
+        => ShowNotification(message, NotificationType.Success, duration);
 
-    public void ShowError(string message) => ShowNotification(message, NotificationType.Error);
+    public void ShowError(string message, int? duration = null) 
+        => ShowNotification(message, NotificationType.Error, duration);
 
-    public void ShowInfo(string message) => ShowNotification(message, NotificationType.Info);
+    public void ShowInfo(string message, int? duration = null) 
+        => ShowNotification(message, NotificationType.Info, duration);
 
-    public void ShowWarning(string message) => ShowNotification(message, NotificationType.Warning);
+    public void ShowWarning(string message, int? duration = null) 
+        => ShowNotification(message, NotificationType.Warning, duration);
 
-    private void RemoveNotification(Guid id)
+    private async Task RemoveNotification(Guid id)
+    {
+        var notification = _notifications.FirstOrDefault(n => n.Id == id);
+        if (notification != null && !notification.IsRemoving)
+        {
+            notification.IsRemoving = true;
+            await InvokeAsync(StateHasChanged);
+            
+            // The actual removal happens in OnAnimationEnd
+        }
+    }
+
+    private void RemoveNotificationInternal(Guid id)
     {
         var notification = _notifications.FirstOrDefault(n => n.Id == id);
         if (notification != null)
         {
-            _notifications.Remove(notification);
-            StateHasChanged();
+            if (!notification.IsRemoving)
+            {
+                notification.IsRemoving = true;
+                InvokeAsync(StateHasChanged);
+            }
+        }
+    }
+
+    private async Task OnAnimationEnd(NotificationItem notification)
+    {
+        if (notification.IsRemoving)
+        {
+            lock (_lockObject)
+            {
+                _notifications.Remove(notification);
+            }
+            await InvokeAsync(StateHasChanged);
         }
     }
 
     private void CheckNotificationsExpiry(object sender, ElapsedEventArgs e)
     {
         var now = DateTime.Now;
-        var expiredNotifications = _notifications
-            .Where(n => (now - n.CreatedAt).TotalMilliseconds > AutoDismissTime)
-            .ToList();
+        var expiredNotifications = new List<NotificationItem>();
+
+        lock (_lockObject)
+        {
+            expiredNotifications = _notifications
+                .Where(n => !n.IsRemoving && (now - n.CreatedAt).TotalMilliseconds > n.Duration)
+                .ToList();
+        }
 
         if (expiredNotifications.Any())
         {
             foreach (var notification in expiredNotifications)
             {
-                _notifications.Remove(notification);
+                RemoveNotificationInternal(notification.Id);
             }
-
-            InvokeAsync(StateHasChanged);
         }
+    }
+
+    private void PlayNotificationSound(NotificationType type)
+    {
+        // Implement sound playing logic here if needed
+        // You could use JavaScript interop to play different sounds based on notification type
+    }
+
+    public void ClearAll()
+    {
+        lock (_lockObject)
+        {
+            foreach (var notification in _notifications.Where(n => !n.IsRemoving))
+            {
+                notification.IsRemoving = true;
+            }
+        }
+        InvokeAsync(StateHasChanged);
     }
 
     public void Dispose()
@@ -118,9 +212,11 @@
     public class NotificationItem
     {
         public Guid Id { get; set; }
-        public string Message { get; set; }
+        public string Message { get; set; } = string.Empty;
         public NotificationType Type { get; set; }
         public DateTime CreatedAt { get; set; }
+        public int Duration { get; set; } = 5000;
+        public bool IsRemoving { get; set; } = false;
     }
 
     public enum NotificationType
