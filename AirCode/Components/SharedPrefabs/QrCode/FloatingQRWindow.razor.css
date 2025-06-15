@@ -1,5 +1,4 @@
-/* Floating QR Code Window Styles */
-/* Enhanced FloatingQRWindow.razor.css - Replace existing styles */
+/* Enhanced FloatingQRWindow.razor.css - Responsive & Theme-Aware */
 
 .floating-qr-overlay {
     position: fixed;
@@ -12,67 +11,76 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    /* Enable scrolling when needed */
     overflow: auto;
+    backdrop-filter: blur(4px);
+}
+
+/* Theme-aware overlay */
+.dark-mode .floating-qr-overlay {
+    background-color: rgba(15, 15, 15, 0.7);
 }
 
 .floating-qr-window {
-    background: white;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
     border-radius: 12px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-    min-width: 350px;
+    min-width: min(350px, 90vw);
     max-width: 90vw;
-    max-height: 90vh;
+    max-height: 85vh;
     position: absolute;
     overflow: hidden;
     transition: all 0.3s ease;
-    /* Ensure proper stacking */
     z-index: 1001;
+    border: 1px solid var(--border);
+}
+
+/* Enhanced dark mode shadow */
+.dark-mode .floating-qr-window {
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
 }
 
 .floating-qr-window.dragging {
     transform: scale(1.02);
     box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
     z-index: 1002;
-    /* Improve drag performance */
     will-change: transform, left, top;
 }
 
+.dark-mode .floating-qr-window.dragging {
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.8);
+}
+
 .floating-qr-window.fullscreen {
-    width: 95vw !important;
-    height: 95vh !important;
-    top: 2.5vh !important;
-    left: 2.5vw !important;
+    width: min(95vw, 1200px) !important;
+    height: min(95vh, 900px) !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
     max-width: none;
     max-height: none;
     border-radius: 8px;
-    /* Enable internal scrolling for fullscreen */
     overflow-y: auto;
-    /* Constrain vertical scroll */
-    max-height: 95vh;
 }
 
 .floating-qr-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 12px 16px;
+    background: linear-gradient(135deg, var(--nav-background) 0%, var(--nav-hover) 100%);
+    color: var(--nav-text);
+    padding: clamp(8px, 2vw, 16px);
     cursor: move;
     user-select: none;
     display: flex;
     justify-content: space-between;
     align-items: center;
     min-height: 48px;
-    position: relative;
-    /* Prevent header from scrolling */
     position: sticky;
     top: 0;
     z-index: 10;
+    backdrop-filter: blur(10px);
 }
 
 .floating-qr-window.fullscreen .floating-qr-header {
     cursor: default;
-    position: sticky;
-    top: 0;
 }
 
 .floating-qr-window.dragging .floating-qr-header {
@@ -82,88 +90,93 @@
 .drag-handle {
     flex: 1;
     font-weight: 600;
-    font-size: 14px;
+    font-size: clamp(12px, 2.5vw, 14px);
     pointer-events: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .header-actions {
     display: flex;
-    gap: 8px;
+    gap: clamp(4px, 1vw, 8px);
     align-items: center;
     pointer-events: auto;
+    flex-shrink: 0;
 }
 
 .fullscreen-button,
 .close-button {
     background: rgba(255, 255, 255, 0.2);
     border: none;
-    color: white;
+    color: var(--nav-text);
     border-radius: 4px;
-    width: 32px;
-    height: 32px;
+    width: clamp(28px, 5vw, 32px);
+    height: clamp(28px, 5vw, 32px);
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: background-color 0.2s ease;
-    font-size: 18px;
+    transition: all 0.2s ease;
+    font-size: clamp(14px, 3vw, 18px);
     font-weight: bold;
-    /* Prevent buttons from being dragged */
     pointer-events: auto;
 }
 
 .fullscreen-button:hover,
 .close-button:hover {
-    background: rgba(255, 255, 255, 0.3);
+    background: var(--button-primary);
+    transform: scale(1.1);
 }
 
 .floating-qr-content {
-    padding: 24px;
+    padding: clamp(16px, 4vw, 32px);
     text-align: center;
-    background: white;
-    /* Enable internal scrolling */
+    background: var(--bg-secondary);
     overflow-y: auto;
-    /* Set max height to enable scroll when needed */
-    max-height: calc(90vh - 48px);
-}
-
-.floating-qr-window.fullscreen .floating-qr-content {
-    padding: 48px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start; /* Changed from center to flex-start */
-    /* Allow scrolling in fullscreen */
-    height: auto;
-    max-height: calc(95vh - 48px);
-    overflow-y: auto;
-    /* Smooth scrolling */
+    max-height: calc(85vh - 48px);
     scroll-behavior: smooth;
 }
 
-.floating-countdown {
-    background: linear-gradient(135deg, #ff6b6b, #ee5a24);
-    color: white;
-    padding: 8px 16px;
-    border-radius: 20px;
-    font-size: 14px;
-    font-weight: 600;
-    margin-bottom: 20px;
-    display: inline-block;
-    animation: pulse 2s infinite;
-    /* Prevent countdown from being dragged */
-    pointer-events: none;
+.floating-qr-window.fullscreen .floating-qr-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    height: auto;
+    max-height: calc(95vh - 48px);
+    padding: clamp(24px, 6vw, 48px);
 }
 
-.floating-qr-window.fullscreen .floating-countdown {
-    font-size: 18px;
-    padding: 12px 24px;
-    margin-bottom: 32px;
+.floating-countdown {
+    background: linear-gradient(135deg, var(--error), #ee5a24);
+    color: white;
+    padding: clamp(6px, 1.5vw, 12px) clamp(12px, 3vw, 24px);
+    border-radius: 20px;
+    font-size: clamp(12px, 2.5vw, 18px);
+    font-weight: 600;
+    margin-bottom: clamp(16px, 4vw, 32px);
+    display: inline-block;
+    animation: pulse 2s infinite;
+    pointer-events: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* Dark mode countdown adjustment */
+.dark-mode .floating-countdown {
+    background: linear-gradient(135deg, var(--warning), var(--gold-600));
+    color: var(--dark-bg-primary);
 }
 
 @keyframes pulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.05); }
+    0%, 100% { 
+        transform: scale(1);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+    50% { 
+        transform: scale(1.05);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+    }
 }
 
 /* Enhanced drag prevention */
@@ -177,71 +190,117 @@
     pointer-events: auto !important;
 }
 
-/* Custom scrollbar for better UX */
+/* Theme-aware scrollbar */
 .floating-qr-content::-webkit-scrollbar {
     width: 6px;
 }
 
 .floating-qr-content::-webkit-scrollbar-track {
-    background: #f1f1f1;
+    background: var(--bg-tertiary);
     border-radius: 3px;
 }
 
 .floating-qr-content::-webkit-scrollbar-thumb {
-    background: #c1c1c1;
+    background: var(--border);
     border-radius: 3px;
 }
 
 .floating-qr-content::-webkit-scrollbar-thumb:hover {
-    background: #a8a8a8;
+    background: var(--icon-primary);
 }
 
-/* Mobile optimizations */
-@media (max-width: 768px) {
+/* Mobile-first responsive breakpoints */
+@media (max-width: 480px) {
     .floating-qr-window {
-        min-width: 320px;
+        min-width: 95vw;
         max-width: 95vw;
+        max-height: 80vh;
+        border-radius: 8px;
+    }
+
+    .floating-qr-window.fullscreen {
+        width: 100vw !important;
+        height: 100vh !important;
+        top: 0 !important;
+        left: 0 !important;
+        transform: none !important;
+        border-radius: 0;
+    }
+
+    .floating-qr-content {
+        max-height: calc(80vh - 48px);
+    }
+
+    .floating-qr-window.fullscreen .floating-qr-content {
+        max-height: calc(100vh - 48px);
+    }
+
+    .drag-handle {
+        max-width: 60%;
+    }
+}
+
+@media (min-width: 481px) and (max-width: 768px) {
+    .floating-qr-window {
+        min-width: 400px;
+        max-width: 85vw;
         max-height: 85vh;
     }
 
     .floating-qr-window.fullscreen {
-        width: 98vw !important;
+        width: 95vw !important;
         height: 90vh !important;
         top: 5vh !important;
-        left: 1vw !important;
-    }
-
-    .floating-qr-content {
-        padding: 16px;
-        max-height: calc(85vh - 48px);
-    }
-
-    .floating-qr-window.fullscreen .floating-qr-content {
-        padding: 24px;
-        max-height: calc(90vh - 48px);
+        left: 2.5vw !important;
+        transform: none !important;
     }
 }
 
-/* Dark mode support */
-@media (prefers-color-scheme: dark) {
+@media (min-width: 769px) and (max-width: 1024px) {
+    .floating-qr-window.fullscreen {
+        width: 90vw !important;
+        height: 85vh !important;
+        max-width: 800px !important;
+        max-height: 700px !important;
+    }
+}
+
+/* High DPI display optimizations */
+@media (min-resolution: 192dpi), (min-resolution: 2dppx) {
     .floating-qr-window {
-        background: #2d3748;
-        color: white;
+        border-width: 0.5px;
     }
-
-    .floating-qr-content {
-        background: #2d3748;
-    }
-
-    .floating-qr-content::-webkit-scrollbar-track {
-        background: #4a5568;
-    }
-
-    .floating-qr-content::-webkit-scrollbar-thumb {
-        background: #718096;
-    }
-
-    .floating-qr-content::-webkit-scrollbar-thumb:hover {
-        background: #a0aec0;
+    
+    .fullscreen-button svg,
+    .close-button svg {
+        width: 14px;
+        height: 14px;
     }
 }
+
+/* Reduced motion accessibility */
+@media (prefers-reduced-motion: reduce) {
+    .floating-qr-window,
+    .fullscreen-button,
+    .close-button,
+    .floating-countdown {
+        transition: none;
+        animation: none;
+    }
+}
+
+/* Focus management for accessibility */
+.fullscreen-button:focus,
+.close-button:focus {
+    outline: 2px solid var(--button-primary);
+    outline-offset: 2px;
+}
+
+/* Touch target optimization */
+@media (pointer: coarse) {
+    .fullscreen-button,
+    .close-button {
+        min-width: 44px;
+        min-height: 44px;
+    }
+    }
