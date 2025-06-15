@@ -1,0 +1,373 @@
+@using AirCode.Services.Search
+@inject ISearchContextService SearchService
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+@implements IAsyncDisposable
+
+<div class="dynamic-search" @ref="searchContainer">
+    <div class="search-input-container">
+        <div class="search-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="21 21-4.35-4.35"></path>
+            </svg>
+        </div>
+        
+        <input 
+            type="text" 
+            class="search-input" 
+            @bind-value="SearchTerm" 
+            @bind-value:event="oninput"
+            @onkeydown="HandleKeyDown"
+            @onfocus="HandleFocus"
+            @onblur="HandleBlur"
+            placeholder="@Placeholder"
+            autocomplete="off"
+            spellcheck="false"
+            @ref="searchInput" />
+            
+        @if (!string.IsNullOrEmpty(SearchTerm))
+        {
+            <button class="clear-button" @onclick="ClearSearch" type="button">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        }
+        
+        @if (IsLoading)
+        {
+            <div class="loading-spinner">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 12a9 9 0 11-6.219-8.56"/>
+                </svg>
+            </div>
+        }
+    </div>
+    
+    @if (ShowDropdown && (Suggestions.Any() || Results.Any()))
+    {
+        <div class="search-dropdown" @onclick:stopPropagation="true">
+            @if (Mode == SearchMode.Suggestions && Suggestions.Any())
+            {
+                <div class="dropdown-section">
+                    <div class="section-header">Suggestions</div>
+                    @for (int i = 0; i < Suggestions.Count; i++)
+                    {
+                        var index = i;
+                        var suggestion = Suggestions[i];
+                        <div class="search-item @(SelectedIndex == index ? "selected" : "")" 
+                             @onclick="() => SelectSuggestion(suggestion)"
+                             @onmouseenter="() => SelectedIndex = index">
+                            @if (!string.IsNullOrEmpty(suggestion.IconPath))
+                            {
+                                <img src="@suggestion.IconPath" alt="" class="item-icon" />
+                            }
+                            else
+                            {
+                                <div class="item-icon-placeholder"></div>
+                            }
+                            <div class="item-content">
+                                <div class="item-title">@suggestion.Text</div>
+                                <div class="item-context">@suggestion.Context</div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            
+            @if (Mode == SearchMode.Results && Results.Any())
+            {
+                <div class="dropdown-section">
+                    <div class="section-header">Results (@Results.Count)</div>
+                    @for (int i = 0; i < Results.Count; i++)
+                    {
+                        var index = i;
+                        var result = Results[i];
+                        <div class="search-item @(SelectedIndex == index ? "selected" : "")" 
+                             @onclick="() => SelectResult(result)"
+                             @onmouseenter="() => SelectedIndex = index">
+                            @if (!string.IsNullOrEmpty(result.IconPath))
+                            {
+                                <img src="@result.IconPath" alt="" class="item-icon" />
+                            }
+                            else
+                            {
+                                <div class="item-icon-placeholder"></div>
+                            }
+                            <div class="item-content">
+                                <div class="item-title">@result.Title</div>
+                                <div class="item-description">@result.Description</div>
+                                <div class="item-context">@result.Context</div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            
+            @if (!Suggestions.Any() && !Results.Any() && !string.IsNullOrEmpty(SearchTerm) && !IsLoading)
+            {
+                <div class="no-results">
+                    <div class="no-results-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <path d="21 21-4.35-4.35"></path>
+                        </svg>
+                    </div>
+                    <div class="no-results-text">No results found for "@SearchTerm"</div>
+                    <div class="no-results-hint">Try adjusting your search terms</div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public string Context { get; set; } = "General";
+    [Parameter] public string Placeholder { get; set; } = "Search...";
+    [Parameter] public int MaxSuggestions { get; set; } = 8;
+    [Parameter] public int MaxResults { get; set; } = 15;
+    [Parameter] public EventCallback<string> OnSearch { get; set; }
+    [Parameter] public EventCallback<SearchSuggestion> OnSuggestionSelected { get; set; }
+    [Parameter] public EventCallback<SearchResult> OnResultSelected { get; set; }
+
+    private string _searchTerm = string.Empty;
+    private List<SearchSuggestion> Suggestions = new();
+    private List<SearchResult> Results = new();
+    private bool ShowDropdown = false;
+    private bool IsLoading = false;
+    private int SelectedIndex = -1;
+    private SearchMode Mode = SearchMode.Suggestions;
+    private ElementReference searchContainer;
+    private ElementReference searchInput;
+    private Timer _debounceTimer;
+    private DotNetObjectReference<DynamicSearch> _dotNetRef;
+
+    private string SearchTerm
+    {
+        get => _searchTerm;
+        set
+        {
+            if (_searchTerm != value)
+            {
+                _searchTerm = value;
+                OnSearchTermChanged();
+            }
+        }
+    }
+
+    private enum SearchMode
+    {
+        Suggestions,
+        Results
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        SearchService.SetContext(Context);
+        _dotNetRef = DotNetObjectReference.Create(this);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("setupClickOutside", searchContainer, _dotNetRef);
+        }
+    }
+
+    private void OnSearchTermChanged()
+    {
+        SelectedIndex = -1;
+        
+        _debounceTimer?.Dispose();
+        _debounceTimer = new Timer(async _ => await PerformSearch(), null, 300, Timeout.Infinite);
+    }
+
+    private async Task PerformSearch()
+    {
+        await InvokeAsync(async () =>
+        {
+            if (string.IsNullOrWhiteSpace(SearchTerm))
+            {
+                Suggestions.Clear();
+                Results.Clear();
+                ShowDropdown = false;
+                IsLoading = false;
+                StateHasChanged();
+                return;
+            }
+
+            IsLoading = true;
+            StateHasChanged();
+
+            try
+            {
+                if (SearchTerm.Length < 3)
+                {
+                    // Show suggestions for short queries
+                    Mode = SearchMode.Suggestions;
+                    Suggestions = await SearchService.GetSuggestionsForContextAsync(Context, SearchTerm, MaxSuggestions);
+                    Results.Clear();
+                }
+                else
+                {
+                    // Show full search results for longer queries
+                    Mode = SearchMode.Results;
+                    Results = await SearchService.SearchAsync(SearchTerm, Context, MaxResults);
+                    Suggestions.Clear();
+                }
+
+                ShowDropdown = true;
+            }
+            catch (Exception ex)
+            {
+                // Log error in real implementation
+                Console.WriteLine($"Search error: {ex.Message}");
+                Suggestions.Clear();
+                Results.Clear();
+                ShowDropdown = false;
+            }
+            finally
+            {
+                IsLoading = false;
+                StateHasChanged();
+            }
+        });
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case "ArrowDown":
+                e.PreventDefault();
+                MoveSelection(1);
+                break;
+            case "ArrowUp":
+                e.PreventDefault();
+                MoveSelection(-1);
+                break;
+            case "Enter":
+                e.PreventDefault();
+                await SelectCurrentItem();
+                break;
+            case "Escape":
+                ShowDropdown = false;
+                await searchInput.FocusAsync();
+                StateHasChanged();
+                break;
+        }
+    }
+
+    private void MoveSelection(int direction)
+    {
+        var itemCount = Mode == SearchMode.Suggestions ? Suggestions.Count : Results.Count;
+        
+        if (itemCount == 0) return;
+
+        SelectedIndex += direction;
+        
+        if (SelectedIndex < 0)
+            SelectedIndex = itemCount - 1;
+        else if (SelectedIndex >= itemCount)
+            SelectedIndex = 0;
+
+        StateHasChanged();
+    }
+
+    private async Task SelectCurrentItem()
+    {
+        if (SelectedIndex < 0) return;
+
+        if (Mode == SearchMode.Suggestions && SelectedIndex < Suggestions.Count)
+        {
+            await SelectSuggestion(Suggestions[SelectedIndex]);
+        }
+        else if (Mode == SearchMode.Results && SelectedIndex < Results.Count)
+        {
+            await SelectResult(Results[SelectedIndex]);
+        }
+    }
+
+    private async Task SelectSuggestion(SearchSuggestion suggestion)
+    {
+        SearchTerm = suggestion.Text;
+        ShowDropdown = false;
+        
+        if (OnSuggestionSelected.HasDelegate)
+        {
+            await OnSuggestionSelected.InvokeAsync(suggestion);
+        }
+        
+        if (!string.IsNullOrEmpty(suggestion.Url))
+        {
+            NavigationManager.NavigateTo(suggestion.Url);
+        }
+        
+        StateHasChanged();
+    }
+
+    private async Task SelectResult(SearchResult result)
+    {
+        SearchTerm = result.Title;
+        ShowDropdown = false;
+        
+        if (OnResultSelected.HasDelegate)
+        {
+            await OnResultSelected.InvokeAsync(result);
+        }
+        
+        if (!string.IsNullOrEmpty(result.Url))
+        {
+            NavigationManager.NavigateTo(result.Url);
+        }
+        
+        StateHasChanged();
+    }
+
+    private void HandleFocus()
+    {
+        if (!string.IsNullOrEmpty(SearchTerm) && (Suggestions.Any() || Results.Any()))
+        {
+            ShowDropdown = true;
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleBlur()
+    {
+        // Small delay to allow for click events on dropdown items
+        await Task.Delay(150);
+        ShowDropdown = false;
+        StateHasChanged();
+    }
+
+    private void ClearSearch()
+    {
+        SearchTerm = string.Empty;
+        Suggestions.Clear();
+        Results.Clear();
+        ShowDropdown = false;
+        StateHasChanged();
+    }
+
+    [JSInvokable]
+    public void HideDropdown()
+    {
+        ShowDropdown = false;
+        StateHasChanged();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _debounceTimer?.Dispose();
+        _dotNetRef?.Dispose();
+        
+        if (searchContainer.Context != null)
+        {
+            await JSRuntime.InvokeVoidAsync("cleanupClickOutside", searchContainer);
+        }
+    }
+}
