@@ -47,6 +47,9 @@ using SessionData = AirCode.Services.Attendance.SessionData;
         private bool showFloatingQR = false;
         private FloatingQRWindow.FloatingSessionData floatingSessionData;
       private bool useTemporalKeyRefresh = false; // Renamed from temporalKeyEnabled // Testing toggle
+          private bool allowOfflineSync = true; // NEW - Add this
+    private AdvancedSecurityFeatures securityFeatures = AdvancedSecurityFeatures.Default; // NEW - Add this
+    
         private System.Threading.Timer temporalKeyUpdateTimer;
 
         
@@ -171,17 +174,22 @@ using SessionData = AirCode.Services.Attendance.SessionData;
         sessionEndTime = DateTime.UtcNow.AddMinutes(sessionModel.Duration);
 
         // Create Supabase attendance session
-        var attendanceSession = new AttendanceSession
-        {
-            SessionId = sessionModel.SessionId,
-            CourseCode = sessionModel.CourseId,
-            StartTime = sessionModel.StartTime,
-            Duration = sessionModel.Duration,
-            ExpirationTime = sessionEndTime,
-            LectureId = null, // Set if you have lecturer info
-            AttendanceRecords = "[]", // Empty initially
-            UseTemporalKeyRefresh = useTemporalKeyRefresh
-        };
+          var attendanceSession = new AttendanceSession
+    {
+        SessionId = sessionModel.SessionId,
+        CourseCode = sessionModel.CourseId,
+        StartTime = sessionModel.StartTime,
+        Duration = sessionModel.Duration,
+        ExpirationTime = sessionEndTime,
+        
+        AttendanceRecords = "[]",
+        
+        // Updated mappings:
+        UseTemporalKeyRefresh = useTemporalKeyRefresh,
+        AllowOfflineConnectionAndSync = allowOfflineSync, // Add this variable
+        SecurityFeatures = (int)securityFeatures, // Cast enum to int
+        TemporalKey = useTemporalKeyRefresh ? GenerateTemporalKey(sessionModel.SessionId, sessionModel.StartTime) : string.Empty
+    };
 
         // Generate initial temporal key if enabled
         if (useTemporalKeyRefresh)
