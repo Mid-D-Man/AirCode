@@ -1,629 +1,727 @@
 @page "/Admin/ManageAcademicSession"
-@using System.ComponentModel.DataAnnotations
-@using AirCode.Components.SharedPrefabs.Cards
-@using AirCode.Models.Admin
-@using AirCode.Services.Admin
-@using Microsoft.AspNetCore.Authorization
-@using Microsoft.AspNetCore.Components.Forms
-@using System.Timers
-@attribute [Authorize(Roles = "superioradmin,lectureradmin")]
-@inject IAcademicSessionService SessionService
-@inject IJSRuntime JSRuntime
-@implements IDisposable
 
-<PageTitle>Manage Academic Sessions</PageTitle>
 
-<!-- Notification Component -->
-<NotificationComponent @ref="notificationComponent" 
-                      Position="NotificationPosition.TopRight" 
-                      AutoDismissTime="4000" 
-                      MaxNotifications="3" 
-                      EnableProgressBar="true" />
+@using AirCode.Domain.Entities
+
+
+@using AirCode.Domain.Enums
+
+
+@using AirCode.Layout.AdminLayout.Superior
+
+
+@layout SuperiorAdminLayout
+
+
+
+
 
 <div class="academic-session-container">
+
+
     <div class="page-header">
-        <h2>Academic Session Management</h2>
+
+
+        <h2 class="text-secondary">Manage Academic Sessions</h2>
+
+
         <div class="actions">
-            <button class="btn-primary" @onclick="ShowCreateSessionModal">
-                <i class="fas fa-plus"></i> Create New Session
+
+
+            <button class="btn-primary" @onclick="() => ShowModal(ManageAcademicSession.ModalType.CreateSession)">
+
+
+                <span class="icon">+</span> New Academic Session
+
+
             </button>
-            <button class="btn-secondary" @onclick="RefreshData">
-                <i class="fas fa-sync-alt @(isLoading ? "fa-spin" : "")"></i> Refresh
-            </button>
+
+
         </div>
+
+
     </div>
 
-    @if (isLoading)
+
+
+
+
+    @if (currentSession != null)
+
+
     {
-        <div class="loading-container">
-            <div class="loading-spinner">
-                <i class="fas fa-spinner fa-spin"></i>
-            </div>
-            <p>Loading academic sessions...</p>
-        </div>
-    }
-    else
-    {
-        <!-- Current Active Session -->
-        @if (currentSession != null)
-        {
-            <div class="current-session-card">
-                <div class="card-header">
-                    <h3>Current Academic Session</h3>
-                    <span class="session-status active">Active</span>
-                </div>
-                <div class="session-details">
-                    <div class="session-info">
-                        <div class="session-title">@currentSession.Title</div>
-                        <div class="session-period">
-                            @currentSession.StartDate.ToString("MMM dd, yyyy") - 
-                            @currentSession.EndDate.ToString("MMM dd, yyyy")
-                        </div>
-                    </div>
-                    <div class="session-actions">
-                        <button class="btn-secondary" @onclick="() => EditSession(currentSession)">
-                            <i class="fas fa-edit"></i> Edit
-                        </button>
-                        <button class="btn-secondary" @onclick="() => ArchiveSession(currentSession.Id)">
-                            <i class="fas fa-archive"></i> Archive
-                        </button>
-                    </div>
+
+
+        <div class="current-session-card">
+
+
+            <div class="card-header">
+
+
+                <h3>Current Academic Session</h3>
+
+
+                <div class="session-status @(IsSessionActive(currentSession) ? "active" : "inactive")">
+
+
+                    @(IsSessionActive(currentSession) ? "Active" : "Archived")
+
+
                 </div>
 
-                <!-- Semesters Grid -->
-                <div class="semester-cards">
-                    @foreach (var semester in currentSession.Semesters)
+
+            </div>
+
+
+            <div class="session-details">
+
+
+                <div class="session-title">@currentSession.YearStart - @currentSession.YearEnd</div>
+
+
+                <div class="session-countdown">
+
+
+                    @if (IsSessionActive(currentSession))
+
+
                     {
-                        <div class="semester-card @(semester.IsActive ? "current-semester" : "")">
-                            <div class="semester-header">
-                                <div class="semester-info">
-                                    <h4>@semester.Name</h4>
-                                    <span class="semester-status @(semester.IsActive ? "active" : "inactive")">
-                                        @(semester.IsActive ? "Active" : "Inactive")
-                                    </span>
-                                </div>
-                                <div class="semester-toggle">
-                                    <span class="toggle-label">Active</span>
-                                    <div class="toggle-switch">
-                                        <input type="checkbox" 
-                                               id="toggle-@semester.Id" 
-                                               checked="@semester.IsActive"
-                                               @onchange="(e) => ToggleSemesterStatus(semester, (bool)e.Value)" />
-                                        <label for="toggle-@semester.Id" class="toggle-slider"></label>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="semester-dates">
-                                <div class="date-info">
-                                    <i class="fas fa-calendar-alt"></i>
-                                    <span>@semester.StartDate.ToString("MMM dd") - @semester.EndDate.ToString("MMM dd, yyyy")</span>
-                                </div>
-                            </div>
-                            @if (semester.IsActive)
-                            {
-                                <div class="semester-countdown">
-                                    <div class="countdown-container">
-                                        <span class="countdown-label">Time remaining:</span>
-                                        <span class="countdown-timer" id="countdown-@semester.Id">
-                                            @GetTimeRemaining(semester.EndDate)
-                                        </span>
-                                    </div>
-                                </div>
-                            }
+
+
+                        <div class="countdown-container">
+
+
+                            <div class="countdown-label">Ends in:</div>
+
+
+                            <div class="countdown-timer">@GetRemainingTime(GetEndDate(currentSession))</div>
+
+
                         </div>
+
+
                     }
 
-                    <!-- Add Semester Card -->
-                    <div class="add-semester-card" @onclick="() => ShowAddSemesterModal(currentSession.Id)">
+
+                    else
+
+
+                    {
+
+
+                        <div class="session-archived">Archived on @GetEndDate(currentSession).ToShortDateString()</div>
+
+
+                    }
+
+
+                </div>
+
+
+            </div>
+
+
+            <div class="semester-cards">
+
+
+                @foreach (var semester in currentSession.Semesters)
+
+
+                {
+
+
+                    <div class="semester-card @(IsCurrentSemester(semester) ? "current-semester" : "")">
+
+
+                        <div class="semester-header">
+
+
+                            <h4>@GetSemesterName(semester.Type)</h4>
+
+
+                            <div class="semester-status @(IsActiveSemester(semester) ? "active" : "inactive")">
+
+
+                                @(IsActiveSemester(semester) ? "Active" : 
+
+
+                                  IsFutureSemester(semester) ? "Upcoming" : "Completed")
+
+
+                            </div>
+
+
+                        </div>
+
+
+                        <div class="semester-dates">
+
+
+                            <div><strong>Start:</strong> @semester.StartDate.ToShortDateString()</div>
+
+
+                            <div><strong>End:</strong> @semester.EndDate.ToShortDateString()</div>
+
+
+                        </div>
+
+
+                        @if (IsActiveSemester(semester))
+
+
+                        {
+
+
+                            <div class="semester-countdown">
+
+
+                                <div class="countdown-label">Ends in:</div>
+
+
+                                <div class="countdown-timer">@GetRemainingTime(semester.EndDate)</div>
+
+
+                            </div>
+
+
+                        }
+
+
+                    </div>
+
+
+                }
+
+
+                @if (currentSession.Semesters.Count < 2)
+
+
+                {
+
+
+                    <div class="add-semester-card" @onclick="() => ShowModal(ManageAcademicSession.ModalType.CreateSemester)">
+
+
                         <div class="add-icon">+</div>
-                        <span>Add New Semester</span>
+
+
+                        <div>Add Semester</div>
+
+
                     </div>
-                </div>
+
+
+                }
+
+
             </div>
+
+
+        </div>
+
+
+    }
+
+
+
+
+
+    <div class="archived-sessions-section">
+
+
+        <h3>Archived Sessions</h3>
+
+
+        @if (archivedSessions.Count > 0)
+
+
+        {
+
+
+            <div class="archived-sessions-grid">
+
+
+                @foreach (var session in archivedSessions)
+
+
+                {
+
+
+                    <div class="archived-session-card" @onclick="() => ViewSessionDetails(session)">
+
+
+                        <div class="session-year">@session.YearStart - @session.YearEnd</div>
+
+
+                        <div class="session-semesters">@session.Semesters.Count Semester(s)</div>
+
+
+                        <div class="archived-date">Archived: @GetEndDate(session).ToShortDateString()</div>
+
+
+                    </div>
+
+
+                }
+
+
+            </div>
+
+
         }
 
-        <!-- Upcoming Sessions -->
-        @if (upcomingSessions?.Any() == true)
-        {
-            <div class="upcoming-sessions-section">
-                <h3>Upcoming Sessions</h3>
-                @foreach (var session in upcomingSessions)
-                {
-                    <div class="upcoming-session-card">
-                        <div class="card-header">
-                            <h4>@session.Title</h4>
-                            <span class="session-status upcoming">Upcoming</span>
-                        </div>
-                        <div class="session-details">
-                            <div class="session-info">
-                                <div class="session-period">
-                                    Starts: @session.StartDate.ToString("MMM dd, yyyy")
-                                </div>
-                            </div>
-                            <div class="session-actions">
-                                <button class="btn-secondary" @onclick="() => EditSession(session)">
-                                    <i class="fas fa-edit"></i> Edit
-                                </button>
-                                <button class="btn-secondary" @onclick="() => ActivateSession(session.Id)">
-                                    <i class="fas fa-play"></i> Activate
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                }
-            </div>
-        }
 
-        <!-- Archived Sessions -->
-        @if (archivedSessions?.Any() == true)
-        {
-            <div class="archived-sessions-section">
-                <h3>Archived Sessions</h3>
-                <div class="archived-sessions-grid">
-                    @foreach (var session in archivedSessions.Take(6))
-                    {
-                        <div class="archived-session-card" @onclick="() => ViewArchivedSession(session)">
-                            <div class="session-year">@session.Title</div>
-                            <div class="session-semesters">@session.Semesters.Count semesters</div>
-                            <div class="archived-date">
-                                Archived: @session.ArchivedDate?.ToString("MMM dd, yyyy")
-                            </div>
-                        </div>
-                    }
-                </div>
-                @if (archivedSessions.Count > 6)
-                {
-                    <div class="view-all-archived">
-                        <button class="btn-secondary" @onclick="ShowAllArchivedSessions">
-                            View All @archivedSessions.Count Archived Sessions
-                        </button>
-                    </div>
-                }
-            </div>
-        }
         else
+
+
         {
+
+
             <div class="no-archived-sessions">
-                <i class="fas fa-archive fa-3x"></i>
-                <p>No archived sessions yet</p>
+
+
+                <p>No archived sessions available.</p>
+
+
             </div>
+
+
         }
 
-        <!-- Create Next Session CTA (when no current session) -->
-        @if (currentSession == null)
-        {
-            <div class="create-next-session">
-                <i class="fas fa-calendar-plus fa-3x"></i>
-                <h3>No Active Academic Session</h3>
-                <p>Create a new academic session to get started</p>
-                <button class="btn-primary" @onclick="ShowCreateSessionModal">
-                    <i class="fas fa-plus"></i> Create Academic Session
-                </button>
+
+    </div>
+
+
+
+
+
+    @if (nextSession != null)
+
+
+    {
+
+
+        <div class="upcoming-session-card">
+
+
+            <div class="card-header">
+
+
+                <h3>Next Academic Session</h3>
+
+
+                <div class="session-status upcoming">Upcoming</div>
+
+
             </div>
-        }
+
+
+            <div class="session-details">
+
+
+                <div class="session-title">@nextSession.YearStart - @nextSession.YearEnd</div>
+
+
+                <div class="session-countdown">
+
+
+                    <div class="countdown-container">
+
+
+                        <div class="countdown-label">Starts in:</div>
+
+
+                        <div class="countdown-timer">@GetRemainingTime(GetStartDate(nextSession))</div>
+
+
+                    </div>
+
+
+                </div>
+
+
+            </div>
+
+
+            <div class="semester-cards">
+
+
+                @foreach (var semester in nextSession.Semesters)
+
+
+                {
+
+
+                    <div class="semester-card">
+
+
+                        <div class="semester-header">
+
+
+                            <h4>@GetSemesterName(semester.Type)</h4>
+
+
+                            <div class="semester-status upcoming">Upcoming</div>
+
+
+                        </div>
+
+
+                        <div class="semester-dates">
+
+
+                            <div><strong>Start:</strong> @semester.StartDate.ToShortDateString()</div>
+
+
+                            <div><strong>End:</strong> @semester.EndDate.ToShortDateString()</div>
+
+
+                        </div>
+
+
+                    </div>
+
+
+                }
+
+
+                @if (nextSession.Semesters.Count < 2)
+
+
+                {
+
+
+                    <div class="add-semester-card" @onclick="() => ShowModal(ManageAcademicSession.ModalType.CreateSemester, nextSession.SessionId)">
+
+
+                        <div class="add-icon">+</div>
+
+
+                        <div>Add Semester</div>
+
+
+                    </div>
+
+
+                }
+
+
+            </div>
+
+
+        </div>
+
+
     }
 
-    <!-- Session Modal -->
+
+    else if (currentSession != null)
+
+
+    {
+
+
+        <div class="create-next-session">
+
+
+            <button class="btn-primary" @onclick="() => ShowModal(ManageAcademicSession.ModalType.CreateSession)">
+
+
+                Create Next Academic Session
+
+
+            </button>
+
+
+            <p>Prepare for the upcoming academic year by creating the next session.</p>
+
+
+        </div>
+
+
+    }
+
+
+
+
+
     @if (showModal)
+
+
     {
+
+
         <div class="modal-overlay" @onclick="CloseModal">
+
+
             <div class="modal-container" @onclick:stopPropagation="true">
+
+
                 <div class="modal-header">
-                    <h3>@(editingSession?.Id > 0 ? "Edit Academic Session" : "Create New Academic Session")</h3>
-                    <button class="close-btn" @onclick="CloseModal">
-                        <i class="fas fa-times"></i>
-                    </button>
+
+
+                    <h3>@GetModalTitle()</h3>
+
+
+                    <button class="close-btn" @onclick="CloseModal">×</button>
+
+
                 </div>
+
+
                 <div class="modal-body">
-                    <EditForm Model="sessionForm" OnValidSubmit="SaveSession">
-                        <DataAnnotationsValidator />
-                        <ValidationSummary />
+
+
+                    @if (activeModal == ManageAcademicSession.ModalType.CreateSession)
+
+
+                    {
+
 
                         <div class="form-group">
-                            <label for="sessionTitle">Session Title</label>
-                            <InputText id="sessionTitle" 
-                                      class="form-control" 
-                                      @bind-Value="sessionForm.Title" 
-                                      placeholder="e.g., 2024/2025 Academic Session" />
-                            <ValidationMessage For="@(() => sessionForm.Title)" />
+
+
+                            <label for="yearStart">Start Year</label>
+
+
+                            <input type="number" 
+
+
+                                   id="yearStart" 
+
+
+                                   @bind="sessionForm.YearStart" 
+
+
+                                   class="form-control" 
+
+
+                                   min="@GetMinAllowedStartYear()" 
+
+
+                                   max="@GetMaxAllowedEndYear()" />
+
+
+                            <small class="form-text">Academic session can span up to 4 years for degree programs</small>
+
+
                         </div>
 
-                        <div class="form-row">
+
+                        <div class="form-group">
+
+
+                            <label for="yearEnd">End Year</label>
+
+
+                            <input type="number" 
+
+
+                                   id="yearEnd" 
+
+
+                                   @bind="sessionForm.YearEnd" 
+
+
+                                   class="form-control" 
+
+
+                                   min="@(sessionForm.YearStart + 1)" 
+
+
+                                   max="@(sessionForm.YearStart + 4)" />
+
+
+                            <small class="form-text">Maximum 4 years from start year</small>
+
+
+                        </div>
+
+
+                        <div class="form-group">
+
+
+                            <label>Include First Semester</label>
+
+
+                            <div class="toggle-switch">
+
+
+                                <input type="checkbox" id="includeFirstSemester" @bind="includeFirstSemester" />
+
+
+                                <label for="includeFirstSemester"></label>
+
+
+                            </div>
+
+
+                        </div>
+
+
+                        @if (includeFirstSemester)
+
+
+                        {
+
+
                             <div class="form-group">
-                                <label for="startDate">Start Date</label>
-                                <InputDate id="startDate" 
-                                          class="form-control" 
-                                          @bind-Value="sessionForm.StartDate" />
-                                <ValidationMessage For="@(() => sessionForm.StartDate)" />
+
+
+                                <label for="firstSemesterStart">First Semester Start Date</label>
+
+
+                                <input type="date" id="firstSemesterStart" @bind="firstSemesterForm.StartDate" class="form-control" />
+
+
                             </div>
+
+
                             <div class="form-group">
-                                <label for="endDate">End Date</label>
-                                <InputDate id="endDate" 
-                                          class="form-control" 
-                                          @bind-Value="sessionForm.EndDate" />
-                                <ValidationMessage For="@(() => sessionForm.EndDate)" />
+
+
+                                <label for="firstSemesterEnd">First Semester End Date</label>
+
+
+                                <input type="date" id="firstSemesterEnd" @bind="firstSemesterForm.EndDate" class="form-control" />
+
+
                             </div>
-                        </div>
+
+
+                        }
+
+
+                    }
+
+
+                    else if (activeModal == ManageAcademicSession.ModalType.CreateSemester)
+
+
+                    {
+
 
                         <div class="form-group">
-                            <label for="description">Description</label>
-                            <InputTextArea id="description" 
-                                          class="form-control" 
-                                          @bind-Value="sessionForm.Description" 
-                                          rows="3"
-                                          placeholder="Optional description for this academic session" />
-                        </div>
 
-                        <div class="form-group">
-                            <div class="form-check">
-                                <InputCheckbox id="isActive" 
-                                              class="form-check-input" 
-                                              @bind-Value="sessionForm.IsActive" />
-                                <label for="isActive" class="form-check-label">
-                                    Set as active session
-                                </label>
-                            </div>
-                        </div>
 
-                        <div class="modal-footer">
-                            <button type="button" class="btn-secondary" @onclick="CloseModal">
-                                Cancel
-                            </button>
-                            <button type="submit" class="btn-primary" disabled="@isSubmitting">
-                                @if (isSubmitting)
+                            <label for="semesterType">Semester Type</label>
+
+
+                            <select id="semesterType" @bind="semesterForm.Type" class="form-control">
+
+
+                                @foreach (SemesterType type in Enum.GetValues(typeof(SemesterType)))
+
+
                                 {
-                                    <i class="fas fa-spinner fa-spin"></i>
+
+
+                                    <option value="@type">@GetSemesterName(type)</option>
+
+
                                 }
-                                @(editingSession?.Id > 0 ? "Update Session" : "Create Session")
-                            </button>
+
+
+                            </select>
+
+
                         </div>
-                    </EditForm>
+
+
+                        <div class="form-group">
+
+
+                            <label for="semesterStart">Start Date</label>
+
+
+                            <input type="date" id="semesterStart" @bind="semesterForm.StartDate" class="form-control" />
+
+
+                        </div>
+
+
+                        <div class="form-group">
+
+
+                            <label for="semesterEnd">End Date</label>
+
+
+                            <input type="date" id="semesterEnd" @bind="semesterForm.EndDate" class="form-control" />
+
+
+                        </div>
+
+
+                    }
+
+
                 </div>
+
+
+                <div class="modal-footer">
+
+
+                    <button class="btn-secondary" @onclick="CloseModal">Cancel</button>
+
+
+                    <button class="btn-primary" @onclick="SaveModal">Save</button>
+
+
+                </div>
+
+
             </div>
+
+
         </div>
+
+
     }
 
-    <!-- Semester Modal -->
-    @if (showSemesterModal)
+
+
+
+
+    @if (showWarning)
+
+
     {
-        <div class="modal-overlay" @onclick="CloseSemesterModal">
-            <div class="modal-container" @onclick:stopPropagation="true">
-                <div class="modal-header">
-                    <h3>Add New Semester</h3>
-                    <button class="close-btn" @onclick="CloseSemesterModal">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <EditForm Model="semesterForm" OnValidSubmit="SaveSemester">
-                        <DataAnnotationsValidator />
-                        <ValidationSummary />
 
-                        <div class="form-group">
-                            <label for="semesterName">Semester Name</label>
-                            <InputText id="semesterName" 
-                                      class="form-control" 
-                                      @bind-Value="semesterForm.Name" 
-                                      placeholder="e.g., First Semester, Second Semester" />
-                            <ValidationMessage For="@(() => semesterForm.Name)" />
-                        </div>
 
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="semesterStart">Start Date</label>
-                                <InputDate id="semesterStart" 
-                                          class="form-control" 
-                                          @bind-Value="semesterForm.StartDate" />
-                                <ValidationMessage For="@(() => semesterForm.StartDate)" />
-                            </div>
-                            <div class="form-group">
-                                <label for="semesterEnd">End Date</label>
-                                <InputDate id="semesterEnd" 
-                                          class="form-control" 
-                                          @bind-Value="semesterForm.EndDate" />
-                                <ValidationMessage For="@(() => semesterForm.EndDate)" />
-                            </div>
-                        </div>
+        <div class="warning-banner">
 
-                        <div class="form-group">
-                            <div class="form-check">
-                                <InputCheckbox id="semesterActive" 
-                                              class="form-check-input" 
-                                              @bind-Value="semesterForm.IsActive" />
-                                <label for="semesterActive" class="form-check-label">
-                                    Set as active semester
-                                </label>
-                            </div>
-                        </div>
 
-                        <div class="modal-footer">
-                            <button type="button" class="btn-secondary" @onclick="CloseSemesterModal">
-                                Cancel
-                            </button>
-                            <button type="submit" class="btn-primary" disabled="@isSubmitting">
-                                @if (isSubmitting)
-                                {
-                                    <i class="fas fa-spinner fa-spin"></i>
-                                }
-                                Add Semester
-                            </button>
-                        </div>
-                    </EditForm>
-                </div>
+            <div class="warning-icon">⚠️</div>
+
+
+            <div class="warning-message">
+
+
+                <strong>Warning:</strong> No upcoming academic session has been configured. 
+
+
+                Please create a new session before the current one ends to ensure continuity.
+
+
             </div>
+
+
+            <button class="btn-primary" @onclick="() => ShowModal(ManageAcademicSession.ModalType.CreateSession)">
+
+
+                Create Session
+
+
+            </button>
+
+
+            <button class="close-warning" @onclick="DismissWarning">×</button>
+
+
         </div>
+
+
     }
+
+
 </div>
-
-@code {
-    private NotificationComponent notificationComponent = default!;
-    private Timer countdownTimer = default!;
-    
-    private AcademicSession? currentSession;
-    private List<AcademicSession> upcomingSessions = new();
-    private List<AcademicSession> archivedSessions = new();
-    
-    private bool showModal = false;
-    private bool showSemesterModal = false;
-    private bool isLoading = true;
-    private bool isSubmitting = false;
-    
-    private AcademicSession? editingSession;
-    private SessionFormModel sessionForm = new();
-    private SemesterFormModel semesterForm = new();
-    private int selectedSessionId = 0;
-
-    protected override async Task OnInitializedAsync()
-    {
-        await LoadData();
-        StartCountdownTimer();
-    }
-
-    private async Task LoadData()
-    {
-        try
-        {
-            isLoading = true;
-            StateHasChanged();
-
-            currentSession = await SessionService.GetCurrentSessionAsync();
-            upcomingSessions = await SessionService.GetUpcomingSessionsAsync();
-            archivedSessions = await SessionService.GetArchivedSessionsAsync();
-
-            notificationComponent?.ShowSuccess("Academic sessions loaded successfully");
-        }
-        catch (Exception ex)
-        {
-            notificationComponent?.ShowError($"Failed to load sessions: {ex.Message}");
-        }
-        finally
-        {
-            isLoading = false;
-            StateHasChanged();
-        }
-    }
-
-    private async Task RefreshData()
-    {
-        await LoadData();
-    }
-
-    private void ShowCreateSessionModal()
-    {
-        editingSession = null;
-        sessionForm = new SessionFormModel();
-        showModal = true;
-    }
-
-    private void EditSession(AcademicSession session)
-    {
-        editingSession = session;
-        sessionForm = new SessionFormModel
-        {
-            Title = session.Title,
-            StartDate = session.StartDate,
-            EndDate = session.EndDate,
-            Description = session.Description,
-            IsActive = session.IsActive
-        };
-        showModal = true;
-    }
-
-    private void CloseModal()
-    {
-        showModal = false;
-        editingSession = null;
-        sessionForm = new();
-    }
-
-    private async Task SaveSession()
-    {
-        try
-        {
-            isSubmitting = true;
-            
-            if (editingSession?.Id > 0)
-            {
-                await SessionService.UpdateSessionAsync(editingSession.Id, sessionForm);
-                notificationComponent?.ShowSuccess("Academic session updated successfully");
-            }
-            else
-            {
-                await SessionService.CreateSessionAsync(sessionForm);
-                notificationComponent?.ShowSuccess("Academic session created successfully");
-            }
-
-            CloseModal();
-            await LoadData();
-        }
-        catch (Exception ex)
-        {
-            notificationComponent?.ShowError($"Failed to save session: {ex.Message}");
-        }
-        finally
-        {
-            isSubmitting = false;
-        }
-    }
-
-    private void ShowAddSemesterModal(int sessionId)
-    {
-        selectedSessionId = sessionId;
-        semesterForm = new SemesterFormModel();
-        showSemesterModal = true;
-    }
-
-    private void CloseSemesterModal()
-    {
-        showSemesterModal = false;
-        semesterForm = new();
-        selectedSessionId = 0;
-    }
-
-    private async Task SaveSemester()
-    {
-        try
-        {
-            isSubmitting = true;
-            
-            await SessionService.AddSemesterAsync(selectedSessionId, semesterForm);
-            notificationComponent?.ShowSuccess("Semester added successfully");
-
-            CloseSemesterModal();
-            await LoadData();
-        }
-        catch (Exception ex)
-        {
-            notificationComponent?.ShowError($"Failed to add semester: {ex.Message}");
-        }
-        finally
-        {
-            isSubmitting = false;
-        }
-    }
-
-    private async Task ToggleSemesterStatus(Semester semester, bool isActive)
-    {
-        try
-        {
-            await SessionService.UpdateSemesterStatusAsync(semester.Id, isActive);
-            
-            if (isActive)
-            {
-                notificationComponent?.ShowSuccess($"{semester.Name} has been activated");
-            }
-            else
-            {
-                notificationComponent?.ShowInfo($"{semester.Name} has been deactivated");
-            }
-
-            await LoadData();
-        }
-        catch (Exception ex)
-        {
-            notificationComponent?.ShowError($"Failed to update semester status: {ex.Message}");
-        }
-    }
-
-    private async Task ArchiveSession(int sessionId)
-    {
-        try
-        {
-            await SessionService.ArchiveSessionAsync(sessionId);
-            notificationComponent?.ShowSuccess("Session archived successfully");
-            await LoadData();
-        }
-        catch (Exception ex)
-        {
-            notificationComponent?.ShowError($"Failed to archive session: {ex.Message}");
-        }
-    }
-
-    private async Task ActivateSession(int sessionId)
-    {
-        try
-        {
-            await SessionService.ActivateSessionAsync(sessionId);
-            notificationComponent?.ShowSuccess("Session activated successfully");
-            await LoadData();
-        }
-        catch (Exception ex)
-        {
-            notificationComponent?.ShowError($"Failed to activate session: {ex.Message}");
-        }
-    }
-
-    private void ViewArchivedSession(AcademicSession session)
-    {
-        // Navigate to detailed view or show in modal
-        notificationComponent?.ShowInfo($"Viewing archived session: {session.Title}");
-    }
-
-    private void ShowAllArchivedSessions()
-    {
-        // Navigate to full archived sessions page
-        notificationComponent?.ShowInfo("Navigating to archived sessions...");
-    }
-
-    private string GetTimeRemaining(DateTime endDate)
-    {
-        var timeSpan = endDate - DateTime.Now;
-        if (timeSpan.TotalDays > 1)
-            return $"{timeSpan.Days} days";
-        else if (timeSpan.TotalHours > 1)
-            return $"{timeSpan.Hours} hours";
-        else if (timeSpan.TotalMinutes > 1)
-            return $"{timeSpan.Minutes} minutes";
-        else
-            return "Ending soon";
-    }
-
-    private void StartCountdownTimer()
-    {
-        countdownTimer = new Timer(60000); // Update every minute
-        countdownTimer.Elapsed += async (sender, e) =>
-        {
-            await InvokeAsync(StateHasChanged);
-        };
-        countdownTimer.Start();
-    }
-
-    public void Dispose()
-    {
-        countdownTimer?.Dispose();
-    }
-
-    // Form Models
-    public class SessionFormModel
-    {
-        [Required(ErrorMessage = "Session title is required")]
-        [StringLength(100, ErrorMessage = "Title cannot exceed 100 characters")]
-        public string Title { get; set; } = string.Empty;
-
-        [Required(ErrorMessage = "Start date is required")]
-        public DateTime StartDate { get; set; } = DateTime.Today;
-
-        [Required(ErrorMessage = "End date is required")]
-        public DateTime EndDate { get; set; } = DateTime.Today.AddMonths(9);
-
-        [StringLength(500, ErrorMessage = "Description cannot exceed 500 characters")]
-        public string Description { get; set; } = string.Empty;
-
-        public bool IsActive { get; set; } = false;
-    }
-
-    public class SemesterFormModel
-    {
-        [Required(ErrorMessage = "Semester name is required")]
-        [StringLength(50, ErrorMessage = "Name cannot exceed 50 characters")]
-        public string Name { get; set; } = string.Empty;
-
-        [Required(ErrorMessage = "Start date is required")]
-        public DateTime StartDate { get; set; } = DateTime.Today;
-
-        [Required(ErrorMessage = "End date is required")]
-        public DateTime EndDate { get; set; } = DateTime.Today.AddMonths(4);
-
-        public bool IsActive { get; set; } = false;
-    }
-}
