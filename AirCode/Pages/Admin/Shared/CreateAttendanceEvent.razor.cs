@@ -5,7 +5,7 @@ using AirCode.Utilities.DataStructures;
 using AirCode.Utilities.HelperScripts;
 using Microsoft.AspNetCore.Components;
 using AttendanceRecord = AirCode.Services.SupaBase.AttendanceRecord;
-
+using Aircode.Models.QRCode;
 namespace AirCode.Pages.Admin.Shared;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
