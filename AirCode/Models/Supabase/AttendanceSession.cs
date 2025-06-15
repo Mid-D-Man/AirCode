@@ -41,8 +41,14 @@ namespace AirCode.Models.Supabase
         [Column("temporal_key")]
         public string TemporalKey { get; set; } = string.Empty;
         
-        [Column("temporal_key_enabled")]
-        public bool TemporalKeyEnabled { get; set; } = false;
+    [Column("use_temporal_key_refresh")]
+public bool UseTemporalKeyRefresh { get; set; } = false; // Renamed from TemporalKeyEnabled
+
+[Column("allow_offline_sync")]
+public bool AllowOfflineConnectionAndSync { get; set; } = true; // New field
+
+[Column("security_features")]
+public int SecurityFeatures { get; set; } = 0; // Maps to AdvancedSecurityFeatures enum
 
         public List<AttendanceRecord> GetAttendanceRecords()
         {
