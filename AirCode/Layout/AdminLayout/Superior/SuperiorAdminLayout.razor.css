@@ -30,10 +30,10 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0 6rem 0 1rem;
+    padding: 0 2rem 0 1rem; /* CHANGED: 6rem → 2rem */
     background-color: var(--bg-secondary);
     border: 1px solid var(--border);
-    margin: 1rem 3rem 0 0;
+    margin: 1rem 1rem 0 0; /* CHANGED: 3rem → 1rem */
     border-radius: 15px;
     backdrop-filter: blur(10px);
 
@@ -88,12 +88,12 @@
 
 .content-bottom {
     flex: 1;
-    padding: 1rem 3rem 2rem 1rem;
+    padding: 1rem 1rem 2rem 1rem; /* CHANGED: 3rem → 1rem */
     overflow-y: auto;
     overflow-x: hidden;
     background-color: var(--bg-secondary);
     border: 1px solid var(--border);
-    margin: 1rem 3rem 1rem 0;
+    margin: 1rem 1rem 1rem 0; /* CHANGED: 3rem → 1rem */
     border-radius: 15px;
     backdrop-filter: blur(10px);
 
@@ -140,13 +140,13 @@
     }
 
     .content-top {
-        padding: 0 4.5rem 0 0.75rem;
-        margin-right: 2.25rem;
+        padding: 0 1.5rem 0 0.75rem; /* CHANGED: 4.5rem → 1.5rem */
+        margin-right: 0.75rem; /* CHANGED: 2.25rem → 0.75rem */
     }
 
     .content-bottom {
-        padding: 0.75rem 2.25rem 1.5rem 0.75rem;
-        margin-right: 2.25rem;
+        padding: 0.75rem 0.75rem 1.5rem 0.75rem; /* CHANGED: 2.25rem → 0.75rem */
+        margin-right: 0.75rem; /* CHANGED: 2.25rem → 0.75rem */
     }
 
     .quick-stats {
@@ -173,13 +173,13 @@
         min-height: 80px;
         flex-direction: column;
         gap: 1rem;
-        padding: 1rem 3.75rem 1rem 0.5rem;
-        margin-right: 3.75rem;
+        padding: 1rem 1.25rem 1rem 0.5rem; /* CHANGED: 3.75rem → 1.25rem */
+        margin-right: 1.25rem; /* CHANGED: 3.75rem → 1.25rem */
     }
 
     .content-bottom {
-        margin-right: 3.75rem;
-        padding: 0.5rem 1.875rem 1rem 0.5rem;
+        margin-right: 1.25rem; /* CHANGED: 3.75rem → 1.25rem */
+        padding: 0.5rem 0.625rem 1rem 0.5rem; /* CHANGED: 1.875rem → 0.625rem */
     }
 
     .quick-stats {
@@ -220,17 +220,17 @@
 
     .content-top,
     .content-bottom {
-        margin: 0.5rem 3.75rem 0.5rem 0.25rem;
+        margin: 0.5rem 1.25rem 0.5rem 0.25rem; /* CHANGED: 3.75rem → 1.25rem */
         border-radius: 10px;
     }
 
     .content-top {
-        padding: 0.75rem 1.875rem 0.75rem 0.375rem;
+        padding: 0.75rem 0.625rem 0.75rem 0.375rem; /* CHANGED: 1.875rem → 0.625rem */
         min-height: 70px;
     }
 
     .content-bottom {
-        padding: 0.375rem 1.125rem 0.75rem 0.375rem;
+        padding: 0.375rem 0.375rem 0.75rem 0.375rem; /* CHANGED: 1.125rem → 0.375rem */
         margin-bottom: 0.5rem;
     }
 
