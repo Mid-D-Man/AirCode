@@ -24,32 +24,31 @@ namespace AirCode.Utilities.HelperScripts
             _cryptographyService = cryptographyService;
         }
 
-        /// <summary>
-        /// Encodes session data into a QR code payload with GitHub Pages compatibility
-        /// External scanners get redirected to GitHub Pages with payload in URL fragment
-        /// </summary>
-        public async Task<string> EncodeSessionDataAsync(
-            string sessionId,
-            string courseCode,
-            DateTime startTime,
-            int duration,
-            bool advanceSecurityModeEnabled = false)
-        {
-            // Generate temporal key for session authenticity
-            string temporalKey = GenerateTemporalKey(sessionId, startTime);
+       public async Task<string> EncodeSessionDataAsync(
+    string sessionId,
+    string courseCode,
+    DateTime startTime,
+    int duration,
+    bool useTemporalKeyRefresh = false,
+    bool allowOfflineConnectionAndSync = true,
+    AdvancedSecurityFeatures securityFeatures = AdvancedSecurityFeatures.Default)
+{
+    // Generate temporal key for session authenticity
+    string temporalKey = GenerateTemporalKey(sessionId, startTime);
 
-            var sessionData = new DecodedSessionData
-            {
-                SessionId = sessionId,
-                CourseCode = courseCode,
-                StartTime = startTime,
-                Duration = duration,
-                GeneratedTime = DateTime.UtcNow,
-                ExpirationTime = DateTime.UtcNow.AddMinutes(duration),
-                TemporalKey = temporalKey,
-                AdvanceSecurityModeEnabled = advanceSecurityModeEnabled
-            };
-
+    var sessionData = new DecodedSessionData
+    {
+        SessionId = sessionId,
+        CourseCode = courseCode,
+        StartTime = startTime,
+        Duration = duration,
+        GeneratedTime = DateTime.UtcNow,
+        ExpirationTime = DateTime.UtcNow.AddMinutes(duration),
+        TemporalKey = temporalKey,
+        UseTemporalKeyRefresh = useTemporalKeyRefresh, // Updated
+        AllowOfflineConnectionAndSync = allowOfflineConnectionAndSync, // New
+        SecurityFeatures = securityFeatures // New
+    };
             string jsonData = JsonSerializer.Serialize(sessionData, new JsonSerializerOptions
             {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase
@@ -176,23 +175,25 @@ namespace AirCode.Utilities.HelperScripts
         /// Extracts partial payload data for Supabase Edge Function
         /// </summary>
         public async Task<QRCodePayloadData> ExtractPayloadDataAsync(string qrCodeContent)
-        {
-            var sessionData = await DecodeSessionDataAsync(qrCodeContent);
-            if (sessionData == null)
-                return null;
+{
+    var sessionData = await DecodeSessionDataAsync(qrCodeContent);
+    if (sessionData == null)
+        return null;
 
-            var payloadData = new QRCodePayloadData
-            {
-                SessionId = sessionData.SessionId,
-                CourseCode = sessionData.CourseCode,
-                StartTime = sessionData.StartTime,
-                EndTime = sessionData.ExpirationTime,
-                TemporalKey = sessionData.TemporalKey,
-                AdvanceSecurityModeEnabled = sessionData.AdvanceSecurityModeEnabled
-            };
+    var payloadData = new QRCodePayloadData
+    {
+        SessionId = sessionData.SessionId,
+        CourseCode = sessionData.CourseCode,
+        StartTime = sessionData.StartTime,
+        EndTime = sessionData.ExpirationTime,
+        TemporalKey = sessionData.TemporalKey,
+        UseTemporalKeyRefresh = sessionData.UseTemporalKeyRefresh, // Updated
+        AllowOfflineConnectionAndSync = sessionData.AllowOfflineConnectionAndSync, // New
+        SecurityFeatures = sessionData.SecurityFeatures // New
+    };
 
-            return payloadData;
-        }
+    return payloadData;
+}
 
         /// <summary>
         /// Creates signed request for Supabase Edge Function
