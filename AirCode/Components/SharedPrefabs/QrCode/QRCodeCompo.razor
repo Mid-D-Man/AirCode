@@ -2,6 +2,7 @@
 @using AirCode.Utilities.HelperScripts
 @using AirCode.Services.Cryptography
 @using Microsoft.AspNetCore.Components
+@using AirCode.Models.QRCode
 @inject IJSRuntime JS
 @inject ICryptographyService CryptographyService
 
@@ -125,7 +126,9 @@
                 SessionId,
                 CourseCode,
                 StartTime,
-                Duration
+                Duration,
+false,
+true,AdvancedSecurityFeatures.Default
             );
 
             // Set content for options
