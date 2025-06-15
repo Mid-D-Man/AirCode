@@ -6,6 +6,8 @@
     padding: var(--spacing-lg);
     background-color: var(--bg-primary);
     min-height: 100vh;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .create-session-page h1 {
@@ -14,6 +16,7 @@
     font-weight: 600;
     margin-bottom: var(--spacing-xl);
     text-align: center;
+    line-height: 1.2;
 }
 
 .content-container {
@@ -23,13 +26,16 @@
     transition: all 0.3s ease;
     align-items: center;
     justify-content: center;
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
 }
 
 .content-container.session-active {
-    /* Remove grid-template-columns to maintain centering */
     display: flex;
     flex-direction: column;
     align-items: center;
+    gap: var(--spacing-xl);
 }
 
 .active-session-container {
@@ -43,8 +49,9 @@
     align-items: center;
     position: relative;
     width: 100%;
-    max-width: 900px; /* Increased from 600px */
-    min-width: 600px; /* Add minimum width for consistency */
+    max-width: 900px;
+    min-width: 320px;
+    box-sizing: border-box;
 }
 
 .form-container {
@@ -54,12 +61,14 @@
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
     border: 1px solid var(--border);
     width: 100%;
-    max-width: 900px; /* Match active-session-container */
-    min-width: 600px;
+    max-width: 900px;
+    min-width: 320px;
+    box-sizing: border-box;
 }
 
 .form-group {
     margin-bottom: var(--spacing-lg);
+    width: 100%;
 }
 
 .form-group label {
@@ -81,6 +90,8 @@
     border-radius: 8px;
     transition: all 0.2s ease;
     min-height: 60px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .selected-course-display:hover {
@@ -93,18 +104,21 @@
     flex-direction: column;
     gap: var(--spacing-xs);
     flex: 1;
+    min-width: 0;
 }
 
 .course-code {
     font-weight: 600;
     color: var(--primary-600);
     font-size: 0.95rem;
+    word-break: break-word;
 }
 
 .course-name {
     color: var(--text-primary);
     font-size: 0.9rem;
     line-height: 1.3;
+    word-break: break-word;
 }
 
 .change-course-btn,
@@ -119,6 +133,7 @@
     cursor: pointer;
     transition: all 0.2s ease;
     white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .select-course-btn {
@@ -154,6 +169,7 @@
     color: var(--text-primary);
     font-size: var(--font-size-base);
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    box-sizing: border-box;
 }
 
 .form-control:focus {
@@ -174,6 +190,7 @@
     justify-content: center;
     margin-top: var(--spacing-xl);
     position: relative;
+    width: 100%;
 }
 
 .loading-spinner {
@@ -208,6 +225,7 @@
     gap: var(--spacing-sm);
     margin-bottom: var(--spacing-lg);
     text-align: center;
+    width: 100%;
 }
 
 .session-header h3 {
@@ -216,6 +234,7 @@
     font-weight: 600;
     margin: 0;
     line-height: 1.3;
+    word-break: break-word;
 }
 
 .course-code-badge {
@@ -226,6 +245,7 @@
     font-size: 0.85rem;
     font-weight: 600;
     letter-spacing: 0.5px;
+    word-break: break-word;
 }
 
 .active-sessions-list {
@@ -237,6 +257,7 @@
     border: 1px solid var(--border);
     width: 100%;
     max-width: 800px;
+    box-sizing: border-box;
 }
 
 .countdown-timer {
@@ -249,6 +270,8 @@
     margin-bottom: var(--spacing-lg);
     box-shadow: 0 2px 10px rgba(33, 150, 243, 0.3);
     animation: pulse-timer 2s infinite;
+    text-align: center;
+    word-break: break-word;
 }
 
 @keyframes pulse-timer {
@@ -258,6 +281,9 @@
 
 .qr-code-wrapper {
     margin: var(--spacing-lg) 0;
+    display: flex;
+    justify-content: center;
+    width: 100%;
 }
 
 .session-actions {
@@ -265,6 +291,9 @@
     gap: var(--spacing-md);
     align-items: center;
     margin-top: var(--spacing-lg);
+    justify-content: center;
+    flex-wrap: wrap;
+    width: 100%;
 }
 
 .floating-qr-icon {
@@ -280,6 +309,7 @@
     cursor: pointer;
     transition: all 0.3s ease;
     box-shadow: 0 4px 15px rgba(156, 39, 176, 0.3);
+    flex-shrink: 0;
 }
 
 .floating-qr-icon:hover {
@@ -295,6 +325,7 @@
     margin-bottom: var(--spacing-lg);
     border-bottom: 2px solid var(--border);
     padding-bottom: var(--spacing-sm);
+    word-break: break-word;
 }
 
 .session-card {
@@ -307,6 +338,8 @@
     border-radius: 8px;
     border: 1px solid var(--border);
     transition: all 0.2s ease;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .session-card:hover {
@@ -323,16 +356,20 @@
     display: flex;
     flex-direction: column;
     gap: var(--spacing-xs);
+    flex: 1;
+    min-width: 0;
 }
 
 .session-info strong {
     color: var(--text-primary);
     font-weight: 600;
+    word-break: break-word;
 }
 
 .session-time {
     color: var(--text-tertiary);
     font-size: 0.9rem;
+    word-break: break-word;
 }
 
 .qr-icon-button {
@@ -347,6 +384,7 @@
     justify-content: center;
     cursor: pointer;
     transition: all 0.2s ease;
+    flex-shrink: 0;
 }
 
 .qr-icon-button:hover {
@@ -367,6 +405,8 @@
     align-items: center;
     justify-content: center;
     animation: fadeIn 0.2s ease-out;
+    padding: var(--spacing-md);
+    box-sizing: border-box;
 }
 
 .course-selection-modal {
@@ -380,7 +420,9 @@
     overflow-y: auto;
     position: relative;
     animation: slideIn 0.3s ease-out;
-    min-width: 500px;
+    min-width: 320px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 @keyframes fadeIn {
@@ -417,6 +459,7 @@
     align-items: center;
     justify-content: center;
     transition: all 0.2s ease;
+    z-index: 10;
 }
 
 .modal-close-btn:hover {
@@ -425,15 +468,26 @@
     transform: scale(1.1);
 }
 
+/* Responsive Design for Navigation Menu States */
 
-/* Large Screens / Desktop */
+/* Large Screens / Desktop (1025px+) */
 @media (min-width: 1025px) {
     .create-session-page {
         padding: var(--spacing-xxl);
+        margin-left: 0;
+    }
+
+    /* When nav is expanded (250px) */
+    body:not(.nav-collapsed) .create-session-page {
+        max-width: calc(100vw - 250px - 2rem);
+    }
+
+    /* When nav is collapsed (80px) */
+    body.nav-collapsed .create-session-page {
+        max-width: calc(100vw - 80px - 2rem);
     }
 
     .content-container.session-active {
-        /* Keep centered layout on desktop */
         flex-direction: column;
         align-items: center;
     }
@@ -445,18 +499,40 @@
     .course-info {
         gap: var(--spacing-sm);
     }
+
+    .course-selection-modal {
+        min-width: 500px;
+        max-width: 600px;
+    }
 }
 
-/* Medium Screens / Tablet */
+/* Medium Screens / Tablet (768px - 1024px) */
 @media (min-width: 768px) and (max-width: 1024px) {
+    .create-session-page {
+        padding: var(--spacing-lg);
+        max-width: 100%;
+    }
+
+    /* When nav is expanded (240px) */
+    body:not(.nav-collapsed) .create-session-page {
+        max-width: calc(100vw - 240px - 1rem);
+    }
+
+    /* When nav is collapsed (70px) */
+    body.nav-collapsed .create-session-page {
+        max-width: calc(100vw - 70px - 1rem);
+    }
+
     .content-container.session-active {
         flex-direction: column;
         align-items: center;
         gap: var(--spacing-lg);
     }
 
-    .active-session-container {
-        max-width: 500px;
+    .active-session-container,
+    .form-container {
+        max-width: 100%;
+        min-width: 320px;
     }
 
     .create-session-page h1 {
@@ -474,19 +550,38 @@
         align-self: flex-end;
         margin-top: var(--spacing-xs);
     }
+
     .course-selection-modal {
-        min-width: unset;
-        width: 95vw;
+        min-width: 320px;
+        max-width: 95vw;
         max-height: 90vh;
         padding: var(--spacing-lg);
         border-radius: 12px;
     }
+
+    .session-actions {
+        justify-content: center;
+    }
 }
 
-/* Small Screens / Mobile */
-@media (max-width: 767px) {
+/* Small Screens / Mobile (481px - 767px) */
+@media (min-width: 481px) and (max-width: 767px) {
     .create-session-page {
         padding: var(--spacing-md);
+        max-width: 100vw;
+    }
+
+    /* When nav is collapsed on mobile (60px) */
+    body.nav-collapsed .create-session-page {
+        margin-left: 60px;
+        max-width: calc(100vw - 60px);
+        padding-left: var(--spacing-sm);
+    }
+
+    /* When nav is expanded on mobile (full overlay) */
+    body:not(.nav-collapsed) .create-session-page {
+        margin-left: 0;
+        max-width: 100vw;
     }
 
     .create-session-page h1 {
@@ -495,18 +590,13 @@
     }
 
     .content-container.session-active {
-        grid-template-columns: 1fr;
         gap: var(--spacing-lg);
     }
 
-    .active-session-container {
-        min-width: unset;
-        max-width: 95vw;
-    }
-
+    .active-session-container,
     .form-container {
-        min-width: unset;
-        max-width: 95vw;
+        min-width: 280px;
+        max-width: 100%;
     }
 
     .selected-course-display {
@@ -565,22 +655,46 @@
     .active-sessions-list {
         padding: var(--spacing-lg);
     }
+
+    .course-selection-modal {
+        width: 95vw;
+        max-width: 95vw;
+        min-width: 280px;
+        max-height: 90vh;
+        padding: var(--spacing-lg);
+    }
 }
 
-/* Extra Small Screens */
+/* Extra Small Screens / Mobile (≤ 480px) */
 @media (max-width: 480px) {
     .create-session-page {
         padding: var(--spacing-sm);
+        max-width: 100vw;
+    }
+
+    /* When nav is collapsed on small mobile (50px) */
+    body.nav-collapsed .create-session-page {
+        margin-left: 50px;
+        max-width: calc(100vw - 50px);
+        padding-left: var(--spacing-xs);
+    }
+
+    /* When nav is expanded on small mobile (full overlay) */
+    body:not(.nav-collapsed) .create-session-page {
+        margin-left: 0;
+        max-width: 100vw;
     }
 
     .form-container,
     .active-session-container,
     .active-sessions-list {
         padding: var(--spacing-md);
+        min-width: 260px;
     }
 
     .create-session-page h1 {
         font-size: 1.25rem;
+        margin-bottom: var(--spacing-md);
     }
 
     .countdown-timer {
@@ -601,8 +715,11 @@
         font-size: 0.9rem;
         padding: var(--spacing-sm) var(--spacing-md);
     }
+
     .course-selection-modal {
         width: 98vw;
+        max-width: 98vw;
+        min-width: 260px;
         height: 95vh;
         max-height: 95vh;
         padding: var(--spacing-md);
@@ -612,6 +729,55 @@
     .modal-close-btn {
         top: var(--spacing-sm);
         right: var(--spacing-sm);
+        width: 28px;
+        height: 28px;
+        font-size: 1.2rem;
+    }
+
+    .session-header h3 {
+        font-size: 1.1rem;
+    }
+
+    .floating-qr-icon {
+        width: 40px;
+        height: 40px;
+    }
+
+    .qr-icon-button {
+        width: 32px;
+        height: 32px;
+    }
+}
+
+/* Landscape orientation adjustments for mobile */
+@media (max-height: 500px) and (orientation: landscape) {
+    .create-session-page {
+        padding: var(--spacing-sm);
+    }
+
+    .create-session-page h1 {
+        font-size: 1.2rem;
+        margin-bottom: var(--spacing-md);
+    }
+
+    .content-container {
+        gap: var(--spacing-md);
+    }
+
+    .form-container,
+    .active-session-container {
+        padding: var(--spacing-md);
+    }
+
+    .countdown-timer {
+        font-size: 0.9rem;
+        padding: var(--spacing-xs) var(--spacing-sm);
+        margin-bottom: var(--spacing-md);
+    }
+
+    .course-selection-modal {
+        max-height: 90vh;
+        overflow-y: auto;
     }
 }
 
@@ -642,4 +808,72 @@ body.dark-mode .selected-course-display:hover {
 
 body.dark-mode .course-code {
     color: var(--primary-400);
+}
+
+/* High DPI display optimizations */
+@media (min-resolution: 192dpi), (min-resolution: 2dppx) {
+    .create-session-page {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+}
+
+/* Reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+    .floating-qr-icon,
+    .qr-icon-button,
+    .change-course-btn,
+    .select-course-btn,
+    .session-card,
+    .countdown-timer {
+        transition: none;
+        animation: none;
+    }
+
+    .floating-qr-icon:hover,
+    .qr-icon-button:hover {
+        transform: none;
+    }
+
+    .session-card:hover {
+        transform: none;
+    }
+}
+
+/* Focus styles for accessibility */
+.change-course-btn:focus-visible,
+.select-course-btn:focus-visible,
+.floating-qr-icon:focus-visible,
+.qr-icon-button:focus-visible {
+    outline: 2px solid var(--button-primary);
+    outline-offset: 2px;
+}
+
+.form-control:focus-visible {
+    outline: 2px solid var(--primary-500);
+    outline-offset: 2px;
+}
+
+/* Print styles */
+@media print {
+    .create-session-page {
+        padding: 0;
+        max-width: 100%;
+        margin: 0;
+    }
+
+    .session-actions,
+    .change-course-btn,
+    .select-course-btn,
+    .floating-qr-icon,
+    .qr-icon-button {
+        display: none;
+    }
+
+    .countdown-timer {
+        background: none;
+        color: black;
+        box-shadow: none;
+        animation: none;
+    }
 }
