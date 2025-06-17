@@ -259,7 +259,7 @@ private string GetSecurityLevelName(AdvancedSecurityFeatures feature)
         var savedSession = await AttendanceSessionService.CreateSessionAsync(attendanceSession);
         
         // Generate QR code payload
-        qrCodePayload = await GenerateQrCodePayload();
+        qrCodePayload = await GenerateQrCodePayloadWithTemporalKey();
 
         // Create Firebase attendance event document (keep existing functionality)
         await CreateFirebaseAttendanceEvent();
@@ -325,9 +325,29 @@ private async Task UpdateTemporalKey()
     {
         string newTemporalKey = GenerateTemporalKey(sessionModel.SessionId, sessionModel.StartTime);
         
+        // Update Supabase
         await AttendanceSessionService.UpdateTemporalKeyAsync(sessionModel.SessionId, newTemporalKey);
         
-        Console.WriteLine($"Updated temporal key for session: {sessionModel.SessionId}");
+        // Generate new QR code payload with updated temporal key
+        qrCodePayload = await QRCodeDecoder.EncodeSessionDataAsync(
+            sessionModel.SessionId,
+            sessionModel.CourseId,
+            sessionModel.StartTime,
+            sessionModel.Duration,
+            allowOfflineSync,
+            useTemporalKeyRefresh,
+            securityFeatures,
+            newTemporalKey
+        );
+        
+        // Update current active session
+        currentActiveSession.QrCodePayload = qrCodePayload;
+        SessionStateService.UpdateActiveSession(currentActiveSession);
+        
+        // Trigger UI update to refresh QR code
+        await InvokeAsync(StateHasChanged);
+        
+        Console.WriteLine($"Updated temporal key and QR code for session: {sessionModel.SessionId}");
     }
     catch (Exception ex)
     {
@@ -458,14 +478,23 @@ private async Task UpdateTemporalKey()
             }
         }
 
-        private async Task<string> GenerateQrCodePayload()
-        {
-            return await QRCodeDecoder.EncodeSessionDataAsync(
-                sessionModel.SessionId,
-                sessionModel.CourseId,
-                sessionModel.StartTime,
-                sessionModel.Duration);
-        }
+     private async Task<string> GenerateQrCodePayloadWithTemporalKey()
+{
+    string temporalKey = useTemporalKeyRefresh ? 
+        GenerateTemporalKey(sessionModel.SessionId, sessionModel.StartTime) : 
+        string.Empty;
+        
+    return await QRCodeDecoder.EncodeSessionDataAsync(
+        sessionModel.SessionId,
+        sessionModel.CourseId,
+        sessionModel.StartTime,
+        sessionModel.Duration,
+        allowOfflineSync,
+        useTemporalKeyRefresh,
+        securityFeatures,
+        temporalKey
+    );
+}
 
         private void OpenFloatingQR()
         {
@@ -509,67 +538,67 @@ private async Task UpdateTemporalKey()
         }
 
         private QRCodeBaseOptions GenerateQRCodeOptions()
-        {
-            QRCodeBaseOptions options = new QRCodeBaseOptions
-            {
-                Content = qrCodePayload,
-                Size = 300,
-                DarkColor = "#000000",
-                LightColor = "#FFFFFF",
-                ErrorLevel = ErrorCorrectionLevel.M,
-                Margin = 4
-            };
+{
+    QRCodeBaseOptions options = new QRCodeBaseOptions
+    {
+        Content = qrCodePayload,
+        Size = 300,
+        DarkColor = "#000000",
+        LightColor = "#FFFFFF",
+        ErrorLevel = ErrorCorrectionLevel.M,
+        Margin = 4
+    };
 
-            return selectedTheme switch
-            {
-                "Gradient" => new QRCodeGradientOptions
-                {
-                    Content = qrCodePayload,
-                    Size = 300,
-                    DarkColor = "#000000",
-                    LightColor = "#FFFFFF",
-                    ErrorLevel = ErrorCorrectionLevel.M,
-                    Margin = 4,
-                    GradientColor1 = "#3498db",
-                    GradientColor2 = "#9b59b6",
-                    Direction = GradientDirection.Diagonal
-                },
-                "Branded" => new QRCodeBrandedOptions
-                {
-                    Content = qrCodePayload,
-                    Size = 300,
-                    DarkColor = "#000000",
-                    LightColor = "#FFFFFF",
-                    ErrorLevel = ErrorCorrectionLevel.H,
-                    Margin = 4,
-                    LogoUrl = "icon-192.png",
-                    LogoSizeRatio = 0.2f,
-                    AddLogoBorder = true,
-                    LogoBorderColor = "#FFFFFF",
-                    LogoBorderWidth = 2,
-                    LogoBorderRadius = 5
-                },
-                "GradientWithLogo" => new QRCodeGradientBrandedOptions
-                {
-                    Content = qrCodePayload,
-                    Size = 300,
-                    DarkColor = "#000000",
-                    LightColor = "#FFFFFF",
-                    ErrorLevel = ErrorCorrectionLevel.H,
-                    Margin = 4,
-                    GradientColor1 = "#3498db",
-                    GradientColor2 = "#9b59b6",
-                    Direction = GradientDirection.Radial,
-                    LogoUrl = "/icon-192.png",
-                    LogoSizeRatio = 0.2f,
-                    AddLogoBorder = true,
-                    LogoBorderColor = "#FFFFFF",
-                    LogoBorderWidth = 2,
-                    LogoBorderRadius = 5
-                },
-                _ => options
-            };
-        }
+    return selectedTheme switch
+    {
+        "Gradient" => new QRCodeGradientOptions
+        {
+            Content = qrCodePayload,
+            Size = 300,
+            DarkColor = "#000000",
+            LightColor = "#FFFFFF",
+            ErrorLevel = ErrorCorrectionLevel.M,
+            Margin = 4,
+            GradientColor1 = "#3498db",
+            GradientColor2 = "#9b59b6",
+            Direction = GradientDirection.Diagonal
+        },
+        "Branded" => new QRCodeBrandedOptions
+        {
+            Content = qrCodePayload,
+            Size = 300,
+            DarkColor = "#000000",
+            LightColor = "#FFFFFF",
+            ErrorLevel = ErrorCorrectionLevel.H,
+            Margin = 4,
+            LogoUrl = "icon-192.png",
+            LogoSizeRatio = 0.2f,
+            AddLogoBorder = true,
+            LogoBorderColor = "#FFFFFF",
+            LogoBorderWidth = 2,
+            LogoBorderRadius = 5
+        },
+        "GradientWithLogo" => new QRCodeGradientBrandedOptions
+        {
+            Content = qrCodePayload,
+            Size = 300,
+            DarkColor = "#000000",
+            LightColor = "#FFFFFF",
+            ErrorLevel = ErrorCorrectionLevel.H,
+            Margin = 4,
+            GradientColor1 = "#3498db",
+            GradientColor2 = "#9b59b6",
+            Direction = GradientDirection.Radial,
+            LogoUrl = "/icon-192.png",
+            LogoSizeRatio = 0.2f,
+            AddLogoBorder = true,
+            LogoBorderColor = "#FFFFFF",
+            LogoBorderWidth = 2,
+            LogoBorderRadius = 5
+        },
+        _ => options
+    };
+}
 
         private string FormatTimeRemaining()
         {
