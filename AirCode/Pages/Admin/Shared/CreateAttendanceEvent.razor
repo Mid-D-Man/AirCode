@@ -6,6 +6,8 @@
 @using AirCode.Components.SharedPrefabs.QrCode
 @using AirCode.Components.SharedPrefabs.Buttons
 @using AirCode.Models.QRCode
+@using AirCode.Components.SharedPrefabs.InfoPopup
+
 <div class="create-session-page">
     <h1>Create Attendance Event</h1>
     
@@ -72,7 +74,7 @@
                         <div class="form-group toggle-group">
                             <div class="toggle-header">
                                 <label for="allowOfflineSync">Allow Offline Sync</label>
-                                <button type="button" class="info-btn" @onclick="() => ShowInfoPopup(InfoType.OfflineSync)">
+                                <button type="button" class="info-btn" @onclick="() => ShowInfoPopup(InfoPopup.InfoType.OfflineSync)">
                                     <span class="info-icon">ⓘ</span>
                                 </button>
                             </div>
@@ -86,7 +88,7 @@
                         <div class="form-group toggle-group">
                             <div class="toggle-header">
                                 <label for="useTemporalKeyRefresh">Use Temporal Key Refresh</label>
-                                <button type="button" class="info-btn" @onclick="() => ShowInfoPopup(InfoType.TemporalKeyRefresh)">
+                                <button type="button" class="info-btn" @onclick="() => ShowInfoPopup(InfoPopup.InfoType.TemporalKeyRefresh)">
                                     <span class="info-icon">ⓘ</span>
                                 </button>
                             </div>
@@ -102,7 +104,7 @@
                             <div class="form-group">
                                 <div class="field-header">
                                     <label for="temporalKeyRefreshInterval">Temporal Key Refresh Interval</label>
-                                    <button type="button" class="info-btn" @onclick="() => ShowInfoPopup(InfoType.RefreshInterval)">
+                                    <button type="button" class="info-btn" @onclick="() => ShowInfoPopup(InfoPopup.InfoType.RefreshInterval)">
                                         <span class="info-icon">ⓘ</span>
                                     </button>
                                 </div>
@@ -119,7 +121,7 @@
                         <div class="form-group">
                             <div class="field-header">
                                 <label for="securityFeatures">Security Features</label>
-                                <button type="button" class="info-btn" @onclick="() => ShowInfoPopup(InfoType.SecurityFeatures)">
+                                <button type="button" class="info-btn" @onclick="() => ShowInfoPopup(InfoPopup.InfoType.SecurityFeatures)">
                                     <span class="info-icon">ⓘ</span>
                                 </button>
                             </div>
@@ -215,20 +217,8 @@
     SessionData="floatingSessionData" 
     OnClose="CloseFloatingQR" />
 
-<!-- Info Popup Modal -->
-@if (showInfoPopup)
-{
-    <div class="info-popup-overlay" @onclick="CloseInfoPopup">
-        <div class="info-popup" @onclick:stopPropagation="true">
-            <div class="info-popup-header">
-                <h4>@GetInfoTitle()</h4>
-                <button class="close-btn" @onclick="CloseInfoPopup">
-                    <span>&times;</span>
-                </button>
-            </div>
-            <div class="info-popup-content">
-                <p>@GetInfoContent()</p>
-            </div>
-        </div>
-    </div>
-}
+<!-- Info Popup Component -->
+<InfoPopup 
+    IsVisible="showInfoPopup" 
+    CurrentInfoType="currentInfoType" 
+    OnClose="CloseInfoPopup" />
