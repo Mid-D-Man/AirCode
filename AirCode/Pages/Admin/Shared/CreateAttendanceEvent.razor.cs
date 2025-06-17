@@ -48,9 +48,9 @@ using AirCode.Components.SharedPrefabs.Others;
         // Floating QR code properties
         private bool showFloatingQR = false;
         private FloatingQRWindow.FloatingSessionData floatingSessionData;
-      private bool useTemporalKeyRefresh = false; // Renamed from temporalKeyEnabled // Testing toggle
-          private bool allowOfflineSync = true; // NEW - Add this
-    private AdvancedSecurityFeatures securityFeatures = AdvancedSecurityFeatures.Default; // NEW - Add this
+        private bool useTemporalKeyRefresh = false; // Renamed from temporalKeyEnabled // Testing toggle
+        private bool allowOfflineSync = true; // NEW - Add this
+        private AdvancedSecurityFeatures securityFeatures = AdvancedSecurityFeatures.Default; // NEW - Add this
     
         private System.Threading.Timer temporalKeyUpdateTimer;
 
@@ -258,7 +258,7 @@ private string GetSecurityLevelName(AdvancedSecurityFeatures feature)
         // Save to Supabase
         var savedSession = await AttendanceSessionService.CreateSessionAsync(attendanceSession);
         
-        // Generate QR code payload
+        // Generate QR code payload - Updated to match new method signature
         qrCodePayload = await GenerateQrCodePayloadWithTemporalKey();
 
         // Create Firebase attendance event document (keep existing functionality)
@@ -328,16 +328,15 @@ private async Task UpdateTemporalKey()
         // Update Supabase
         await AttendanceSessionService.UpdateTemporalKeyAsync(sessionModel.SessionId, newTemporalKey);
         
-        // Generate new QR code payload with updated temporal key
+        // Generate new QR code payload with updated temporal key - Updated to match new method signature
         qrCodePayload = await QRCodeDecoder.EncodeSessionDataAsync(
             sessionModel.SessionId,
             sessionModel.CourseId,
             sessionModel.StartTime,
             sessionModel.Duration,
-            allowOfflineSync,
             useTemporalKeyRefresh,
-            securityFeatures,
-            newTemporalKey
+            allowOfflineSync,
+            securityFeatures
         );
         
         // Update current active session
@@ -478,23 +477,19 @@ private async Task UpdateTemporalKey()
             }
         }
 
+     // Updated to match new QRCodeDecoder method signature
      private async Task<string> GenerateQrCodePayloadWithTemporalKey()
-{
-    string temporalKey = useTemporalKeyRefresh ? 
-        GenerateTemporalKey(sessionModel.SessionId, sessionModel.StartTime) : 
-        string.Empty;
-        
-    return await QRCodeDecoder.EncodeSessionDataAsync(
-        sessionModel.SessionId,
-        sessionModel.CourseId,
-        sessionModel.StartTime,
-        sessionModel.Duration,
-        allowOfflineSync,
-        useTemporalKeyRefresh,
-        securityFeatures,
-        temporalKey
-    );
-}
+     {
+         return await QRCodeDecoder.EncodeSessionDataAsync(
+             sessionModel.SessionId,
+             sessionModel.CourseId,
+             sessionModel.StartTime,
+             sessionModel.Duration,
+             useTemporalKeyRefresh,
+             allowOfflineSync,
+             securityFeatures
+         );
+     }
 
         private void OpenFloatingQR()
         {
