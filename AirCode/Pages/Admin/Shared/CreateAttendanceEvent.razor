@@ -5,7 +5,7 @@
 @using AirCode.Components.SharedPrefabs.Others
 @using AirCode.Components.SharedPrefabs.QrCode
 @using AirCode.Components.SharedPrefabs.Buttons
-@using  AirCode.Models.QRCode
+@using AirCode.Models.QRCode
 <div class="create-session-page">
     <h1>Create Attendance Event</h1>
     
@@ -64,35 +64,69 @@
                         </InputSelect>
                     </div>
 
-                    <!-- NEW SECURITY OPTIONS SECTION -->
-                    <div class="security-options-section">
-                        <h4>Security Settings</h4>
+                    <!-- Security Configuration Section -->
+                    <div class="form-section">
+                        <h3 class="section-title">Security Configuration</h3>
                         
-                        <div class="form-group security-toggle">
-                            <label class="toggle-label">
-                                <InputCheckbox @bind-Value="useTemporalKeyRefresh" />
-                                <span class="toggle-text">Enable Temporal Key Refresh</span>
-                            </label>
-                            <small class="help-text">Automatically updates QR code security keys every 2 minutes for enhanced security</small>
+                        <!-- Allow Offline Sync Toggle -->
+                        <div class="form-group toggle-group">
+                            <div class="toggle-header">
+                                <label for="allowOfflineSync">Allow Offline Sync</label>
+                                <button type="button" class="info-btn" @onclick="() => ShowInfoPopup(InfoType.OfflineSync)">
+                                    <span class="info-icon">ⓘ</span>
+                                </button>
+                            </div>
+                            <div class="toggle-switch">
+                                <input type="checkbox" id="allowOfflineSync" @bind="allowOfflineSync" />
+                                <label for="allowOfflineSync" class="toggle-label"></label>
+                            </div>
                         </div>
 
-                        <div class="form-group security-toggle">
-                            <label class="toggle-label">
-                                <InputCheckbox @bind-Value="allowOfflineSync" />
-                                <span class="toggle-text">Allow Offline Connection & Sync</span>
-                            </label>
-                            <small class="help-text">Permits students to scan attendance offline and sync when connection is restored</small>
+                        <!-- Use Temporal Key Refresh Toggle -->
+                        <div class="form-group toggle-group">
+                            <div class="toggle-header">
+                                <label for="useTemporalKeyRefresh">Use Temporal Key Refresh</label>
+                                <button type="button" class="info-btn" @onclick="() => ShowInfoPopup(InfoType.TemporalKeyRefresh)">
+                                    <span class="info-icon">ⓘ</span>
+                                </button>
+                            </div>
+                            <div class="toggle-switch">
+                                <input type="checkbox" id="useTemporalKeyRefresh" @bind="useTemporalKeyRefresh" />
+                                <label for="useTemporalKeyRefresh" class="toggle-label"></label>
+                            </div>
                         </div>
 
+                        <!-- Temporal Key Refresh Interval (only show when temporal key is enabled) -->
+                        @if (useTemporalKeyRefresh)
+                        {
+                            <div class="form-group">
+                                <div class="field-header">
+                                    <label for="temporalKeyRefreshInterval">Temporal Key Refresh Interval</label>
+                                    <button type="button" class="info-btn" @onclick="() => ShowInfoPopup(InfoType.RefreshInterval)">
+                                        <span class="info-icon">ⓘ</span>
+                                    </button>
+                                </div>
+                                <InputSelect id="temporalKeyRefreshInterval" @bind-Value="temporalKeyRefreshInterval" class="form-control">
+                                    <option value="2">2 minutes</option>
+                                    <option value="5">5 minutes</option>
+                                    <option value="10">10 minutes</option>
+                                    <option value="30">30 minutes</option>
+                                </InputSelect>
+                            </div>
+                        }
+
+                        <!-- Security Features Dropdown -->
                         <div class="form-group">
-                            <label for="securityFeatures">Advanced Security Features</label>
+                            <div class="field-header">
+                                <label for="securityFeatures">Security Features</label>
+                                <button type="button" class="info-btn" @onclick="() => ShowInfoPopup(InfoType.SecurityFeatures)">
+                                    <span class="info-icon">ⓘ</span>
+                                </button>
+                            </div>
                             <InputSelect id="securityFeatures" @bind-Value="securityFeatures" class="form-control">
-                                <option value="@AdvancedSecurityFeatures.Default">Default Security</option>
-                                <option value="@AdvancedSecurityFeatures.DeviceGuidCheck">Device GUID Verification</option>
+                                <option value="@AdvancedSecurityFeatures.Default">Default (Basic Security)</option>
+                                <option value="@AdvancedSecurityFeatures.DeviceGuidCheck">Device GUID Check</option>
                             </InputSelect>
-                            <small class="help-text">
-                                @GetSecurityFeatureDescription(securityFeatures)
-                            </small>
                         </div>
                     </div>
                     
@@ -116,24 +150,6 @@
                 <div class="session-header">
                     <h3>@selectedCourse?.Name</h3>
                     <span class="course-code-badge">@selectedCourse?.CourseCode</span>
-                </div>
-
-                <!-- NEW SECURITY STATUS DISPLAY -->
-                <div class="security-status">
-                    <div class="security-indicators">
-                        <div class="security-indicator @(useTemporalKeyRefresh ? "active" : "inactive")">
-                            <span class="indicator-icon">🔑</span>
-                            <span class="indicator-text">Temporal Key: @(useTemporalKeyRefresh ? "Active" : "Disabled")</span>
-                        </div>
-                        <div class="security-indicator @(allowOfflineSync ? "active" : "inactive")">
-                            <span class="indicator-icon">📱</span>
-                            <span class="indicator-text">Offline Sync: @(allowOfflineSync ? "Enabled" : "Disabled")</span>
-                        </div>
-                        <div class="security-indicator">
-                            <span class="indicator-icon">🛡️</span>
-                            <span class="indicator-text">Security: @GetSecurityLevelName(securityFeatures)</span>
-                        </div>
-                    </div>
                 </div>
 
                 <div class="countdown-timer">
@@ -198,3 +214,21 @@
     IsVisible="showFloatingQR" 
     SessionData="floatingSessionData" 
     OnClose="CloseFloatingQR" />
+
+<!-- Info Popup Modal -->
+@if (showInfoPopup)
+{
+    <div class="info-popup-overlay" @onclick="CloseInfoPopup">
+        <div class="info-popup" @onclick:stopPropagation="true">
+            <div class="info-popup-header">
+                <h4>@GetInfoTitle()</h4>
+                <button class="close-btn" @onclick="CloseInfoPopup">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="info-popup-content">
+                <p>@GetInfoContent()</p>
+            </div>
+        </div>
+    </div>
+}
