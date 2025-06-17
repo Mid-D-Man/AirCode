@@ -63,6 +63,38 @@
                             <option value="GradientWithLogo">Gradient with Logo</option>
                         </InputSelect>
                     </div>
+
+                    <!-- NEW SECURITY OPTIONS SECTION -->
+                    <div class="security-options-section">
+                        <h4>Security Settings</h4>
+                        
+                        <div class="form-group security-toggle">
+                            <label class="toggle-label">
+                                <InputCheckbox @bind-Value="useTemporalKeyRefresh" />
+                                <span class="toggle-text">Enable Temporal Key Refresh</span>
+                            </label>
+                            <small class="help-text">Automatically updates QR code security keys every 2 minutes for enhanced security</small>
+                        </div>
+
+                        <div class="form-group security-toggle">
+                            <label class="toggle-label">
+                                <InputCheckbox @bind-Value="allowOfflineSync" />
+                                <span class="toggle-text">Allow Offline Connection & Sync</span>
+                            </label>
+                            <small class="help-text">Permits students to scan attendance offline and sync when connection is restored</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="securityFeatures">Advanced Security Features</label>
+                            <InputSelect id="securityFeatures" @bind-Value="securityFeatures" class="form-control">
+                                <option value="@AdvancedSecurityFeatures.Default">Default Security</option>
+                                <option value="@AdvancedSecurityFeatures.DeviceGuidCheck">Device GUID Verification</option>
+                            </InputSelect>
+                            <small class="help-text">
+                                @GetSecurityFeatureDescription(securityFeatures)
+                            </small>
+                        </div>
+                    </div>
                     
                     <div class="button-container">
                         <PrimaryButton Text="Start Session" 
@@ -84,6 +116,24 @@
                 <div class="session-header">
                     <h3>@selectedCourse?.Name</h3>
                     <span class="course-code-badge">@selectedCourse?.CourseCode</span>
+                </div>
+
+                <!-- NEW SECURITY STATUS DISPLAY -->
+                <div class="security-status">
+                    <div class="security-indicators">
+                        <div class="security-indicator @(useTemporalKeyRefresh ? "active" : "inactive")">
+                            <span class="indicator-icon">🔑</span>
+                            <span class="indicator-text">Temporal Key: @(useTemporalKeyRefresh ? "Active" : "Disabled")</span>
+                        </div>
+                        <div class="security-indicator @(allowOfflineSync ? "active" : "inactive")">
+                            <span class="indicator-icon">📱</span>
+                            <span class="indicator-text">Offline Sync: @(allowOfflineSync ? "Enabled" : "Disabled")</span>
+                        </div>
+                        <div class="security-indicator">
+                            <span class="indicator-icon">🛡️</span>
+                            <span class="indicator-text">Security: @GetSecurityLevelName(securityFeatures)</span>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="countdown-timer">
