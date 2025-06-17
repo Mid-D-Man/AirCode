@@ -20,15 +20,11 @@
         }
         @if (UseTemporalKeyRefresh)
         {
-            <p><span class="temporal-key-indicator">🔄 Dynamic Security Enabled</span></p>
-        }
-        @if (SecurityFeatures != AdvancedSecurityFeatures.Default)
-        {
-            <p><span class="security-indicator">🔒 Enhanced Security: @GetSecurityLevelName(SecurityFeatures)</span></p>
+            <p><small>🔄 Security keys refresh automatically</small></p>
         }
         @if (AllowOfflineSync)
         {
-            <p><span class="offline-indicator">📱 Offline Sync Enabled</span></p>
+            <p><small>📱 Offline scanning supported</small></p>
         }
     </div>
 </div>
@@ -42,22 +38,21 @@
     [Parameter] public QRCodeBaseOptions Options { get; set; }
     [Parameter] public EventCallback<QRCodeData> OnGenerated { get; set; }
     
-    // New parameters for temporal key and security features
+    // New security and sync parameters
     [Parameter] public bool UseTemporalKeyRefresh { get; set; } = false;
     [Parameter] public bool AllowOfflineSync { get; set; } = true;
     [Parameter] public AdvancedSecurityFeatures SecurityFeatures { get; set; } = AdvancedSecurityFeatures.Default;
-    [Parameter] public string CurrentTemporalKey { get; set; } = string.Empty;
-    [Parameter] public EventCallback OnTemporalKeyUpdateNeeded { get; set; }
+    [Parameter] public string TemporalKey { get; set; } = string.Empty;
+    
+    // External payload parameter - when provided, skip internal encoding
+    [Parameter] public string ExternalPayload { get; set; }
     
     private string QRCodeId = Guid.NewGuid().ToString("N");
     private IJSObjectReference _qrCodeModule;
     private bool _jsInitialized = false;
     private QRCodeData _generatedQRCode;
     private QRCodeDecoder _qrDecoder;
-    private System.Threading.Timer _qrRefreshTimer;
-    private string _lastTemporalKey = string.Empty;
-
-
+    private string _lastGeneratedPayload = string.Empty;
     
     protected override async Task OnInitializedAsync()
     {
@@ -75,12 +70,6 @@
             {
                 Console.WriteLine($"Failed to load JS module: {ex.Message}");
             }
-        }
-
-        // Start QR refresh timer if temporal key refresh is enabled
-        if (UseTemporalKeyRefresh)
-        {
-            StartQRRefreshTimer();
         }
     }
 
@@ -106,16 +95,6 @@
             ErrorLevel = ErrorCorrectionLevel.M,
             Margin = 4
         };
-
-        // Check if temporal key has changed and regenerate QR if needed
-        if (UseTemporalKeyRefresh && _lastTemporalKey != CurrentTemporalKey && !string.IsNullOrEmpty(CurrentTemporalKey))
-        {
-            _lastTemporalKey = CurrentTemporalKey;
-            if (_jsInitialized)
-            {
-                await GenerateSecureQRCode();
-            }
-        }
         
         await base.OnParametersSetAsync();
     }
@@ -126,48 +105,33 @@
         {
             await GenerateSecureQRCode();
         }
-        else if (!firstRender && !string.IsNullOrEmpty(CourseCode) && _jsInitialized && 
-                 (_generatedQRCode == null || HasParametersChanged()))
+        else if (!firstRender && !string.IsNullOrEmpty(CourseCode) && _jsInitialized && ShouldRegenerateQRCode())
         {
             await GenerateSecureQRCode();
         }
     }
 
-    private void StartQRRefreshTimer()
+    private bool ShouldRegenerateQRCode()
     {
-        // Refresh QR code every 30 seconds when temporal key refresh is enabled
-        _qrRefreshTimer = new System.Threading.Timer(
-            async _ => {
-                if (OnTemporalKeyUpdateNeeded.HasDelegate)
-                {
-                    await InvokeAsync(async () => {
-                        await OnTemporalKeyUpdateNeeded.InvokeAsync();
-                        StateHasChanged();
-                    });
-                }
-            },
-            null,
-            TimeSpan.FromSeconds(30),
-            TimeSpan.FromSeconds(30)
-        );
-    }
-
-    private bool HasParametersChanged()
-    {
-        var currentIdentifier = GetCurrentContentIdentifier();
-        return _generatedQRCode?.Content != currentIdentifier;
+        // Check if we have an external payload and it's different from last generated
+        if (!string.IsNullOrEmpty(ExternalPayload))
+        {
+            return ExternalPayload != _lastGeneratedPayload;
+        }
+        
+        // Fallback to parameter change detection
+        return _generatedQRCode?.Content != GetCurrentContentIdentifier();
     }
 
     private string GetCurrentContentIdentifier()
     {
-        var baseIdentifier = $"{SessionId}|{CourseCode}|{StartTime:O}|{Duration}";
-        
-        if (UseTemporalKeyRefresh)
+        // Use external payload if provided, otherwise generate identifier
+        if (!string.IsNullOrEmpty(ExternalPayload))
         {
-            baseIdentifier += $"|{CurrentTemporalKey}";
+            return ExternalPayload;
         }
         
-        return baseIdentifier;
+        return $"{SessionId}|{CourseCode}|{StartTime:O}|{Duration}|{UseTemporalKeyRefresh}|{AllowOfflineSync}|{SecurityFeatures}|{TemporalKey}";
     }
 
     private async Task GenerateSecureQRCode()
@@ -177,17 +141,29 @@
             if (!_jsInitialized || string.IsNullOrEmpty(CourseCode))
                 return;
 
-            // Generate encrypted QR code content using the decoder service with new parameters
-            string secureContent = await _qrDecoder.EncodeSessionDataAsync(
-                SessionId,
-                CourseCode,
-                StartTime,
-                Duration,
-                AllowOfflineSync,
-                UseTemporalKeyRefresh,
-                SecurityFeatures,
-                CurrentTemporalKey // Pass the current temporal key
-            );
+            string secureContent;
+            
+            // Use external payload if provided, otherwise generate internally
+            if (!string.IsNullOrEmpty(ExternalPayload))
+            {
+                secureContent = ExternalPayload;
+                _lastGeneratedPayload = ExternalPayload;
+            }
+            else
+            {
+                // Generate encrypted QR code content using the decoder service
+                secureContent = await _qrDecoder.EncodeSessionDataAsync(
+                    SessionId,
+                    CourseCode,
+                    StartTime,
+                    Duration,
+                    AllowOfflineSync,
+                    UseTemporalKeyRefresh,
+                    SecurityFeatures,
+                    TemporalKey
+                );
+                _lastGeneratedPayload = secureContent;
+            }
 
             // Set content for options
             var updatedOptions = Options with { Content = secureContent };
@@ -223,14 +199,11 @@
                 _generatedQRCode = new QRCodeData
                 {
                     Id = QRCodeId,
-                    Content = GetCurrentContentIdentifier(), // Store identifier for change detection
+                    Content = GetCurrentContentIdentifier(),
                     SvgContent = svg,
                     CreatedAt = DateTime.UtcNow,
                     ValidDuration = Duration,
-                    Theme = Theme,
-                    UseTemporalKey = UseTemporalKeyRefresh,
-                    SecurityFeatures = SecurityFeatures,
-                    AllowOfflineSync = AllowOfflineSync
+                    Theme = Theme
                 };
                 
                 // Invoke callback if registered
@@ -357,21 +330,15 @@
             _ => "linear-x"
         };
     }
-
-    private string GetSecurityLevelName(AdvancedSecurityFeatures feature)
+    
+    // Public method to force QR code regeneration (can be called externally)
+    public async Task RefreshQRCode()
     {
-        return feature switch
-        {
-            AdvancedSecurityFeatures.Default => "Standard",
-            AdvancedSecurityFeatures.DeviceGuidCheck => "Enhanced",
-            _ => "Unknown"
-        };
+        await GenerateSecureQRCode();
     }
     
     public async ValueTask DisposeAsync()
     {
-        _qrRefreshTimer?.Dispose();
-        
         if (_qrCodeModule != null)
         {
             try
