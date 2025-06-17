@@ -1,4 +1,4 @@
-/* Enhanced QRCodeCompo.razor.css - Responsive & Theme-Aware */
+/* Enhanced QRCodeCompo.razor.css - Responsive & Theme-Aware with Loading States */
 
 .qr-code {
     display: flex;
@@ -32,6 +32,8 @@
     overflow: hidden;
     width: fit-content;
     max-width: 100%;
+    min-height: 280px; /* Ensure consistent height during loading */
+    min-width: 280px; /* Ensure consistent width during loading */
 }
 
 /* Dark mode container adjustments */
@@ -50,11 +52,59 @@
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
 }
 
+/* Loading overlay styles */
+.qr-loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--bg-secondary);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    border-radius: 12px;
+    backdrop-filter: blur(2px);
+}
+
+.qr-loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(var(--button-primary-rgb, 0, 123, 255), 0.3);
+    border-top: 3px solid var(--button-primary, #007bff);
+    border-radius: 50%;
+    animation: qr-spin 1s linear infinite;
+    margin-bottom: 12px;
+}
+
+.qr-loading-text {
+    color: var(--text-secondary);
+    font-size: clamp(0.8rem, 2vw, 0.9rem);
+    font-weight: 500;
+    text-align: center;
+    margin: 0;
+    opacity: 0.8;
+}
+
+@keyframes qr-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Hide QR code content when loading */
+.hidden {
+    opacity: 0;
+    visibility: hidden;
+}
+
 /* QR Code responsive sizing */
-.qr-code-container > div {
+.qr-code-container > div:not(.qr-loading-overlay) {
     display: flex;
     justify-content: center;
     align-items: center;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
 }
 
 .qr-code-container svg,
@@ -108,6 +158,18 @@
     font-weight: 600;
 }
 
+/* Loading status indicator */
+.loading-status {
+    color: var(--button-primary) !important;
+    font-style: italic;
+    animation: loading-pulse 2s ease-in-out infinite;
+}
+
+@keyframes loading-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
 /* Enhanced expiring animation */
 @keyframes pulse {
     0% { 
@@ -150,11 +212,13 @@
     animation: pulse 1s infinite;
 }
 
-/* Loading state */
+/* Loading state for container */
 .qr-code-container.loading {
     position: relative;
+    border-color: var(--button-primary);
 }
 
+/* Legacy loading state (keeping for backward compatibility) */
 .qr-code-container.loading::before {
     content: '';
     position: absolute;
@@ -167,6 +231,8 @@
     border-top: 3px solid var(--button-primary);
     border-radius: 50%;
     animation: spin 1s linear infinite;
+    z-index: 5;
+    opacity: 0; /* Hidden by default, use new overlay instead */
 }
 
 @keyframes spin {
@@ -189,6 +255,21 @@
     color: var(--error);
     font-size: clamp(0.8rem, 2vw, 0.9rem);
     font-weight: 600;
+    z-index: 10;
+}
+
+/* Dark mode loading spinner adjustments */
+.dark-mode .qr-loading-spinner {
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-top: 3px solid var(--button-primary, #0d6efd);
+}
+
+.dark-mode .qr-loading-overlay {
+    background-color: var(--bg-secondary);
+}
+
+.dark-mode .qr-loading-text {
+    color: var(--text-secondary);
 }
 
 /* Mobile-first responsive breakpoints */
@@ -203,6 +284,18 @@
         border-radius: 8px;
         width: 100%;
         box-sizing: border-box;
+        min-height: 240px;
+        min-width: 240px;
+    }
+
+    .qr-loading-spinner {
+        width: 32px;
+        height: 32px;
+        border-width: 2px;
+    }
+
+    .qr-loading-text {
+        font-size: 0.8rem;
     }
 
     .qr-code-info {
@@ -221,6 +314,8 @@
     .qr-code-container {
         padding: 16px;
         max-width: 90vw;
+        min-height: 260px;
+        min-width: 260px;
     }
 
     .qr-code-info {
@@ -231,6 +326,8 @@
 @media (min-width: 769px) and (max-width: 1024px) {
     .qr-code-container {
         padding: 20px;
+        min-height: 280px;
+        min-width: 280px;
     }
 
     .qr-code-info {
@@ -242,6 +339,8 @@
 @media (min-width: 1025px) {
     .qr-code-container {
         padding: 24px;
+        min-height: 300px;
+        min-width: 300px;
     }
 
     .qr-code-info {
@@ -259,6 +358,10 @@
         border-width: 0.5px;
         border-left-width: 3px;
     }
+
+    .qr-loading-spinner {
+        border-width: 2px;
+    }
 }
 
 /* Reduced motion accessibility */
@@ -271,9 +374,14 @@
         animation: none;
     }
 
+    .qr-loading-spinner,
     .qr-code-container.loading::before {
         animation: none;
         opacity: 0.6;
+    }
+
+    .loading-status {
+        animation: none;
     }
 }
 
@@ -295,6 +403,13 @@
         box-shadow: none;
         border: 1px solid #000;
         background: white !important;
+        min-height: auto;
+        min-width: auto;
+    }
+
+    .qr-loading-overlay,
+    .qr-loading-spinner {
+        display: none !important;
     }
 
     .qr-code-info {
@@ -307,4 +422,8 @@
     .qr-code-info p {
         color: black !important;
     }
+
+    .loading-status {
+        display: none;
     }
+}
