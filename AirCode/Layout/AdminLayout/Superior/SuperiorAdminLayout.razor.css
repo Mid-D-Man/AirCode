@@ -184,13 +184,13 @@
 
     /* FIX: Add extra right margin when nav menu is collapsed on mobile */
     .nav-menu.collapsed ~ .main-content .content-top {
-        margin-right: 1.5rem; /* Increased from 1.25rem */
-        padding-right: 1.5rem; /* Increased from 1.25rem */
+        margin-right: 3rem; /* Increased significantly for mobile */
+        padding-right: 3rem; /* Increased significantly for mobile */
     }
 
     .nav-menu.collapsed ~ .main-content .content-bottom {
-        margin-right: 1.5rem; /* Increased from 1.25rem */
-        padding-right: 1rem; /* Increased from 0.625rem */
+        margin-right: 3rem; /* Increased significantly for mobile */
+        padding-right: 2.5rem; /* Increased significantly for mobile */
     }
 
     .quick-stats {
@@ -248,15 +248,15 @@
     /* FIX: Add extra right margin when nav menu is collapsed on small mobile */
     .nav-menu.collapsed ~ .main-content .content-top,
     .nav-menu.collapsed ~ .main-content .content-bottom {
-        margin-right: 1.75rem; /* Increased from 1.25rem */
+        margin-right: 4rem; /* Significantly increased for small mobile */
     }
 
     .nav-menu.collapsed ~ .main-content .content-top {
-        padding-right: 1rem; /* Increased from 0.625rem */
+        padding-right: 3.5rem; /* Significantly increased for small mobile */
     }
 
     .nav-menu.collapsed ~ .main-content .content-bottom {
-        padding-right: 0.75rem; /* Increased from 0.375rem */
+        padding-right: 3rem; /* Significantly increased for small mobile */
     }
 
     .quick-stats {
