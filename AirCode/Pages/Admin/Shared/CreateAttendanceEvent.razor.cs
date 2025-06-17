@@ -16,6 +16,8 @@ using AirCode.Services.Courses;
 using AirCode.Services.Firebase;
 using AirCode.Domain.Entities;
 using SessionData = AirCode.Services.Attendance.SessionData;
+using AirCode.Components.SharedPrefabs.InfoPopup;
+
     public partial class CreateAttendanceEvent : ComponentBase, IDisposable
     {
         [Inject] private IJSRuntime JS { get; set; }
@@ -76,24 +78,16 @@ using SessionData = AirCode.Services.Attendance.SessionData;
 
 // Add these variables to your existing CreateAttendanceEvent.razor.cs file
 
-// Info popup variables
-private bool showInfoPopup = false;
-private InfoType currentInfoType;
 
 // Temporal key refresh interval (in minutes)
 private int temporalKeyRefreshInterval = 5; // Default to 5 minutes
 
-// Enum for info popup types
-public enum InfoType
-{
-    OfflineSync,
-    TemporalKeyRefresh,
-    RefreshInterval,
-    SecurityFeatures
-}
+private bool showInfoPopup = false;
+private InfoPopup.InfoType currentInfoType;
 
 
-private void ShowInfoPopup(InfoType infoType)
+
+private void ShowInfoPopup(InfoPopup.InfoType infoType)
 {
     currentInfoType = infoType;
     showInfoPopup = true;
@@ -104,33 +98,7 @@ private void CloseInfoPopup()
     showInfoPopup = false;
 }
 
-private string GetInfoTitle()
-{
-    return currentInfoType switch
-    {
-        InfoType.OfflineSync => "Allow Offline Sync",
-        InfoType.TemporalKeyRefresh => "Temporal Key Refresh",
-        InfoType.RefreshInterval => "Refresh Interval",
-        InfoType.SecurityFeatures => "Security Features",
-        _ => "Information"
-    };
-}
 
-private string GetInfoContent()
-{
-    return currentInfoType switch
-    {
-        InfoType.OfflineSync => "When enabled, students can scan QR codes even when offline. Their attendance will be synced when they reconnect to the internet. This ensures attendance is captured even in poor network conditions.",
-        
-        InfoType.TemporalKeyRefresh => "Temporal Key Refresh adds an extra layer of security by periodically changing the QR code's internal key. This prevents old QR codes from being reused and helps prevent attendance fraud. The QR code appearance remains the same, but the internal security key changes at regular intervals.",
-        
-        InfoType.RefreshInterval => "This setting determines how often the temporal key is refreshed. Shorter intervals (2-5 minutes) provide better security but may cause more network traffic. Longer intervals (10-30 minutes) are more efficient but slightly less secure. 5 minutes is recommended for most scenarios.",
-        
-        InfoType.SecurityFeatures => "Security features provide additional validation methods:\n\n• Default: Basic security with standard QR code validation\n• Device GUID Check: Validates that the same device isn't used to scan multiple times, helping prevent attendance fraud through device sharing",
-        
-        _ => "No information available."
-    };
-}
 
 // Update the StartTemporalKeyUpdateTimer method to use the interval setting
 private void StartTemporalKeyUpdateTimer()
