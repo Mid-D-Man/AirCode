@@ -57,10 +57,7 @@
     private System.Threading.Timer _qrRefreshTimer;
     private string _lastTemporalKey = string.Empty;
 
-    /*
-    impl Ultra-short QR code lifespan (30-60 seconds) with temporal key refresh
-    Dynamic codes that regenerate when temporal key changes
-    */
+
     
     protected override async Task OnInitializedAsync()
     {
