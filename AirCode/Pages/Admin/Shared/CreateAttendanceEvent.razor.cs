@@ -346,16 +346,7 @@ private string GenerateTemporalKey(string sessionId, DateTime startTime)
     }
 }
 
-private void StartTemporalKeyUpdateTimer()
-{
-    // Update temporal key every 2 minutes when enabled
-    temporalKeyUpdateTimer = new System.Threading.Timer(
-        async _ => await UpdateTemporalKey(),
-        null,
-        TimeSpan.FromMinutes(2), // First update after 2 minutes
-        TimeSpan.FromMinutes(2)  // Then every 2 minutes
-    );
-}
+
 
 private async Task UpdateTemporalKey()
 {
