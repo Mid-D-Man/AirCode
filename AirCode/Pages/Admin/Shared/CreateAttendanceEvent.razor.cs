@@ -74,6 +74,26 @@ using SessionData = AirCode.Services.Attendance.SessionData;
             );
         }
 
+
+private string GetSecurityFeatureDescription(AdvancedSecurityFeatures feature)
+{
+    return feature switch
+    {
+        AdvancedSecurityFeatures.Default => "Standard security with basic validation",
+        AdvancedSecurityFeatures.DeviceGuidCheck => "Enhanced security with device-specific verification to prevent unauthorized access",
+        _ => "Unknown security feature"
+    };
+}
+
+private string GetSecurityLevelName(AdvancedSecurityFeatures feature)
+{
+    return feature switch
+    {
+        AdvancedSecurityFeatures.Default => "Standard",
+        AdvancedSecurityFeatures.DeviceGuidCheck => "Enhanced",
+        _ => "Unknown"
+    };
+}
         private void RefreshSessionLists()
         {
             allActiveSessions = SessionStateService.GetActiveSessions();
