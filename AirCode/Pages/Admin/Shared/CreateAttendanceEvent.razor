@@ -139,6 +139,7 @@
                         @if (isCreatingSession)
                         {
                             <div class="loading-spinner">
+                                <div class="spinner"></div>
                                 <span>Creating session...</span>
                             </div>
                         }
@@ -154,15 +155,43 @@
                     <span class="course-code-badge">@selectedCourse?.CourseCode</span>
                 </div>
 
-                <div class="countdown-timer">
-                    Session ends in: @FormatTimeRemaining()
+                <div class="session-status-indicators">
+                    <div class="countdown-timer">
+                        <span class="timer-label">Session ends in:</span>
+                        <span class="timer-value">@FormatTimeRemaining()</span>
+                    </div>
+                    
+                    @if (useTemporalKeyRefresh)
+                    {
+                        <div class="temporal-key-indicator">
+                            <span class="security-badge temporal-key-active">
+                                <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                                </svg>
+                                Temporal Key Refresh Active
+                            </span>
+                            <span class="refresh-interval">Updates every @temporalKeyRefreshInterval min</span>
+                        </div>
+                    }
+                    
+                    @if (securityFeatures != AdvancedSecurityFeatures.Default)
+                    {
+                        <div class="security-level-indicator">
+                            <span class="security-badge enhanced-security">
+                                <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M12,1L3,5V11C3,16.55 6.84,21.74 12,23C17.16,21.74 21,16.55 21,11V5L12,1M10,17L6,13L7.41,11.59L10,14.17L16.59,7.58L18,9L10,17Z"/>
+                                </svg>
+                                Enhanced Security
+                            </span>
+                            <span class="security-description">@GetSecurityFeatureDescription(securityFeatures)</span>
+                        </div>
+                    }
                 </div>
 
                 <div class="qr-code-wrapper">
                     <QRCodeCompo
                         SessionId="@sessionModel.SessionId"
                         CourseCode="@sessionModel.CourseId"
-                    
                         StartTime="@sessionModel.StartTime"
                         Duration="@sessionModel.Duration"
                         Theme="@ConvertStringToTheme(selectedTheme)"
@@ -176,7 +205,19 @@
                             <path d="M3 11h8V3H3v8zm2-6h4v4H5V5zM3 21h8v-8H3v8zm2-6h4v4H5v-4zM13 3v8h8V3h-8zm6 6h-4V5h4v4zM19 13h2v2h-2zM13 13h2v2h-2zM15 15h2v2h-2zM13 17h2v2h-2zM15 19h2v2h-2zM17 17h2v2h-2zM19 19h2v2h-2zM17 15h2v2h-2z"/>
                         </svg>
                     </button>
-                    <PrimaryButton Text="End Session" OnClick="EndSession" />
+                    
+                    <div class="end-session-container">
+                        <PrimaryButton Text="End Session" 
+                                     OnClick="EndSession" 
+                                     Disabled="@isEndingSession" />
+                        @if (isEndingSession)
+                        {
+                            <div class="loading-spinner ending-session">
+                                <div class="spinner"></div>
+                                <span>Ending session...</span>
+                            </div>
+                        }
+                    </div>
                 </div>
             </div>
         }
@@ -191,8 +232,30 @@
             {
                 <div class="session-card">
                     <div class="session-info">
-                        <strong>@session.CourseName (@session.CourseId)</strong>
-                        <span class="session-time">Ends: @session.EndTime.ToString("HH:mm")</span>
+                        <div class="session-main-info">
+                            <strong>@session.CourseName (@session.CourseId)</strong>
+                            <span class="session-time">Ends: @session.EndTime.ToString("HH:mm")</span>
+                        </div>
+                        <div class="session-badges">
+                            @if (session.UseTemporalKeyRefresh)
+                            {
+                                <span class="session-feature-badge temporal">
+                                    <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                                    </svg>
+                                    Temporal Key
+                                </span>
+                            }
+                            @if (session.SecurityFeatures != AdvancedSecurityFeatures.Default)
+                            {
+                                <span class="session-feature-badge security">
+                                    <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M12,1L3,5V11C3,16.55 6.84,21.74 12,23C17.16,21.74 21,16.55 21,11V5L12,1M10,17L6,13L7.41,11.59L10,14.17L16.59,7.58L18,9L10,17Z"/>
+                                    </svg>
+                                    Enhanced
+                                </span>
+                            }
+                        </div>
                     </div>
                     <button class="qr-icon-button" @onclick="() => OpenFloatingQRForSession(session)" title="Show QR Code">
                         <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
