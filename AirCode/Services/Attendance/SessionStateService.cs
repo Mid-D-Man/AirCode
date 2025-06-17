@@ -79,17 +79,23 @@ namespace AirCode.Services.Attendance
         }
     }
 
-    public class ActiveSessionData
-    {
-        public string SessionId { get; set; }
-        public string CourseName { get; set; }
-        public string CourseId { get; set; }
-        public DateTime StartTime { get; set; }
-        public DateTime EndTime { get; set; }
-        public int Duration { get; set; }
-        public string QrCodePayload { get; set; }
-        public string Theme { get; set; }
-    }
+    // ActiveSessionData.cs - Add these properties to your existing ActiveSessionData class
+
+public class ActiveSessionData
+{
+    public string SessionId { get; set; }
+    public string CourseName { get; set; }
+    public string CourseId { get; set; }
+    public DateTime StartTime { get; set; }
+    public DateTime EndTime { get; set; }
+    public int Duration { get; set; }
+    public string QrCodePayload { get; set; }
+    public string Theme { get; set; }
+    
+    // Add these missing properties:
+    public bool UseTemporalKeyRefresh { get; set; }
+    public AdvancedSecurityFeatures SecurityFeatures { get; set; } = AdvancedSecurityFeatures.Default;
+}
 
     public class SessionData
     {
