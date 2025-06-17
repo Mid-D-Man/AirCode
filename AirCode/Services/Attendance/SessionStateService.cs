@@ -32,6 +32,18 @@ namespace AirCode.Services.Attendance
             StateChanged?.Invoke();
         }
 
+        // NEW: Add the missing UpdateActiveSession method
+        public void UpdateActiveSession(ActiveSessionData updatedSession)
+        {
+            var existingSession = _activeSessions.FirstOrDefault(s => s.SessionId == updatedSession.SessionId);
+            if (existingSession != null)
+            {
+                var index = _activeSessions.IndexOf(existingSession);
+                _activeSessions[index] = updatedSession;
+                StateChanged?.Invoke();
+            }
+        }
+
         public void UpdateCurrentSession(string courseId, SessionData session)
         {
             _currentSessions[courseId] = session;
