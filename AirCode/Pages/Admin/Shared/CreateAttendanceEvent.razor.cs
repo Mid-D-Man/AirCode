@@ -55,7 +55,7 @@ using AirCode.Components.SharedPrefabs.Others;
         private int temporalKeyRefreshInterval = 5; // Default to 5 minutes
         private bool showInfoPopup = false;
         private InfoPopup.InfoType currentInfoType;
-
+private bool isEndingSession = false;
         protected override void OnInitialized()
         {
             sessionModel.Duration = 30;
@@ -406,6 +406,7 @@ using AirCode.Components.SharedPrefabs.Others;
         {
             try
             {
+            isEndingSession = true;
                 if (currentActiveSession != null)
                 {
                     // Stop temporal key timer
@@ -428,6 +429,8 @@ using AirCode.Components.SharedPrefabs.Others;
             catch (Exception ex)
             {
                 Console.WriteLine($"Error ending session: {ex.Message}");
+            }finally{
+            isEndingSession = false;
             }
         }
 
