@@ -24,31 +24,33 @@ namespace AirCode.Utilities.HelperScripts
             _cryptographyService = cryptographyService;
         }
 
-       public async Task<string> EncodeSessionDataAsync(
-    string sessionId,
-    string courseCode,
-    DateTime startTime,
-    int duration,
-    bool useTemporalKeyRefresh = false,
-    bool allowOfflineConnectionAndSync = true,
-    AdvancedSecurityFeatures securityFeatures = AdvancedSecurityFeatures.Default)
-{
-    // Generate temporal key for session authenticity
-    string temporalKey = GenerateTemporalKey(sessionId, startTime);
+        /// <summary>
+        /// Encodes session data with temporal key provided from CreateAttendanceEvent
+        /// </summary>
+        public async Task<string> EncodeSessionDataAsync(
+            string sessionId,
+            string courseCode,
+            DateTime startTime,
+            int duration,
+            bool allowOfflineConnectionAndSync,
+            bool useTemporalKeyRefresh,
+            AdvancedSecurityFeatures securityFeatures,
+            string temporalKey)
+        {
+            var sessionData = new DecodedSessionData
+            {
+                SessionId = sessionId,
+                CourseCode = courseCode,
+                StartTime = startTime,
+                Duration = duration,
+                GeneratedTime = DateTime.UtcNow,
+                ExpirationTime = DateTime.UtcNow.AddMinutes(duration),
+                TemporalKey = temporalKey,
+                UseTemporalKeyRefresh = useTemporalKeyRefresh,
+                AllowOfflineConnectionAndSync = allowOfflineConnectionAndSync,
+                SecurityFeatures = securityFeatures
+            };
 
-    var sessionData = new DecodedSessionData
-    {
-        SessionId = sessionId,
-        CourseCode = courseCode,
-        StartTime = startTime,
-        Duration = duration,
-        GeneratedTime = DateTime.UtcNow,
-        ExpirationTime = DateTime.UtcNow.AddMinutes(duration),
-        TemporalKey = temporalKey,
-        UseTemporalKeyRefresh = useTemporalKeyRefresh, // Updated
-        AllowOfflineConnectionAndSync = allowOfflineConnectionAndSync, // New
-        SecurityFeatures = securityFeatures // New
-    };
             string jsonData = JsonSerializer.Serialize(sessionData, new JsonSerializerOptions
             {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase
@@ -126,11 +128,8 @@ namespace AirCode.Utilities.HelperScripts
                         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
                     });
 
-                // Security validations
+                // Basic time validation only
                 if (DateTime.UtcNow > sessionData.ExpirationTime)
-                    return null;
-
-                if (!ValidateTemporalKey(sessionData.TemporalKey, sessionData.SessionId, sessionData.StartTime))
                     return null;
 
                 if (sessionData.GeneratedTime > DateTime.UtcNow.AddMinutes(5))
@@ -175,25 +174,25 @@ namespace AirCode.Utilities.HelperScripts
         /// Extracts partial payload data for Supabase Edge Function
         /// </summary>
         public async Task<QRCodePayloadData> ExtractPayloadDataAsync(string qrCodeContent)
-{
-    var sessionData = await DecodeSessionDataAsync(qrCodeContent);
-    if (sessionData == null)
-        return null;
+        {
+            var sessionData = await DecodeSessionDataAsync(qrCodeContent);
+            if (sessionData == null)
+                return null;
 
-    var payloadData = new QRCodePayloadData
-    {
-        SessionId = sessionData.SessionId,
-        CourseCode = sessionData.CourseCode,
-        StartTime = sessionData.StartTime,
-        EndTime = sessionData.ExpirationTime,
-        TemporalKey = sessionData.TemporalKey,
-        UseTemporalKeyRefresh = sessionData.UseTemporalKeyRefresh, // Updated
-        AllowOfflineConnectionAndSync = sessionData.AllowOfflineConnectionAndSync, // New
-        SecurityFeatures = sessionData.SecurityFeatures // New
-    };
+            var payloadData = new QRCodePayloadData
+            {
+                SessionId = sessionData.SessionId,
+                CourseCode = sessionData.CourseCode,
+                StartTime = sessionData.StartTime,
+                EndTime = sessionData.ExpirationTime,
+                TemporalKey = sessionData.TemporalKey,
+                UseTemporalKeyRefresh = sessionData.UseTemporalKeyRefresh,
+                AllowOfflineConnectionAndSync = sessionData.AllowOfflineConnectionAndSync,
+                SecurityFeatures = sessionData.SecurityFeatures
+            };
 
-    return payloadData;
-}
+            return payloadData;
+        }
 
         /// <summary>
         /// Creates signed request for Supabase Edge Function
@@ -216,34 +215,6 @@ namespace AirCode.Utilities.HelperScripts
                 PayloadSignature = signature
             };
         }
-
-        #region Temporal Key Methods
-
-        /// <summary>
-        /// Generates temporal key for session authenticity and replay attack prevention
-        /// </summary>
-        private string GenerateTemporalKey(string sessionId, DateTime startTime)
-        {
-            var keyData = $"{sessionId}:{startTime:yyyyMMddHHmm}:TEMPORAL";
-            var keyBytes = Encoding.UTF8.GetBytes(keyData);
-            
-            using (var sha256 = System.Security.Cryptography.SHA256.Create())
-            {
-                var hashBytes = sha256.ComputeHash(keyBytes);
-                return Convert.ToBase64String(hashBytes).Substring(0, 16);
-            }
-        }
-
-        /// <summary>
-        /// Validates temporal key against expected value
-        /// </summary>
-        private bool ValidateTemporalKey(string providedKey, string sessionId, DateTime startTime)
-        {
-            string expectedKey = GenerateTemporalKey(sessionId, startTime);
-            return string.Equals(providedKey, expectedKey, StringComparison.Ordinal);
-        }
-
-        #endregion
 
         #region Helper Methods
 
