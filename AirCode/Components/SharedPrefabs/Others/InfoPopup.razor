@@ -1,0 +1,64 @@
+@* InfoPopup.razor *@
+@if (IsVisible)
+{
+    <div class="info-popup-overlay" @onclick="OnOverlayClick">
+        <div class="info-popup" @onclick:stopPropagation="true">
+            <div class="info-popup-header">
+                <h4>@GetInfoTitle()</h4>
+                <button class="close-btn" @onclick="OnClose">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="info-popup-content">
+                <p>@GetInfoContent()</p>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public InfoType CurrentInfoType { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private async Task OnOverlayClick()
+    {
+        await OnClose.InvokeAsync();
+    }
+
+    private string GetInfoTitle()
+    {
+        return CurrentInfoType switch
+        {
+            InfoType.OfflineSync => "Allow Offline Sync",
+            InfoType.TemporalKeyRefresh => "Temporal Key Refresh",
+            InfoType.RefreshInterval => "Refresh Interval",
+            InfoType.SecurityFeatures => "Security Features",
+            _ => "Information"
+        };
+    }
+
+    private string GetInfoContent()
+    {
+        return CurrentInfoType switch
+        {
+            InfoType.OfflineSync => "When enabled, students can scan QR codes even when offline. Their attendance will be synced when they reconnect to the internet. This ensures attendance is captured even in poor network conditions.",
+            
+            InfoType.TemporalKeyRefresh => "Temporal Key Refresh adds an extra layer of security by periodically changing the QR code's internal key. This prevents old QR codes from being reused and helps prevent attendance fraud. The QR code appearance remains the same, but the internal security key changes at regular intervals.",
+            
+            InfoType.RefreshInterval => "This setting determines how often the temporal key is refreshed. Shorter intervals (2-5 minutes) provide better security but may cause more network traffic. Longer intervals (10-30 minutes) are more efficient but slightly less secure. 5 minutes is recommended for most scenarios.",
+            
+            InfoType.SecurityFeatures => "Security features provide additional validation methods:\n\n• Default: Basic security with standard QR code validation\n• Device GUID Check: Validates that the same device isn't used to scan multiple times, helping prevent attendance fraud through device sharing",
+            
+            _ => "No information available."
+        };
+    }
+
+    public enum InfoType
+    {
+        OfflineSync,
+        TemporalKeyRefresh,
+        RefreshInterval,
+        SecurityFeatures
+    }
+}
