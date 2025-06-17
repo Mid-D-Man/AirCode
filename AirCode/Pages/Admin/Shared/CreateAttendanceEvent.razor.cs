@@ -16,7 +16,7 @@ using AirCode.Services.Courses;
 using AirCode.Services.Firebase;
 using AirCode.Domain.Entities;
 using SessionData = AirCode.Services.Attendance.SessionData;
-using AirCode.Components.SharedPrefabs.InfoPopup;
+using AirCode.Components.SharedPrefabs.Others;
 
     public partial class CreateAttendanceEvent : ComponentBase, IDisposable
     {
