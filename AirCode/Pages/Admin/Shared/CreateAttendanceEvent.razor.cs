@@ -25,7 +25,6 @@ using AirCode.Components.SharedPrefabs.Others;
         [Inject] private SessionStateService SessionStateService { get; set; }
         [Inject] private ICourseService CourseService { get; set; }
         [Inject] private IFirestoreService FirestoreService { get; set; }
-//for testing
         [Inject] private ISupabaseEdgeFunctionService EdgeService { get; set; }
         [Inject] private IAttendanceSessionService AttendanceSessionService { get; set; }
 
@@ -48,13 +47,15 @@ using AirCode.Components.SharedPrefabs.Others;
         // Floating QR code properties
         private bool showFloatingQR = false;
         private FloatingQRWindow.FloatingSessionData floatingSessionData;
-      private bool useTemporalKeyRefresh = false; // Renamed from temporalKeyEnabled // Testing toggle
-          private bool allowOfflineSync = true; // NEW - Add this
-    private AdvancedSecurityFeatures securityFeatures = AdvancedSecurityFeatures.Default; // NEW - Add this
-    
-        private System.Threading.Timer temporalKeyUpdateTimer;
-
+        private bool useTemporalKeyRefresh = false;
+        private bool allowOfflineSync = true;
+        private AdvancedSecurityFeatures securityFeatures = AdvancedSecurityFeatures.Default;
         
+        private System.Threading.Timer temporalKeyUpdateTimer;
+        private int temporalKeyRefreshInterval = 5; // Default to 5 minutes
+        private bool showInfoPopup = false;
+        private InfoPopup.InfoType currentInfoType;
+
         protected override void OnInitialized()
         {
             sessionModel.Duration = 30;
@@ -76,62 +77,49 @@ using AirCode.Components.SharedPrefabs.Others;
             );
         }
 
-// Add these variables to your existing CreateAttendanceEvent.razor.cs file
+        private void ShowInfoPopup(InfoPopup.InfoType infoType)
+        {
+            currentInfoType = infoType;
+            showInfoPopup = true;
+        }
 
+        private void CloseInfoPopup()
+        {
+            showInfoPopup = false;
+        }
 
-// Temporal key refresh interval (in minutes)
-private int temporalKeyRefreshInterval = 5; // Default to 5 minutes
+        private void StartTemporalKeyUpdateTimer()
+        {
+            var interval = TimeSpan.FromMinutes(temporalKeyRefreshInterval);
+            
+            temporalKeyUpdateTimer = new System.Threading.Timer(
+                async _ => await UpdateTemporalKey(),
+                null,
+                interval,
+                interval
+            );
+        }
 
-private bool showInfoPopup = false;
-private InfoPopup.InfoType currentInfoType;
+        private string GetSecurityFeatureDescription(AdvancedSecurityFeatures feature)
+        {
+            return feature switch
+            {
+                AdvancedSecurityFeatures.Default => "Standard security with basic validation",
+                AdvancedSecurityFeatures.DeviceGuidCheck => "Enhanced security with device-specific verification to prevent unauthorized access",
+                _ => "Unknown security feature"
+            };
+        }
 
+        private string GetSecurityLevelName(AdvancedSecurityFeatures feature)
+        {
+            return feature switch
+            {
+                AdvancedSecurityFeatures.Default => "Standard",
+                AdvancedSecurityFeatures.DeviceGuidCheck => "Enhanced",
+                _ => "Unknown"
+            };
+        }
 
-
-private void ShowInfoPopup(InfoPopup.InfoType infoType)
-{
-    currentInfoType = infoType;
-    showInfoPopup = true;
-}
-
-private void CloseInfoPopup()
-{
-    showInfoPopup = false;
-}
-
-
-
-// Update the StartTemporalKeyUpdateTimer method to use the interval setting
-private void StartTemporalKeyUpdateTimer()
-{
-    // Use the selected interval instead of hardcoded 2 minutes
-    var interval = TimeSpan.FromMinutes(temporalKeyRefreshInterval);
-    
-    temporalKeyUpdateTimer = new System.Threading.Timer(
-        async _ => await UpdateTemporalKey(),
-        null,
-        interval, // First update after the specified interval
-        interval  // Then every specified interval
-    );
-}
-private string GetSecurityFeatureDescription(AdvancedSecurityFeatures feature)
-{
-    return feature switch
-    {
-        AdvancedSecurityFeatures.Default => "Standard security with basic validation",
-        AdvancedSecurityFeatures.DeviceGuidCheck => "Enhanced security with device-specific verification to prevent unauthorized access",
-        _ => "Unknown security feature"
-    };
-}
-
-private string GetSecurityLevelName(AdvancedSecurityFeatures feature)
-{
-    return feature switch
-    {
-        AdvancedSecurityFeatures.Default => "Standard",
-        AdvancedSecurityFeatures.DeviceGuidCheck => "Enhanced",
-        _ => "Unknown"
-    };
-}
         private void RefreshSessionLists()
         {
             allActiveSessions = SessionStateService.GetActiveSessions();
@@ -209,151 +197,138 @@ private string GetSecurityLevelName(AdvancedSecurityFeatures feature)
             StateHasChanged();
         }
 
-       private async void StartSession()
-{
-    if (selectedCourse == null) return;
-
-    // Check if there's already an active session for this course
-    if (allActiveSessions.Any(s => s.CourseId == selectedCourse.CourseCode))
-    {
-        // Show error message - session already exists for this course
-        return;
-    }
-
-    try
-    {
-        isCreatingSession = true;
-        StateHasChanged();
-
-        sessionModel.StartTime = DateTime.UtcNow;
-        sessionModel.Date = DateTime.UtcNow.Date;
-        sessionModel.SessionId = Guid.NewGuid().ToString("N");
-        
-        sessionEndTime = DateTime.UtcNow.AddMinutes(sessionModel.Duration);
-
-        // Create Supabase attendance session
-          var attendanceSession = new AttendanceSession
-    {
-        SessionId = sessionModel.SessionId,
-        CourseCode = sessionModel.CourseId,
-        StartTime = sessionModel.StartTime,
-        Duration = sessionModel.Duration,
-        ExpirationTime = sessionEndTime,
-        
-        AttendanceRecords = "[]",
-        
-        // Updated mappings:
-        UseTemporalKeyRefresh = useTemporalKeyRefresh,
-        AllowOfflineConnectionAndSync = allowOfflineSync, // Add this variable
-        SecurityFeatures = (int)securityFeatures, // Cast enum to int
-        TemporalKey = useTemporalKeyRefresh ? GenerateTemporalKey(sessionModel.SessionId, sessionModel.StartTime) : string.Empty
-    };
-
-        // Generate initial temporal key if enabled
-        if (useTemporalKeyRefresh)
+        private async void StartSession()
         {
-            attendanceSession.TemporalKey = GenerateTemporalKey(sessionModel.SessionId, sessionModel.StartTime);
+            if (selectedCourse == null) return;
+
+            // Check if there's already an active session for this course
+            if (allActiveSessions.Any(s => s.CourseId == selectedCourse.CourseCode))
+            {
+                // Show error message - session already exists for this course
+                return;
+            }
+
+            try
+            {
+                isCreatingSession = true;
+                StateHasChanged();
+
+                sessionModel.StartTime = DateTime.UtcNow;
+                sessionModel.Date = DateTime.UtcNow.Date;
+                sessionModel.SessionId = Guid.NewGuid().ToString("N");
+                
+                sessionEndTime = DateTime.UtcNow.AddMinutes(sessionModel.Duration);
+
+                // Create Supabase attendance session
+                var attendanceSession = new AttendanceSession
+                {
+                    SessionId = sessionModel.SessionId,
+                    CourseCode = sessionModel.CourseId,
+                    StartTime = sessionModel.StartTime,
+                    Duration = sessionModel.Duration,
+                    ExpirationTime = sessionEndTime,
+                    AttendanceRecords = "[]",
+                    UseTemporalKeyRefresh = useTemporalKeyRefresh,
+                    AllowOfflineConnectionAndSync = allowOfflineSync,
+                    SecurityFeatures = (int)securityFeatures,
+                    TemporalKey = useTemporalKeyRefresh ? GenerateTemporalKey(sessionModel.SessionId, sessionModel.StartTime) : string.Empty
+                };
+
+                // Save to Supabase
+                var savedSession = await AttendanceSessionService.CreateSessionAsync(attendanceSession);
+                
+                // Generate QR code payload
+                qrCodePayload = await GenerateQrCodePayloadWithTemporalKey();
+
+                // Create Firebase attendance event document (keep existing functionality)
+                await CreateFirebaseAttendanceEvent();
+
+                // Add to active sessions via service
+                currentActiveSession = new ActiveSessionData
+                {
+                    SessionId = sessionModel.SessionId,
+                    CourseName = sessionModel.CourseName,
+                    CourseId = sessionModel.CourseId,
+                    StartTime = sessionModel.StartTime,
+                    EndTime = sessionEndTime,
+                    Duration = sessionModel.Duration,
+                    QrCodePayload = qrCodePayload,
+                    Theme = selectedTheme
+                };
+
+                SessionStateService.AddActiveSession(currentActiveSession);
+                SessionStateService.UpdateCurrentSession("default", sessionModel);
+
+                // Start temporal key update timer if enabled
+                if (useTemporalKeyRefresh)
+                {
+                    StartTemporalKeyUpdateTimer();
+                }
+
+                isSessionStarted = true;
+                RefreshSessionLists();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error starting session: {ex.Message}");
+            }
+            finally
+            {
+                isCreatingSession = false;
+                StateHasChanged();
+            }
         }
 
-        // Save to Supabase
-        var savedSession = await AttendanceSessionService.CreateSessionAsync(attendanceSession);
-        
-        // Generate QR code payload
-        qrCodePayload = await GenerateQrCodePayloadWithTemporalKey();
-
-        // Create Firebase attendance event document (keep existing functionality)
-        await CreateFirebaseAttendanceEvent();
-
-        // Add to active sessions via service
-        currentActiveSession = new ActiveSessionData
+        private string GenerateTemporalKey(string sessionId, DateTime startTime)
         {
-            SessionId = sessionModel.SessionId,
-            CourseName = sessionModel.CourseName,
-            CourseId = sessionModel.CourseId,
-            StartTime = sessionModel.StartTime,
-            EndTime = sessionEndTime,
-            Duration = sessionModel.Duration,
-            QrCodePayload = qrCodePayload,
-            Theme = selectedTheme
-        };
-
-        SessionStateService.AddActiveSession(currentActiveSession);
-        SessionStateService.UpdateCurrentSession("default", sessionModel);
-
-        // Start temporal key update timer if enabled
-        if (useTemporalKeyRefresh)
-        {
-            StartTemporalKeyUpdateTimer();
+            var keyData = $"{sessionId}:{startTime:yyyyMMddHHmm}:{DateTime.UtcNow.Ticks}";
+            var keyBytes = System.Text.Encoding.UTF8.GetBytes(keyData);
+            
+            using (var sha256 = System.Security.Cryptography.SHA256.Create())
+            {
+                var hashBytes = sha256.ComputeHash(keyBytes);
+                return Convert.ToBase64String(hashBytes).Substring(0, 16);
+            }
         }
 
-        isSessionStarted = true;
-        RefreshSessionLists();
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"Error starting session: {ex.Message}");
-        // Handle error appropriately
-    }
-    finally
-    {
-        isCreatingSession = false;
-        StateHasChanged();
-    }
-}
+        private async Task UpdateTemporalKey()
+        {
+            if (!useTemporalKeyRefresh || !isSessionStarted || currentActiveSession == null)
+                return;
 
-// ADD THESE NEW METHODS:
-private string GenerateTemporalKey(string sessionId, DateTime startTime)
-{
-    var keyData = $"{sessionId}:{startTime:yyyyMMddHHmm}:{DateTime.UtcNow.Ticks}";
-    var keyBytes = System.Text.Encoding.UTF8.GetBytes(keyData);
-    
-    using (var sha256 = System.Security.Cryptography.SHA256.Create())
-    {
-        var hashBytes = sha256.ComputeHash(keyBytes);
-        return Convert.ToBase64String(hashBytes).Substring(0, 16);
-    }
-}
-
-
-
-private async Task UpdateTemporalKey()
-{
-    if (!useTemporalKeyRefresh || !isSessionStarted || currentActiveSession == null)
-        return;
-
-    try
-    {
-        string newTemporalKey = GenerateTemporalKey(sessionModel.SessionId, sessionModel.StartTime);
-        
-        // Update Supabase
-        await AttendanceSessionService.UpdateTemporalKeyAsync(sessionModel.SessionId, newTemporalKey);
-        
-        // Generate new QR code payload with updated temporal key
-        qrCodePayload = await QRCodeDecoder.EncodeSessionDataAsync(
-            sessionModel.SessionId,
-            sessionModel.CourseId,
-            sessionModel.StartTime,
-            sessionModel.Duration,
-            useTemporalKeyRefresh,
-            allowOfflineSync,
-            securityFeatures,
-            newTemporalKey  // Fixed: Add the temporal key parameter
-        );
-        
-        // Update current active session
-        currentActiveSession.QrCodePayload = qrCodePayload;
-        SessionStateService.UpdateActiveSession(currentActiveSession);
-        
-        // Trigger UI update to refresh QR code
-        await InvokeAsync(StateHasChanged);
-        
-        Console.WriteLine($"Updated temporal key and QR code for session: {sessionModel.SessionId}");
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"Error updating temporal key: {ex.Message}");
-    }
-}
+            try
+            {
+                string newTemporalKey = GenerateTemporalKey(sessionModel.SessionId, sessionModel.StartTime);
+                
+                // Update Supabase
+                await AttendanceSessionService.UpdateTemporalKeyAsync(sessionModel.SessionId, newTemporalKey);
+                
+                // Generate new QR code payload with updated temporal key
+                qrCodePayload = await QRCodeDecoder.EncodeSessionDataAsync(
+                    sessionModel.SessionId,
+                    sessionModel.CourseId,
+                    sessionModel.StartTime,
+                    sessionModel.Duration,
+                    useTemporalKeyRefresh,
+                    allowOfflineSync,
+                    securityFeatures,
+                    newTemporalKey
+                );
+                
+                // Update current active session
+                currentActiveSession.QrCodePayload = qrCodePayload;
+                SessionStateService.UpdateActiveSession(currentActiveSession);
+                
+                // Trigger UI update to refresh QR code
+                await InvokeAsync(StateHasChanged);
+                
+                Console.WriteLine($"Updated temporal key and QR code for session: {sessionModel.SessionId}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error updating temporal key: {ex.Message}");
+            }
+        }
 
         private async Task CreateFirebaseAttendanceEvent()
         {
@@ -404,7 +379,6 @@ private async Task UpdateTemporalKey()
                     // Add new event as a field within existing document
                     var eventFieldName = $"Event_{sessionModel.SessionId}_{sessionModel.StartTime:yyyyMMdd}";
                     await FirestoreService.AddOrUpdateFieldAsync("ATTENDANCE_EVENTS", documentId, eventFieldName, attendanceEventData);
-                   
                 }
                 else
                 {
@@ -419,13 +393,12 @@ private async Task UpdateTemporalKey()
                     };
 
                     await FirestoreService.AddDocumentAsync("ATTENDANCE_EVENTS", courseEventDocument, documentId);
-                
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Error creating Firebase attendance event: {ex.Message}");
-                throw; // Re-throw to handle in calling method
+                throw;
             }
         }
 
@@ -469,8 +442,6 @@ private async Task UpdateTemporalKey()
 
                 await FirestoreService.AddOrUpdateFieldAsync("ATTENDANCE_EVENTS", documentId, statusFieldName, status);
                 await FirestoreService.AddOrUpdateFieldAsync("ATTENDANCE_EVENTS", documentId, endTimeFieldName, DateTime.UtcNow);
-                
-                
             }
             catch (Exception ex)
             {
@@ -478,23 +449,23 @@ private async Task UpdateTemporalKey()
             }
         }
 
-     private async Task<string> GenerateQrCodePayloadWithTemporalKey()
-{
-    string temporalKey = useTemporalKeyRefresh ? 
-        GenerateTemporalKey(sessionModel.SessionId, sessionModel.StartTime) : 
-        string.Empty;
-        
-    return await QRCodeDecoder.EncodeSessionDataAsync(
-        sessionModel.SessionId,
-        sessionModel.CourseId,
-        sessionModel.StartTime,
-        sessionModel.Duration,
-        useTemporalKeyRefresh,
-        allowOfflineSync,
-        securityFeatures,
-        temporalKey  // Fixed: Add the temporal key parameter
-    );
-}
+        private async Task<string> GenerateQrCodePayloadWithTemporalKey()
+        {
+            string temporalKey = useTemporalKeyRefresh ? 
+                GenerateTemporalKey(sessionModel.SessionId, sessionModel.StartTime) : 
+                string.Empty;
+                
+            return await QRCodeDecoder.EncodeSessionDataAsync(
+                sessionModel.SessionId,
+                sessionModel.CourseId,
+                sessionModel.StartTime,
+                sessionModel.Duration,
+                useTemporalKeyRefresh,
+                allowOfflineSync,
+                securityFeatures,
+                temporalKey
+            );
+        }
 
         private void OpenFloatingQR()
         {
@@ -538,67 +509,67 @@ private async Task UpdateTemporalKey()
         }
 
         private QRCodeBaseOptions GenerateQRCodeOptions()
-{
-    QRCodeBaseOptions options = new QRCodeBaseOptions
-    {
-        Content = qrCodePayload,
-        Size = 300,
-        DarkColor = "#000000",
-        LightColor = "#FFFFFF",
-        ErrorLevel = ErrorCorrectionLevel.M,
-        Margin = 4
-    };
+        {
+            QRCodeBaseOptions options = new QRCodeBaseOptions
+            {
+                Content = qrCodePayload,
+                Size = 300,
+                DarkColor = "#000000",
+                LightColor = "#FFFFFF",
+                ErrorLevel = ErrorCorrectionLevel.M,
+                Margin = 4
+            };
 
-    return selectedTheme switch
-    {
-        "Gradient" => new QRCodeGradientOptions
-        {
-            Content = qrCodePayload,
-            Size = 300,
-            DarkColor = "#000000",
-            LightColor = "#FFFFFF",
-            ErrorLevel = ErrorCorrectionLevel.M,
-            Margin = 4,
-            GradientColor1 = "#3498db",
-            GradientColor2 = "#9b59b6",
-            Direction = GradientDirection.Diagonal
-        },
-        "Branded" => new QRCodeBrandedOptions
-        {
-            Content = qrCodePayload,
-            Size = 300,
-            DarkColor = "#000000",
-            LightColor = "#FFFFFF",
-            ErrorLevel = ErrorCorrectionLevel.H,
-            Margin = 4,
-            LogoUrl = "icon-192.png",
-            LogoSizeRatio = 0.2f,
-            AddLogoBorder = true,
-            LogoBorderColor = "#FFFFFF",
-            LogoBorderWidth = 2,
-            LogoBorderRadius = 5
-        },
-        "GradientWithLogo" => new QRCodeGradientBrandedOptions
-        {
-            Content = qrCodePayload,
-            Size = 300,
-            DarkColor = "#000000",
-            LightColor = "#FFFFFF",
-            ErrorLevel = ErrorCorrectionLevel.H,
-            Margin = 4,
-            GradientColor1 = "#3498db",
-            GradientColor2 = "#9b59b6",
-            Direction = GradientDirection.Radial,
-            LogoUrl = "/icon-192.png",
-            LogoSizeRatio = 0.2f,
-            AddLogoBorder = true,
-            LogoBorderColor = "#FFFFFF",
-            LogoBorderWidth = 2,
-            LogoBorderRadius = 5
-        },
-        _ => options
-    };
-}
+            return selectedTheme switch
+            {
+                "Gradient" => new QRCodeGradientOptions
+                {
+                    Content = qrCodePayload,
+                    Size = 300,
+                    DarkColor = "#000000",
+                    LightColor = "#FFFFFF",
+                    ErrorLevel = ErrorCorrectionLevel.M,
+                    Margin = 4,
+                    GradientColor1 = "#3498db",
+                    GradientColor2 = "#9b59b6",
+                    Direction = GradientDirection.Diagonal
+                },
+                "Branded" => new QRCodeBrandedOptions
+                {
+                    Content = qrCodePayload,
+                    Size = 300,
+                    DarkColor = "#000000",
+                    LightColor = "#FFFFFF",
+                    ErrorLevel = ErrorCorrectionLevel.H,
+                    Margin = 4,
+                    LogoUrl = "icon-192.png",
+                    LogoSizeRatio = 0.2f,
+                    AddLogoBorder = true,
+                    LogoBorderColor = "#FFFFFF",
+                    LogoBorderWidth = 2,
+                    LogoBorderRadius = 5
+                },
+                "GradientWithLogo" => new QRCodeGradientBrandedOptions
+                {
+                    Content = qrCodePayload,
+                    Size = 300,
+                    DarkColor = "#000000",
+                    LightColor = "#FFFFFF",
+                    ErrorLevel = ErrorCorrectionLevel.H,
+                    Margin = 4,
+                    GradientColor1 = "#3498db",
+                    GradientColor2 = "#9b59b6",
+                    Direction = GradientDirection.Radial,
+                    LogoUrl = "/icon-192.png",
+                    LogoSizeRatio = 0.2f,
+                    AddLogoBorder = true,
+                    LogoBorderColor = "#FFFFFF",
+                    LogoBorderWidth = 2,
+                    LogoBorderRadius = 5
+                },
+                _ => options
+            };
+        }
 
         private string FormatTimeRemaining()
         {
@@ -617,9 +588,9 @@ private async Task UpdateTemporalKey()
         private Task HandleQRCodeGenerated(QRCodeData qrCode)
         {
             generatedQRCode = qrCode;
-         
             return Task.CompletedTask;
         }
+
         private async Task ProcessAttendanceCode(string qrCode)
         {
             try
@@ -632,8 +603,7 @@ private async Task UpdateTemporalKey()
                     start_time = sessionModel.StartTime,
                     duration = sessionModel.Duration,
                     expiration_time = sessionEndTime,
-                    lecture_id = (string)null, // Set to null or assign if you have lecturer info
-                    attendance_records = new List<object>(), // Empty initially, will be populated as students scan
+                    attendance_records = new List<object>(),
                     created_at = DateTime.UtcNow,
                     updated_at = DateTime.UtcNow
                 };
@@ -648,7 +618,6 @@ private async Task UpdateTemporalKey()
                     IsOnlineScan = true
                 };
 
-                // Test with legacy method (will be replaced with new payload structure)
                 var result = await EdgeService.ProcessAttendanceAsync(qrCode, testAttendanceRecord);
         
                 Console.WriteLine($"Processing attendance code: {qrCode}, result: {result.ToString()}");
@@ -658,6 +627,7 @@ private async Task UpdateTemporalKey()
                 Console.WriteLine($"Error processing attendance: {ex.Message}");
             }
         }
+
         public void Dispose()
         {
             countdownTimer?.Dispose();
