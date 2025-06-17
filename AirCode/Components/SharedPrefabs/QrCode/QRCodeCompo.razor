@@ -18,9 +18,17 @@
         {
             <p><strong>Course:</strong> @CourseCode</p>
         }
-        @if (!string.IsNullOrEmpty(LectureId))
+        @if (UseTemporalKeyRefresh)
         {
-            <p><strong>Session:</strong> @LectureId</p>
+            <p><span class="temporal-key-indicator">🔄 Dynamic Security Enabled</span></p>
+        }
+        @if (SecurityFeatures != AdvancedSecurityFeatures.Default)
+        {
+            <p><span class="security-indicator">🔒 Enhanced Security: @GetSecurityLevelName(SecurityFeatures)</span></p>
+        }
+        @if (AllowOfflineSync)
+        {
+            <p><span class="offline-indicator">📱 Offline Sync Enabled</span></p>
         }
     </div>
 </div>
@@ -28,23 +36,31 @@
 @code {
     [Parameter] public string SessionId { get; set; }
     [Parameter] public string CourseCode { get; set; }
-    [Parameter] public string LectureId { get; set; }
     [Parameter] public DateTime StartTime { get; set; } = DateTime.UtcNow;
     [Parameter] public int Duration { get; set; } = 30;
     [Parameter] public QRCodeTheme Theme { get; set; } = QRCodeTheme.Standard;
     [Parameter] public QRCodeBaseOptions Options { get; set; }
     [Parameter] public EventCallback<QRCodeData> OnGenerated { get; set; }
     
+    // New parameters for temporal key and security features
+    [Parameter] public bool UseTemporalKeyRefresh { get; set; } = false;
+    [Parameter] public bool AllowOfflineSync { get; set; } = true;
+    [Parameter] public AdvancedSecurityFeatures SecurityFeatures { get; set; } = AdvancedSecurityFeatures.Default;
+    [Parameter] public string CurrentTemporalKey { get; set; } = string.Empty;
+    [Parameter] public EventCallback OnTemporalKeyUpdateNeeded { get; set; }
+    
     private string QRCodeId = Guid.NewGuid().ToString("N");
     private IJSObjectReference _qrCodeModule;
     private bool _jsInitialized = false;
     private QRCodeData _generatedQRCode;
     private QRCodeDecoder _qrDecoder;
+    private System.Threading.Timer _qrRefreshTimer;
+    private string _lastTemporalKey = string.Empty;
 
     /*
-  impl Ultra-short QR code lifespan (30-60 seconds)
-       Dynamic codes that regenerate every 15-30 seconds
-     */
+    impl Ultra-short QR code lifespan (30-60 seconds) with temporal key refresh
+    Dynamic codes that regenerate when temporal key changes
+    */
     
     protected override async Task OnInitializedAsync()
     {
@@ -62,6 +78,12 @@
             {
                 Console.WriteLine($"Failed to load JS module: {ex.Message}");
             }
+        }
+
+        // Start QR refresh timer if temporal key refresh is enabled
+        if (UseTemporalKeyRefresh)
+        {
+            StartQRRefreshTimer();
         }
     }
 
@@ -87,6 +109,16 @@
             ErrorLevel = ErrorCorrectionLevel.M,
             Margin = 4
         };
+
+        // Check if temporal key has changed and regenerate QR if needed
+        if (UseTemporalKeyRefresh && _lastTemporalKey != CurrentTemporalKey && !string.IsNullOrEmpty(CurrentTemporalKey))
+        {
+            _lastTemporalKey = CurrentTemporalKey;
+            if (_jsInitialized)
+            {
+                await GenerateSecureQRCode();
+            }
+        }
         
         await base.OnParametersSetAsync();
     }
@@ -104,14 +136,41 @@
         }
     }
 
+    private void StartQRRefreshTimer()
+    {
+        // Refresh QR code every 30 seconds when temporal key refresh is enabled
+        _qrRefreshTimer = new System.Threading.Timer(
+            async _ => {
+                if (OnTemporalKeyUpdateNeeded.HasDelegate)
+                {
+                    await InvokeAsync(async () => {
+                        await OnTemporalKeyUpdateNeeded.InvokeAsync();
+                        StateHasChanged();
+                    });
+                }
+            },
+            null,
+            TimeSpan.FromSeconds(30),
+            TimeSpan.FromSeconds(30)
+        );
+    }
+
     private bool HasParametersChanged()
     {
-        return _generatedQRCode?.Content != GetCurrentContentIdentifier();
+        var currentIdentifier = GetCurrentContentIdentifier();
+        return _generatedQRCode?.Content != currentIdentifier;
     }
 
     private string GetCurrentContentIdentifier()
     {
-        return $"{SessionId}|{CourseCode}|{StartTime:O}|{Duration}|{LectureId}";
+        var baseIdentifier = $"{SessionId}|{CourseCode}|{StartTime:O}|{Duration}";
+        
+        if (UseTemporalKeyRefresh)
+        {
+            baseIdentifier += $"|{CurrentTemporalKey}";
+        }
+        
+        return baseIdentifier;
     }
 
     private async Task GenerateSecureQRCode()
@@ -121,14 +180,16 @@
             if (!_jsInitialized || string.IsNullOrEmpty(CourseCode))
                 return;
 
-            // Generate encrypted QR code content using the decoder service
+            // Generate encrypted QR code content using the decoder service with new parameters
             string secureContent = await _qrDecoder.EncodeSessionDataAsync(
                 SessionId,
                 CourseCode,
                 StartTime,
                 Duration,
-false,
-true,AdvancedSecurityFeatures.Default
+                AllowOfflineSync,
+                UseTemporalKeyRefresh,
+                SecurityFeatures,
+                CurrentTemporalKey // Pass the current temporal key
             );
 
             // Set content for options
@@ -169,7 +230,10 @@ true,AdvancedSecurityFeatures.Default
                     SvgContent = svg,
                     CreatedAt = DateTime.UtcNow,
                     ValidDuration = Duration,
-                    Theme = Theme
+                    Theme = Theme,
+                    UseTemporalKey = UseTemporalKeyRefresh,
+                    SecurityFeatures = SecurityFeatures,
+                    AllowOfflineSync = AllowOfflineSync
                 };
                 
                 // Invoke callback if registered
@@ -296,9 +360,21 @@ true,AdvancedSecurityFeatures.Default
             _ => "linear-x"
         };
     }
+
+    private string GetSecurityLevelName(AdvancedSecurityFeatures feature)
+    {
+        return feature switch
+        {
+            AdvancedSecurityFeatures.Default => "Standard",
+            AdvancedSecurityFeatures.DeviceGuidCheck => "Enhanced",
+            _ => "Unknown"
+        };
+    }
     
     public async ValueTask DisposeAsync()
     {
+        _qrRefreshTimer?.Dispose();
+        
         if (_qrCodeModule != null)
         {
             try
