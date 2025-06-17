@@ -245,17 +245,19 @@ private bool isEndingSession = false;
 
                 // Add to active sessions via service
                 currentActiveSession = new ActiveSessionData
-                {
-                    SessionId = sessionModel.SessionId,
-                    CourseName = sessionModel.CourseName,
-                    CourseId = sessionModel.CourseId,
-                    StartTime = sessionModel.StartTime,
-                    EndTime = sessionEndTime,
-                    Duration = sessionModel.Duration,
-                    QrCodePayload = qrCodePayload,
-                    Theme = selectedTheme
-                };
-
+{
+    SessionId = sessionModel.SessionId,
+    CourseName = sessionModel.CourseName,
+    CourseId = sessionModel.CourseId,
+    StartTime = sessionModel.StartTime,
+    EndTime = sessionEndTime,
+    Duration = sessionModel.Duration,
+    QrCodePayload = qrCodePayload,
+    Theme = selectedTheme,
+    // Add these missing properties:
+    UseTemporalKeyRefresh = useTemporalKeyRefresh,
+    SecurityFeatures = securityFeatures
+};
                 SessionStateService.AddActiveSession(currentActiveSession);
                 SessionStateService.UpdateCurrentSession("default", sessionModel);
 
