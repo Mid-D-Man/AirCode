@@ -64,12 +64,19 @@
     private bool _jsInitialized = false;
     private QRCodeData _generatedQRCode;
     private QRCodeDecoder _qrDecoder;
+    
+    // Previous state tracking to prevent infinite loops
     private string _lastGeneratedPayload = string.Empty;
     private string _lastTemporalKey = string.Empty;
+    private string _lastContentIdentifier = string.Empty;
+    private bool _isGenerating = false; // Critical: Prevent concurrent generation
     
     // Loading state management
     private bool IsLoading = false;
     private string LoadingMessage = "Generating QR Code...";
+    
+    // Cancellation support for async operations
+    private CancellationTokenSource _cancellationTokenSource = new();
     
     protected override async Task OnInitializedAsync()
     {
@@ -118,11 +125,18 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        // Only generate on first render or when explicitly needed
         if (firstRender && _jsInitialized)
         {
             await GenerateSecureQRCode();
         }
-        else if (!firstRender && !string.IsNullOrEmpty(CourseCode) && _jsInitialized && ShouldRegenerateQRCode())
+        // Remove automatic regeneration logic from OnAfterRenderAsync to prevent infinite loops
+    }
+
+    // Public method that can be called externally when regeneration is needed
+    public async Task TriggerRegeneration()
+    {
+        if (_jsInitialized && !string.IsNullOrEmpty(CourseCode) && ShouldRegenerateQRCode())
         {
             // Check if temporal key changed to show appropriate loading message
             if (UseTemporalKeyRefresh && TemporalKey != _lastTemporalKey)
@@ -140,6 +154,17 @@
 
     private bool ShouldRegenerateQRCode()
     {
+        // Prevent regeneration if already generating
+        if (_isGenerating) return false;
+        
+        var currentIdentifier = GetCurrentContentIdentifier();
+        
+        // Check if content actually changed
+        if (currentIdentifier == _lastContentIdentifier)
+        {
+            return false;
+        }
+        
         // Check if we have an external payload and it's different from last generated
         if (!string.IsNullOrEmpty(ExternalPayload))
         {
@@ -152,8 +177,7 @@
             return true;
         }
         
-        // Fallback to parameter change detection
-        return _generatedQRCode?.Content != GetCurrentContentIdentifier();
+        return true;
     }
 
     private string GetCurrentContentIdentifier()
@@ -169,17 +193,31 @@
 
     private async Task GenerateSecureQRCode()
     {
+        // Prevent concurrent generation
+        if (_isGenerating)
+        {
+            return;
+        }
+
         try
         {
+            _isGenerating = true;
+            
             if (!_jsInitialized || string.IsNullOrEmpty(CourseCode))
                 return;
 
-            // Show loading state
+            // Show loading state without triggering StateHasChanged in a loop
+            var wasLoading = IsLoading;
             IsLoading = true;
-            StateHasChanged();
+            
+            // Only call StateHasChanged if state actually changed
+            if (!wasLoading)
+            {
+                StateHasChanged();
+            }
             
             // Small delay to ensure loading state is visible
-            await Task.Delay(100);
+            await Task.Delay(100, _cancellationTokenSource.Token);
 
             string secureContent;
             
@@ -205,6 +243,9 @@
                 _lastGeneratedPayload = secureContent;
                 _lastTemporalKey = TemporalKey; // Update the last temporal key
             }
+
+            // Update content identifier to prevent unnecessary regeneration
+            _lastContentIdentifier = GetCurrentContentIdentifier();
 
             // Set content for options
             var updatedOptions = Options with { Content = secureContent };
@@ -240,7 +281,7 @@
                 _generatedQRCode = new QRCodeData
                 {
                     Id = QRCodeId,
-                    Content = GetCurrentContentIdentifier(),
+                    Content = _lastContentIdentifier,
                     SvgContent = svg,
                     CreatedAt = DateTime.UtcNow,
                     ValidDuration = Duration,
@@ -254,15 +295,26 @@
                 }
             }
         }
+        catch (OperationCanceledException)
+        {
+            // Operation was cancelled, this is expected during disposal
+            Console.WriteLine("QR code generation was cancelled");
+        }
         catch (Exception ex)
         {
             Console.WriteLine($"Error generating secure QR code: {ex.Message}");
         }
         finally
         {
-            // Hide loading state
+            // Hide loading state and mark generation as complete
             IsLoading = false;
-            StateHasChanged();
+            _isGenerating = false;
+            
+            // Only call StateHasChanged if we're not disposed
+            if (!_cancellationTokenSource.Token.IsCancellationRequested)
+            {
+                StateHasChanged();
+            }
         }
     }
 
@@ -395,16 +447,24 @@
     
     public async ValueTask DisposeAsync()
     {
-        if (_qrCodeModule != null)
+        try
         {
-            try
+            // Cancel any ongoing operations
+            _cancellationTokenSource?.Cancel();
+            
+            // Dispose of the JS module
+            if (_qrCodeModule != null)
             {
                 await _qrCodeModule.DisposeAsync();
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error disposing JS module: {ex.Message}");
-            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error disposing JS module: {ex.Message}");
+        }
+        finally
+        {
+            _cancellationTokenSource?.Dispose();
         }
     }
 }
