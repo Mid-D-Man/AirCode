@@ -44,7 +44,6 @@
     </div>
 }
 
-
 @code {
     [Parameter] public bool IsVisible { get; set; }
     [Parameter] public FloatingSessionData SessionData { get; set; }
@@ -54,7 +53,7 @@
     private System.Threading.Timer countdownTimer;
     private bool isFullscreen = false;
     private string previousWindowStyle = "";
-//astalabista bebe
+
     protected override void OnParametersSet()
     {
         if (IsVisible && SessionData != null)
@@ -262,5 +261,8 @@
         public int Duration { get; set; }
         public string QrCodePayload { get; set; }
         public string Theme { get; set; }
+        public bool UseTemporalKeyRefresh { get; set; }
+        public AdvancedSecurityFeatures SecurityFeatures { get; set; } = AdvancedSecurityFeatures.Default;
+        public string TemporalKey { get; set; } = string.Empty;
     }
 }
