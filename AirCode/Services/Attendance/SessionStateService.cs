@@ -89,6 +89,7 @@ namespace AirCode.Services.Attendance
         public string QrCodePayload { get; set; }
         public string Theme { get; set; }
         public bool UseTemporalKeyRefresh { get; set; }
+        public bool OfflineSyncEnabled { get; set; } = true;
         public AdvancedSecurityFeatures SecurityFeatures { get; set; } = AdvancedSecurityFeatures.Default;
         public string TemporalKey { get; set; } = string.Empty;
     }

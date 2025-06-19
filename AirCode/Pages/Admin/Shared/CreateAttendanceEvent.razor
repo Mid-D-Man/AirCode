@@ -5,8 +5,8 @@
 @using AirCode.Components.SharedPrefabs.Others
 @using AirCode.Components.SharedPrefabs.QrCode
 @using AirCode.Components.SharedPrefabs.Buttons
+@using AirCode.Components.SharedPrefabs.Spinner
 @using AirCode.Models.QRCode
-
 
 <div class="create-session-page">
     <h1>Create Attendance Event</h1>
@@ -138,10 +138,8 @@
                                      Disabled="@(selectedCourse == null || isCreatingSession)" />
                         @if (isCreatingSession)
                         {
-                            <div class="loading-spinner">
-                                <div class="spinner"></div>
-                                <span>Creating session...</span>
-                            </div>
+                            <LoadingSpinner Title="Creating Session" 
+                                          Subtitle="Please wait while we set up your attendance session..." />
                         }
                     </div>
                 </EditForm>
@@ -156,9 +154,9 @@
                 </div>
 
                 <div class="session-status-indicators">
-                    <div class="countdown-timer">
+                    <div class="countdown-timer @GetCountdownClass()">
                         <span class="timer-label">Session ends in:</span>
-                        <span class="timer-value">@FormatTimeRemaining()</span>
+                        <span class="timer-value @(IsCountdownCritical() ? "critical-flash" : "")">@FormatTimeRemaining()</span>
                     </div>
                     
                     @if (useTemporalKeyRefresh)
@@ -184,6 +182,18 @@
                                 Enhanced Security
                             </span>
                             <span class="security-description">@GetSecurityFeatureDescription(securityFeatures)</span>
+                        </div>
+                    }
+
+                    @if (allowOfflineSync)
+                    {
+                        <div class="offline-sync-indicator">
+                            <span class="security-badge offline-sync-enabled">
+                                <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M1,9H23L12,20L1,9Z"/>
+                                </svg>
+                                Offline Sync Enabled
+                            </span>
                         </div>
                     }
                 </div>
@@ -215,10 +225,8 @@
                                      Disabled="@isEndingSession" />
                         @if (isEndingSession)
                         {
-                            <div class="loading-spinner ending-session">
-                                <div class="spinner"></div>
-                                <span>Ending session...</span>
-                            </div>
+                            <LoadingSpinner Title="Ending Session" 
+                                          Subtitle="Finalizing attendance data and cleaning up..." />
                         }
                     </div>
                 </div>
@@ -256,6 +264,15 @@
                                         <path d="M12,1L3,5V11C3,16.55 6.84,21.74 12,23C17.16,21.74 21,16.55 21,11V5L12,1M10,17L6,13L7.41,11.59L10,14.17L16.59,7.58L18,9L10,17Z"/>
                                     </svg>
                                     Enhanced
+                                </span>
+                            }
+                            @if (session.OfflineSyncEnabled)
+                            {
+                                <span class="session-feature-badge offline">
+                                    <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M1,9H23L12,20L1,9Z"/>
+                                    </svg>
+                                    Offline
                                 </span>
                             }
                         </div>
