@@ -138,6 +138,10 @@
     {
         try
         {
+            IsLoading = true;
+            LoadingMessage = "Updating QR Code...";
+            StateHasChanged();
+
             if (!_jsInitialized)
                 return;
 
@@ -214,6 +218,11 @@
         catch (Exception ex)
         {
             Console.WriteLine($"Error generating secure QR code: {ex.Message}");
+        } 
+        finally
+        {
+            IsLoading = false;
+            StateHasChanged();
         }
     }
 

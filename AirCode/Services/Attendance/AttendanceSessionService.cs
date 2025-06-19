@@ -82,8 +82,7 @@ namespace AirCode.Services.Attendance
                     throw new InvalidOperationException($"Session not found: {sessionId}");
 
                 session.TemporalKey = newTemporalKey;
-                session.UpdatedAt = DateTime.UtcNow;
-
+                session.UpdatedAt = DateTime.UtcNow;//yap we update so we can add slight 20sec grace to qr code scan
                 var result = await _database.UpdateAsync(session);
                 _logger.LogInformation("Updated temporal key for session: {SessionId}", sessionId);
                 

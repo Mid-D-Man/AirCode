@@ -1,5 +1,4 @@
 /* CreateAttendanceEvent.razor.css - Cleaned & Mobile Optimized */
-
 .create-session-page {
     max-width: 1200px;
     margin: 0 auto;
@@ -168,7 +167,7 @@ input[type="checkbox"]:checked + .toggle-label::after {
     align-items: center;
     padding: var(--spacing-md);
     background-color: var(--bg-tertiary);
-    border: 2px solid var(--primary-200);
+    border: 2px solid var(--button-primary);
     border-radius: 8px;
     gap: var(--spacing-md);
 }
@@ -195,8 +194,8 @@ input[type="checkbox"]:checked + .toggle-label::after {
 
 .change-course-btn,
 .select-course-btn {
-    background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
-    color: white;
+    background: var(--button-primary);
+    color: var(--button-text);
     border: none;
     padding: var(--spacing-sm) var(--spacing-md);
     border-radius: 6px;
@@ -217,8 +216,9 @@ input[type="checkbox"]:checked + .toggle-label::after {
 
 .change-course-btn:hover,
 .select-course-btn:hover {
+    background: var(--button-primary-hover);
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 /* Form Controls */
@@ -236,10 +236,22 @@ input[type="checkbox"]:checked + .toggle-label::after {
 
 .form-control:focus {
     outline: none;
-    border-color: var(--primary-500);
-    box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+    border-color: var(--button-primary);
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.1);
 }
 
+body.dark-mode .form-control:focus {
+    border-color: var(--button-primary);
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
+}
+body.dark-mode .change-course-btn:hover,
+body.dark-mode .select-course-btn:hover {
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
+body.dark-mode .floating-qr-icon:hover {
+    box-shadow: 0 6px 20px rgba(34, 197, 94, 0.3);
+}
 /* Button Container */
 .button-container {
     display: flex;
@@ -262,11 +274,10 @@ input[type="checkbox"]:checked + .toggle-label::after {
     width: 16px;
     height: 16px;
     border: 2px solid var(--border);
-    border-top: 2px solid var(--primary-500);
+    border-top: 2px solid var(--button-primary);
     border-radius: 50%;
     animation: spin 1s linear infinite;
 }
-
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
@@ -286,17 +297,18 @@ input[type="checkbox"]:checked + .toggle-label::after {
 }
 
 .course-code-badge {
-    background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
-    color: white;
+    background: var(--button-primary);
+    color: var(--button-text);
     padding: var(--spacing-xs) var(--spacing-md);
     border-radius: 15px;
     font-size: 0.85rem;
     font-weight: 600;
 }
 
+
 .countdown-timer {
-    background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
-    color: white;
+    background: var(--button-primary);
+    color: var(--button-text);
     padding: var(--spacing-md) var(--spacing-lg);
     border-radius: 25px;
     font-size: 1.1rem;
@@ -326,8 +338,8 @@ input[type="checkbox"]:checked + .toggle-label::after {
 }
 
 .floating-qr-icon {
-    background: linear-gradient(135deg, var(--secondary-500), var(--secondary-600));
-    color: white;
+    background: var(--button-secondary);
+    color: var(--button-text);
     border: none;
     border-radius: 50%;
     width: 48px;
@@ -340,8 +352,9 @@ input[type="checkbox"]:checked + .toggle-label::after {
 }
 
 .floating-qr-icon:hover {
+    background: var(--button-secondary-hover);
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(156, 39, 176, 0.4);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
 }
 
 /* Active Sessions List */
@@ -402,8 +415,8 @@ input[type="checkbox"]:checked + .toggle-label::after {
 }
 
 .qr-icon-button {
-    background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
-    color: white;
+    background: var(--button-primary);
+    color: var(--button-text);
     border: none;
     border-radius: 6px;
     width: 36px;
@@ -417,43 +430,23 @@ input[type="checkbox"]:checked + .toggle-label::after {
 }
 
 .qr-icon-button:hover {
+    background: var(--button-primary-hover);
     transform: scale(1.1);
 }
 
 /* Responsive Design */
 
-/* Large Screens (1025px+) */
+/* Large Screens (1025px+) - REMOVED navigation margin overrides */
 @media (min-width: 1025px) {
     .create-session-page {
         padding: var(--spacing-xxl);
     }
-
-    /* Navigation adjustments */
-    body:not(.nav-collapsed) .create-session-page {
-        margin-left: 250px;
-        max-width: calc(100vw - 250px - 2rem);
-    }
-
-    body.nav-collapsed .create-session-page {
-        margin-left: 80px;
-        max-width: calc(100vw - 80px - 2rem);
-    }
 }
 
-/* Medium Screens (768px - 1024px) */
+/* Medium Screens (768px - 1024px) - REMOVED navigation margin overrides */
 @media (min-width: 768px) and (max-width: 1024px) {
     .create-session-page {
         padding: var(--spacing-lg);
-    }
-
-    body:not(.nav-collapsed) .create-session-page {
-        margin-left: 240px;
-        max-width: calc(100vw - 240px - 1rem);
-    }
-
-    body.nav-collapsed .create-session-page {
-        margin-left: 70px;
-        max-width: calc(100vw - 70px - 1rem);
     }
 
     .create-session-page h1 {

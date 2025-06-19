@@ -37,7 +37,7 @@
 }
 
 /* Dark mode container adjustments */
-.dark-mode .qr-code-container {
+body.dark-mode .qr-code-container {
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
     border-color: var(--border);
 }
@@ -48,7 +48,7 @@
     border-color: var(--button-primary);
 }
 
-.dark-mode .qr-code-container:hover {
+body.dark-mode .qr-code-container:hover {
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
 }
 
@@ -72,8 +72,8 @@
 .qr-loading-spinner {
     width: 40px;
     height: 40px;
-    border: 3px solid rgba(var(--button-primary-rgb, 0, 123, 255), 0.3);
-    border-top: 3px solid var(--button-primary, #007bff);
+    border: 3px solid var(--border);
+    border-top: 3px solid var(--button-primary);
     border-radius: 50%;
     animation: qr-spin 1s linear infinite;
     margin-bottom: 12px;
@@ -172,32 +172,32 @@
 
 /* Enhanced expiring animation */
 @keyframes pulse {
-    0% { 
+    0% {
         opacity: 1;
         transform: scale(1);
     }
-    50% { 
+    50% {
         opacity: 0.7;
         transform: scale(1.02);
     }
-    100% { 
+    100% {
         opacity: 1;
         transform: scale(1);
     }
 }
 
 @keyframes urgent-pulse {
-    0% { 
+    0% {
         opacity: 1;
         background-color: var(--bg-tertiary);
         border-left-color: var(--error);
     }
-    50% { 
+    50% {
         opacity: 0.9;
         background-color: rgba(239, 68, 68, 0.1);
         border-left-color: var(--warning);
     }
-    100% { 
+    100% {
         opacity: 1;
         background-color: var(--bg-tertiary);
         border-left-color: var(--error);
@@ -246,6 +246,10 @@
     background-color: rgba(239, 68, 68, 0.05);
 }
 
+body.dark-mode .qr-code-container.error {
+    background-color: rgba(239, 68, 68, 0.1);
+}
+
 .qr-code-container.error::after {
     content: '⚠️ QR Code generation failed';
     position: absolute;
@@ -256,20 +260,6 @@
     font-size: clamp(0.8rem, 2vw, 0.9rem);
     font-weight: 600;
     z-index: 10;
-}
-
-/* Dark mode loading spinner adjustments */
-.dark-mode .qr-loading-spinner {
-    border: 3px solid rgba(255, 255, 255, 0.3);
-    border-top: 3px solid var(--button-primary, #0d6efd);
-}
-
-.dark-mode .qr-loading-overlay {
-    background-color: var(--bg-secondary);
-}
-
-.dark-mode .qr-loading-text {
-    color: var(--text-secondary);
 }
 
 /* Mobile-first responsive breakpoints */
@@ -353,7 +343,7 @@
     .qr-code-container {
         border-width: 0.5px;
     }
-    
+
     .qr-code-info {
         border-width: 0.5px;
         border-left-width: 3px;
