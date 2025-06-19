@@ -26,6 +26,7 @@
         {
             <p><strong>Course:</strong> @CourseCode</p>
         }
+      
         @if (UseTemporalKeyRefresh)
         {
             <p><small>🔄 Security keys refresh automatically</small></p>
@@ -33,10 +34,6 @@
         @if (AllowOfflineSync)
         {
             <p><small>📱 Offline scanning supported</small></p>
-        }
-        @if (IsLoading && UseTemporalKeyRefresh)
-        {
-            <p class="loading-status"><small>⏳ Refreshing security keys...</small></p>
         }
     </div>
 </div>
@@ -65,48 +62,37 @@
     private QRCodeData _generatedQRCode;
     private QRCodeDecoder _qrDecoder;
     
-    // Previous state tracking to prevent infinite loops
-    private string _lastGeneratedPayload = string.Empty;
-    private string _lastTemporalKey = string.Empty;
-    private string _lastContentIdentifier = string.Empty;
-    private bool _isGenerating = false; // Critical: Prevent concurrent generation
-    
     // Loading state management
-    private bool IsLoading = true; // Start with loading true
+    private bool IsLoading = false; // Fixed: Start with false, set to true when needed
     private string LoadingMessage = "Initializing QR Code...";
-    
-    // Cancellation support for async operations
-    private CancellationTokenSource _cancellationTokenSource = new();
     
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
         _qrDecoder = new QRCodeDecoder(CryptographyService);
         
-        // Initialize default session ID if not provided
-        if (string.IsNullOrEmpty(SessionId))
+        if (!_jsInitialized)
         {
-            SessionId = Guid.NewGuid().ToString("N");
-        }
-        
-        try
-        {
-            _qrCodeModule = await JS.InvokeAsync<IJSObjectReference>("import", "./js/qrCodeModule.js");
-            _jsInitialized = true;
-            Console.WriteLine("QR Code JS module loaded successfully");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Failed to load JS module: {ex.Message}");
-            // Set loading to false even if JS fails, show error state
-            IsLoading = false;
-            LoadingMessage = "Failed to load QR module";
-            StateHasChanged();
+            try
+            {
+                _qrCodeModule = await JS.InvokeAsync<IJSObjectReference>("import", "./js/qrCodeModule.js");
+                _jsInitialized = true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to load JS module: {ex.Message}");
+            }
         }
     }
 
     protected override async Task OnParametersSetAsync()
     {
+        // Validate required parameters
+        if (string.IsNullOrEmpty(SessionId))
+        {
+            SessionId = Guid.NewGuid().ToString("N");
+        }
+
         // Initialize default options if not provided
         Options ??= new QRCodeBaseOptions
         {
@@ -122,72 +108,19 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        // Only generate on first render and when JS is initialized
         if (firstRender && _jsInitialized)
         {
-            Console.WriteLine("First render - generating QR code");
             await GenerateSecureQRCode();
         }
-        
-        await base.OnAfterRenderAsync(firstRender);
-    }
-
-    // Public method that can be called externally when regeneration is needed
-    public async Task TriggerRegeneration()
-    {
-        if (_jsInitialized && ShouldRegenerateQRCode())
+        else if (!firstRender && _jsInitialized && HasParametersChanged())
         {
-            Console.WriteLine("Triggering QR code regeneration");
-            
-            // Check if temporal key changed to show appropriate loading message
-            if (UseTemporalKeyRefresh && TemporalKey != _lastTemporalKey)
-            {
-                LoadingMessage = "Refreshing security keys...";
-            }
-            else
-            {
-                LoadingMessage = "Updating QR Code...";
-            }
-            
             await GenerateSecureQRCode();
         }
     }
 
-    private bool ShouldRegenerateQRCode()
+    private bool HasParametersChanged()
     {
-        // Prevent regeneration if already generating
-        if (_isGenerating) 
-        {
-            Console.WriteLine("Skipping regeneration - already generating");
-            return false;
-        }
-        
-        var currentIdentifier = GetCurrentContentIdentifier();
-        
-        // Check if content actually changed
-        if (currentIdentifier == _lastContentIdentifier)
-        {
-            Console.WriteLine("Skipping regeneration - content unchanged");
-            return false;
-        }
-        
-        // Check if we have an external payload and it's different from last generated
-        if (!string.IsNullOrEmpty(ExternalPayload))
-        {
-            bool shouldRegenerate = ExternalPayload != _lastGeneratedPayload;
-            Console.WriteLine($"External payload check: {shouldRegenerate}");
-            return shouldRegenerate;
-        }
-        
-        // Check if temporal key changed
-        if (UseTemporalKeyRefresh && TemporalKey != _lastTemporalKey)
-        {
-            Console.WriteLine("Regenerating due to temporal key change");
-            return true;
-        }
-        
-        Console.WriteLine("Should regenerate QR code");
-        return true;
+        return _generatedQRCode?.Content != GetCurrentContentIdentifier();
     }
 
     private string GetCurrentContentIdentifier()
@@ -203,60 +136,20 @@
 
     private async Task GenerateSecureQRCode()
     {
-        // Prevent concurrent generation
-        if (_isGenerating)
-        {
-            Console.WriteLine("Already generating QR code, skipping");
-            return;
-        }
-
         try
         {
-            _isGenerating = true;
-            Console.WriteLine("Starting QR code generation");
-            
             if (!_jsInitialized)
-            {
-                Console.WriteLine("JS not initialized, cannot generate QR code");
-                IsLoading = false;
-                LoadingMessage = "QR module not loaded";
-                StateHasChanged();
                 return;
-            }
-
-            // Validate required parameters - CourseCode is optional now
-            if (string.IsNullOrEmpty(SessionId))
-            {
-                Console.WriteLine("SessionId is required but missing");
-                IsLoading = false;
-                LoadingMessage = "Session ID missing";
-                StateHasChanged();
-                return;
-            }
-
-            // Show loading state
-            if (!IsLoading)
-            {
-                IsLoading = true;
-                LoadingMessage = "Generating QR Code...";
-                StateHasChanged();
-            }
-            
-            // Small delay to ensure loading state is visible
-            await Task.Delay(100, _cancellationTokenSource.Token);
 
             string secureContent;
             
             // Use external payload if provided, otherwise generate internally
             if (!string.IsNullOrEmpty(ExternalPayload))
             {
-                Console.WriteLine("Using external payload");
                 secureContent = ExternalPayload;
-                _lastGeneratedPayload = ExternalPayload;
             }
             else
             {
-                Console.WriteLine("Generating internal payload");
                 // Generate encrypted QR code content using the decoder service
                 secureContent = await _qrDecoder.EncodeSessionDataAsync(
                     SessionId,
@@ -268,21 +161,13 @@
                     SecurityFeatures,
                     TemporalKey
                 );
-                _lastGeneratedPayload = secureContent;
-                _lastTemporalKey = TemporalKey; // Update the last temporal key
             }
-
-            // Update content identifier to prevent unnecessary regeneration
-            _lastContentIdentifier = GetCurrentContentIdentifier();
-            Console.WriteLine($"Generated content identifier: {_lastContentIdentifier.Substring(0, Math.Min(50, _lastContentIdentifier.Length))}...");
 
             // Set content for options
             var updatedOptions = Options with { Content = secureContent };
             
             string svg;
             int size = updatedOptions.Size;
-            
-            Console.WriteLine($"Generating QR code with theme: {Theme}");
             
             // Generate QR code based on theme
             switch (Theme)
@@ -306,14 +191,13 @@
             
             if (!string.IsNullOrEmpty(svg))
             {
-                Console.WriteLine($"Generated SVG length: {svg.Length}");
                 await _qrCodeModule.InvokeVoidAsync("setSvgContent", $"qrCodeContainer_{QRCodeId}", svg);
                 
                 // Create QR code data object
                 _generatedQRCode = new QRCodeData
                 {
                     Id = QRCodeId,
-                    Content = _lastContentIdentifier,
+                    Content = GetCurrentContentIdentifier(),
                     SvgContent = svg,
                     CreatedAt = DateTime.UtcNow,
                     ValidDuration = Duration,
@@ -325,39 +209,11 @@
                 {
                     await OnGenerated.InvokeAsync(_generatedQRCode);
                 }
-                
-                Console.WriteLine("QR code generated successfully");
             }
-            else
-            {
-                Console.WriteLine("Generated SVG is empty");
-                LoadingMessage = "Failed to generate QR code";
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            // Operation was cancelled, this is expected during disposal
-            Console.WriteLine("QR code generation was cancelled");
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error generating secure QR code: {ex.Message}");
-            Console.WriteLine($"Stack trace: {ex.StackTrace}");
-            LoadingMessage = $"Error: {ex.Message}";
-        }
-        finally
-        {
-            // Hide loading state and mark generation as complete
-            IsLoading = false;
-            _isGenerating = false;
-            
-            Console.WriteLine("QR code generation completed, hiding loading state");
-            
-            // Only call StateHasChanged if we're not disposed
-            if (!_cancellationTokenSource.Token.IsCancellationRequested)
-            {
-                StateHasChanged();
-            }
         }
     }
 
@@ -476,38 +332,28 @@
     // Public method to force QR code regeneration (can be called externally)
     public async Task RefreshQRCode()
     {
-        LoadingMessage = "Refreshing QR Code...";
         await GenerateSecureQRCode();
     }
     
     // Public method to refresh with temporal key update
     public async Task RefreshWithTemporalKey(string newTemporalKey)
     {
-        LoadingMessage = "Refreshing security keys...";
         TemporalKey = newTemporalKey;
         await GenerateSecureQRCode();
     }
     
     public async ValueTask DisposeAsync()
     {
-        try
+        if (_qrCodeModule != null)
         {
-            // Cancel any ongoing operations
-            _cancellationTokenSource?.Cancel();
-            
-            // Dispose of the JS module
-            if (_qrCodeModule != null)
+            try
             {
                 await _qrCodeModule.DisposeAsync();
             }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error disposing JS module: {ex.Message}");
-        }
-        finally
-        {
-            _cancellationTokenSource?.Dispose();
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error disposing JS module: {ex.Message}");
+            }
         }
     }
 }
