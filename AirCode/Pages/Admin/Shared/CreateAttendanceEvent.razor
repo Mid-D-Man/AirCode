@@ -189,14 +189,17 @@
                 </div>
 
                 <div class="qr-code-wrapper">
-                    <QRCodeCompo
-                        SessionId="@sessionModel.SessionId"
-                        CourseCode="@sessionModel.CourseId"
-                        StartTime="@sessionModel.StartTime"
-                        Duration="@sessionModel.Duration"
-                        Theme="@ConvertStringToTheme(selectedTheme)"
-                        Options="@GenerateQRCodeOptions()"
-                        OnGenerated="HandleQRCodeGenerated" />
+                    <QRCodeCompo SessionId="@sessionModel.SessionId"
+                                 CourseCode="@sessionModel.CourseId"
+                                 StartTime="@sessionModel.StartTime"
+                                 Duration="@sessionModel.Duration"
+                                 Theme="@ConvertStringToTheme(selectedTheme)"
+                                 Options="@GenerateQRCodeOptions()"
+                                 UseTemporalKeyRefresh="@useTemporalKeyRefresh"
+                                 AllowOfflineSync="@allowOfflineSync"
+                                 SecurityFeatures="@securityFeatures"
+                                 TemporalKey="@(currentActiveSession?.TemporalKey ?? string.Empty)"
+                                 OnGenerated="@HandleQRCodeGenerated" />
                 </div>
                 
                 <div class="session-actions">

@@ -317,44 +317,31 @@ private async void RestoreExistingSession(ActiveSessionData activeSession, Sessi
         }
 
         private async Task UpdateTemporalKey()
-{
-    if (!useTemporalKeyRefresh || !isSessionStarted || currentActiveSession == null)
-        return;
+        {
+            if (!useTemporalKeyRefresh || !isSessionStarted || currentActiveSession == null)
+                return;
 
-    try
-    {
-        string newTemporalKey = GenerateTemporalKey(sessionModel.SessionId, sessionModel.StartTime);
+            try
+            {
+                string newTemporalKey = GenerateTemporalKey(sessionModel.SessionId, sessionModel.StartTime);
         
-        // Update Supabase
-        await AttendanceSessionService.UpdateTemporalKeyAsync(sessionModel.SessionId, newTemporalKey);
+                // Update Supabase first
+                await AttendanceSessionService.UpdateTemporalKeyAsync(sessionModel.SessionId, newTemporalKey);
         
-        // Generate new QR code payload with updated temporal key
-        qrCodePayload = await QRCodeDecoder.EncodeSessionDataAsync(
-            sessionModel.SessionId,
-            sessionModel.CourseId,
-            sessionModel.StartTime,
-            sessionModel.Duration,
-            allowOfflineSync,
-            useTemporalKeyRefresh,
-            securityFeatures,
-            newTemporalKey
-        );
+                // Update current active session's temporal key
+                currentActiveSession.TemporalKey = newTemporalKey;
+                SessionStateService.UpdateActiveSession(currentActiveSession);
         
-        // Update current active session with new temporal key
-        currentActiveSession.QrCodePayload = qrCodePayload;
-        currentActiveSession.TemporalKey = newTemporalKey; // Add this line
-        SessionStateService.UpdateActiveSession(currentActiveSession);
+                // Trigger QR component refresh via parameter change
+                await InvokeAsync(StateHasChanged);
         
-        // Trigger UI update to refresh QR code
-        await InvokeAsync(StateHasChanged);
-        
-        Console.WriteLine($"Updated temporal key and QR code for session: {sessionModel.SessionId}");
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"Error updating temporal key: {ex.Message}");
-    }
-}
+                Console.WriteLine($"Updated temporal key for session: {sessionModel.SessionId}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error updating temporal key: {ex.Message}");
+            }
+        }
 
 
         private async Task CreateFirebaseAttendanceEvent()
