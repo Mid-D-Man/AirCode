@@ -56,6 +56,8 @@ using AirCode.Components.SharedPrefabs.Others;
         private bool showInfoPopup = false;
         private InfoPopup.InfoType currentInfoType;
 private bool isEndingSession = false;
+private bool isSessionEnded = false;
+
         protected override void OnInitialized()
         {
             sessionModel.Duration = 30;
@@ -87,7 +89,34 @@ private bool isEndingSession = false;
         {
             showInfoPopup = false;
         }
+        private string GetCountdownClass()
+        {
+            if (!isSessionStarted) return "normal";
+    
+            var timeRemaining = GetTimeRemainingInSeconds();
+    
+            if (timeRemaining <= 60) // Last minute - critical
+                return "critical";
+            else if (timeRemaining <= 300) // Last 5 minutes - warning
+                return "warning";
+            else
+                return "normal";
+        }
 
+        private bool IsCountdownCritical()
+        {
+            return GetTimeRemainingInSeconds() <= 60;
+        }
+
+        private int GetTimeRemainingInSeconds()
+        {
+            if (currentActiveSession == null) return 0;
+    
+            var endTime = currentActiveSession.StartTime.AddMinutes(currentActiveSession.Duration);
+            var remaining = endTime - DateTime.Now;
+    
+            return Math.Max(0, (int)remaining.TotalSeconds);
+        }
         private void StartTemporalKeyUpdateTimer()
         {
             var interval = TimeSpan.FromMinutes(temporalKeyRefreshInterval);
@@ -293,10 +322,13 @@ private async void RestoreExistingSession(ActiveSessionData activeSession, Sessi
 
         isSessionStarted = true;
         RefreshSessionLists();
+        
+        isCreatingSession = false;
     }
     catch (Exception ex)
     {
         Console.WriteLine($"Error starting session: {ex.Message}");
+        
     }
     finally
     {
@@ -420,7 +452,8 @@ private async void RestoreExistingSession(ActiveSessionData activeSession, Sessi
         {
             try
             {
-            isEndingSession = true;
+                isEndingSession = true;
+           
                 if (currentActiveSession != null)
                 {
                     // Stop temporal key timer
@@ -443,11 +476,36 @@ private async void RestoreExistingSession(ActiveSessionData activeSession, Sessi
             catch (Exception ex)
             {
                 Console.WriteLine($"Error ending session: {ex.Message}");
+                
+                isEndingSession = false;
             }finally{
             isEndingSession = false;
             }
         }
+        private async Task HandleSessionEnd()
+        {
+            // This is where you'll add your session end logic
+            // For example:
+            // - Process final attendance data
+            // - Send notifications
+            // - Update database
+            // - Generate reports
+            // etc.
+    
+            Console.WriteLine("Session ended - processing final data...");
+        }
 
+        private void ResetSession()
+        {
+            // Reset all session states to start fresh
+            isSessionStarted = false;
+            isSessionEnded = false;
+            isCreatingSession = false;
+            isEndingSession = false;
+            currentActiveSession = null;
+    
+            StateHasChanged();
+        }
         private async Task UpdateFirebaseAttendanceEventStatus(string status)
         {
             try
