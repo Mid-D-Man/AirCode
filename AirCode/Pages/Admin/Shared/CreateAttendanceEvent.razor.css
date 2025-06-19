@@ -1,4 +1,4 @@
-/* CreateAttendanceEvent.razor.css - Cleaned & Mobile Optimized */
+/* CreateAttendanceEvent.razor.css - Updated with Spinner Integration */
 .create-session-page {
     max-width: 1200px;
     margin: 0 auto;
@@ -252,35 +252,163 @@ body.dark-mode .select-course-btn:hover {
 body.dark-mode .floating-qr-icon:hover {
     box-shadow: 0 6px 20px rgba(34, 197, 94, 0.3);
 }
-/* Button Container */
+
+/* Button Container - Updated for LoadingSpinner Integration */
 .button-container {
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
-    gap: var(--spacing-md);
+    gap: var(--spacing-lg);
     margin-top: var(--spacing-xl);
+    position: relative;
 }
 
-.loading-spinner {
+/* Removed duplicate/conflicting spinner styles - now handled by LoadingSpinner component */
+
+/* Session Status Indicators - Enhanced */
+.session-status-indicators {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
+    padding: var(--spacing-lg);
+    background: linear-gradient(135deg, rgba(33, 150, 243, 0.05), rgba(156, 39, 176, 0.05));
+    border-radius: 12px;
+    border: 1px solid var(--border);
+}
+
+.countdown-timer {
+    background: linear-gradient(135deg, var(--button-primary), var(--primary-600));
+    color: var(--button-text);
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-radius: 25px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    text-align: center;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    position: relative;
+    overflow: hidden;
+}
+
+.countdown-timer::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
+}
+
+.countdown-timer:hover::before {
+    left: 100%;
+}
+
+.timer-label {
+    display: block;
+    font-size: 0.85rem;
+    opacity: 0.9;
+    margin-bottom: 4px;
+}
+
+.timer-value {
+    display: block;
+    font-size: 1.3rem;
+    font-weight: 700;
+}
+
+.critical-flash {
+    animation: critical-pulse 1s infinite alternate;
+}
+
+@keyframes critical-pulse {
+    0% {
+        background: linear-gradient(135deg, #dc3545, #c82333);
+        transform: scale(1);
+    }
+    100% {
+        background: linear-gradient(135deg, #e74c3c, #dc3545);
+        transform: scale(1.02);
+    }
+}
+
+/* Security and Feature Badges */
+.temporal-key-indicator,
+.security-level-indicator,
+.offline-sync-indicator {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+    padding: var(--spacing-sm) var(--spacing-md);
+    background-color: var(--bg-tertiary);
+    border-radius: 8px;
+    border-left: 4px solid var(--primary-500);
+}
+
+.security-badge {
     display: flex;
     align-items: center;
-    gap: var(--spacing-sm);
-    color: var(--text-secondary);
-    font-size: 0.9rem;
+    gap: var(--spacing-xs);
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-primary);
 }
 
-.loading-spinner::before {
-    content: '';
-    width: 16px;
-    height: 16px;
-    border: 2px solid var(--border);
-    border-top: 2px solid var(--button-primary);
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
+.temporal-key-active {
+    color: var(--success);
 }
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+
+.enhanced-security {
+    color: var(--warning);
+}
+
+.offline-sync-enabled {
+    color: var(--info);
+}
+
+.refresh-interval,
+.security-description {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    margin-left: 20px;
+}
+
+/* Session Feature Badges in Lists */
+.session-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-xs);
+    margin-top: var(--spacing-xs);
+}
+
+.session-feature-badge {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-size: 0.7rem;
+    font-weight: 500;
+}
+
+.session-feature-badge.temporal {
+    background-color: rgba(34, 197, 94, 0.1);
+    color: var(--success);
+    border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.session-feature-badge.security {
+    background-color: rgba(245, 158, 11, 0.1);
+    color: var(--warning);
+    border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.session-feature-badge.offline {
+    background-color: rgba(59, 130, 246, 0.1);
+    color: var(--info);
+    border: 1px solid rgba(59, 130, 246, 0.2);
 }
 
 /* Active Session Styling */
@@ -305,24 +433,6 @@ body.dark-mode .floating-qr-icon:hover {
     font-weight: 600;
 }
 
-
-.countdown-timer {
-    background: var(--button-primary);
-    color: var(--button-text);
-    padding: var(--spacing-md) var(--spacing-lg);
-    border-radius: 25px;
-    font-size: 1.1rem;
-    font-weight: 600;
-    margin-bottom: var(--spacing-lg);
-    text-align: center;
-    animation: pulse-timer 2s infinite;
-}
-
-@keyframes pulse-timer {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.02); }
-}
-
 .qr-code-wrapper {
     margin: var(--spacing-lg) 0;
     display: flex;
@@ -335,6 +445,13 @@ body.dark-mode .floating-qr-icon:hover {
     align-items: center;
     justify-content: center;
     margin-top: var(--spacing-lg);
+}
+
+.end-session-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-md);
 }
 
 .floating-qr-icon {
@@ -436,14 +553,25 @@ body.dark-mode .floating-qr-icon:hover {
 
 /* Responsive Design */
 
-/* Large Screens (1025px+) - REMOVED navigation margin overrides */
+/* Large Screens (1025px+) */
 @media (min-width: 1025px) {
     .create-session-page {
         padding: var(--spacing-xxl);
     }
+
+    .session-status-indicators {
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: space-between;
+    }
+
+    .countdown-timer {
+        flex: 1;
+        min-width: 250px;
+    }
 }
 
-/* Medium Screens (768px - 1024px) - REMOVED navigation margin overrides */
+/* Medium Screens (768px - 1024px) */
 @media (min-width: 768px) and (max-width: 1024px) {
     .create-session-page {
         padding: var(--spacing-lg);
@@ -461,6 +589,10 @@ body.dark-mode .floating-qr-icon:hover {
 
     .change-course-btn {
         width: 100%;
+    }
+
+    .session-status-indicators {
+        padding: var(--spacing-md);
     }
 }
 
@@ -511,6 +643,14 @@ body.dark-mode .floating-qr-icon:hover {
 
     .qr-icon-button {
         align-self: flex-end;
+    }
+
+    .countdown-timer {
+        font-size: 1rem;
+    }
+
+    .timer-value {
+        font-size: 1.1rem;
     }
 }
 
@@ -566,6 +706,10 @@ body.dark-mode .floating-qr-icon:hover {
         padding: var(--spacing-sm);
     }
 
+    .timer-value {
+        font-size: 1rem;
+    }
+
     .session-actions {
         flex-direction: column;
         gap: var(--spacing-sm);
@@ -597,6 +741,19 @@ body.dark-mode .floating-qr-icon:hover {
     .form-group {
         margin-bottom: var(--spacing-md);
     }
+
+    .session-status-indicators {
+        padding: var(--spacing-sm);
+    }
+
+    .security-badge {
+        font-size: 0.8rem;
+    }
+
+    .session-feature-badge {
+        font-size: 0.65rem;
+        padding: 1px 4px;
+    }
 }
 
 /* Landscape mobile adjustments */
@@ -625,6 +782,11 @@ body.dark-mode .floating-qr-icon:hover {
         padding: var(--spacing-xs) var(--spacing-sm);
         margin-bottom: var(--spacing-md);
     }
+
+    .session-status-indicators {
+        padding: var(--spacing-sm);
+        gap: var(--spacing-sm);
+    }
 }
 
 /* Dark mode adjustments */
@@ -646,6 +808,21 @@ body.dark-mode .course-code {
     color: var(--primary-400);
 }
 
+body.dark-mode .session-feature-badge.temporal {
+    background-color: rgba(34, 197, 94, 0.15);
+    color: var(--success);
+}
+
+body.dark-mode .session-feature-badge.security {
+    background-color: rgba(245, 158, 11, 0.15);
+    color: var(--warning);
+}
+
+body.dark-mode .session-feature-badge.offline {
+    background-color: rgba(59, 130, 246, 0.15);
+    color: var(--info);
+}
+
 /* Accessibility improvements */
 .change-course-btn:focus-visible,
 .select-course-btn:focus-visible,
@@ -660,6 +837,23 @@ body.dark-mode .course-code {
     outline-offset: 2px;
 }
 
+/* High contrast mode support */
+@media (prefers-contrast: more) {
+    .countdown-timer {
+        background: var(--text-primary);
+        color: var(--bg-primary);
+        border: 2px solid var(--text-primary);
+    }
+
+    .security-badge {
+        border: 1px solid currentColor;
+    }
+
+    .session-feature-badge {
+        border-width: 2px;
+    }
+}
+
 /* Reduced motion preferences */
 @media (prefers-reduced-motion: reduce) {
     .floating-qr-icon,
@@ -667,7 +861,8 @@ body.dark-mode .course-code {
     .change-course-btn,
     .select-course-btn,
     .session-card,
-    .countdown-timer {
+    .countdown-timer,
+    .critical-flash {
         transition: none;
         animation: none;
     }
@@ -676,6 +871,10 @@ body.dark-mode .course-code {
     .qr-icon-button:hover,
     .session-card:hover {
         transform: none;
+    }
+
+    .countdown-timer::before {
+        display: none;
     }
 }
 
@@ -699,5 +898,17 @@ body.dark-mode .course-code {
         background: none;
         color: black;
         animation: none;
+    }
+
+    .session-status-indicators {
+        background: none;
+        border: 1px solid black;
+    }
+
+    .security-badge,
+    .session-feature-badge {
+        color: black;
+        background: none;
+        border: 1px solid black;
     }
 }
