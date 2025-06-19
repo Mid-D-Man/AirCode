@@ -63,8 +63,12 @@
     private QRCodeDecoder _qrDecoder;
     
     // Loading state management
-    private bool IsLoading = false; // Fixed: Start with false, set to true when needed
+    private bool IsLoading = false;
     private string LoadingMessage = "Initializing QR Code...";
+    
+    // Track the last generated content to prevent unnecessary regeneration
+    private string _lastGeneratedContent = "";
+    private bool _isGenerating = false; // Prevent concurrent generation
     
     protected override async Task OnInitializedAsync()
     {
@@ -112,7 +116,7 @@
         {
             await GenerateSecureQRCode();
         }
-        else if (!firstRender && _jsInitialized && HasParametersChanged())
+        else if (!firstRender && _jsInitialized && HasParametersChanged() && !_isGenerating)
         {
             await GenerateSecureQRCode();
         }
@@ -120,7 +124,8 @@
 
     private bool HasParametersChanged()
     {
-        return _generatedQRCode?.Content != GetCurrentContentIdentifier();
+        var currentContent = GetCurrentContentIdentifier();
+        return _lastGeneratedContent != currentContent;
     }
 
     private string GetCurrentContentIdentifier()
@@ -136,14 +141,25 @@
 
     private async Task GenerateSecureQRCode()
     {
+        // Prevent concurrent generation
+        if (_isGenerating)
+            return;
+
         try
         {
+            _isGenerating = true;
             IsLoading = true;
-            LoadingMessage = "Updating QR Code...";
-            StateHasChanged();
-
+            LoadingMessage = "Generating QR Code...";
+            
+            // Only call StateHasChanged if we're not already in a render cycle
             if (!_jsInitialized)
+            {
+                StateHasChanged();
                 return;
+            }
+
+            // Update the last generated content to prevent loops
+            _lastGeneratedContent = GetCurrentContentIdentifier();
 
             string secureContent;
             
@@ -201,7 +217,7 @@
                 _generatedQRCode = new QRCodeData
                 {
                     Id = QRCodeId,
-                    Content = GetCurrentContentIdentifier(),
+                    Content = _lastGeneratedContent,
                     SvgContent = svg,
                     CreatedAt = DateTime.UtcNow,
                     ValidDuration = Duration,
@@ -218,11 +234,13 @@
         catch (Exception ex)
         {
             Console.WriteLine($"Error generating secure QR code: {ex.Message}");
+            LoadingMessage = "Error generating QR code";
         } 
         finally
         {
             IsLoading = false;
-            StateHasChanged();
+            _isGenerating = false;
+            StateHasChanged(); // Only call StateHasChanged once at the end
         }
     }
 
