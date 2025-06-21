@@ -37,39 +37,33 @@
     private string statsIconSvg = string.Empty;
     private string scanIconSvg = string.Empty;
     private string settingsIconSvg = string.Empty;
+    private bool _iconsLoaded = false;
+    private int _retryCount = 0;
+    private const int MAX_RETRIES = 3;
 
     protected override async Task OnInitializedAsync()
     {
-        // Determine the current page from the URL
+        SetCurrentPage();
+        await LoadIconsWithRetry();
+        NavigationManager.LocationChanged += OnLocationChanged;
+    }
+
+    private void SetCurrentPage()
+    {
         var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
         var path = uri.AbsolutePath;
         
-        if (path.Contains("Stats"))
-            currentPage = "stats";
-        else if (path.Contains("Courses"))
-            currentPage = "settings";
-        else
-            currentPage = "scan";
-
-        // Load SVG icons with fallback handling
-        await LoadIcons();
-        
-        // Listen for navigation changes
-        NavigationManager.LocationChanged += OnLocationChanged;
+        currentPage = path switch
+        {
+            var p when p.Contains("Stats") => "stats",
+            var p when p.Contains("Courses") => "settings",
+            _ => "scan"
+        };
     }
     
     private void OnLocationChanged(object sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
     {
-        var uri = NavigationManager.ToAbsoluteUri(e.Location);
-        var path = uri.AbsolutePath;
-        
-        if (path.Contains("Stats"))
-            currentPage = "stats";
-        else if (path.Contains("Courses"))
-            currentPage = "settings";
-        else
-            currentPage = "scan";
-            
+        SetCurrentPage();
         InvokeAsync(StateHasChanged);
     }
     
@@ -78,33 +72,95 @@
         NavigationManager.LocationChanged -= OnLocationChanged;
     }
 
-    private async Task LoadIcons()
+    private async Task LoadIconsWithRetry()
     {
-        try
+        while (_retryCount < MAX_RETRIES && !_iconsLoaded)
         {
-            // Load with explicit error handling for each icon
-            var statsTask = SvgIconService.GetSvgContentAsync("stats");
-            var scanTask = SvgIconService.GetSvgContentAsync("scan_qrcode");
-            var settingsTask = SvgIconService.GetSvgContentAsync("settings");
-
-            var results = await Task.WhenAll(statsTask, scanTask, settingsTask);
+            _retryCount++;
             
-            statsIconSvg = results[0] ?? string.Empty;
-            scanIconSvg = results[1] ?? string.Empty;
-            settingsIconSvg = results[2] ?? string.Empty;
+            try
+            {
+                Console.WriteLine($"Attempting icon load (attempt {_retryCount}/{MAX_RETRIES})");
+                
+                // Load icons with timeout protection
+                var loadTasks = new[]
+                {
+                    LoadSingleIconAsync("stats"),
+                    LoadSingleIconAsync("scan_qrcode"),
+                    LoadSingleIconAsync("settings")
+                };
 
-            // Debug logging
-            Console.WriteLine($"Stats SVG loaded: {!string.IsNullOrEmpty(statsIconSvg)}");
-            Console.WriteLine($"Scan SVG loaded: {!string.IsNullOrEmpty(scanIconSvg)}");
-            Console.WriteLine($"Settings SVG loaded: {!string.IsNullOrEmpty(settingsIconSvg)}");
+                // Add overall timeout
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(8));
+                var results = await Task.WhenAll(loadTasks).WaitAsync(cts.Token);
+                
+                statsIconSvg = results[0];
+                scanIconSvg = results[1];  
+                settingsIconSvg = results[2];
+
+                // Validate load success
+                var loadedCount = new[] { statsIconSvg, scanIconSvg, settingsIconSvg }
+                    .Count(icon => !string.IsNullOrEmpty(icon));
+
+                Console.WriteLine($"Loaded {loadedCount}/3 icons successfully");
+                
+                if (loadedCount >= 2) // Accept partial success
+                {
+                    _iconsLoaded = true;
+                    Console.WriteLine("Icon loading completed successfully");
+                }
+                else if (_retryCount < MAX_RETRIES)
+                {
+                    Console.WriteLine($"Insufficient icons loaded, retrying in {_retryCount}s...");
+                    await Task.Delay(_retryCount * 1000); // Progressive delay
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Icon load attempt {_retryCount} failed: {ex.Message}");
+                
+                if (_retryCount < MAX_RETRIES)
+                {
+                    await Task.Delay(_retryCount * 1000);
+                }
+            }
         }
-        catch (Exception ex)
+
+        // Final fallback assignment
+        if (!_iconsLoaded)
         {
-            Console.WriteLine($"Error loading navigation icons: {ex.Message}");
-            // Icons remain empty, fallback to IconPath will be used
+            Console.WriteLine("All icon load attempts failed, using fallbacks");
+            statsIconSvg = string.Empty;
+            scanIconSvg = string.Empty;
+            settingsIconSvg = string.Empty;
         }
         
         StateHasChanged();
+    }
+
+    private async Task<string> LoadSingleIconAsync(string iconName)
+    {
+        try
+        {
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+            var content = await SvgIconService.GetSvgContentAsync(iconName);
+            
+            if (!string.IsNullOrEmpty(content))
+            {
+                Console.WriteLine($"✓ {iconName} loaded successfully");
+                return content;
+            }
+            else
+            {
+                Console.WriteLine($"✗ {iconName} returned empty content");
+                return string.Empty;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"✗ {iconName} load failed: {ex.Message}");
+            return string.Empty;
+        }
     }
 
     private string GetButtonClass(string page)

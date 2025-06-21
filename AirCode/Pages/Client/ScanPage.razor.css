@@ -156,15 +156,19 @@
     background: #000;
 }
 
-/* Scan frame overlay with corners */
+
+/* Scan frame overlay - Square dimensions */
 .scan-frame {
     position: absolute;
-    top: 20%;
-    left: 20%;
-    right: 20%;
-    bottom: 20%;
+    /* Calculate square dimensions based on viewport */
+    width: min(60vw, 60vh);
+    height: min(60vw, 60vh);
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
     z-index: 10;
     pointer-events: none;
+    margin-top: -20px; /* Slight upward adjustment for header clearance */
 }
 
 .corner {
@@ -173,6 +177,7 @@
     height: 30px;
     border: 3px solid #4CAF50;
     border-radius: 4px;
+    box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
 }
 
 .corner.top-left {
@@ -203,7 +208,7 @@
     border-top: none;
 }
 
-/* Scanning line animation */
+/* Scanning line animation - adjusted for square frame */
 .scan-line {
     position: absolute;
     top: 0;
@@ -212,6 +217,7 @@
     height: 2px;
     background: linear-gradient(90deg, transparent, #4CAF50, transparent);
     animation: scanLineMove 2s ease-in-out infinite;
+    box-shadow: 0 0 8px rgba(76, 175, 80, 0.8);
 }
 
 @keyframes scanLineMove {
@@ -430,15 +436,15 @@
     }
 
     .scan-frame {
-        top: 25%;
-        left: 25%;
-        right: 25%;
-        bottom: 25%;
+        width: min(70vw, 70vh);
+        height: min(70vw, 70vh);
+        margin-top: -10px;
     }
 
     .corner {
         width: 25px;
         height: 25px;
+        border-width: 2.5px;
     }
 
     .scan-controls {

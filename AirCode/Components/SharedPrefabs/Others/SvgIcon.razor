@@ -4,7 +4,7 @@
 
 @if (string.IsNullOrEmpty(_svgContent))
 {
-    <i class="@_fallbackIconClass"></i>
+    <i class="@_fallbackIconClass" style="@StyleString"></i>
 }
 else
 {
@@ -29,50 +29,99 @@ else
     [Parameter]
     public string Fill { get; set; } = "currentColor";
 
+    [Parameter]
+    public string FallbackIcon { get; set; } = "fas fa-circle";
+
     [Parameter(CaptureUnmatchedValues = true)]
     public Dictionary<string, object> AdditionalAttributes { get; set; }
 
     private string _svgContent = string.Empty;
     private string _fallbackIconClass = "fas fa-circle";
     private bool _initialized = false;
+    private bool _loadAttempted = false;
 
-    private string StyleString => $"width: {Width}; height: {Height};";
+    private string StyleString => $"width: {Width}; height: {Height}; display: inline-flex; align-items: center; justify-content: center;";
 
     protected override async Task OnInitializedAsync()
     {
+        SetFallbackIcon();
         await LoadSvgContentAsync();
         _initialized = true;
     }
 
     protected override async Task OnParametersSetAsync()
     {
-        if (_initialized && !string.IsNullOrEmpty(IconName))
+        if (_initialized)
         {
-            await LoadSvgContentAsync();
+            SetFallbackIcon();
+            if (!string.IsNullOrEmpty(IconName) && !_loadAttempted)
+            {
+                await LoadSvgContentAsync();
+            }
+        }
+    }
+
+    private void SetFallbackIcon()
+    {
+        if (!string.IsNullOrEmpty(FallbackIcon))
+        {
+            _fallbackIconClass = FallbackIcon;
+        }
+        else
+        {
+            // Icon-specific fallbacks
+            _fallbackIconClass = IconName switch
+            {
+                "stats" => "fas fa-chart-bar",
+                "scan_qrcode" or "scan" => "fas fa-qrcode",
+                "settings" => "fas fa-cog",
+                _ => "fas fa-circle"
+            };
         }
     }
 
     private async Task LoadSvgContentAsync()
     {
-        if (string.IsNullOrEmpty(IconName))
+        if (string.IsNullOrEmpty(IconName) || _loadAttempted)
         {
             return;
         }
 
-        var content = await SvgIconService.GetSvgContentAsync(IconName);
+        _loadAttempted = true;
 
-        if (!string.IsNullOrEmpty(content))
+        try
         {
-            // If we want to modify the SVG (e.g., to set the fill color)
-            if (!string.IsNullOrEmpty(Fill) && Fill != "currentColor")
+            // Add timeout and retry logic
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            var content = await SvgIconService.GetSvgContentAsync(IconName);
+
+            if (!string.IsNullOrEmpty(content))
             {
-                content = content.Replace("fill=\"currentColor\"", $"fill=\"{Fill}\"");
-            }
+                // Process fill color replacement
+                if (!string.IsNullOrEmpty(Fill) && Fill != "currentColor")
+                {
+                    content = content.Replace("fill=\"currentColor\"", $"fill=\"{Fill}\"");
+                    content = content.Replace("fill='currentColor'", $"fill='{Fill}'");
+                }
 
-            _svgContent = content;
+                // Ensure SVG has proper dimensions
+                if (!content.Contains("width=") && !content.Contains("height="))
+                {
+                    content = content.Replace("<svg", $"<svg width=\"{Width}\" height=\"{Height}\"");
+                }
+
+                _svgContent = content;
+                Console.WriteLine($"SVG loaded successfully for icon: {IconName}");
+            }
+            else
+            {
+                Console.WriteLine($"SVG content empty for icon: {IconName}, using fallback");
+                _svgContent = string.Empty;
+            }
         }
-        else
+        catch (Exception ex)
         {
+            Console.WriteLine($"Error loading SVG icon '{IconName}': {ex.Message}");
             _svgContent = string.Empty;
         }
 
