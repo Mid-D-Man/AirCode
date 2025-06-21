@@ -1,20 +1,20 @@
 
 namespace AirCode.Domain.Enums
 {
-    //removed assistant lecturer, that would cause confusion 
+    //removed assistant lecturer,course rep , deemed unessesary , that would cause confusion 
+    //if both lec,rep not in class that means it never holds now, also course repcan just borrow assistant their account s
     public enum UserRole
     {
-        SuperiorAdmin, // Full system access, can manage everything
-        LecturerAdmin, // Can manage their courses, view course attendance
+        SuperiorAdmin,  // Full system access, can manage everything
+        LecturerAdmin,  // Can manage their courses, view course attendance
         CourseRepAdmin, // Can view course attendance, start attendance events
-        AssistantCourseRep, // Can start attendance events for main course rep
-        Student // Can view personal attendance, register courses
+        Student         // Can view personal attendance, register courses
     }
+
 
     public enum ClassRepStatus
     {
         None,
-        AssistantRep,
         MainRep
     }
 

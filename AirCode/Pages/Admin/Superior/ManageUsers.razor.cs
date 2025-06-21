@@ -288,27 +288,38 @@ public partial class ManageUsers : ComponentBase
     private int GetTotalPages(int itemCount) => (int)Math.Ceiling(itemCount / (double)ITEMS_PER_PAGE);
     
     // Generate ID methods using pooled StringBuilder
-    private string GenerateAdminId(string type)
+    private string GenerateAdminId()
     {
         using var sbWrapper = StringBuilderPool.GetPooled();
         var sb = sbWrapper.Object;
-        
-        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
-        var randomBytes = new byte[4];
+    
+        // Generate 4 random salt characters
+        var saltBytes = new byte[2]; // 2 bytes = 4 hex characters
+        using (var rng = RandomNumberGenerator.Create())
+        {
+            rng.GetBytes(saltBytes);
+        }
+        var saltString = Convert.ToHexString(saltBytes).ToUpper();
+    
+        // Generate base64 random string (12 bytes = 16 base64 characters)
+        var randomBytes = new byte[12];
         using (var rng = RandomNumberGenerator.Create())
         {
             rng.GetBytes(randomBytes);
         }
-        var randomString = Convert.ToHexString(randomBytes).ToLower();
-        
-        sb.Append(type.ToLower())
-            .Append('_')
-            .Append(timestamp)
-            .Append('_')
-            .Append(randomString);
+        var base64String = Convert.ToBase64String(randomBytes)
+            .Replace("+", "")
+            .Replace("/", "")
+            .Replace("=", "");
+    
+        sb.Append("AIRCODE-")
+            .Append(saltString)
+            .Append('-')
+            .Append(base64String);
           
         return sb.ToString();
     }
+
     private void SetActiveTab(string tab)
     {
         activeTab = tab;
@@ -459,8 +470,8 @@ private async Task CreateCourseRepSkeleton()
     // Create student entry first
     await CreateStudentSkeleton();
 
-    // Create admin entry
-    var adminId = GenerateAdminId("CourseRep");
+    // Create admin entry with updated ID generation
+    var adminId = GenerateAdminId(); // Updated call
 
     var newCourseRepAdmin = new CourseRepAdminInfo
     {
@@ -483,33 +494,31 @@ private async Task CreateCourseRepSkeleton()
     await FirestoreService.UpdateDocumentAsync(ADMIN_IDS_COLLECTION, COURSEREP_ADMIN_DOC, existingDoc);
 }
     
-    private async Task CreateLecturerSkeleton()
+private async Task CreateLecturerSkeleton()
+{
+    var adminId = GenerateAdminId(); // Updated call
+    var lecturerId = GenerateLecturerId();
+    
+    var newLecturerAdmin = new LecturerAdminInfo
     {
-        var adminId = GenerateAdminId("Lecturer");
-        var lecturerId = GenerateLecturerId();
-        
-        var newLecturerAdmin = new LecturerAdminInfo
-        {
-            AdminId = adminId,
-            LecturerId = lecturerId,
-            CurrentUsage = 0,
-            MaxUsage = newMaxUsage,
-            UserIds = new List<string>()
-        };
-        
-        // Get existing document or create new one
-        var existingDoc = await FirestoreService.GetDocumentAsync<LecturerAdminDocument>(ADMIN_IDS_COLLECTION, LECTURER_ADMIN_DOC);
-        if (existingDoc == null)
-        {
-            existingDoc = new LecturerAdminDocument { Ids = new List<LecturerAdminInfo>() };
-        }
-        
-        existingDoc.Ids.Add(newLecturerAdmin);
-        
-        await FirestoreService.UpdateDocumentAsync(ADMIN_IDS_COLLECTION, LECTURER_ADMIN_DOC, existingDoc);
+        AdminId = adminId,
+        LecturerId = lecturerId,
+        CurrentUsage = 0,
+        MaxUsage = newMaxUsage,
+        UserIds = new List<string>()
+    };
+    
+    // Get existing document or create new one
+    var existingDoc = await FirestoreService.GetDocumentAsync<LecturerAdminDocument>(ADMIN_IDS_COLLECTION, LECTURER_ADMIN_DOC);
+    if (existingDoc == null)
+    {
+        existingDoc = new LecturerAdminDocument { Ids = new List<LecturerAdminInfo>() };
     }
-
-   
+    
+    existingDoc.Ids.Add(newLecturerAdmin);
+    
+    await FirestoreService.UpdateDocumentAsync(ADMIN_IDS_COLLECTION, LECTURER_ADMIN_DOC, existingDoc);
+}
     private async Task UpdateMaxUsage()
     {
         try
