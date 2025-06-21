@@ -107,25 +107,25 @@
 
     private async void OnQrCodeScan(string code)
     {
-        if (!string.IsNullOrEmpty(code) && !isProcessing && !showResult)
+        if (!string.IsNullOrEmpty(code) && CanProcessAttendance())
         {
             MID_HelperFunctions.DebugMessage($"QR Code detected: {code}", DebugClass.Info);
-            
+        
             // Stop scanning and show processing state
             await PauseScanning();
             isProcessing = true;
             scanComplete = true;
             StateHasChanged();
-            
+        
             try
             {
                 // Decode the session data
                 var decodedSessionData = await QRDecoder.DecodeSessionDataAsync(code);
-                
+            
                 if (decodedSessionData != null)
                 {
                     MID_HelperFunctions.DebugMessage($"Valid AirCode QR detected for course: {decodedSessionData.CourseCode}", DebugClass.Info);
-                    
+                
                     // Process attendance
                     await ProcessAttendanceWithNewPayload(code);
                 }
@@ -140,61 +140,101 @@
                 MID_HelperFunctions.DebugMessage($"Error processing QR code: {ex.Message}", DebugClass.Exception);
                 ShowResult($"Error processing QR code: {ex.Message}", false);
             }
-            
+        
             isProcessing = false;
             await InvokeAsync(StateHasChanged);
         }
     }
 
     private async Task ProcessAttendanceWithNewPayload(string qrCode)
+{
+    try
     {
-        try
+        MID_HelperFunctions.DebugMessage($"Processing attendance with new payload structure for QR: {qrCode}", DebugClass.Info);
+    
+        var attendanceRecord = new AttendanceRecord
         {
-            MID_HelperFunctions.DebugMessage($"Processing attendance with new payload structure for QR: {qrCode}", DebugClass.Info);
+            MatricNumber = currentUserMatricNumber,
+            HasScannedAttendance = true,
+            IsOnlineScan = true
+        };
+    
+        MID_HelperFunctions.DebugMessage($"Attendance record: {MID_HelperFunctions.ToJson(attendanceRecord)}", DebugClass.Log);
+    
+        // Create the Edge Function request
+        var edgeFunctionRequest = await QRDecoder.CreateEdgeFunctionRequestAsync(qrCode, attendanceRecord);
         
-            var attendanceRecord = new AttendanceRecord
-            {
-                MatricNumber = currentUserMatricNumber,
-                HasScannedAttendance = true,
-                IsOnlineScan = true
-            };
-        
-            MID_HelperFunctions.DebugMessage($"Attendance record: {MID_HelperFunctions.ToJson(attendanceRecord)}", DebugClass.Log);
-        
-            // Create the Edge Function request
-            var edgeFunctionRequest = await QRDecoder.CreateEdgeFunctionRequestAsync(qrCode, attendanceRecord);
-            
-            if (edgeFunctionRequest == null)
-            {
-                ShowResult("Failed to create valid request payload", false);
-                return;
-            }
-
-            MID_HelperFunctions.DebugMessage($"Edge function request: {MID_HelperFunctions.ToJson(edgeFunctionRequest)}", DebugClass.Log);
-        
-            // Process attendance
-            var result = await EdgeService.ProcessAttendanceWithPayloadAsync(edgeFunctionRequest);
-        
-            MID_HelperFunctions.DebugMessage($"Edge function result: {MID_HelperFunctions.ToJson(result)}", DebugClass.Log);
-        
-            if (result.Success)
-            {
-                ShowResult("Attendance recorded successfully!", true);
-                MID_HelperFunctions.DebugMessage("Attendance processed successfully", DebugClass.Info);
-            }
-            else
-            {
-                ShowResult($"Failed: {result.Message}", false);
-                MID_HelperFunctions.DebugMessage($"Attendance processing failed: {result.Message}", DebugClass.Warning);
-            }
+        if (edgeFunctionRequest == null)
+        {
+            ShowResult("Failed to create valid request payload", false);
+            return;
         }
-        catch (Exception ex)
+
+        MID_HelperFunctions.DebugMessage($"Edge function request: {MID_HelperFunctions.ToJson(edgeFunctionRequest)}", DebugClass.Log);
+    
+        // Process attendance
+        var result = await EdgeService.ProcessAttendanceWithPayloadAsync(edgeFunctionRequest);
+    
+        MID_HelperFunctions.DebugMessage($"Edge function result: {MID_HelperFunctions.ToJson(result)}", DebugClass.Log);
+    
+        if (result.Success)
         {
-            MID_HelperFunctions.DebugMessage($"Exception in ProcessAttendanceWithNewPayload: {ex}", DebugClass.Exception);
-            ShowResult($"Error: {ex.Message}", false);
+            ShowResult("Attendance recorded successfully!", true);
+            MID_HelperFunctions.DebugMessage("Attendance processed successfully", DebugClass.Info);
+        }
+        else
+        {
+            // Enhanced error handling based on error codes
+            var userFriendlyMessage = GetUserFriendlyErrorMessage(result.ErrorCode, result.Message);
+            ShowResult(userFriendlyMessage, false);
+            MID_HelperFunctions.DebugMessage($"Attendance processing failed: {result.Message} (Code: {result.ErrorCode})", DebugClass.Warning);
         }
     }
+    catch (Exception ex)
+    {
+        MID_HelperFunctions.DebugMessage($"Exception in ProcessAttendanceWithNewPayload: {ex}", DebugClass.Exception);
+        ShowResult($"An unexpected error occurred. Please try again.", false);
+    }
+}
 
+private string GetUserFriendlyErrorMessage(string errorCode, string originalMessage)
+{
+    return errorCode switch
+    {
+        "DUPLICATE_ATTENDANCE" => "⚠️ You have already marked attendance for this session. Multiple submissions are not allowed.",
+        "SESSION_NOT_FOUND" => "❌ This attendance session does not exist or has been removed. Please check with your instructor.",
+        "TEMPORAL_KEY_EXPIRED" => "⏰ Your QR code has expired. Please scan the latest QR code displayed by your instructor.",
+        "TEMPORAL_KEY_MISSING" => "🔒 This session requires a temporal security key. Please scan a fresh QR code.",
+        "DEVICE_SECURITY_VIOLATION" => "🛡️ This device has already been used by another student for attendance. Please use your own device or contact your instructor.",
+        "DEVICE_GUID_MISSING" => "📱 Device identification is required for this secure session.",
+        "MATRIC_NUMBER_MISSING" => "🆔 Student identification number is required for attendance.",
+        "SESSION_QUERY_ERROR" => "🔌 Database connection failed. Please check your internet connection and try again.",
+        "ATTENDANCE_UPDATE_ERROR" => "💾 Failed to save attendance record. Please try again or contact support.",
+        "NETWORK_ERROR" => "🌐 Network connection failed. Please check your internet connection.",
+        "SUPABASE_CONFIG_ERROR" => "⚙️ Server configuration error. Please contact technical support.",
+        "INVALID_JSON" => "📋 Invalid request format. Please try scanning the QR code again.",
+        "MISSING_PARAMETERS" => "📝 Required information is missing. Please try scanning the QR code again.",
+        _ => $"❌ {originalMessage}"
+    };
+}
+private bool CanProcessAttendance()
+{
+    // Prevent duplicate processing
+    if (isProcessing || showResult)
+    {
+        MID_HelperFunctions.DebugMessage("Attendance processing already in progress or completed", DebugClass.Warning);
+        return false;
+    }
+
+    // Validate user matric number
+    if (string.IsNullOrWhiteSpace(currentUserMatricNumber))
+    {
+        ShowResult("User identification not available. Please ensure you are logged in.", false);
+        return false;
+    }
+
+    return true;
+}
     private void ShowResult(string message, bool success)
     {
         resultMessage = message;

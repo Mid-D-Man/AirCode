@@ -36,57 +36,94 @@ namespace AirCode.Services.SupaBase
         /// <summary>
         /// Process attendance with unencrypted payload structure
         /// </summary>
-        public async Task<AttendanceProcessingResult> ProcessAttendanceWithPayloadAsync(EdgeFunctionRequest request)
+       /// <summary>
+/// Process attendance with unencrypted payload structure
+/// </summary>
+public async Task<AttendanceProcessingResult> ProcessAttendanceWithPayloadAsync(EdgeFunctionRequest request)
+{
+    try
+    {
+        Console.WriteLine($"Sending edge function request: {JsonSerializer.Serialize(request, _jsonOptions)}");
+
+        var response = await SendEdgeFunctionRequestAsync("process-attendance-data", request);
+        
+        var responseContent = await response.Content.ReadAsStringAsync();
+        Console.WriteLine($"Response Status: {response.StatusCode}");
+        Console.WriteLine($"Response Content: {responseContent}");
+        
+        // Parse the response regardless of status code
+        EdgeFunctionResponse edgeResponse;
+        try
         {
-            try
+            edgeResponse = JsonSerializer.Deserialize<EdgeFunctionResponse>(responseContent, _jsonOptions);
+        }
+        catch (JsonException)
+        {
+            return new AttendanceProcessingResult
             {
-                Console.WriteLine($"Sending edge function request: {JsonSerializer.Serialize(request, _jsonOptions)}");
-
-                var response = await SendEdgeFunctionRequestAsync("process-attendance-data", request);
-                
-                var responseContent = await response.Content.ReadAsStringAsync();
-                Console.WriteLine($"Response Status: {response.StatusCode}");
-                Console.WriteLine($"Response Content: {responseContent}");
-                
-                if (response.IsSuccessStatusCode)
-                {
-                    var result = JsonSerializer.Deserialize<AttendanceProcessingResult>(responseContent, _jsonOptions);
-                    return result ?? new AttendanceProcessingResult 
-                    { 
-                        Success = false, 
-                        Message = "Invalid response format" 
-                    };
-                }
-
-                return new AttendanceProcessingResult
-                {
-                    Success = false,
-                    Message = $"Request failed: {response.StatusCode}",
-                    ErrorDetails = responseContent
-                };
-            }
-            catch (HttpRequestException ex)
-            {
-                Console.WriteLine($"HTTP Request Exception: {ex}");
-                return new AttendanceProcessingResult
-                {
-                    Success = false,
-                    Message = $"Network error: {ex.Message}",
-                    ErrorDetails = ex.ToString()
-                };
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"General Exception: {ex}");
-                return new AttendanceProcessingResult
-                {
-                    Success = false,
-                    Message = $"Processing error: {ex.Message}",
-                    ErrorDetails = ex.ToString()
-                };
-            }
+                Success = false,
+                Message = "Invalid response format from server",
+                ErrorDetails = responseContent
+            };
         }
 
+        if (response.IsSuccessStatusCode && edgeResponse?.Success == true)
+        {
+            // Success case
+            return new AttendanceProcessingResult
+            {
+                Success = true,
+                Message = edgeResponse.Message,
+                SessionData = edgeResponse.SessionData != null ? new QRCodePayloadData
+                {
+                    SessionId = edgeResponse.SessionData.SessionId,
+                    CourseCode = edgeResponse.SessionData.CourseCode,
+                    StartTime = edgeResponse.SessionData.StartTime,
+                    EndTime = edgeResponse.SessionData.EndTime
+                } : null,
+                ProcessedAttendance = edgeResponse.ProcessedAttendance != null ? new AttendanceRecord
+                {
+                    MatricNumber = edgeResponse.ProcessedAttendance.MatricNumber,
+                    ScanTime = edgeResponse.ProcessedAttendance.ScannedAt,
+                    IsOnlineScan = edgeResponse.ProcessedAttendance.IsOnlineScan
+                } : null
+            };
+        }
+        else
+        {
+            // Error case - return the specific error message from Edge function
+            return new AttendanceProcessingResult
+            {
+                Success = false,
+                Message = edgeResponse?.Message ?? "Unknown error occurred",
+                ErrorCode = edgeResponse?.ErrorCode ?? "UNKNOWN_ERROR",
+                ErrorDetails = $"HTTP {response.StatusCode}: {responseContent}"
+            };
+        }
+    }
+    catch (HttpRequestException ex)
+    {
+        Console.WriteLine($"HTTP Request Exception: {ex}");
+        return new AttendanceProcessingResult
+        {
+            Success = false,
+            Message = "Network connection failed. Please check your internet connection.",
+            ErrorCode = "NETWORK_ERROR",
+            ErrorDetails = ex.ToString()
+        };
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"General Exception: {ex}");
+        return new AttendanceProcessingResult
+        {
+            Success = false,
+            Message = $"An unexpected error occurred: {ex.Message}",
+            ErrorCode = "PROCESSING_ERROR",
+            ErrorDetails = ex.ToString()
+        };
+    }
+}
         /// <summary>
         /// Validate QR code payload data with signature verification
         /// </summary>
@@ -293,6 +330,7 @@ namespace AirCode.Services.SupaBase
     {
         public bool Success { get; set; }
         public string Message { get; set; } = string.Empty;
+        public string ErrorCode { get; set; } = string.Empty; // Add this property
         public string ErrorDetails { get; set; } = string.Empty;
         public QRCodePayloadData SessionData { get; set; }
         public AttendanceRecord ProcessedAttendance { get; set; }
@@ -317,6 +355,32 @@ namespace AirCode.Services.SupaBase
         }
     }
 
+
+// Add response models to match Edge function structure
+    public class EdgeFunctionResponse
+    {
+        public bool Success { get; set; }
+        public string Message { get; set; } = string.Empty;
+        public string ErrorCode { get; set; } = string.Empty;
+        public DateTime Timestamp { get; set; }
+        public EdgeSessionData SessionData { get; set; }
+        public EdgeProcessedAttendance ProcessedAttendance { get; set; }
+    }
+
+    public class EdgeSessionData
+    {
+        public string SessionId { get; set; } = string.Empty;
+        public string CourseCode { get; set; } = string.Empty;
+        public DateTime StartTime { get; set; }
+        public DateTime EndTime { get; set; }
+    }
+
+    public class EdgeProcessedAttendance
+    {
+        public string MatricNumber { get; set; } = string.Empty;
+        public DateTime ScannedAt { get; set; }
+        public bool IsOnlineScan { get; set; }
+    }
     public class CatResponse
     {
         public string ImageUrl { get; set; } = string.Empty;
