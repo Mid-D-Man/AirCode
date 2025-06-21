@@ -1,4 +1,5 @@
 using AirCode.Models.QRCode;
+using AirCode.Models.Supabase;
 
 namespace AirCode.Services.SupaBase;
 

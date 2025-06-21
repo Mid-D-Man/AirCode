@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using AirCode.Services.Cryptography;
 using AirCode.Models.QRCode;
+using AirCode.Models.Supabase;
 using AirCode.Services.SupaBase;
 
 namespace AirCode.Utilities.HelperScripts

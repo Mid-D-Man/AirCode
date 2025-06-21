@@ -317,18 +317,6 @@ namespace AirCode.Services.SupaBase
         }
     }
 
-    public class AttendanceRecord
-    {
-        public string MatricNumber { get; set; } = string.Empty;
-        public bool HasScannedAttendance { get; set; }
-        public bool IsOnlineScan { get; set; }
-
-        public override string ToString()
-        {
-            return JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
-        }
-    }
-
     public class CatResponse
     {
         public string ImageUrl { get; set; } = string.Empty;
