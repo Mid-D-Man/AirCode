@@ -466,6 +466,7 @@ private async void RestoreExistingSession(ActiveSessionData activeSession, Sessi
                 }
 
                 SessionStateService.RemoveCurrentSession("default");
+                await MigrateAttendanceDataToFirebase();
 
                 isSessionStarted = false;
                 currentActiveSession = null;
@@ -705,7 +706,57 @@ private async void RestoreExistingSession(ActiveSessionData activeSession, Sessi
                 Console.WriteLine($"Error processing attendance: {ex.Message}");
             }
         }
+        private async Task EndSessionWithDataMigration()
+        {
+            try
+            {
+                isEndingSession = true;
+        
+                // Sync any remaining offline records first
+               // await OfflineSyncService.SyncPendingRecordsAsync();
+        
+                // Migrate attendance data from Supabase to Firebase
+                await MigrateAttendanceDataToFirebase();
+        
+                // Clean up Supabase working data (keep backup)
+               // await ArchiveSupabaseSessionData();
+        
+                // End session normally
+                 EndSession();
+            }
+            catch (Exception ex)
+            {
+                MID_HelperFunctions.DebugMessage($"Error ending session with migration: {ex.Message}", DebugClass.Exception);
+            }
+            finally
+            {
+                isEndingSession = false;
+            }
+        }
 
+        private async Task MigrateAttendanceDataToFirebase()
+        {
+            // Get final attendance records from Supabase
+            var finalAttendanceData = await AttendanceSessionService.GetActiveSessionsAsync();
+    
+            // Update Firebase with complete attendance records
+            var documentId = $"AttendanceEvent_{sessionModel.CourseId}";
+            var eventFieldName = $"Event_{sessionModel.SessionId}_{sessionModel.StartTime:yyyyMMdd}";
+    
+            await FirestoreService.AddOrUpdateFieldAsync(
+                "ATTENDANCE_EVENTS", 
+                documentId, 
+                $"{eventFieldName}.FinalAttendanceRecords", 
+                finalAttendanceData
+            );
+    
+            await FirestoreService.AddOrUpdateFieldAsync(
+                "ATTENDANCE_EVENTS", 
+                documentId, 
+                $"{eventFieldName}.Status", 
+                "Completed"
+            );
+        }
         public void Dispose()
         {
             countdownTimer?.Dispose();
