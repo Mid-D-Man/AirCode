@@ -148,8 +148,8 @@ else
         {
             "SuperiorAdmin" => user.IsInRole("superioradmin"),
             "LecturerAdmin" => user.IsInRole("lectureradmin"),
-            "CourseAdmin" => user.IsInRole("courseadmin"),
-            "AnyAdmin" => user.IsInRole("superioradmin") || user.IsInRole("lectureradmin") || user.IsInRole("courseadmin"),
+            "CourseAdmin" => user.IsInRole("courserepadmin"),
+            "AnyAdmin" => user.IsInRole("superioradmin") || user.IsInRole("lectureradmin") || user.IsInRole("courserepadmin"),
             "Student" => user.IsInRole("student"),
             _ => true
         };

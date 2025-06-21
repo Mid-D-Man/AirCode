@@ -1,9 +1,10 @@
 @page "/Admin/ManageAcademicSession"
-
+@attribute [Authorize(Roles = "SuperiorAdmin")]
 @using AirCode.Domain.Entities
 @using AirCode.Domain.Enums
 @using AirCode.Layout.AdminLayout.Superior
 @using AirCode.Components.SharedPrefabs.Cards
+@using Microsoft.AspNetCore.Authorization
 
 @layout SuperiorAdminLayout
 
