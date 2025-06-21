@@ -1,9 +1,8 @@
 using AirCode.Domain.Entities;
 using AirCode.Domain.Enums;
-using AirCode.Services.Firebase;
+using AirCode.Services.Department;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
-using Newtonsoft.Json;
 
 namespace AirCode.Pages.Admin.Superior;
 
@@ -11,10 +10,7 @@ public partial class ManageDepartments : ComponentBase
 {
     [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
     [Inject] private NavigationManager NavigationManager { get; set; } = default!;
-    [Inject] private IFirestoreService FirestoreService { get; set; } = default!;
-
-    private const string DEPARTMENTS_COLLECTION = "DEPARTMENTS";  
-    private const string DEPARTMENTS_DOCUMENT = "Departments";
+    [Inject] private IDepartmentService DepartmentService { get; set; } = default!;
 
     private List<Department> _departments = new();
     private Department _newDepartment = new();
@@ -26,34 +22,10 @@ public partial class ManageDepartments : ComponentBase
     private LevelType _newLevelType = LevelType.Level100;
     private LevelType _levelTypeToRemove;
     private string _newCourseId = string.Empty;
-    private bool _isFirebaseConnected = false;
 
     protected override async Task OnInitializedAsync()
     {
-        await CheckFirebaseConnection();
         await LoadDepartments();
-    }
-
-    private async Task CheckFirebaseConnection()
-    {
-        try
-        {
-            if (!FirestoreService.IsInitialized)
-            {
-                await JSRuntime.InvokeVoidAsync("alert", "Firebase is not initialized!");
-                return;
-            }
-
-            _isFirebaseConnected = await FirestoreService.IsConnectedAsync();
-            if (!_isFirebaseConnected)
-            {
-                await JSRuntime.InvokeVoidAsync("alert", "Firebase connection failed!");
-            }
-        }
-        catch (Exception ex)
-        {
-            await JSRuntime.InvokeVoidAsync("alert", $"Firebase connection error: {ex.Message}");
-        }
     }
 
     private async Task LoadDepartments()
@@ -61,48 +33,11 @@ public partial class ManageDepartments : ComponentBase
         _isLoading = true;
         try
         {
-            if (!_isFirebaseConnected)
-            {
-                await JSRuntime.InvokeVoidAsync("alert", "Firebase is not connected!");
-                return;
-            }
-
-            // Try to get the departments document from Firebase
-            var departmentsData = await FirestoreService.GetDocumentAsync<DepartmentsContainer>(
-                DEPARTMENTS_COLLECTION, DEPARTMENTS_DOCUMENT);
-
-            if (departmentsData != null && departmentsData.Departments != null)
-            {
-                _departments = departmentsData.Departments;
-            }
-            else
-            {
-                // Document doesn't exist, initialize with empty list
-                _departments = new List<Department>();
-                
-                // Create the document structure in Firebase
-                var initialContainer = new DepartmentsContainer 
-                { 
-                    Departments = _departments,
-                    LastModified = DateTime.UtcNow,
-                    ModifiedBy = "System"
-                };
-
-                // Try to create the initial document
-                var result = await FirestoreService.AddDocumentAsync(
-                    DEPARTMENTS_COLLECTION, initialContainer, DEPARTMENTS_DOCUMENT);
-                
-                if (string.IsNullOrEmpty(result))
-                {
-                    await JSRuntime.InvokeVoidAsync("alert", 
-                        "Warning: Could not initialize departments collection in Firebase");
-                }
-            }
+            _departments = await DepartmentService.GetAllDepartmentsAsync();
         }
         catch (Exception ex)
         {
             await JSRuntime.InvokeVoidAsync("alert", $"Error loading departments: {ex.Message}");
-            // Fallback to empty list if Firebase fails
             _departments = new List<Department>();
         }
         finally
@@ -111,65 +46,28 @@ public partial class ManageDepartments : ComponentBase
         }
     }
 
-    private async Task SaveDepartmentsToFirebase()
-    {
-        try
-        {
-            var departmentsContainer = new DepartmentsContainer
-            {
-                Departments = _departments,
-                LastModified = DateTime.UtcNow,
-                ModifiedBy = "Admin" // You might want to get this from user context
-            };
-
-            var success = await FirestoreService.UpdateDocumentAsync(
-                DEPARTMENTS_COLLECTION, DEPARTMENTS_DOCUMENT, departmentsContainer);
-
-            if (!success)
-            {
-                throw new Exception("Failed to update Firebase document");
-            }
-        }
-        catch (Exception ex)
-        {
-            await JSRuntime.InvokeVoidAsync("alert", $"Error saving to Firebase: {ex.Message}");
-            throw; // Re-throw to handle in calling method
-        }
-    }
-
     private async Task HandleValidSubmit()
     {
         try
         {
-            // Check if department ID already exists
-            if (_departments.Any(d => d.DepartmentId == _newDepartment.DepartmentId))
+            var success = await DepartmentService.AddDepartmentAsync(_newDepartment);
+            
+            if (success)
             {
-                await JSRuntime.InvokeVoidAsync("alert", "Department ID already exists!");
-                return;
+                // Refresh local data
+                await LoadDepartments();
+                
+                // Reset form
+                _newDepartment = new Department();
+                await JSRuntime.InvokeVoidAsync("alert", "Department added successfully!");
             }
-            
-            _newDepartment.SetModificationDetails(
-                Guid.NewGuid().ToString(), 
-                DateTime.UtcNow, 
-                "Admin"); // You might want to get this from user context
-
-            // Add to local list
-            _departments.Add(_newDepartment);
-            
-            // Save to Firebase
-            await SaveDepartmentsToFirebase();
-            
-            // Reset form
-            _newDepartment = new Department();
-            await JSRuntime.InvokeVoidAsync("alert", "Department added successfully!");
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Failed to add department. Department ID may already exist.");
+            }
         }
         catch (Exception ex)
         {
-            // Remove from local list if Firebase save failed
-            if (_departments.Contains(_newDepartment))
-            {
-                _departments.Remove(_newDepartment);
-            }
             await JSRuntime.InvokeVoidAsync("alert", $"Error adding department: {ex.Message}");
         }
     }
@@ -197,27 +95,28 @@ public partial class ManageDepartments : ComponentBase
         {
             if (_departmentToDelete == null) return;
             
-            // Remove from local list
-            _departments.Remove(_departmentToDelete);
+            var success = await DepartmentService.DeleteDepartmentAsync(_departmentToDelete.DepartmentId);
             
-            // Save to Firebase
-            await SaveDepartmentsToFirebase();
-            
-            // Clear selection if deleted department was selected
-            if (_selectedDepartment?.DepartmentId == _departmentToDelete.DepartmentId)
+            if (success)
             {
-                _selectedDepartment = null;
+                // Refresh local data
+                await LoadDepartments();
+                
+                // Clear selection if deleted department was selected
+                if (_selectedDepartment?.DepartmentId == _departmentToDelete.DepartmentId)
+                {
+                    _selectedDepartment = null;
+                }
+                
+                await JSRuntime.InvokeVoidAsync("alert", "Department deleted successfully!");
             }
-            
-            await JSRuntime.InvokeVoidAsync("alert", "Department deleted successfully!");
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Failed to delete department.");
+            }
         }
         catch (Exception ex)
         {
-            // Add back to local list if Firebase save failed
-            if (_departmentToDelete != null && !_departments.Contains(_departmentToDelete))
-            {
-                _departments.Add(_departmentToDelete);
-            }
             await JSRuntime.InvokeVoidAsync("alert", $"Error deleting department: {ex.Message}");
         }
         finally
@@ -232,13 +131,6 @@ public partial class ManageDepartments : ComponentBase
         {
             if (_selectedDepartment == null) return;
             
-            // Check if level already exists
-            if (_selectedDepartment.Levels.Any(l => l.LevelType == _newLevelType))
-            {
-                await JSRuntime.InvokeVoidAsync("alert", "This level already exists in the department!");
-                return;
-            }
-            
             var newLevel = new Level
             {
                 LevelType = _newLevelType,
@@ -246,21 +138,26 @@ public partial class ManageDepartments : ComponentBase
                 CourseIds = new List<string>()
             };
             
-            // Add to local object
-            _selectedDepartment.AddLevel(newLevel);
+            var success = await DepartmentService.AddLevelToDepartmentAsync(
+                _selectedDepartment.DepartmentId, newLevel);
             
-            // Save to Firebase
-            await SaveDepartmentsToFirebase();
-            
-            await JSRuntime.InvokeVoidAsync("alert", "Level added successfully!");
+            if (success)
+            {
+                // Refresh local data to maintain consistency
+                await LoadDepartments();
+                
+                // Re-select the department to maintain UI state
+                _selectedDepartment = _departments.FirstOrDefault(d => d.DepartmentId == _selectedDepartment.DepartmentId);
+                
+                await JSRuntime.InvokeVoidAsync("alert", "Level added successfully!");
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Failed to add level. Level may already exist.");
+            }
         }
         catch (Exception ex)
         {
-            // Remove from local object if Firebase save failed
-            if (_selectedDepartment != null)
-            {
-                _selectedDepartment.RemoveLevel(_newLevelType);
-            }
             await JSRuntime.InvokeVoidAsync("alert", $"Error adding level: {ex.Message}");
         }
     }
@@ -278,29 +175,30 @@ public partial class ManageDepartments : ComponentBase
 
     private async Task RemoveLevel()
     {
-        Level? removedLevel = null;
         try
         {
             if (_selectedDepartment == null) return;
             
-            // Store reference to removed level for rollback
-            removedLevel = _selectedDepartment.Levels.FirstOrDefault(l => l.LevelType == _levelTypeToRemove);
+            var success = await DepartmentService.RemoveLevelFromDepartmentAsync(
+                _selectedDepartment.DepartmentId, _levelTypeToRemove);
             
-            // Remove from local object
-            _selectedDepartment.RemoveLevel(_levelTypeToRemove);
-            
-            // Save to Firebase
-            await SaveDepartmentsToFirebase();
-            
-            await JSRuntime.InvokeVoidAsync("alert", "Level removed successfully!");
+            if (success)
+            {
+                // Refresh local data to maintain consistency
+                await LoadDepartments();
+                
+                // Re-select the department to maintain UI state
+                _selectedDepartment = _departments.FirstOrDefault(d => d.DepartmentId == _selectedDepartment.DepartmentId);
+                
+                await JSRuntime.InvokeVoidAsync("alert", "Level removed successfully!");
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Failed to remove level.");
+            }
         }
         catch (Exception ex)
         {
-            // Add back to local object if Firebase save failed
-            if (_selectedDepartment != null && removedLevel != null)
-            {
-                _selectedDepartment.AddLevel(removedLevel);
-            }
             await JSRuntime.InvokeVoidAsync("alert", $"Error removing level: {ex.Message}");
         }
         finally
@@ -315,33 +213,27 @@ public partial class ManageDepartments : ComponentBase
         {
             if (_selectedDepartment == null || string.IsNullOrWhiteSpace(_newCourseId)) return;
             
-            var level = _selectedDepartment.Levels.FirstOrDefault(l => l.LevelType == levelType);
-            if (level == null) return;
+            var success = await DepartmentService.AddCourseIdToLevelAsync(
+                _selectedDepartment.DepartmentId, levelType, _newCourseId);
             
-            // Check if course ID already exists in this level
-            if (level.CourseIds.Contains(_newCourseId))
+            if (success)
             {
-                await JSRuntime.InvokeVoidAsync("alert", "This course ID already exists in this level!");
-                return;
+                // Refresh local data to maintain consistency
+                await LoadDepartments();
+                
+                // Re-select the department to maintain UI state
+                _selectedDepartment = _departments.FirstOrDefault(d => d.DepartmentId == _selectedDepartment.DepartmentId);
+                
+                _newCourseId = string.Empty;
+                await JSRuntime.InvokeVoidAsync("alert", "Course added successfully!");
             }
-            
-            // Add to local object
-            level.AddCourseId(_newCourseId);
-            
-            // Save to Firebase
-            await SaveDepartmentsToFirebase();
-            
-            _newCourseId = string.Empty;
-            await JSRuntime.InvokeVoidAsync("alert", "Course added successfully!");
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Failed to add course. Course may already exist in this level.");
+            }
         }
         catch (Exception ex)
         {
-            // Remove from local object if Firebase save failed
-            var level = _selectedDepartment?.Levels.FirstOrDefault(l => l.LevelType == levelType);
-            if (level != null && level.CourseIds.Contains(_newCourseId))
-            {
-                level.RemoveCourseId(_newCourseId);
-            }
             await JSRuntime.InvokeVoidAsync("alert", $"Error adding course: {ex.Message}");
         }
     }
@@ -352,34 +244,27 @@ public partial class ManageDepartments : ComponentBase
         {
             if (_selectedDepartment == null) return;
             
-            var level = _selectedDepartment.Levels.FirstOrDefault(l => l.LevelType == levelType);
-            if (level == null) return;
+            var success = await DepartmentService.RemoveCourseIdFromLevelAsync(
+                _selectedDepartment.DepartmentId, levelType, courseId);
             
-            // Remove from local object
-            level.RemoveCourseId(courseId);
-            
-            // Save to Firebase
-            await SaveDepartmentsToFirebase();
-            
-            await JSRuntime.InvokeVoidAsync("alert", "Course removed successfully!");
+            if (success)
+            {
+                // Refresh local data to maintain consistency
+                await LoadDepartments();
+                
+                // Re-select the department to maintain UI state
+                _selectedDepartment = _departments.FirstOrDefault(d => d.DepartmentId == _selectedDepartment.DepartmentId);
+                
+                await JSRuntime.InvokeVoidAsync("alert", "Course removed successfully!");
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Failed to remove course.");
+            }
         }
         catch (Exception ex)
         {
-            // Add back to local object if Firebase save failed
-            var level = _selectedDepartment?.Levels.FirstOrDefault(l => l.LevelType == levelType);
-            if (level != null && !level.CourseIds.Contains(courseId))
-            {
-                level.AddCourseId(courseId);
-            }
             await JSRuntime.InvokeVoidAsync("alert", $"Error removing course: {ex.Message}");
         }
     }
-}
-
-// Helper class to match Firebase document structure
-public class DepartmentsContainer
-{
-    public List<Department> Departments { get; set; } = new();
-    public DateTime LastModified { get; set; }
-    public string ModifiedBy { get; set; } = string.Empty;
 }

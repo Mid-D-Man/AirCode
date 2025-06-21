@@ -41,9 +41,11 @@ private AirCode.Components.SharedPrefabs.Cards.NotificationComponent notificatio
         // Firebase constants
         private const string ACADEMIC_SESSIONS_COLLECTION = "ACADEMIC_SESSIONS";
         #endregion
-#region Component References
+        
+ #region Component References
 [Parameter] public AirCode.Components.SharedPrefabs.Cards.NotificationComponent NotificationComponent { get; set; }
 #endregion
+
         #region Component Lifecycle
         protected override async Task OnInitializedAsync()
         {
