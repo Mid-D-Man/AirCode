@@ -1,7 +1,6 @@
 // Models/QRCodeModels.cs
 using System.Text.Json;
-using AirCode.Services.SupaBase;
-
+using AttendanceRecord = AirCode.Models.Supabase.AttendanceRecord;
 namespace AirCode.Models.QRCode
 {
 /// <summary>
