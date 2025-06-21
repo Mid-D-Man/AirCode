@@ -130,15 +130,12 @@
                 case "courserepadmin":
                     NavigationManager.NavigateTo("Admin/Dashboard", forceLoad: false);
                     break;
-                case "assistantcourserep":
-                    NavigationManager.NavigateTo("Admin/Dashboard", forceLoad: false);
-                    break;
                 case "student":
                     NavigationManager.NavigateTo("Client/ScanAttendance", forceLoad: false);
                     break;
                 default:
                     // If we can't determine the role, go to auth-info for debugging
-                    NavigationManager.NavigateTo("/auth-info", forceLoad: false);
+                    NavigationManager.NavigateTo("UnknownError", forceLoad: false);
                     break;
             }
         }
@@ -206,16 +203,13 @@
             switch (userRole.ToLower())
             {
                 case "lectureradmin":
-                    NavigationManager.NavigateTo("/Offline/LecturerDashboard", forceLoad: false);
+                    NavigationManager.NavigateTo("Admin/OfflineAttendanceEvent", forceLoad: false);
                     break;
                 case "courserepadmin":
-                    NavigationManager.NavigateTo("/Offline/CourseRepDashboard", forceLoad: false);
-                    break;
-                case "assistantcourserep":
-                    NavigationManager.NavigateTo("/Offline/AssistantDashboard", forceLoad: false);
+                    NavigationManager.NavigateTo("Admin/OfflineAttendanceEvent", forceLoad: false);
                     break;
                 case "student":
-                    NavigationManager.NavigateTo("/Offline/StudentDashboard", forceLoad: false);
+                    NavigationManager.NavigateTo("Client/OfflineScanPage", forceLoad: false);
                     break;
                 default:
                     notificationComponent?.ShowError("Unable to determine user role for offline mode. Please login online.");

@@ -137,7 +137,7 @@ namespace AirCode.Services.Auth
 
             // Check if user has student or course admin role
             var userRole = await GetUserRoleAsync();
-            var allowedRoles = new[] { "student", "courseadmin" };
+            var allowedRoles = new[] { "student", "courserepadmin" };
             if (!allowedRoles.Contains(userRole?.ToLower()))
                 return string.Empty;
 
@@ -294,7 +294,7 @@ namespace AirCode.Services.Auth
                                 (_, _, lecturerId, _) = await ExtractUserInfoFromToken(token.Value);
                             }
                         }
-                        else if (new[] { "student", "courseadmin" }.Contains(userRole?.ToLower()))
+                        else if (new[] { "student", "courserepadmin" }.Contains(userRole?.ToLower()))
                         {
                             matricNumber = await GetMatricNumberAsync();
                             if (string.IsNullOrEmpty(matricNumber))
@@ -349,13 +349,13 @@ namespace AirCode.Services.Auth
                 else
                 {
                     await LogAuthenticationMessageAsync("Failed to retrieve JWT token");
-                    _navigationManager.NavigateTo("/auth-info", forceLoad: false);
+                    _navigationManager.NavigateTo("UnknownError", forceLoad: false);
                 }
             }
             catch (Exception ex)
             {
                 await LogAuthenticationMessageAsync($"Error in ProcessSuccessfulLoginAsync: {ex.Message}");
-                _navigationManager.NavigateTo("/auth-info", forceLoad: false);
+                _navigationManager.NavigateTo("UnknownError", forceLoad: false);
             }
         }
         
