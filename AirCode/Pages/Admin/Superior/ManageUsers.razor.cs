@@ -104,7 +104,16 @@ public partial class ManageUsers : ComponentBase
         return student?.IsCurrentlyInUse == true ? "user-card in-use" : "user-card";
     }
 
-    
+    // In your ManageUsers.razor.cs - add proper initialization
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Ensure component reference is properly initialized
+            StateHasChanged();
+        }
+        await base.OnAfterRenderAsync(firstRender);
+    }
     private PooledTaskWrapper<List<StudentSkeletonUser>> LoadStudentsPooled()
     {
         return new PooledTaskWrapper<List<StudentSkeletonUser>>(
@@ -706,11 +715,23 @@ private async Task CreateLecturerSkeleton()
         try
         {
             await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", text);
-            notificationComponent?.ShowSuccess("Copied to clipboard!");
+            await ShowNotification("Copied to clipboard!");
         }
         catch (Exception ex)
         {
-            notificationComponent?.ShowError($"Error copying to clipboard: {ex.Message}");
+            await ShowNotification($"Error copying to clipboard: {ex.Message}", false);
+        }
+    }
+    private async Task ShowNotification(string message, bool isSuccess = true)
+    {
+        if (notificationComponent != null)
+        {
+            if (isSuccess)
+                notificationComponent.ShowSuccess(message);
+            else
+                notificationComponent.ShowError(message);
+        
+            await InvokeAsync(StateHasChanged);
         }
     }
     public void Dispose()
