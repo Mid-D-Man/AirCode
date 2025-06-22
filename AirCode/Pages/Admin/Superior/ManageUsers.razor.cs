@@ -54,7 +54,7 @@ public partial class ManageUsers : ComponentBase
     private string selectedAssignedUserId;
     
     // Reference to notification component
-    private NotificationComponent notificationComponent;
+  //  private NotificationComponent notificationComponent;
     
     // Rendering control
     private bool _isUpdatingCollections = false;
@@ -81,7 +81,7 @@ public partial class ManageUsers : ComponentBase
         }
         catch (Exception ex)
         {
-            notificationComponent?.ShowError($"Error loading users: {ex.Message}");
+            //notificationComponent?.ShowError($"Error loading users: {ex.Message}");
         }
         finally
         {
@@ -130,7 +130,7 @@ public partial class ManageUsers : ComponentBase
         }
         catch (Exception ex)
         {
-            notificationComponent?.ShowError($"Error loading students: {ex.Message}");
+            //notificationComponent?.ShowError($"Error loading students: {ex.Message}");
         }
     }
     
@@ -162,7 +162,7 @@ public partial class ManageUsers : ComponentBase
         }
         catch (Exception ex)
         {
-            notificationComponent?.ShowError($"Error loading lecturers: {ex.Message}");
+            //notificationComponent?.ShowError($"Error loading lecturers: {ex.Message}");
         }
     }
     
@@ -203,7 +203,7 @@ public partial class ManageUsers : ComponentBase
         }
         catch (Exception ex)
         {
-            notificationComponent?.ShowError($"Error loading course reps: {ex.Message}");
+            //notificationComponent?.ShowError($"Error loading course reps: {ex.Message}");
         }
     }
     
@@ -393,13 +393,13 @@ public partial class ManageUsers : ComponentBase
                     break;
             }
         
-            notificationComponent?.ShowSuccess("Skeleton user created successfully!");
+            //notificationComponent?.ShowSuccess("Skeleton user created successfully!");
             CloseModals();
             await LoadAllUsers();
         }
         catch (Exception ex)
         {
-            notificationComponent?.ShowError($"Error creating skeleton user: {ex.Message}");
+            //notificationComponent?.ShowError($"Error creating skeleton user: {ex.Message}");
         }
         finally
         {
@@ -518,13 +518,13 @@ public partial class ManageUsers : ComponentBase
                 await UpdateCourseRepMaxUsage(courseRepAdmin, updateMaxUsage);
             }
             
-            notificationComponent?.ShowSuccess("Maximum usage updated successfully!");
+            //notificationComponent?.ShowSuccess("Maximum usage updated successfully!");
             CloseModals();
             await LoadAllUsers();
         }
         catch (Exception ex)
         {
-            notificationComponent?.ShowError($"Error updating maximum usage: {ex.Message}");
+            //notificationComponent?.ShowError($"Error updating maximum usage: {ex.Message}");
         }
     }
     
@@ -573,13 +573,13 @@ public partial class ManageUsers : ComponentBase
                     break;
             }
             
-            notificationComponent?.ShowSuccess("Skeleton user deleted successfully!");
+            //notificationComponent?.ShowSuccess("Skeleton user deleted successfully!");
             CloseModals();
             await LoadAllUsers();
         }
         catch (Exception ex)
         {
-            notificationComponent?.ShowError($"Error deleting skeleton user: {ex.Message}");
+           // notificationComponent?.ShowError($"Error deleting skeleton user: {ex.Message}");
         }
     }
     
@@ -633,13 +633,13 @@ public partial class ManageUsers : ComponentBase
                 await RemoveUserFromCourseRep(courseRepAdmin, selectedAssignedUserId);
             }
             
-            notificationComponent?.ShowSuccess("User removed successfully!");
+            //notificationComponent?.ShowSuccess("User removed successfully!");
             CloseModals();
             await LoadAllUsers();
         }
         catch (Exception ex)
         {
-            notificationComponent?.ShowError($"Error removing user: {ex.Message}");
+            //notificationComponent?.ShowError($"Error removing user: {ex.Message}");
         }
     }
     
@@ -678,11 +678,11 @@ public partial class ManageUsers : ComponentBase
         try
         {
             await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", text);
-            notificationComponent?.ShowSuccess("Copied to clipboard!");
+            //notificationComponent?.ShowSuccess("Copied to clipboard!");
         }
         catch (Exception ex)
         {
-            notificationComponent?.ShowError($"Error copying to clipboard: {ex.Message}");
+           // notificationComponent?.ShowError($"Error copying to clipboard: {ex.Message}");
         }
     }
 }
