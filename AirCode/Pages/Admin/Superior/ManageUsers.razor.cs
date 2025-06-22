@@ -300,22 +300,19 @@ public partial class ManageUsers : ComponentBase
         {
             rng.GetBytes(randomBytes);
         }
-    
-        // Fix: Use only alphanumeric characters for HTML attribute compatibility
-        var base64String = Convert.ToBase64String(randomBytes)
-            .Replace("+", "")
-            .Replace("/", "")
-            .Replace("=", "")
-            .Replace("-", "")
-            .Replace("_", "");
+
+        // Generate alphanumeric string for HTML attribute compatibility
+        var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        var random = new Random();
+        var randomString = new string(Enumerable.Repeat(chars, 16)
+            .Select(s => s[random.Next(s.Length)]).ToArray());
 
         sb.Append("AIRCODE")
             .Append(saltString)
-            .Append(base64String);
-  
+            .Append(randomString);
+
         return sb.ToString();
     }
-
     private void SetActiveTab(string tab)
     {
         activeTab = tab;
@@ -723,7 +720,7 @@ private async Task CreateLecturerSkeleton()
         CourseRepListPool?.Dispose();
         StringBuilderPool?.Dispose();
      }
-    
+    //pretty sure we are doing this from auth0 though
     private string GenerateLecturerId()
     {
         var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();

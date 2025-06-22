@@ -4,8 +4,8 @@
 <div class="notification-container @_positionClass" style="--auto-dismiss-time: @(AutoDismissTime)ms">
     @foreach (var notification in _notifications)
     {
-        <div class="notification @notification.Type.ToString().ToLower() @(notification.IsRemoving ? "removing" : "")" 
-             @key="notification.Id"
+        <div class="notification @notification.Type.ToString().ToLower() @(notification.IsRemoving ? "removing" : "")"
+             @key="@($"notif_{notification.Id.ToString().Replace("-", "")}")"
              @onanimationend="@(() => OnAnimationEnd(notification))">
             <div class="notification-content">
                 <div class="notification-icon">
