@@ -2,7 +2,18 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.WebAssembly.Authentication
 @using AirCode.Components.SharedPrefabs.Spinner
+@using Blazored.Toast.Configuration
+@using Blazored.Toast
 
+<BlazoredToasts Position="ToastPosition.TopRight"
+                Timeout="5"
+                IconType="IconType.FontAwesome"
+                SuccessClass="success-toast"
+                InfoClass="info-toast"
+                WarningClass="warning-toast"
+                ErrorClass="error-toast"
+                ShowProgressBar="true"
+                CloseButtonClass="custom-close-btn" />
 <CascadingAuthenticationState>
     <Router AppAssembly="@typeof(App).Assembly">
         <Found Context="routeData">

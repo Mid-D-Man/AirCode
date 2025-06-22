@@ -19,6 +19,7 @@ using AirCode.Services.Storage;
 using AirCode.Services.VisualElements;
 using AirCode.Utilities.DataStructures;
 using AirCode.Utilities.HelperScripts;
+using Blazored.Toast;
 
 // ============================================================================
 // AirCode Blazor WebAssembly Application Configuration
@@ -142,7 +143,7 @@ builder.Services.AddScoped<QRCodeDecoder>();
 
 // UI and visual component services
 builder.Services.AddScoped<ISvgIconService, SvgIconService>();
-
+builder.Services.AddBlazoredToast();
 // ============================================================================
 // External Service Integrations
 // ============================================================================

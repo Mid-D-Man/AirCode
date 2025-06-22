@@ -1,232 +1,121 @@
-@using System.Timers
-@implements IDisposable
-
-<div class="notification-container @_positionClass">
-    @foreach (var notification in _notifications)
-    {
-        <div class="notification @notification.Type.ToString().ToLower() @(notification.IsRemoving ? "removing" : "")"
-             @key="@GetNotificationKey(notification.Id)"
-             @onanimationend="@(() => OnAnimationEnd(notification))"
-             style="--notification-duration: @(notification.Duration)ms">
-            <div class="notification-content">
-                <div class="notification-icon">
-                    @switch (notification.Type)
-                    {
-                        case NotificationType.Success:
-                            <i class="fas fa-check-circle"></i>
-                            break;
-                        case NotificationType.Error:
-                            <i class="fas fa-exclamation-circle"></i>
-                            break;
-                        case NotificationType.Info:
-                            <i class="fas fa-info-circle"></i>
-                            break;
-                        case NotificationType.Warning:
-                            <i class="fas fa-exclamation-triangle"></i>
-                            break;
-                    }
-                </div>
-                <div class="notification-message">
-                    @if (notification.IsHtml)
-                    {
-                        @((MarkupString)notification.Message)
-                    }
-                    else
-                    {
-                        @notification.Message
-                    }
-                </div>
-            </div>
-            <button class="notification-close" 
-                    @onclick="() => RemoveNotification(notification.Id)"
-                    @onclick:stopPropagation="true"
-                    aria-label="Close notification"
-                    title="Close notification">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-    }
-</div>
+@using Blazored.Toast.Services
+@using Blazored.Toast.Configuration
+@inject IToastService ToastService
 
 @code {
-    private List<NotificationItem> _notifications = new();
-    private string _positionClass = "top-right";
-    private Timer _timer;
-    private readonly object _lockObject = new();
+    [Parameter] public NotificationPosition Position { get; set; } = NotificationPosition.TopRight;
+    [Parameter] public int AutoDismissTime { get; set; } = 5000;
+    [Parameter] public bool ShowProgressBar { get; set; } = true;
+    [Parameter] public bool ShowCloseButton { get; set; } = true;
+    [Parameter] public bool PauseOnHover { get; set; } = true;
 
-    [Parameter]
-    public NotificationPosition Position { get; set; } = NotificationPosition.TopRight;
-
-    [Parameter]
-    public int AutoDismissTime { get; set; } = 5000;
-
-    [Parameter]
-    public int MaxNotifications { get; set; } = 5;
-
-    [Parameter]
-    public bool EnableProgressBar { get; set; } = true;
-
-    [Parameter]
-    public bool EnableSound { get; set; } = false;
-
-    protected override void OnInitialized()
+    private ToastPosition GetToastPosition()
     {
-        _positionClass = Position switch
+        return Position switch
         {
-            NotificationPosition.TopRight => "top-right",
-            NotificationPosition.TopLeft => "top-left",
-            NotificationPosition.BottomRight => "bottom-right",
-            NotificationPosition.BottomLeft => "bottom-left",
-            _ => "top-right"
+            NotificationPosition.TopRight => ToastPosition.TopRight,
+            NotificationPosition.TopLeft => ToastPosition.TopLeft,
+            NotificationPosition.BottomRight => ToastPosition.BottomRight,
+            NotificationPosition.BottomLeft => ToastPosition.BottomLeft,
+            _ => ToastPosition.TopRight
         };
-
-        _timer = new Timer(100);
-        _timer.Elapsed += CheckNotificationsExpiry;
-        _timer.AutoReset = true;
-        _timer.Enabled = true;
     }
 
-    private string GetNotificationKey(Guid id)
+    private Action<ToastSettings> GetToastSettings()
     {
-        // Ensure key starts with letter and contains only valid characters
-        return $"notif_{id:N}";
+        return settings =>
+        {
+            settings.Timeout = AutoDismissTime / 1000; // Convert to seconds
+            settings.ShowProgressBar = ShowProgressBar;
+            settings.ShowCloseButton = ShowCloseButton;
+            settings.PauseProgressOnHover = PauseOnHover;
+            settings.Position = GetToastPosition();
+            settings.AdditionalClasses = "custom-toast";
+        };
     }
 
-    public void ShowNotification(string message, NotificationType type = NotificationType.Info, int? customDuration = null, bool isHtml = false)
+    public void ShowSuccess(string message, int? customDuration = null)
     {
-        lock (_lockObject)
+        ToastService.ShowSuccess(message, settings =>
         {
-            while (_notifications.Count >= MaxNotifications)
-            {
-                var oldest = _notifications.FirstOrDefault(n => !n.IsRemoving);
-                if (oldest != null)
-                {
-                    RemoveNotificationInternal(oldest.Id);
-                }
-                else
-                {
-                    break;
-                }
-            }
-
-            var notification = new NotificationItem
-            {
-                Id = Guid.NewGuid(),
-                Message = message,
-                Type = type,
-                CreatedAt = DateTime.Now,
-                Duration = customDuration ?? AutoDismissTime,
-                IsRemoving = false,
-                IsHtml = isHtml
-            };
-
-            _notifications.Add(notification);
-        }
-
-        InvokeAsync(StateHasChanged);
-
-        if (EnableSound)
-        {
-            PlayNotificationSound(type);
-        }
+            settings.Timeout = (customDuration ?? AutoDismissTime) / 1000;
+            settings.ShowProgressBar = ShowProgressBar;
+            settings.ShowCloseButton = ShowCloseButton;
+            settings.PauseProgressOnHover = PauseOnHover;
+            settings.Position = GetToastPosition();
+            settings.AdditionalClasses = "custom-toast success-toast";
+            settings.IconType = IconType.FontAwesome;
+            settings.Icon = "fa-check-circle";
+        });
     }
 
-    public void ShowSuccess(string message, int? duration = null, bool isHtml = false) 
-        => ShowNotification(message, NotificationType.Success, duration, isHtml);
-
-    public void ShowError(string message, int? duration = null, bool isHtml = false) 
-        => ShowNotification(message, NotificationType.Error, duration, isHtml);
-
-    public void ShowInfo(string message, int? duration = null, bool isHtml = false) 
-        => ShowNotification(message, NotificationType.Info, duration, isHtml);
-
-    public void ShowWarning(string message, int? duration = null, bool isHtml = false) 
-        => ShowNotification(message, NotificationType.Warning, duration, isHtml);
-
-    private async Task RemoveNotification(Guid id)
+    public void ShowError(string message, int? customDuration = null)
     {
-        var notification = _notifications.FirstOrDefault(n => n.Id == id);
-        if (notification != null && !notification.IsRemoving)
+        ToastService.ShowError(message, settings =>
         {
-            notification.IsRemoving = true;
-            await InvokeAsync(StateHasChanged);
-        }
+            settings.Timeout = (customDuration ?? AutoDismissTime) / 1000;
+            settings.ShowProgressBar = ShowProgressBar;
+            settings.ShowCloseButton = ShowCloseButton;
+            settings.PauseProgressOnHover = PauseOnHover;
+            settings.Position = GetToastPosition();
+            settings.AdditionalClasses = "custom-toast error-toast";
+            settings.IconType = IconType.FontAwesome;
+            settings.Icon = "fa-exclamation-circle";
+        });
     }
 
-    private void RemoveNotificationInternal(Guid id)
+    public void ShowInfo(string message, int? customDuration = null)
     {
-        var notification = _notifications.FirstOrDefault(n => n.Id == id);
-        if (notification != null && !notification.IsRemoving)
+        ToastService.ShowInfo(message, settings =>
         {
-            notification.IsRemoving = true;
-            InvokeAsync(StateHasChanged);
-        }
+            settings.Timeout = (customDuration ?? AutoDismissTime) / 1000;
+            settings.ShowProgressBar = ShowProgressBar;
+            settings.ShowCloseButton = ShowCloseButton;
+            settings.PauseProgressOnHover = PauseOnHover;
+            settings.Position = GetToastPosition();
+            settings.AdditionalClasses = "custom-toast info-toast";
+            settings.IconType = IconType.FontAwesome;
+            settings.Icon = "fa-info-circle";
+        });
     }
 
-    private async Task OnAnimationEnd(NotificationItem notification)
+    public void ShowWarning(string message, int? customDuration = null)
     {
-        if (notification.IsRemoving)
+        ToastService.ShowWarning(message, settings =>
         {
-            lock (_lockObject)
-            {
-                _notifications.Remove(notification);
-            }
-            await InvokeAsync(StateHasChanged);
-        }
+            settings.Timeout = (customDuration ?? AutoDismissTime) / 1000;
+            settings.ShowProgressBar = ShowProgressBar;
+            settings.ShowCloseButton = ShowCloseButton;
+            settings.PauseProgressOnHover = PauseOnHover;
+            settings.Position = GetToastPosition();
+            settings.AdditionalClasses = "custom-toast warning-toast";
+            settings.IconType = IconType.FontAwesome;
+            settings.Icon = "fa-exclamation-triangle";
+        });
     }
 
-    private void CheckNotificationsExpiry(object sender, ElapsedEventArgs e)
+    public void ShowNotification(string message, NotificationType type = NotificationType.Info, int? customDuration = null)
     {
-        var now = DateTime.Now;
-        var expiredNotifications = new List<NotificationItem>();
-
-        lock (_lockObject)
+        switch (type)
         {
-            expiredNotifications = _notifications
-                .Where(n => !n.IsRemoving && (now - n.CreatedAt).TotalMilliseconds > n.Duration)
-                .ToList();
+            case NotificationType.Success:
+                ShowSuccess(message, customDuration);
+                break;
+            case NotificationType.Error:
+                ShowError(message, customDuration);
+                break;
+            case NotificationType.Info:
+                ShowInfo(message, customDuration);
+                break;
+            case NotificationType.Warning:
+                ShowWarning(message, customDuration);
+                break;
         }
-
-        if (expiredNotifications.Any())
-        {
-            foreach (var notification in expiredNotifications)
-            {
-                RemoveNotificationInternal(notification.Id);
-            }
-        }
-    }
-
-    private void PlayNotificationSound(NotificationType type)
-    {
-        // Implement sound playing logic here if needed
     }
 
     public void ClearAll()
     {
-        lock (_lockObject)
-        {
-            foreach (var notification in _notifications.Where(n => !n.IsRemoving))
-            {
-                notification.IsRemoving = true;
-            }
-        }
-        InvokeAsync(StateHasChanged);
-    }
-
-    public void Dispose()
-    {
-        _timer?.Dispose();
-    }
-
-    public class NotificationItem
-    {
-        public Guid Id { get; set; }
-        public string Message { get; set; } = string.Empty;
-        public NotificationType Type { get; set; }
-        public DateTime CreatedAt { get; set; }
-        public int Duration { get; set; } = 5000;
-        public bool IsRemoving { get; set; } = false;
-        public bool IsHtml { get; set; } = false;
+        ToastService.ClearAll();
     }
 
     public enum NotificationType

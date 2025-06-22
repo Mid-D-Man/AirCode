@@ -1,158 +1,19 @@
 @page "/example"
 @using AirCode.Components.SharedPrefabs.Cards
 
-<div class="page-container">
-    <h1>Example Page with Notifications</h1>
-    
-    <div class="action-buttons">
-        <button class="btn btn-success" @onclick="ShowSuccessNotification">
-            Show Success
-        </button>
-        
-        <button class="btn btn-error" @onclick="ShowErrorNotification">
-            Show Error
-        </button>
-        
-        <button class="btn btn-info" @onclick="ShowInfoNotification">
-            Show Info
-        </button>
-        
-        <button class="btn btn-warning" @onclick="ShowWarningNotification">
-            Show Warning
-        </button>
-        
-        <button class="btn btn-secondary" @onclick="ShowHtmlNotification">
-            Show HTML Content
-        </button>
-        
-        <button class="btn btn-danger" @onclick="ClearAllNotifications">
-            Clear All
-        </button>
-    </div>
+<h3>Notification Example</h3>
 
-    <div class="form-section">
-        <h2>Custom Notification Test</h2>
-        <div class="form-group">
-            <label for="customMessage">Message:</label>
-            <input id="customMessage" @bind="customMessage" class="form-control" placeholder="Enter custom message" />
-        </div>
-        
-        <div class="form-group">
-            <label for="notificationType">Type:</label>
-            <select id="notificationType" @bind="selectedType" class="form-control">
-                <option value="Success">Success</option>
-                <option value="Error">Error</option>
-                <option value="Info">Info</option>
-                <option value="Warning">Warning</option>
-            </select>
-        </div>
-        
-        <div class="form-group">
-            <label for="customDuration">Duration (ms):</label>
-            <input id="customDuration" @bind="customDuration" type="number" class="form-control" placeholder="5000" />
-        </div>
-        
-        <button class="btn btn-primary" @onclick="ShowCustomNotification">
-            Show Custom Notification
-        </button>
-    </div>
+<NotificationComponent @ref="notificationComponent" 
+                       Position="NotificationComponent.NotificationPosition.TopRight"
+                       AutoDismissTime="5000"
+                       ShowProgressBar="true"
+                       ShowCloseButton="true"
+                       PauseOnHover="true" />
+
+<div class="button-group">
+    <button class="btn btn-success" @onclick="ShowSuccess">Show Success</button>
+    <button class="btn btn-info" @onclick="ShowInfo">Show Info</button>
+    <button class="btn btn-warning" @onclick="ShowWarning">Show Warning</button>
+    <button class="btn btn-danger" @onclick="ShowError">Show Error</button>
+    <button class="btn btn-secondary" @onclick="ClearAll">Clear All</button>
 </div>
-
-<!-- NotificationComponent with scoped configuration -->
-<NotificationComponent @ref="notificationComponent"
-                      Position="NotificationComponent.NotificationPosition.TopRight"
-                      AutoDismissTime="5000"
-                      MaxNotifications="5"
-                      EnableProgressBar="true"
-                      EnableSound="false" />
-
-<style>
-    .page-container {
-        padding: 2rem;
-        max-width: 800px;
-        margin: 0 auto;
-    }
-    
-    .action-buttons {
-        display: flex;
-        gap: 1rem;
-        margin-bottom: 2rem;
-        flex-wrap: wrap;
-    }
-    
-    .form-section {
-        background: var(--bg-secondary);
-        padding: 1.5rem;
-        border-radius: 8px;
-        border: 1px solid var(--border);
-    }
-    
-    .form-group {
-        margin-bottom: 1rem;
-    }
-    
-    .form-group label {
-        display: block;
-        margin-bottom: 0.5rem;
-        font-weight: 500;
-        color: var(--text-primary);
-    }
-    
-    .form-control {
-        width: 100%;
-        padding: 0.5rem;
-        border: 1px solid var(--border);
-        border-radius: 4px;
-        background: var(--bg-primary);
-        color: var(--text-primary);
-    }
-    
-    .btn {
-        padding: 0.5rem 1rem;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        font-weight: 500;
-        transition: all 0.2s;
-    }
-    
-    .btn-success {
-        background: var(--success);
-        color: white;
-    }
-    
-    .btn-error {
-        background: var(--error);
-        color: white;
-    }
-    
-    .btn-info {
-        background: var(--info);
-        color: white;
-    }
-    
-    .btn-warning {
-        background: var(--warning);
-        color: white;
-    }
-    
-    .btn-primary {
-        background: var(--primary);
-        color: white;
-    }
-    
-    .btn-secondary {
-        background: #6c757d;
-        color: white;
-    }
-    
-    .btn-danger {
-        background: #dc3545;
-        color: white;
-    }
-    
-    .btn:hover {
-        opacity: 0.9;
-        transform: translateY(-1px);
-    }
-</style>
