@@ -86,19 +86,13 @@ public partial class ManageUsers : ComponentBase
         try
         {
             loading = true;
-            
-            // Use pooled objects for concurrent loading
-            using var studentTask = LoadStudentsPooled();
-            using var lecturerTask = LoadLecturersPooled();
-            using var courseRepTask = LoadCourseRepsPooled();
-            
-            await Task.WhenAll(
-                studentTask.Task,
-                lecturerTask.Task,
-                courseRepTask.Task
-            );
-            
-            // Reset pagination after loading
+            StateHasChanged(); // Immediate UI feedback
+        
+            // Sequential loading to prevent DOM conflicts
+            await LoadStudentsPooled().Task;
+            await LoadLecturersPooled().Task;
+            await LoadCourseRepsPooled().Task;
+        
             _paginationState.ResetAllPages();
         }
         catch (Exception ex)
@@ -292,31 +286,31 @@ public partial class ManageUsers : ComponentBase
     {
         using var sbWrapper = StringBuilderPool.GetPooled();
         var sb = sbWrapper.Object;
-    
-        // Generate 4 random salt characters
-        var saltBytes = new byte[2]; // 2 bytes = 4 hex characters
+
+        var saltBytes = new byte[2];
         using (var rng = RandomNumberGenerator.Create())
         {
             rng.GetBytes(saltBytes);
         }
         var saltString = Convert.ToHexString(saltBytes).ToUpper();
-    
-        // Generate base64 random string (12 bytes = 16 base64 characters)
+
         var randomBytes = new byte[12];
         using (var rng = RandomNumberGenerator.Create())
         {
             rng.GetBytes(randomBytes);
         }
-        var base64String = Convert.ToBase64String(randomBytes)
-            .Replace("+", "")
-            .Replace("/", "")
-            .Replace("=", "");
     
+        // Fix: Use URL-safe base64 encoding for HTML attribute compatibility
+        var base64String = Convert.ToBase64String(randomBytes)
+            .Replace("+", "-")
+            .Replace("/", "_")
+            .Replace("=", "");
+
         sb.Append("AIRCODE-")
             .Append(saltString)
             .Append('-')
             .Append(base64String);
-          
+      
         return sb.ToString();
     }
 
@@ -360,6 +354,13 @@ public partial class ManageUsers : ComponentBase
         showRemoveUserModal = true;
     }
     
+    protected override bool ShouldRender()
+    {
+        // Enhanced rendering control
+        return !loading && _collections != null && 
+               (_collections.Students != null || _collections.Lecturers != null || _collections.CourseReps != null);
+    }
+
     private void CloseModals()
     {
         showCreateModal = false;
@@ -369,14 +370,12 @@ public partial class ManageUsers : ComponentBase
         selectedUser = null;
         selectedUserType = null;
         selectedAssignedUserId = null;
-    
-        // Ensure clean state before next render
-        InvokeAsync(StateHasChanged);
-    }
-    protected override bool ShouldRender()
-    {
-        // Prevent rendering during critical async operations
-        return !loading;
+
+        // Critical: Ensure state consistency before re-render
+        InvokeAsync(() => {
+            StateHasChanged();
+            return Task.CompletedTask;
+        });
     }
     // Replace both methods with single implementation
     private void OnUserTypeChanged(ChangeEventArgs e)
