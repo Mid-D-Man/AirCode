@@ -1,626 +1,805 @@
-using AirCode.Domain.Entities;
-using AirCode.Domain.Enums;
-using AirCode.Services.Firebase;
-using AirCode.Utilities.HelperScripts;
 using Microsoft.AspNetCore.Components;
-using Microsoft.JSInterop;
-using Newtonsoft.Json;
-using System.ComponentModel;
+using System.Text;
+using System.Security.Cryptography;
 using AirCode.Components.SharedPrefabs.Cards;
-namespace AirCode.Pages.Admin.Superior
+using AirCode.Services.Firebase;
+using AirCode.Domain.ValueObjects;
+using AirCode.Utilities.ObjectPooling;
+using Microsoft.JSInterop;
+
+namespace AirCode.Pages.Admin.Superior;
+
+public partial class ManageUsers : ComponentBase
 {
-    public partial class ManageAcademicSession : IDisposable
+    #region Dependency Injection
+    [Inject] private IFirestoreService FirestoreService { get; set; }
+    [Inject] private IJSRuntime JSRuntime { get; set; }
+    #endregion
+
+    #region Object Pooling
+    private static readonly MID_ComponentObjectPool<List<StudentSkeletonUser>> StudentListPool = 
+        new(() => new List<StudentSkeletonUser>(), list => list.Clear(), maxPoolSize: 10);
+    
+    private static readonly MID_ComponentObjectPool<List<LecturerSkeletonUser>> LecturerListPool = 
+        new(() => new List<LecturerSkeletonUser>(), list => list.Clear(), maxPoolSize: 10);
+    
+    private static readonly MID_ComponentObjectPool<List<CourseRepSkeletonUser>> CourseRepListPool = 
+        new(() => new List<CourseRepSkeletonUser>(), list => list.Clear(), maxPoolSize: 10);
+    
+    private static readonly MID_ComponentObjectPool<StringBuilder> StringBuilderPool = 
+        new(() => new StringBuilder(), sb => sb.Clear(), maxPoolSize: 20);
+    #endregion
+
+    #region Collections & State
+    private readonly Collections _collections = new();
+    private readonly PaginationState _paginationState = new();
+    #endregion
+
+    #region Constants
+    private const string STUDENTS_COLLECTION = "STUDENTS_MATRICULATION_NUMBERS";
+    private const string ADMIN_IDS_COLLECTION = "VALID_ADMIN_IDS";
+    private const string LECTURER_ADMIN_DOC = "LecturerAdminIdsDoc";
+    private const string COURSEREP_ADMIN_DOC = "CourseRepAdminIdsDoc";
+    private const string STUDENT_ID = "students";
+    private const string COURSEREP_ID = "coursereps";
+    private const string LECTURER_ID = "lecturers";
+    private const int ITEMS_PER_PAGE = 10;
+    #endregion
+
+    #region UI State Variables
+    private bool loading = true;
+    private string activeTab = "students";
+    
+    // Modal states
+    private bool showCreateModal = false;
+    private bool showMaxUsageModal = false;
+    private bool showDeleteModal = false;
+    private bool showRemoveUserModal = false;
+    
+    // Form fields
+    private string newUserType = "Student";
+    private string newMatricNumber = "";
+    private string newLevel = "100";
+    private int newMaxUsage = 1;
+    private int updateMaxUsage = 1;
+    
+    // Selected items
+    private object selectedUser;
+    private string selectedUserType;
+    private string selectedAssignedUserId;
+    
+    // Reference to notification component
+    private NotificationComponent notificationComponent;
+    #endregion
+
+    #region Lifecycle Methods
+    protected override async Task OnInitializedAsync()
     {
-        [Inject] private IJSRuntime JSRuntime { get; set; }
-        [Inject] private NavigationManager NavigationManager { get; set; }
-        [Inject] private IFirestoreService FirestoreService { get; set; }
+        await LoadAllUsers();
+    }
 
-        #region Private Fields
-        private AcademicSession currentSession;
-        private AcademicSession nextSession;
-        private List<AcademicSession> archivedSessions = new List<AcademicSession>();
-        private bool showModal = false;
-        private bool showWarning = false;
-        private ModalType activeModal;
-        private string targetSessionId;
-        
-        // Form models
-        private SessionFormModel sessionForm = new();
-        private SemesterFormModel semesterForm = new();
-        private SemesterFormModel firstSemesterForm = new();
-        private bool includeFirstSemester = true;
-        // Add this with other private fields
-private AirCode.Components.SharedPrefabs.Cards.NotificationComponent notificationComponent;
-        // Timer for countdown
-        private System.Threading.Timer timer;
-        
-        // Connection status
-        private bool IsInitialized;
-        private bool IsConnected;
-
-        // Firebase constants
-        private const string ACADEMIC_SESSIONS_COLLECTION = "ACADEMIC_SESSIONS";
-        #endregion
-        
- #region Component References
-[Parameter] public AirCode.Components.SharedPrefabs.Cards.NotificationComponent NotificationComponent { get; set; }
-#endregion
-
-        #region Component Lifecycle
-        protected override async Task OnInitializedAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
         {
-            await CheckConnectionStatus();
-            await LoadSessions();
-            SetupCountdownTimer();
-            CheckForWarnings();
-        }
-
-        protected override async Task OnAfterRenderAsync(bool firstRender)
-        {
-            if (firstRender)
-            {
-                // Additional initialization logic if needed
-            }
-        }
-
-        public void Dispose()
-        {
-            timer?.Dispose();
-        }
-        #endregion
-
-        #region Connection Management
-        private async Task CheckConnectionStatus()
-        {
-            IsInitialized = FirestoreService.IsInitialized;
-            IsConnected = await FirestoreService.IsConnectedAsync();
             StateHasChanged();
         }
-        #endregion
+        await base.OnAfterRenderAsync(firstRender);
+    }
 
-        #region Data Loading
-private async Task LoadSessions()
-{
-    try
+    protected override bool ShouldRender()
     {
-        Console.WriteLine($"Loading sessions from Firebase collection: {ACADEMIC_SESSIONS_COLLECTION}");
-        
-        var allSessions = await GetAllSessionsFromFirebase();
-        
-        if (allSessions != null && allSessions.Any())
+        return !loading && _collections != null && 
+               (_collections.Students != null || _collections.Lecturers != null || _collections.CourseReps != null);
+    }
+    #endregion
+
+    #region Data Loading Methods
+    private async Task LoadAllUsers()
+    {
+        try
         {
-            Console.WriteLine($"Successfully loaded {allSessions.Count} sessions from Firebase");
-            ProcessLoadedSessions(allSessions);
-            NotificationComponent?.ShowInfo($"Loaded {allSessions.Count} academic sessions");
+            loading = true;
+            StateHasChanged();
+        
+            await LoadStudentsPooled().Task;
+            await LoadLecturersPooled().Task;
+            await LoadCourseRepsPooled().Task;
+        
+            _paginationState.ResetAllPages();
         }
-        else
+        catch (Exception ex)
         {
-            Console.WriteLine("No sessions found in Firebase");
-            // Initialize empty lists - no demo data creation
-            currentSession = null;
-            nextSession = null;
-            archivedSessions = new List<AcademicSession>();
-            NotificationComponent?.ShowInfo("No academic sessions found. Create your first session to get started.");
+            notificationComponent?.ShowError($"Error loading users: {ex.Message}");
+        }
+        finally
+        {
+            loading = false;
+            StateHasChanged();
         }
     }
-    catch (Exception ex)
+
+    private PooledTaskWrapper<List<StudentSkeletonUser>> LoadStudentsPooled()
     {
-        Console.WriteLine($"Error loading sessions: {ex.Message}");
-        Console.WriteLine($"Stack trace: {ex.StackTrace}");
-        // Initialize empty state on error
-        currentSession = null;
-        nextSession = null;
-        archivedSessions = new List<AcademicSession>();
-        NotificationComponent?.ShowError($"Failed to load sessions: {ex.Message}");
-    }
-}
-        private void ProcessLoadedSessions(List<AcademicSession> allSessions)
-        {
-            if (allSessions?.Count > 0)
+        return new PooledTaskWrapper<List<StudentSkeletonUser>>(
+            StudentListPool,
+            async (pooledList) =>
             {
-                DateTime now = DateTime.Now;
-                
-                Console.WriteLine($"Processing {allSessions.Count} loaded sessions");
-                
-                // Categorize sessions
-                currentSession = allSessions.FirstOrDefault(s => IsSessionActive(s));
-                nextSession = allSessions.FirstOrDefault(s => GetStartDate(s) > now);
-                archivedSessions = allSessions.Where(s => GetEndDate(s) < now).ToList();
-
-                Console.WriteLine($"Current session: {(currentSession != null ? currentSession.SessionId : "None")}");
-                Console.WriteLine($"Next session: {(nextSession != null ? nextSession.SessionId : "None")}");
-                Console.WriteLine($"Archived sessions: {archivedSessions.Count}");
-            }
-        }
-        #endregion
-
-        #region Session ID Generation
-        private string GenerateSessionId(int yearStart, int yearEnd)
-        {
-            return $"{yearStart}_{yearEnd}_Session";
-        }
-
-        private string GenerateSemesterId(string sessionId, SemesterType semesterType)
-        {
-            string semesterCode = semesterType == SemesterType.FirstSemester ? "S1" : "S2";
-            return $"{sessionId}_{semesterCode}";
-        }
-
-        private string GenerateSecurityToken()
-        {
-            // Generate a more readable security token while maintaining uniqueness
-            return $"SEC_{DateTime.Now:yyyyMMdd}_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
-        }
-        #endregion
-
-        #region Modal Management
-        public void ShowModal(ModalType modalType, string sessionId = null)
-        {
-            activeModal = modalType;
-            targetSessionId = sessionId;
-            
-            if (modalType == ModalType.CreateSession)
-            {
-                InitializeSessionForm();
-            }
-            else if (modalType == ModalType.CreateSemester)
-            {
-                InitializeSemesterForm();
-            }
-            
-            showModal = true;
-        }
-        
-        public void CloseModal()
-        {
-            showModal = false;
-        }
-
-        private void InitializeSessionForm()
-        {
-            int currentYear = DateTime.Now.Year;
-            int nextYear = DateTime.Now.Month >= 8 ? currentYear : currentYear - 1;
-            
-            sessionForm = new SessionFormModel
-            {
-                YearStart = (short)nextYear,
-                YearEnd = (short)(nextYear + 4) // Allow up to 4 years for degree programs
-            };
-            
-            firstSemesterForm = new SemesterFormModel
-            {
-                Type = SemesterType.FirstSemester,
-                StartDate = new DateTime(nextYear, 9, 1),
-                EndDate = new DateTime(nextYear + 4, 1, 31) // Extended for degree completion
-            };
-            
-            includeFirstSemester = true;
-        }
-
-        private void InitializeSemesterForm()
-        {
-            AcademicSession targetSession = GetTargetSession();
-            SemesterType nextType = GetNextSemesterType(targetSession);
-            (DateTime startDate, DateTime endDate) = GetSemesterDates(targetSession, nextType);
-                
-            semesterForm = new SemesterFormModel
-            {
-                Type = nextType,
-                StartDate = startDate,
-                EndDate = endDate
-            };
-        }
-
-        private AcademicSession GetTargetSession()
-        {
-            return targetSessionId != null 
-                ? nextSession?.SessionId == targetSessionId ? nextSession : currentSession
-                : currentSession;
-        }
-
-        private SemesterType GetNextSemesterType(AcademicSession targetSession)
-        {
-            return targetSession.Semesters.Any(s => s.Type == SemesterType.FirstSemester)
-                ? SemesterType.SecondSemester
-                : SemesterType.FirstSemester;
-        }
-
-        private (DateTime startDate, DateTime endDate) GetSemesterDates(AcademicSession targetSession, SemesterType semesterType)
-        {
-            if (semesterType == SemesterType.FirstSemester)
-            {
-                return (new DateTime(targetSession.YearStart, 9, 1), 
-                        new DateTime(targetSession.YearEnd, 1, 31));
-            }
-            else
-            {
-                return (new DateTime(targetSession.YearEnd, 2, 1), 
-                        new DateTime(targetSession.YearEnd, 6, 30));
-            }
-        }
-
-        public string GetModalTitle()
-        {
-            return activeModal switch
-            {
-                ModalType.CreateSession => "Create New Academic Session",
-                ModalType.CreateSemester => "Add Semester",
-                _ => "Modal"
-            };
-        }
-        #endregion
-
-        #region Session Management
-  public async Task SaveModal()
-{
-    try
-    {
-        Console.WriteLine($"Saving modal data for {activeModal}");
-        
-        if (activeModal == ModalType.CreateSession)
-        {
-            await CreateNewSession();
-            NotificationComponent?.ShowSuccess($"Academic session {sessionForm.YearStart}-{sessionForm.YearEnd} created successfully!");
-        }
-        else if (activeModal == ModalType.CreateSemester)
-        {
-            await CreateNewSemester();
-            NotificationComponent?.ShowSuccess($"{GetSemesterName(semesterForm.Type)} added successfully!");
-        }
-        
-        CloseModal();
-        CheckForWarnings();
-        
-        Console.WriteLine("Modal saved successfully");
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"Error saving modal: {ex.Message}");
-        Console.WriteLine($"Stack trace: {ex.StackTrace}");
-        NotificationComponent?.ShowError($"Failed to save: {ex.Message}");
-    }
-}
-
-        private async Task CreateNewSession()
-        {
-            Console.WriteLine("Creating new academic session");
-            
-            string sessionId = GenerateSessionId(sessionForm.YearStart, sessionForm.YearEnd);
-            
-            var newSession = new AcademicSession
-            {
-                SessionId = sessionId,
-                YearStart = sessionForm.YearStart,
-                YearEnd = sessionForm.YearEnd,
-                SecurityToken = GenerateSecurityToken(),
-                LastModified = DateTime.Now,
-                ModifiedBy = "System",
-                Semesters = new List<Semester>()
-            };
-            
-            if (includeFirstSemester)
-            {
-                AddFirstSemester(newSession);
-            }
-            
-            CategorizeNewSession(newSession);
-            await SaveSessionToFirebase(newSession);
-            
-            Console.WriteLine($"New session created: {newSession.SessionId}");
-        }
-
-        private void AddFirstSemester(AcademicSession session)
-        {
-            var newSemester = new Semester
-            {
-                SemesterId = GenerateSemesterId(session.SessionId, SemesterType.FirstSemester),
-                Type = SemesterType.FirstSemester,
-                SessionId = session.SessionId,
-                StartDate = firstSemesterForm.StartDate,
-                EndDate = firstSemesterForm.EndDate,
-                SecurityToken = GenerateSecurityToken(),
-                LastModified = DateTime.Now,
-                ModifiedBy = "System"
-            };
-            
-            session.Semesters.Add(newSemester);
-            Console.WriteLine($"Added first semester to session: {session.SessionId}");
-        }
-
-        private void CategorizeNewSession(AcademicSession newSession)
-        {
-            DateTime startDate = GetStartDate(newSession);
-            if (startDate <= DateTime.Now)
-            {
-                if (currentSession != null)
+                try
                 {
-                    archivedSessions.Add(currentSession);
-                    Console.WriteLine($"Moved current session to archived: {currentSession.SessionId}");
+                    for (int level = 100; level <= 500; level += 100)
+                    {
+                        var docName = $"StudentLevel{level}";
+                        var levelData = await FirestoreService.GetDocumentAsync<StudentLevelDocument>(STUDENTS_COLLECTION, docName);
+                        
+                        if (levelData?.ValidStudentMatricNumbers != null)
+                        {
+                            var courseRepMatricNumbers = _collections.CourseReps.Select(cr => cr.AdminInfo.MatricNumber).ToHashSet();
+                            
+                            foreach (var student in levelData.ValidStudentMatricNumbers)
+                            {
+                                if (!courseRepMatricNumbers.Contains(student.MatricNumber))
+                                {
+                                    pooledList.Add(student);
+                                }
+                            }
+                        }
+                    }
+                    
+                    _collections.Students.Clear();
+                    _collections.Students.AddRange(pooledList);
                 }
-                currentSession = newSession;
-                Console.WriteLine($"Set as current session: {newSession.SessionId}");
-            }
-            else
-            {
-                nextSession = newSession;
-                Console.WriteLine($"Set as next session: {newSession.SessionId}");
-            }
-        }
-
-        private async Task CreateNewSemester()
-        {
-            Console.WriteLine("Creating new semester");
-            
-            AcademicSession targetSession = GetTargetSession();
-            
-            var newSemester = new Semester
-            {
-                SemesterId = GenerateSemesterId(targetSession.SessionId, semesterForm.Type),
-                Type = semesterForm.Type,
-                SessionId = targetSession.SessionId,
-                StartDate = semesterForm.StartDate,
-                EndDate = semesterForm.EndDate,
-                SecurityToken = GenerateSecurityToken(),
-                LastModified = DateTime.Now,
-                ModifiedBy = "System"
-            };
-            
-            var updatedSemesters = new List<Semester>(targetSession.Semesters) { newSemester };
-            AcademicSession updatedSession = targetSession with { Semesters = updatedSemesters };
-            
-            UpdateSessionReference(targetSession, updatedSession);
-            await SaveSessionToFirebase(updatedSession);
-            
-            Console.WriteLine($"New semester created for session: {targetSession.SessionId}");
-        }
-
-        private void UpdateSessionReference(AcademicSession originalSession, AcademicSession updatedSession)
-        {
-            if (originalSession == currentSession)
-            {
-                currentSession = updatedSession;
-            }
-            else if (originalSession == nextSession)
-            {
-                nextSession = updatedSession;
-            }
-        }
-        #endregion
-
-        #region Warning System
-        private void CheckForWarnings()
-{
-    if (currentSession != null && nextSession == null)
-    {
-        DateTime endDate = GetEndDate(currentSession);
-        TimeSpan timeRemaining = endDate - DateTime.Now;
-        
-        if (timeRemaining.TotalDays <= 30)
-        {
-            showWarning = true;
-            Console.WriteLine($"Warning: Current session ends in {timeRemaining.TotalDays} days");
-            NotificationComponent?.ShowWarning(
-                $"Current academic session ends in {(int)timeRemaining.TotalDays} days. Consider creating the next session.");
-        }
-    }
-}
-
-        public void DismissWarning()
-        {
-            showWarning = false;
-        }
-        #endregion
-
-        #region Utility Methods
-        private void SetupCountdownTimer()
-        {
-            timer = new System.Threading.Timer(async _ =>
-            {
-                await InvokeAsync(StateHasChanged);
-            }, null, TimeSpan.Zero, TimeSpan.FromSeconds(60));
-        }
-
-        public DateTime GetStartDate(AcademicSession session)
-        {
-            return session.Semesters.Any() 
-                ? session.Semesters.Min(s => s.StartDate) 
-                : new DateTime(session.YearStart, 9, 1);
-        }
-        
-        public DateTime GetEndDate(AcademicSession session)
-        {
-            return session.Semesters.Any() 
-                ? session.Semesters.Max(s => s.EndDate) 
-                : new DateTime(session.YearEnd, 6, 30);
-        }
-        
-        public bool IsSessionActive(AcademicSession session)
-        {
-            DateTime now = DateTime.Now;
-            DateTime startDate = GetStartDate(session);
-            DateTime endDate = GetEndDate(session);
-            
-            return now >= startDate && now <= endDate;
-        }
-        
-        public bool IsActiveSemester(Semester semester)
-        {
-            DateTime now = DateTime.Now;
-            return now >= semester.StartDate && now <= semester.EndDate;
-        }
-        
-        public bool IsFutureSemester(Semester semester)
-        {
-            return DateTime.Now < semester.StartDate;
-        }
-        
-        public bool IsCurrentSemester(Semester semester)
-        {
-            return IsActiveSemester(semester);
-        }
-        
-        public string GetSemesterName(SemesterType type)
-        {
-            return type switch
-            {
-                SemesterType.FirstSemester => "First Semester",
-                SemesterType.SecondSemester => "Second Semester",
-                _ => type.ToString()
-            };
-        }
-        
-        public string GetRemainingTime(DateTime endDate)
-        {
-            TimeSpan remaining = endDate - DateTime.Now;
-            
-            if (remaining.TotalDays <= 0)
-            {
-                return "Expired";
-            }
-            
-            if (remaining.TotalDays > 30)
-            {
-                int months = (int)(remaining.TotalDays / 30);
-                return $"{months} month{(months > 1 ? "s" : "")}";
-            }
-            
-            if (remaining.TotalDays >= 1)
-            {
-                int days = (int)remaining.TotalDays;
-                return $"{days} day{(days > 1 ? "s" : "")}";
-            }
-            
-            int hours = (int)remaining.TotalHours;
-            return $"{hours} hour{(hours > 1 ? "s" : "")}";
-        }
-
-        public void ViewSessionDetails(AcademicSession session)
-        {
-            Console.WriteLine($"Viewing details for session {session.SessionId}");
-        }
-
-        public short GetMaxAllowedEndYear()
-        {
-            return (short)(DateTime.Now.Year + 4);
-        }
-
-        public short GetMinAllowedStartYear()
-        {
-            return (short)DateTime.Now.Year;
-        }
-
-        private List<AcademicSession> GetAllSessions()
-        {
-            var allSessions = new List<AcademicSession>();
-            
-            if (currentSession != null)
-                allSessions.Add(currentSession);
-                
-            if (nextSession != null)
-                allSessions.Add(nextSession);
-                
-            allSessions.AddRange(archivedSessions);
-            
-            return allSessions;
-        }
-        #endregion
-
-        #region Firebase Operations
-        private async Task<List<AcademicSession>> GetAllSessionsFromFirebase()
-        {
-            try
-            {
-                Console.WriteLine($"Retrieving all sessions from collection: {ACADEMIC_SESSIONS_COLLECTION}");
-        
-                var allSessions = await FirestoreService.GetCollectionAsync<AcademicSession>(ACADEMIC_SESSIONS_COLLECTION);
-                
-                if (allSessions != null && allSessions.Any())
+                catch (Exception ex)
                 {
-                    Console.WriteLine($"Successfully retrieved {allSessions.Count} sessions from Firebase");
-                    return allSessions;
+                    notificationComponent?.ShowError($"Error loading students: {ex.Message}");
                 }
-                else
-                {
-                    Console.WriteLine($"No sessions found in collection '{ACADEMIC_SESSIONS_COLLECTION}'");
-                    return new List<AcademicSession>();
-                }
+                
+                return pooledList;
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error retrieving sessions from Firebase: {ex.Message}");
-                Console.WriteLine($"Collection: {ACADEMIC_SESSIONS_COLLECTION}");
-                Console.WriteLine($"Stack trace: {ex.StackTrace}");
-                return new List<AcademicSession>();
-            }
-        }
-        
-    private async Task SaveSessionToFirebase(AcademicSession session)
-{
-    try
-    {
-        Console.WriteLine($"Saving session {session.SessionId} to Firebase");
-        
-        // Use session ID as document ID for readable Firebase structure
-        var documentId = await FirestoreService.AddDocumentAsync<AcademicSession>(
-            ACADEMIC_SESSIONS_COLLECTION,
-            session,
-            session.SessionId // Use session ID as custom document ID
         );
-        
-        if (!string.IsNullOrEmpty(documentId))
-        {
-            Console.WriteLine($"Successfully saved session: {session.SessionId}");
-        }
-        else
-        {
-            // If add fails, try update (session might already exist)
-            bool updateSuccess = await FirestoreService.UpdateDocumentAsync<AcademicSession>(
-                ACADEMIC_SESSIONS_COLLECTION,
-                session.SessionId,
-                session
-            );
-            
-            if (updateSuccess)
-            {
-                Console.WriteLine($"Successfully updated existing session: {session.SessionId}");
-            }
-            else
-            {
-                Console.WriteLine($"Failed to save or update session: {session.SessionId}");
-                throw new Exception($"Failed to save session {session.SessionId} to Firebase");
-            }
-        }
     }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"Error saving session to Firebase: {ex.Message}");
-        Console.WriteLine($"Session ID: {session.SessionId}");
-        Console.WriteLine($"Stack trace: {ex.StackTrace}");
-        NotificationComponent?.ShowError($"Database error: Failed to save session {session.SessionId}");
-        throw; // Re-throw to allow calling method to handle
-    }
-}
-        #endregion
 
-        #region Form Models and Enums
-        public class SessionFormModel
-        {
-            public short YearStart { get; set; }
-            public short YearEnd { get; set; }
-        }
-        
-        public class SemesterFormModel
-        {
-            public SemesterType Type { get; set; }
-            public DateTime StartDate { get; set; }
-            public DateTime EndDate { get; set; }
-        }
-        
-        public enum ModalType
-        {
-            CreateSession,
-            CreateSemester
-        }
-        #endregion
+    private PooledTaskWrapper<List<LecturerSkeletonUser>> LoadLecturersPooled()
+    {
+        return new PooledTaskWrapper<List<LecturerSkeletonUser>>(
+            LecturerListPool,
+            async (pooledList) =>
+            {
+                try
+                {
+                    var lecturerDoc = await FirestoreService.GetDocumentAsync<LecturerAdminDocument>(ADMIN_IDS_COLLECTION, LECTURER_ADMIN_DOC);
+                    if (lecturerDoc?.Ids != null)
+                    {
+                        foreach (var adminData in lecturerDoc.Ids)
+                        {
+                            pooledList.Add(new LecturerSkeletonUser
+                            {
+                                AdminId = adminData.AdminId,
+                                LecturerId = adminData.LecturerId,
+                                CurrentUsage = adminData.CurrentUsage,
+                                MaxUsage = adminData.MaxUsage,
+                                UserIds = adminData.UserIds
+                            });
+                        }
+                    }
+                    
+                    _collections.Lecturers.Clear();
+                    _collections.Lecturers.AddRange(pooledList);
+                }
+                catch (Exception ex)
+                {
+                    notificationComponent?.ShowError($"Error loading lecturers: {ex.Message}");
+                }
+                
+                return pooledList;
+            }
+        );
     }
+
+    private PooledTaskWrapper<List<CourseRepSkeletonUser>> LoadCourseRepsPooled()
+    {
+        return new PooledTaskWrapper<List<CourseRepSkeletonUser>>(
+            CourseRepListPool,
+            async (pooledList) =>
+            {
+                try
+                {
+                    var courseRepDoc = await FirestoreService.GetDocumentAsync<CourseRepAdminDocument>(ADMIN_IDS_COLLECTION, COURSEREP_ADMIN_DOC);
+                    if (courseRepDoc?.Ids != null)
+                    {
+                        foreach (var adminData in courseRepDoc.Ids)
+                        {
+                            var studentInfo = await FindStudentByMatricNumberAsync(adminData.MatricNumber);
+                            if (studentInfo != null)
+                            {
+                                pooledList.Add(new CourseRepSkeletonUser
+                                {
+                                    AdminInfo = new CourseRepAdminInfo
+                                    {
+                                        AdminId = adminData.AdminId,
+                                        MatricNumber = adminData.MatricNumber,
+                                        CurrentUsage = adminData.CurrentUsage,
+                                        MaxUsage = adminData.MaxUsage,
+                                        UserIds = adminData.UserIds
+                                    },
+                                    StudentInfo = studentInfo
+                                });
+                            }
+                        }
+                    }
+                    
+                    _collections.CourseReps.Clear();
+                    _collections.CourseReps.AddRange(pooledList);
+                }
+                catch (Exception ex)
+                {
+                    notificationComponent?.ShowError($"Error loading course reps: {ex.Message}");
+                }
+                
+                return pooledList;
+            }
+        );
+    }
+
+    private async Task<StudentSkeletonUser> FindStudentByMatricNumberAsync(string matricNumber)
+    {
+        for (int level = 100; level <= 500; level += 100)
+        {
+            var docName = $"StudentLevel{level}";
+            var levelData = await FirestoreService.GetDocumentAsync<StudentLevelDocument>(STUDENTS_COLLECTION, docName);
+            
+            if (levelData?.ValidStudentMatricNumbers != null)
+            {
+                var student = levelData.ValidStudentMatricNumbers
+                    .FirstOrDefault(s => s.MatricNumber.Equals(matricNumber, StringComparison.OrdinalIgnoreCase));
+                if (student != null)
+                    return student;
+            }
+        }
+        
+        return null;
+    }
+    #endregion
+
+    #region Pagination Methods
+    private IEnumerable<T> GetPagedItems<T>(List<T> items, int currentPage)
+    {
+        if (items == null || !items.Any())
+            return Enumerable.Empty<T>();
+    
+        return items
+            .Skip((currentPage - 1) * ITEMS_PER_PAGE)
+            .Take(ITEMS_PER_PAGE);
+    }
+
+    private int GetTotalPages(int totalItems)
+    {
+        return (int)Math.Ceiling((double)totalItems / ITEMS_PER_PAGE);
+    }
+
+    private void NavigateToPage(string userType, int page)
+    {
+        switch (userType)
+        {
+            case STUDENT_ID:
+                _paginationState.StudentsCurrentPage = page;
+                break;
+            case LECTURER_ID:
+                _paginationState.LecturersCurrentPage = page;
+                break;
+            case COURSEREP_ID:
+                _paginationState.CourseRepsCurrentPage = page;
+                break;
+        }
+        StateHasChanged();
+    }
+    #endregion
+
+    #region UI Event Handlers
+    private void SetActiveTab(string tab)
+    {
+        activeTab = tab;
+        StateHasChanged();
+    }
+
+    private string GetStatusClass(StudentSkeletonUser student)
+    {
+        return student?.IsCurrentlyInUse == true ? "user-card in-use" : "user-card";
+    }
+
+    private void OnUserTypeChanged(ChangeEventArgs e)
+    {
+        newUserType = e.Value?.ToString() ?? "Student";
+    
+        // Updated max usage logic - Course Reps now default to 1
+        newMaxUsage = newUserType switch
+        {
+            "Lecturer" => 1,
+            "CourseRep" => 1, // Changed from 2 to 1
+            _ => 1
+        };
+    
+        StateHasChanged();
+    }
+
+    private void OnUserTypeChangedWithBinding(ChangeEventArgs e)
+    {
+        newUserType = e.Value?.ToString() ?? "Student";
+        OnUserTypeChanged(e);
+    }
+    #endregion
+
+    #region Modal Management
+    private void ShowCreateUserModal()
+    {
+        ResetCreateForm();
+        showCreateModal = true;
+    }
+    
+    private void ShowMaxUsageModal(object user, string userType)
+    {
+        selectedUser = user;
+        selectedUserType = userType;
+        
+        if (user is LecturerSkeletonUser lecturer)
+            updateMaxUsage = lecturer.MaxUsage;
+        else if (user is CourseRepAdminInfo courseRepAdmin)
+            updateMaxUsage = courseRepAdmin.MaxUsage;
+            
+        showMaxUsageModal = true;
+    }
+    
+    private void ShowDeleteUserModal(object user, string userType)
+    {
+        selectedUser = user;
+        selectedUserType = userType;
+        showDeleteModal = true;
+    }
+    
+    private void ShowRemoveUserModal(object user, string userId, string userType)
+    {
+        selectedUser = user;
+        selectedAssignedUserId = userId;
+        selectedUserType = userType;
+        showRemoveUserModal = true;
+    }
+
+    private void CloseModals()
+    {
+        showCreateModal = false;
+        showMaxUsageModal = false;
+        showDeleteModal = false;
+        showRemoveUserModal = false;
+    
+        newMatricNumber = "";
+        selectedUser = null;
+        selectedUserType = null;
+        selectedAssignedUserId = null;
+    }
+
+    private void ResetCreateForm()
+    {
+        newUserType = "Student";
+        newMatricNumber = "";
+        newLevel = "100";
+        newMaxUsage = 1;
+    }
+    #endregion
+
+    #region ID Generation
+    private string GenerateAdminId()
+    {
+        using var sbWrapper = StringBuilderPool.GetPooled();
+        var sb = sbWrapper.Object;
+
+        var saltBytes = new byte[2];
+        using (var rng = RandomNumberGenerator.Create())
+        {
+            rng.GetBytes(saltBytes);
+        }
+        var saltString = Convert.ToHexString(saltBytes).ToUpper();
+
+        var randomBytes = new byte[12];
+        using (var rng = RandomNumberGenerator.Create())
+        {
+            rng.GetBytes(randomBytes);
+        }
+
+        var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        var random = new Random();
+        var randomString = new string(Enumerable.Repeat(chars, 16)
+            .Select(s => s[random.Next(s.Length)]).ToArray());
+
+        sb.Append("AIRCODE")
+            .Append(saltString)
+            .Append(randomString);
+
+        return sb.ToString();
+    }
+
+    private string GenerateLecturerId()
+    {
+        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
+        var randomBytes = new byte[3];
+        using (var rng = RandomNumberGenerator.Create())
+        {
+            rng.GetBytes(randomBytes);
+        }
+        var randomString = Convert.ToHexString(randomBytes).ToLower();
+        return $"LEC_{timestamp}_{randomString}";
+    }
+    #endregion
+
+    #region Create Operations
+    private async Task CreateSkeletonUser()
+    {
+        try
+        {
+            loading = true;
+            StateHasChanged();
+        
+            switch (newUserType)
+            {
+                case "Student":
+                    await CreateStudentSkeleton();
+                    break;
+                case "Lecturer":
+                    await CreateLecturerSkeleton();
+                    break;
+                case "CourseRep":
+                    await CreateCourseRepSkeleton();
+                    break;
+            }
+        
+            notificationComponent?.ShowSuccess("Skeleton user created successfully!");
+            CloseModals();
+            await LoadAllUsers();
+        }
+        catch (Exception ex)
+        {
+            notificationComponent?.ShowError($"Error creating skeleton user: {ex.Message}");
+        }
+        finally
+        {
+            loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task CreateStudentSkeleton()
+    {
+        if (string.IsNullOrWhiteSpace(newMatricNumber))
+            throw new ArgumentException("Matriculation number is required");
+
+        var matricNumber = newMatricNumber.ToUpper().Replace(" ", "").Replace("_", "");
+
+        if (_collections.Students.Any(s => s.MatricNumber.Equals(matricNumber, StringComparison.OrdinalIgnoreCase)))
+            throw new InvalidOperationException("Student with this matriculation number already exists");
+
+        var newStudent = new StudentSkeletonUser
+        {
+            CurrentUserId = "",
+            IsCurrentlyInUse = false,
+            Level = newLevel,
+            MatricNumber = matricNumber
+        };
+
+        var docName = $"StudentLevel{newLevel}";
+
+        var existingDoc = await FirestoreService.GetDocumentAsync<StudentLevelDocument>(STUDENTS_COLLECTION, docName);
+        if (existingDoc == null)
+        {
+            existingDoc = new StudentLevelDocument { ValidStudentMatricNumbers = new List<StudentSkeletonUser>() };
+        }
+
+        existingDoc.ValidStudentMatricNumbers.Add(newStudent);
+
+        await FirestoreService.UpdateDocumentAsync(STUDENTS_COLLECTION, docName, existingDoc);
+    }
+
+    private async Task CreateCourseRepSkeleton()
+    {
+        if (string.IsNullOrWhiteSpace(newMatricNumber))
+            throw new ArgumentException("Matriculation number is required");
+
+        var matricNumber = newMatricNumber.ToUpper().Replace(" ", "").Replace("_", "");
+
+        if (_collections.CourseReps.Any(cr => cr.AdminInfo.MatricNumber.Equals(matricNumber, StringComparison.OrdinalIgnoreCase)))
+            throw new InvalidOperationException("Course rep with this matriculation number already exists");
+
+        await CreateStudentSkeleton();
+
+        var adminId = GenerateAdminId();
+
+        var newCourseRepAdmin = new CourseRepAdminInfo
+        {
+            AdminId = adminId,
+            MatricNumber = matricNumber,
+            CurrentUsage = 0,
+            MaxUsage = newMaxUsage,
+            UserIds = new List<string>()
+        };
+
+        var existingDoc = await FirestoreService.GetDocumentAsync<CourseRepAdminDocument>(ADMIN_IDS_COLLECTION, COURSEREP_ADMIN_DOC);
+        if (existingDoc == null)
+        {
+            existingDoc = new CourseRepAdminDocument { Ids = new List<CourseRepAdminInfo>() };
+        }
+
+        existingDoc.Ids.Add(newCourseRepAdmin);
+
+        await FirestoreService.UpdateDocumentAsync(ADMIN_IDS_COLLECTION, COURSEREP_ADMIN_DOC, existingDoc);
+    }
+    
+    private async Task CreateLecturerSkeleton()
+    {
+        var adminId = GenerateAdminId();
+        var lecturerId = GenerateLecturerId();
+        
+        var newLecturerAdmin = new LecturerAdminInfo
+        {
+            AdminId = adminId,
+            LecturerId = lecturerId,
+            CurrentUsage = 0,
+            MaxUsage = newMaxUsage,
+            UserIds = new List<string>()
+        };
+        
+        var existingDoc = await FirestoreService.GetDocumentAsync<LecturerAdminDocument>(ADMIN_IDS_COLLECTION, LECTURER_ADMIN_DOC);
+        if (existingDoc == null)
+        {
+            existingDoc = new LecturerAdminDocument { Ids = new List<LecturerAdminInfo>() };
+        }
+        
+        existingDoc.Ids.Add(newLecturerAdmin);
+        
+        await FirestoreService.UpdateDocumentAsync(ADMIN_IDS_COLLECTION, LECTURER_ADMIN_DOC, existingDoc);
+    }
+    #endregion
+
+    #region Update Operations
+    private async Task UpdateMaxUsage()
+    {
+        try
+        {
+            if (selectedUser is LecturerSkeletonUser lecturer)
+            {
+                await UpdateLecturerMaxUsage(lecturer, updateMaxUsage);
+            }
+            else if (selectedUser is CourseRepAdminInfo courseRepAdmin)
+            {
+                await UpdateCourseRepMaxUsage(courseRepAdmin, updateMaxUsage);
+            }
+            
+            notificationComponent?.ShowSuccess("Maximum usage updated successfully!");
+            CloseModals();
+            await LoadAllUsers();
+        }
+        catch (Exception ex)
+        {
+            notificationComponent?.ShowError($"Error updating maximum usage: {ex.Message}");
+        }
+    }
+    
+    private async Task UpdateLecturerMaxUsage(LecturerSkeletonUser lecturer, int newMaxUsage)
+    {
+        var lecturerDoc = await FirestoreService.GetDocumentAsync<LecturerAdminDocument>(ADMIN_IDS_COLLECTION, LECTURER_ADMIN_DOC);
+        if (lecturerDoc?.Ids != null)
+        {
+            var lecturerToUpdate = lecturerDoc.Ids.FirstOrDefault(l => l.AdminId == lecturer.AdminId);
+            if (lecturerToUpdate != null)
+            {
+                lecturerToUpdate.MaxUsage = newMaxUsage;
+                await FirestoreService.UpdateDocumentAsync(ADMIN_IDS_COLLECTION, LECTURER_ADMIN_DOC, lecturerDoc);
+            }
+        }
+    }
+    
+    private async Task UpdateCourseRepMaxUsage(CourseRepAdminInfo courseRepAdmin, int newMaxUsage)
+    {
+        var courseRepDoc = await FirestoreService.GetDocumentAsync<CourseRepAdminDocument>(ADMIN_IDS_COLLECTION, COURSEREP_ADMIN_DOC);
+        if (courseRepDoc?.Ids != null)
+        {
+            var courseRepToUpdate = courseRepDoc.Ids.FirstOrDefault(cr => cr.AdminId == courseRepAdmin.AdminId);
+            if (courseRepToUpdate != null)
+            {
+                courseRepToUpdate.MaxUsage = newMaxUsage;
+                await FirestoreService.UpdateDocumentAsync(ADMIN_IDS_COLLECTION, COURSEREP_ADMIN_DOC, courseRepDoc);
+            }
+        }
+    }
+    #endregion
+
+    #region Delete Operations (Fixed Implementation)
+    private async Task DeleteSkeletonUser()
+    {
+        try
+        {
+            loading = true;
+            StateHasChanged();
+
+            switch (selectedUserType)
+            {
+                case "student":
+                    await DeleteStudentSkeleton(selectedUser as StudentSkeletonUser);
+                    break;
+                case "lecturer":
+                    await DeleteLecturerSkeleton(selectedUser as LecturerSkeletonUser);
+                    break;
+                case "courserep":
+                    await DeleteCourseRepSkeleton(selectedUser as CourseRepSkeletonUser);
+                    break;
+            }
+            
+            notificationComponent?.ShowSuccess("Skeleton user deleted successfully!");
+            CloseModals();
+            await LoadAllUsers();
+        }
+        catch (Exception ex)
+        {
+            notificationComponent?.ShowError($"Error deleting skeleton user: {ex.Message}");
+        }
+        finally
+        {
+            loading = false;
+            StateHasChanged();
+        }
+    }
+    
+    private async Task DeleteStudentSkeleton(StudentSkeletonUser student)
+    {
+        var docName = $"StudentLevel{student.Level}";
+        var levelDoc = await FirestoreService.GetDocumentAsync<StudentLevelDocument>(STUDENTS_COLLECTION, docName);
+        
+        if (levelDoc?.ValidStudentMatricNumbers != null)
+        {
+            levelDoc.ValidStudentMatricNumbers.RemoveAll(s => s.MatricNumber.Equals(student.MatricNumber, StringComparison.OrdinalIgnoreCase));
+            // Use AddDocumentAsync with explicit ID instead of UpdateDocumentAsync
+            await FirestoreService.AddDocumentAsync(STUDENTS_COLLECTION, levelDoc, docName);
+        }
+    }
+    
+    private async Task DeleteLecturerSkeleton(LecturerSkeletonUser lecturer)
+    {
+        var lecturerDoc = await FirestoreService.GetDocumentAsync<LecturerAdminDocument>(ADMIN_IDS_COLLECTION, LECTURER_ADMIN_DOC);
+        
+        if (lecturerDoc?.Ids != null)
+        {
+            lecturerDoc.Ids.RemoveAll(l => l.AdminId == lecturer.AdminId);
+            // Use AddDocumentAsync with explicit ID instead of UpdateDocumentAsync
+            await FirestoreService.AddDocumentAsync(ADMIN_IDS_COLLECTION, lecturerDoc, LECTURER_ADMIN_DOC);
+        }
+    }
+    
+    private async Task DeleteCourseRepSkeleton(CourseRepSkeletonUser courseRep)
+    {
+        // Delete from admin collection
+        var courseRepDoc = await FirestoreService.GetDocumentAsync<CourseRepAdminDocument>(ADMIN_IDS_COLLECTION, COURSEREP_ADMIN_DOC);
+        if (courseRepDoc?.Ids != null)
+        {
+            courseRepDoc.Ids.RemoveAll(cr => cr.AdminId == courseRep.AdminInfo.AdminId);
+            // Use AddDocumentAsync with explicit ID instead of UpdateDocumentAsync
+            await FirestoreService.AddDocumentAsync(ADMIN_IDS_COLLECTION, courseRepDoc, COURSEREP_ADMIN_DOC);
+        }
+        
+        // Delete from student collection
+        await DeleteStudentSkeleton(courseRep.StudentInfo);
+    }
+    #endregion
+
+    #region Remove User Operations
+    private async Task RemoveAssignedUser()
+    {
+        try
+        {
+            if (selectedUser is LecturerSkeletonUser lecturer)
+            {
+                await RemoveUserFromLecturer(lecturer, selectedAssignedUserId);
+            }
+            else if (selectedUser is CourseRepAdminInfo courseRepAdmin)
+            {
+                await RemoveUserFromCourseRep(courseRepAdmin, selectedAssignedUserId);
+            }
+            
+            notificationComponent?.ShowSuccess("User removed successfully!");
+            CloseModals();
+            await LoadAllUsers();
+        }
+        catch (Exception ex)
+        {
+            notificationComponent?.ShowError($"Error removing user: {ex.Message}");
+        }
+    }
+    
+    private async Task RemoveUserFromLecturer(LecturerSkeletonUser lecturer, string userId)
+    {
+        var lecturerDoc = await FirestoreService.GetDocumentAsync<LecturerAdminDocument>(ADMIN_IDS_COLLECTION, LECTURER_ADMIN_DOC);
+        if (lecturerDoc?.Ids != null)
+        {
+            var lecturerToUpdate = lecturerDoc.Ids.FirstOrDefault(l => l.AdminId == lecturer.AdminId);
+            if (lecturerToUpdate != null)
+            {
+                lecturerToUpdate.UserIds.Remove(userId);
+                lecturerToUpdate.CurrentUsage = lecturerToUpdate.UserIds.Count;
+                await FirestoreService.UpdateDocumentAsync(ADMIN_IDS_COLLECTION, LECTURER_ADMIN_DOC, lecturerDoc);
+            }
+        }
+    }
+    
+    private async Task RemoveUserFromCourseRep(CourseRepAdminInfo courseRepAdmin, string userId)
+    {
+        var courseRepDoc = await FirestoreService.GetDocumentAsync<CourseRepAdminDocument>(ADMIN_IDS_COLLECTION, COURSEREP_ADMIN_DOC);
+        if (courseRepDoc?.Ids != null)
+        {
+            var courseRepToUpdate = courseRepDoc.Ids.FirstOrDefault(cr => cr.AdminId == courseRepAdmin.AdminId);
+            if (courseRepToUpdate != null)
+            {
+                courseRepToUpdate.UserIds.Remove(userId);
+                courseRepToUpdate.CurrentUsage = courseRepToUpdate.UserIds.Count;
+                await FirestoreService.UpdateDocumentAsync(ADMIN_IDS_COLLECTION, COURSEREP_ADMIN_DOC, courseRepDoc);
+            }
+        }
+    }
+    #endregion
+
+    #region Utility Methods
+    private async Task CopyToClipboard(string text)
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", text);
+            await ShowNotification("Copied to clipboard!");
+        }
+        catch (Exception ex)
+        {
+            await ShowNotification($"Error copying to clipboard: {ex.Message}", false);
+        }
+    }
+
+    private async Task ShowNotification(string message, bool isSuccess = true)
+    {
+        if (notificationComponent != null)
+        {
+            if (isSuccess)
+                notificationComponent.ShowSuccess(message);
+            else
+                notificationComponent.ShowError(message);
+        
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+    #endregion
+
+    #region Disposal
+    public void Dispose()
+    {
+        StudentListPool?.Dispose();
+        LecturerListPool?.Dispose();
+        CourseRepListPool?.Dispose();
+        StringBuilderPool?.Dispose();
+    }
+    #endregion
+
+    #region Inner Classes
+    private class Collections
+    {
+        public List<StudentSkeletonUser> Students { get; } = new();
+        public List<LecturerSkeletonUser> Lecturers { get; } = new();
+        public List<CourseRepSkeletonUser> CourseReps { get; } = new();
+    }
+    
+    private class PaginationState
+    {
+        public int StudentsCurrentPage { get; set; } = 1;
+        public int LecturersCurrentPage { get; set; } = 1;
+        public int CourseRepsCurrentPage { get; set; } = 1;
+        
+        public void ResetAllPages()
+        {
+            StudentsCurrentPage = 1;
+            LecturersCurrentPage = 1;
+            CourseRepsCurrentPage = 1;
+        }
+    }
+    #endregion
 }
