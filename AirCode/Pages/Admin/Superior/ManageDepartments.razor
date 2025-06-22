@@ -2,6 +2,7 @@
 @using AirCode.Domain.Entities
 @using AirCode.Domain.Enums
 @using AirCode.Layout.AdminLayout.Superior
+@using AirCode.Components.SharedPrefabs.Others
 @layout SuperiorAdminLayout
 
 <div class="container-fluid bg-primary p-4">
@@ -150,14 +151,10 @@
                                                     </div>
                                                     
                                                     <div class="mb-3">
-                                                        <div class="input-group">
-                                                            <input type="text" class="form-control" placeholder="Course ID" 
-                                                                @bind="_newCourseId" />
-                                                            <button class="btn btn-outline-primary" type="button" 
-                                                                @onclick="() => AddCourseToLevel(level.LevelType)">
-                                                                Add Course
-                                                            </button>
-                                                        </div>
+                                                        <button class="btn btn-outline-primary" type="button" 
+                                                            @onclick="() => OpenCourseSelection(level.LevelType)">
+                                                            <i class="bi bi-plus-circle"></i> Add Course
+                                                        </button>
                                                     </div>
 
                                                     @if (level.CourseIds.Count == 0)
@@ -192,6 +189,11 @@
         }
     }
 </div>
+
+<!-- Course Selection Modal -->
+<CourseSelectionComponent IsVisible="_showCourseSelection"
+                         OnCourseSelected="OnCourseSelected"
+                         OnClosed="OnCourseSelectionClosed" />
 
 @if (_showDeleteConfirmation)
 {

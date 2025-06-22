@@ -23,6 +23,10 @@ public partial class ManageDepartments : ComponentBase
     private LevelType _levelTypeToRemove;
     private string _newCourseId = string.Empty;
 
+    // Course selection related fields
+    private bool _showCourseSelection = false;
+    private LevelType _targetLevelType;
+
     protected override async Task OnInitializedAsync()
     {
         await LoadDepartments();
@@ -207,6 +211,56 @@ public partial class ManageDepartments : ComponentBase
         }
     }
 
+    #region Course Selection Integration
+
+    private void OpenCourseSelection(LevelType levelType)
+    {
+        _targetLevelType = levelType;
+        _showCourseSelection = true;
+    }
+
+    private async Task OnCourseSelected(Course selectedCourse)
+    {
+        try
+        {
+            if (_selectedDepartment == null || selectedCourse == null) return;
+            
+            var success = await DepartmentService.AddCourseIdToLevelAsync(
+                _selectedDepartment.DepartmentId, _targetLevelType, selectedCourse.CourseCode);
+            
+            if (success)
+            {
+                // Refresh local data to maintain consistency
+                await LoadDepartments();
+                
+                // Re-select the department to maintain UI state
+                _selectedDepartment = _departments.FirstOrDefault(d => d.DepartmentId == _selectedDepartment.DepartmentId);
+                
+                await JSRuntime.InvokeVoidAsync("alert", $"Course '{selectedCourse.CourseCode} - {selectedCourse.Name}' added successfully to {_targetLevelType}!");
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Failed to add course. Course may already exist in this level.");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Error adding course: {ex.Message}");
+        }
+        finally
+        {
+            _showCourseSelection = false;
+        }
+    }
+
+    private void OnCourseSelectionClosed()
+    {
+        _showCourseSelection = false;
+    }
+
+    #endregion
+
+    // Keep the old method for backward compatibility, but it's no longer used in the UI
     private async Task AddCourseToLevel(LevelType levelType)
     {
         try
