@@ -5,7 +5,7 @@
     @foreach (var notification in _notifications)
     {
         <div class="notification @notification.Type.ToString().ToLower() @(notification.IsRemoving ? "removing" : "")"
-             @key="@($"notif_{notification.Id.ToString().Replace("-", "")}")"
+             @key="@GetNotificationKey(notification.Id)"
              @onanimationend="@(() => OnAnimationEnd(notification))"
              style="--notification-duration: @(notification.Duration)ms">
             <div class="notification-content">
@@ -26,7 +26,16 @@
                             break;
                     }
                 </div>
-                <div class="notification-message">@((MarkupString)notification.Message)</div>
+                <div class="notification-message">
+                    @if (notification.IsHtml)
+                    {
+                        @((MarkupString)notification.Message)
+                    }
+                    else
+                    {
+                        @notification.Message
+                    }
+                </div>
             </div>
             <button class="notification-close" 
                     @onclick="() => RemoveNotification(notification.Id)"
@@ -49,10 +58,10 @@
     public NotificationPosition Position { get; set; } = NotificationPosition.TopRight;
 
     [Parameter]
-    public int AutoDismissTime { get; set; } = 5000; // time in milliseconds
+    public int AutoDismissTime { get; set; } = 5000;
 
     [Parameter]
-    public int MaxNotifications { get; set; } = 5; // Maximum notifications to show
+    public int MaxNotifications { get; set; } = 5;
 
     [Parameter]
     public bool EnableProgressBar { get; set; } = true;
@@ -71,17 +80,22 @@
             _ => "top-right"
         };
 
-        _timer = new Timer(100); // Check more frequently for smoother experience
+        _timer = new Timer(100);
         _timer.Elapsed += CheckNotificationsExpiry;
         _timer.AutoReset = true;
         _timer.Enabled = true;
     }
 
-    public void ShowNotification(string message, NotificationType type = NotificationType.Info, int? customDuration = null)
+    private string GetNotificationKey(Guid id)
+    {
+        // Ensure key starts with letter and contains only valid characters
+        return $"notif_{id:N}";
+    }
+
+    public void ShowNotification(string message, NotificationType type = NotificationType.Info, int? customDuration = null, bool isHtml = false)
     {
         lock (_lockObject)
         {
-            // Remove oldest notifications if we exceed the maximum
             while (_notifications.Count >= MaxNotifications)
             {
                 var oldest = _notifications.FirstOrDefault(n => !n.IsRemoving);
@@ -102,7 +116,8 @@
                 Type = type,
                 CreatedAt = DateTime.Now,
                 Duration = customDuration ?? AutoDismissTime,
-                IsRemoving = false
+                IsRemoving = false,
+                IsHtml = isHtml
             };
 
             _notifications.Add(notification);
@@ -110,24 +125,23 @@
 
         InvokeAsync(StateHasChanged);
 
-        // Play sound if enabled
         if (EnableSound)
         {
             PlayNotificationSound(type);
         }
     }
 
-    public void ShowSuccess(string message, int? duration = null) 
-        => ShowNotification(message, NotificationType.Success, duration);
+    public void ShowSuccess(string message, int? duration = null, bool isHtml = false) 
+        => ShowNotification(message, NotificationType.Success, duration, isHtml);
 
-    public void ShowError(string message, int? duration = null) 
-        => ShowNotification(message, NotificationType.Error, duration);
+    public void ShowError(string message, int? duration = null, bool isHtml = false) 
+        => ShowNotification(message, NotificationType.Error, duration, isHtml);
 
-    public void ShowInfo(string message, int? duration = null) 
-        => ShowNotification(message, NotificationType.Info, duration);
+    public void ShowInfo(string message, int? duration = null, bool isHtml = false) 
+        => ShowNotification(message, NotificationType.Info, duration, isHtml);
 
-    public void ShowWarning(string message, int? duration = null) 
-        => ShowNotification(message, NotificationType.Warning, duration);
+    public void ShowWarning(string message, int? duration = null, bool isHtml = false) 
+        => ShowNotification(message, NotificationType.Warning, duration, isHtml);
 
     private async Task RemoveNotification(Guid id)
     {
@@ -136,21 +150,16 @@
         {
             notification.IsRemoving = true;
             await InvokeAsync(StateHasChanged);
-            
-            // The actual removal happens in OnAnimationEnd
         }
     }
 
     private void RemoveNotificationInternal(Guid id)
     {
         var notification = _notifications.FirstOrDefault(n => n.Id == id);
-        if (notification != null)
+        if (notification != null && !notification.IsRemoving)
         {
-            if (!notification.IsRemoving)
-            {
-                notification.IsRemoving = true;
-                InvokeAsync(StateHasChanged);
-            }
+            notification.IsRemoving = true;
+            InvokeAsync(StateHasChanged);
         }
     }
 
@@ -190,7 +199,6 @@
     private void PlayNotificationSound(NotificationType type)
     {
         // Implement sound playing logic here if needed
-        // You could use JavaScript interop to play different sounds based on notification type
     }
 
     public void ClearAll()
@@ -218,6 +226,7 @@
         public DateTime CreatedAt { get; set; }
         public int Duration { get; set; } = 5000;
         public bool IsRemoving { get; set; } = false;
+        public bool IsHtml { get; set; } = false;
     }
 
     public enum NotificationType
