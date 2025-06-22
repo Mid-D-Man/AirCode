@@ -12,13 +12,14 @@ using AirCode.Components.SharedPrefabs.Cards;
 using AirCode.Services.Firebase;
 using AirCode.Domain.Enums;
 using AirCode.Utilities.ObjectPooling;
+using Microsoft.JSInterop;
 
 namespace AirCode.Pages.Admin.Superior;
 
 public partial class ManageUsers : ComponentBase
 {
     [Inject] private IFirestoreService FirestoreService { get; set; }
-    
+    [Inject] private IJSRuntime JSRuntime { get; set; }
     // Object Pools
     private static readonly MID_ComponentObjectPool<List<StudentSkeletonUser>> StudentListPool = 
         new(() => new List<StudentSkeletonUser>(), list => list.Clear(), maxPoolSize: 10);
@@ -252,13 +253,13 @@ public partial class ManageUsers : ComponentBase
         return null;
     }
     // Pagination Methods
-    private IEnumerable<T> GetPagedItems<T>(List<T> items, ref int currentPage)
+    private IEnumerable<T> GetPagedItems<T>(List<T> items, int currentPage)
     {
-        var totalPages = (int)Math.Ceiling(items.Count / (double)ITEMS_PER_PAGE);
-        currentPage = Math.Max(1, Math.Min(currentPage, totalPages));
-        
+        var totalPages = GetTotalPages(items.Count);
+        var safePage = Math.Max(1, Math.Min(currentPage, Math.Max(1, totalPages)));
+    
         return items
-            .Skip((currentPage - 1) * ITEMS_PER_PAGE)
+            .Skip((safePage - 1) * ITEMS_PER_PAGE)
             .Take(ITEMS_PER_PAGE);
     }
     
@@ -703,15 +704,11 @@ private async Task CreateLecturerSkeleton()
             }
         }
     }
-    
     private async Task CopyToClipboard(string text)
     {
         try
         {
-            await Task.Run(() => {
-                // For Blazor WebAssembly, you might need to use JavaScript interop
-                // This is a placeholder implementation
-            });
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", text);
             notificationComponent?.ShowSuccess("Copied to clipboard!");
         }
         catch (Exception ex)
@@ -719,7 +716,6 @@ private async Task CreateLecturerSkeleton()
             notificationComponent?.ShowError($"Error copying to clipboard: {ex.Message}");
         }
     }
-    
    
     
     private string GenerateLecturerId()

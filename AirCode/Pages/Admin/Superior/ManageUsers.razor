@@ -57,7 +57,7 @@
                     @{
                         var studentsCurrentPage = _paginationState.StudentsCurrentPage;
                     }
-                    @foreach (var student in GetPagedItems(_collections.Students, ref studentsCurrentPage))
+                    @foreach (var student in GetPagedItems(_collections.Students, _paginationState.StudentsCurrentPage))
                     {
                         <div class="user-card @(student.IsCurrentlyInUse ? "in-use" : "")">
                             <div class="user-card-header">
@@ -131,7 +131,7 @@
                     @{
                         var lecturersCurrentPage = _paginationState.LecturersCurrentPage;
                     }
-                    @foreach (var lecturer in GetPagedItems(_collections.Lecturers, ref lecturersCurrentPage))
+                    @foreach (var lecturer in GetPagedItems(_collections.Lecturers, _paginationState.LecturersCurrentPage))
                     {
                         <div class="user-card">
                             <div class="user-card-header">
@@ -217,7 +217,7 @@
                     @{
                         var courseRepsCurrentPage = _paginationState.CourseRepsCurrentPage;
                     }
-                    @foreach (var courseRep in GetPagedItems(_collections.CourseReps, ref courseRepsCurrentPage))
+                    @foreach (var courseRep in GetPagedItems(_collections.CourseReps, _paginationState.CourseRepsCurrentPage))
                     {
                         <div class="user-card @(courseRep.StudentInfo.IsCurrentlyInUse ? "in-use" : "")">
                             <div class="user-card-header">
