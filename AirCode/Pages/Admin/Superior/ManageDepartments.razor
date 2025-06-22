@@ -129,29 +129,35 @@
                             }
                             else
                             {
-                                <div class="accordion" id="levelsAccordion">
+                                <div class="levels-container">
                                     @foreach (var level in _selectedDepartment.Levels)
                                     {
-                                        <div class="accordion-item">
-                                            <h2 class="accordion-header" id="heading-@level.LevelType">
-                                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
-                                                        data-bs-target="#collapse-@level.LevelType" aria-expanded="false" 
-                                                        aria-controls="collapse-@level.LevelType">
-                                                    @level.LevelType
-                                                </button>
-                                            </h2>
-                                            <div id="collapse-@level.LevelType" class="accordion-collapse collapse" 
-                                                aria-labelledby="heading-@level.LevelType" data-bs-parent="#levelsAccordion">
-                                                <div class="accordion-body">
-                                                    <div class="d-flex justify-content-between mb-3">
-                                                        <h5 class="text-secondary">Courses</h5>
-                                                        <button class="btn btn-danger btn-sm" @onclick="() => ConfirmRemoveLevel(level.LevelType)">
-                                                            <i class="bi bi-trash"></i> Remove Level
-                                                        </button>
+                                        var levelId = $"level-{level.LevelType}";
+                                        var isExpanded = _expandedLevels.Contains(level.LevelType);
+                                        
+                                        <div class="level-card mb-3">
+                                            <div class="level-header" @onclick="() => ToggleLevel(level.LevelType)">
+                                                <div class="level-header-content">
+                                                    <h5 class="level-title">@level.LevelType</h5>
+                                                    <span class="course-count">@level.CourseIds.Count courses</span>
+                                                </div>
+                                                <div class="level-actions">
+                                                    <button class="btn btn-danger btn-sm" @onclick:stopPropagation="true" 
+                                                            @onclick="() => ConfirmRemoveLevel(level.LevelType)">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                    <div class="expand-icon @(isExpanded ? "expanded" : "")">
+                                                        <i class="bi bi-chevron-down"></i>
                                                     </div>
-                                                    
-                                                    <div class="mb-3">
-                                                        <button class="btn btn-outline-primary" type="button" 
+                                                </div>
+                                            </div>
+                                            
+                                            @if (isExpanded)
+                                            {
+                                                <div class="level-content">
+                                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                                        <h6 class="text-secondary mb-0">Assigned Courses</h6>
+                                                        <button class="btn btn-outline-primary btn-sm" 
                                                             @onclick="() => OpenCourseSelection(level.LevelType)">
                                                             <i class="bi bi-plus-circle"></i> Add Course
                                                         </button>
@@ -159,15 +165,18 @@
 
                                                     @if (level.CourseIds.Count == 0)
                                                     {
-                                                        <p class="text-tertiary">No courses assigned to this level.</p>
+                                                        <div class="empty-state">
+                                                            <i class="bi bi-book"></i>
+                                                            <p class="text-tertiary mb-0">No courses assigned to this level.</p>
+                                                        </div>
                                                     }
                                                     else
                                                     {
-                                                        <div class="list-group">
+                                                        <div class="courses-grid">
                                                             @foreach (var courseId in level.CourseIds)
                                                             {
-                                                                <div class="list-group-item d-flex justify-content-between align-items-center">
-                                                                    <span>@courseId</span>
+                                                                <div class="course-item">
+                                                                    <span class="course-id">@courseId</span>
                                                                     <button class="btn btn-danger btn-sm" 
                                                                         @onclick="() => RemoveCourseFromLevel(level.LevelType, courseId)">
                                                                         <i class="bi bi-x"></i>
@@ -177,7 +186,7 @@
                                                         </div>
                                                     }
                                                 </div>
-                                            </div>
+                                            }
                                         </div>
                                     }
                                 </div>

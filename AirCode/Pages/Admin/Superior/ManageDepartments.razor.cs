@@ -26,7 +26,16 @@ public partial class ManageDepartments : ComponentBase
     // Course selection related fields
     private bool _showCourseSelection = false;
     private LevelType _targetLevelType;
+// State Management Implementation
+    private HashSet<LevelType> _expandedLevels = new();
 
+    private void ToggleLevel(LevelType levelType)
+    {
+        if (_expandedLevels.Contains(levelType))
+            _expandedLevels.Remove(levelType);
+        else
+            _expandedLevels.Add(levelType);
+    }
     protected override async Task OnInitializedAsync()
     {
         await LoadDepartments();
