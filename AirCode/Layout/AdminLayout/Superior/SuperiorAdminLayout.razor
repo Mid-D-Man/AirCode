@@ -3,14 +3,24 @@
 
 @using AirCode.Components.SharedPrefabs.Buttons
 @using AirCode.Components.SharedPrefabs.Others
+@using Blazored.Toast
+@using Blazored.Toast.Configuration
 
 <div class="superior-admin-layout">
     <SuperiorAdminNavMenu />
     <div class="main-content">
+        <BlazoredToasts Position="ToastPosition.TopRight"
+                        Timeout="5"
+                        IconType="IconType.FontAwesome"
+                        SuccessClass="success-toast"
+                        InfoClass="info-toast"
+                        WarningClass="warning-toast"
+                        ErrorClass="error-toast"
+                        ShowProgressBar="true" />
         <div class="content-top">
-            <DynamicSearch Context="Admin" Placeholder="Search admin..." />
-         
-            <ThemeToggle />
+            <DynamicSearch Context="Admin" Placeholder="Search admin..."/>
+
+            <ThemeToggle/>
 
             <div class="quick-stats">
                 <div class="stat-item">

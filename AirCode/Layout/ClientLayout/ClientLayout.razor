@@ -1,10 +1,21 @@
 @* Layout/ClientLayout/ClientLayout.razor *@
 @namespace AirCode.Layout.ClientLayout
+@using Blazored.Toast
+@using Blazored.Toast.Configuration
 @inherits LayoutComponentBase
 @inject AirCode.Services.VisualElements.ISvgIconService SvgIconService
 
+
 <div class="client-layout">
     <div class="main-content">
+        <BlazoredToasts Position="ToastPosition.TopRight"
+                        Timeout="5"
+                        IconType="IconType.FontAwesome"
+                        SuccessClass="success-toast"
+                        InfoClass="info-toast"
+                        WarningClass="warning-toast"
+                        ErrorClass="error-toast"
+                        ShowProgressBar="true" />
         <div class="content-top">
             <div class="header-left">
                 <h2>AirCode</h2>
@@ -13,7 +24,7 @@
                 <div class="notifications" @onclick="OpenNotifications">
                     <span class="notification-icon">
                         <i class="oi oi-bell"></i>
-                        @if(NotificationCount > 0)
+                        @if (NotificationCount > 0)
                         {
                             <span class="notification-badge">@(NotificationCount > 9 ? "9+" : NotificationCount.ToString())</span>
                         }
@@ -26,7 +37,7 @@
                     }
                     else
                     {
-                        <img src="/svgs/Users_Icon.svg" alt="Profile" class="profile-image" />
+                        <img src="/svgs/Users_Icon.svg" alt="Profile" class="profile-image"/>
                     }
                 </div>
             </div>
