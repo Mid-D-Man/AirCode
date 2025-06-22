@@ -18,8 +18,18 @@ public class DepartmentService : IDepartmentService
     public DepartmentService(IFirestoreService firestoreService)
     {
         _firestoreService = firestoreService;
+        // Initialize Firebase connection
+        _ = InitializeFirebaseAsync();
     }
 
+    private async Task InitializeFirebaseAsync()
+    {
+        if (!_firestoreService.IsInitialized)
+        {
+            await _firestoreService.SetConnectionStateAsync(true);
+            await _firestoreService.ProcessPendingOperationsAsync();
+        }
+    }
     public async Task<List<Department>> GetAllDepartmentsAsync()
     {
         try
