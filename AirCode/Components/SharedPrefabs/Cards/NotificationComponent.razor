@@ -2,56 +2,59 @@
 @implements IDisposable
 
 <div class="notification-container @_positionClass" style="--auto-dismiss-time: @(AutoDismissTime)ms">
-    @foreach (var notification in _notifications)
+    @if (_notifications.Any())
     {
-        <div class="notification @notification.Type.ToString().ToLower() @(notification.IsRemoving ? "removing" : "")"
-             @key="@($"notif_{notification.Id.ToString().Replace("-", "")}")"
-             @onanimationend="@(() => OnAnimationEnd(notification))">
-            <div class="notification-content">
-                <div class="notification-icon">
-                    @switch (notification.Type)
-                    {
-                        case NotificationType.Success:
-                            <i class="fas fa-check-circle"></i>
-                            break;
-                        case NotificationType.Error:
-                            <i class="fas fa-exclamation-circle"></i>
-                            break;
-                        case NotificationType.Info:
-                            <i class="fas fa-info-circle"></i>
-                            break;
-                        case NotificationType.Warning:
-                            <i class="fas fa-exclamation-triangle"></i>
-                            break;
-                    }
+        @foreach (var notification in _notifications)
+        {
+            <div class="notification @notification.Type.ToString().ToLower() @(notification.IsRemoving ? "removing" : "")"
+                 @key="notification.Id"
+                 @onanimationend="@(() => OnAnimationEnd(notification))">
+                <div class="notification-content">
+                    <div class="notification-icon">
+                        @switch (notification.Type)
+                        {
+                            case NotificationType.Success:
+                                <i class="fas fa-check-circle"></i>
+                                break;
+                            case NotificationType.Error:
+                                <i class="fas fa-exclamation-circle"></i>
+                                break;
+                            case NotificationType.Info:
+                                <i class="fas fa-info-circle"></i>
+                                break;
+                            case NotificationType.Warning:
+                                <i class="fas fa-exclamation-triangle"></i>
+                                break;
+                        }
+                    </div>
+                    <div class="notification-message">@((MarkupString)notification.Message)</div>
                 </div>
-                <div class="notification-message">@((MarkupString)notification.Message)</div>
+                <button class="notification-close" 
+                        @onclick="() => RemoveNotification(notification.Id)"
+                        @onclick:stopPropagation="true"
+                        aria-label="Close notification"
+                        title="Close notification">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
-            <button class="notification-close" 
-                    @onclick="() => RemoveNotification(notification.Id)"
-                    @onclick:stopPropagation="true"
-                    aria-label="Close notification"
-                    title="Close notification">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
+        }
     }
 </div>
 
 @code {
     private List<NotificationItem> _notifications = new();
     private string _positionClass = "top-right";
-    private Timer _timer;
+    private Timer? _timer;
     private readonly object _lockObject = new();
 
     [Parameter]
     public NotificationPosition Position { get; set; } = NotificationPosition.TopRight;
 
     [Parameter]
-    public int AutoDismissTime { get; set; } = 5000; // time in milliseconds
+    public int AutoDismissTime { get; set; } = 5000;
 
     [Parameter]
-    public int MaxNotifications { get; set; } = 5; // Maximum notifications to show
+    public int MaxNotifications { get; set; } = 5;
 
     [Parameter]
     public bool EnableProgressBar { get; set; } = true;
@@ -70,7 +73,7 @@
             _ => "top-right"
         };
 
-        _timer = new Timer(100); // Check more frequently for smoother experience
+        _timer = new Timer(100);
         _timer.Elapsed += CheckNotificationsExpiry;
         _timer.AutoReset = true;
         _timer.Enabled = true;
@@ -78,9 +81,10 @@
 
     public void ShowNotification(string message, NotificationType type = NotificationType.Info, int? customDuration = null)
     {
+        if (string.IsNullOrEmpty(message)) return;
+
         lock (_lockObject)
         {
-            // Remove oldest notifications if we exceed the maximum
             while (_notifications.Count >= MaxNotifications)
             {
                 var oldest = _notifications.FirstOrDefault(n => !n.IsRemoving);
@@ -109,7 +113,6 @@
 
         InvokeAsync(StateHasChanged);
 
-        // Play sound if enabled
         if (EnableSound)
         {
             PlayNotificationSound(type);
@@ -135,21 +138,16 @@
         {
             notification.IsRemoving = true;
             await InvokeAsync(StateHasChanged);
-            
-            // The actual removal happens in OnAnimationEnd
         }
     }
 
     private void RemoveNotificationInternal(Guid id)
     {
         var notification = _notifications.FirstOrDefault(n => n.Id == id);
-        if (notification != null)
+        if (notification != null && !notification.IsRemoving)
         {
-            if (!notification.IsRemoving)
-            {
-                notification.IsRemoving = true;
-                InvokeAsync(StateHasChanged);
-            }
+            notification.IsRemoving = true;
+            InvokeAsync(StateHasChanged);
         }
     }
 
@@ -159,7 +157,7 @@
         {
             lock (_lockObject)
             {
-                _notifications.Remove(notification);
+                _notifications.RemoveAll(n => n.Id == notification.Id);
             }
             await InvokeAsync(StateHasChanged);
         }
@@ -189,7 +187,6 @@
     private void PlayNotificationSound(NotificationType type)
     {
         // Implement sound playing logic here if needed
-        // You could use JavaScript interop to play different sounds based on notification type
     }
 
     public void ClearAll()
@@ -206,6 +203,7 @@
 
     public void Dispose()
     {
+        _timer?.Stop();
         _timer?.Dispose();
     }
 
