@@ -1,8 +1,18 @@
 @page "/example"
 @using AirCode.Components.SharedPrefabs.Cards
-
+@using Blazored.Toast.Configuration
+@using Blazored.Toast
 <h3>Notification Example</h3>
 
+<BlazoredToasts Position="ToastPosition.TopRight"
+                Timeout="5"
+                IconType="IconType.FontAwesome"
+                SuccessClass="success-toast"
+                InfoClass="info-toast"
+                WarningClass="warning-toast"
+                ErrorClass="error-toast"
+                ShowProgressBar="true"
+                CloseButtonClass="custom-close-btn" />
 <NotificationComponent @ref="notificationComponent" 
                        Position="NotificationComponent.NotificationPosition.TopRight"
                        AutoDismissTime="5000"
