@@ -301,17 +301,18 @@ public partial class ManageUsers : ComponentBase
             rng.GetBytes(randomBytes);
         }
     
-        // Fix: Use URL-safe base64 encoding for HTML attribute compatibility
+        // Fix: Use only alphanumeric characters for HTML attribute compatibility
         var base64String = Convert.ToBase64String(randomBytes)
-            .Replace("+", "-")
-            .Replace("/", "_")
-            .Replace("=", "");
+            .Replace("+", "")
+            .Replace("/", "")
+            .Replace("=", "")
+            .Replace("-", "")
+            .Replace("_", "");
 
-        sb.Append("AIRCODE-")
+        sb.Append("AIRCODE")
             .Append(saltString)
-            .Append('-')
             .Append(base64String);
-      
+  
         return sb.ToString();
     }
 
