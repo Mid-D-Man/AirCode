@@ -81,6 +81,7 @@
     overflow: hidden;
     transition: all 0.3s ease;
     border: 1px solid var(--border);
+    color: var(--text-primary); /* Ensure text is visible in all themes */
 }
 
 .user-card:hover {
@@ -106,6 +107,7 @@
     font-family: monospace;
     font-weight: bold;
     word-break: break-all;
+    color: inherit; /* Inherit from parent to maintain theme consistency */
 }
 
 .user-type {
@@ -115,10 +117,12 @@
     font-size: 0.8rem;
     font-weight: bold;
     white-space: nowrap;
+    color: var(--nav-text); /* Explicit color for contrast */
 }
 
 .user-card-body {
     padding: var(--spacing-md);
+    color: var(--text-primary); /* Explicit text color for body content */
 }
 
 .user-details {
@@ -141,6 +145,7 @@
 .detail-value {
     flex: 1;
     word-break: break-word;
+    color: var(--text-primary); /* Ensure value text is visible */
 }
 
 .admin-id-text {
@@ -149,6 +154,7 @@
     background-color: var(--bg-tertiary);
     padding: 2px 6px;
     border-radius: 3px;
+    color: var(--text-primary); /* Explicit color for admin ID */
 }
 
 /* Assigned Users Section */
@@ -186,6 +192,7 @@
     font-family: monospace;
     font-size: 0.85rem;
     flex: 1;
+    color: var(--text-primary); /* Ensure compact user ID is visible */
 }
 
 .user-card-footer {
@@ -245,19 +252,65 @@
     color: var(--text-secondary) !important;
 }
 
-/* Modal Styles - Enhanced for better visibility and responsiveness */
+/* Pagination Styles - Enhanced positioning */
+.pagination-container {
+    margin-top: var(--spacing-xl); /* Increased spacing from content above */
+    margin-bottom: var(--spacing-lg);
+    display: flex;
+    justify-content: center;
+}
+
+.pagination {
+    display: flex;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    background-color: var(--bg-secondary);
+    border-radius: 6px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.page-item {
+    margin: 0;
+}
+
+.page-link {
+    display: block;
+    padding: var(--spacing-sm) var(--spacing-md);
+    margin: 0;
+    color: var(--text-primary);
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 40px;
+    text-align: center;
+}
+
+.page-link:hover {
+    background-color: var(--bg-tertiary);
+    color: var(--button-primary);
+}
+
+.page-item.active .page-link {
+    background-color: var(--button-primary);
+    color: var(--button-text);
+}
+
+/* Modal Styles - Fixed positioning and sizing */
 .modal {
     position: fixed;
     top: 0;
     left: 0;
     z-index: 1050;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+    overflow: auto;
     outline: 0;
     display: flex;
     align-items: center;
     justify-content: center;
+    padding: var(--spacing-md); /* Add padding for smaller screens */
 }
 
 .modal.show {
@@ -266,10 +319,9 @@
 
 .modal-dialog {
     position: relative;
-    width: 90%;
-    max-width: 600px;
-    max-height: 90vh;
-    margin: auto;
+    width: 100%;
+    max-width: 500px;
+    margin: 0;
     display: flex;
     flex-direction: column;
 }
@@ -279,25 +331,22 @@
     display: flex;
     flex-direction: column;
     width: 100%;
-    height: 100%;
-    max-height: 90vh;
     background-color: var(--bg-secondary);
     background-clip: padding-box;
     border: 1px solid var(--border);
-    border-radius: 0.5rem;
+    border-radius: 8px;
     outline: 0;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
     overflow: hidden;
+    max-height: calc(100vh - 2rem); /* Prevent modal from exceeding viewport */
 }
 
 .modal-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: var(--spacing-md);
+    padding: var(--spacing-lg) var(--spacing-lg) var(--spacing-md);
     border-bottom: 1px solid var(--border);
-    border-top-left-radius: 0.5rem;
-    border-top-right-radius: 0.5rem;
     background-color: var(--bg-secondary);
     flex-shrink: 0;
 }
@@ -307,17 +356,29 @@
     line-height: 1.5;
     font-weight: 600;
     color: var(--text-primary);
+    font-size: 1.1rem;
 }
 
 .btn-close {
-    padding: 0.5rem;
+    padding: var(--spacing-sm);
     background-color: transparent;
     border: 0;
     cursor: pointer;
-    font-size: 1.2rem;
+    font-size: 1.25rem;
     color: var(--text-secondary);
     border-radius: 4px;
     transition: all 0.2s ease;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-close::before {
+    content: "×";
+    font-size: 1.5rem;
+    line-height: 1;
 }
 
 .btn-close:hover {
@@ -328,9 +389,9 @@
 .modal-body {
     position: relative;
     flex: 1 1 auto;
-    padding: var(--spacing-md);
+    padding: var(--spacing-md) var(--spacing-lg);
     overflow-y: auto;
-    max-height: calc(90vh - 140px); /* Account for header and footer */
+    color: var(--text-primary); /* Ensure modal text is visible */
 }
 
 .modal-footer {
@@ -338,13 +399,10 @@
     align-items: center;
     justify-content: flex-end;
     gap: var(--spacing-sm);
-    padding: var(--spacing-md);
+    padding: var(--spacing-md) var(--spacing-lg) var(--spacing-lg);
     border-top: 1px solid var(--border);
-    border-bottom-right-radius: 0.5rem;
-    border-bottom-left-radius: 0.5rem;
     background-color: var(--bg-secondary);
     flex-shrink: 0;
-    min-height: 60px; /* Ensure minimum height */
 }
 
 .modal-backdrop {
@@ -354,7 +412,7 @@
     z-index: 1040;
     width: 100vw;
     height: 100vh;
-    background-color: rgba(0, 0, 0, 0.5);
+    background-color: rgba(0, 0, 0, 0.6);
 }
 
 .modal-backdrop.show {
@@ -375,7 +433,7 @@
 
 .form-control {
     width: 100%;
-    padding: var(--spacing-sm);
+    padding: var(--spacing-sm) var(--spacing-md);
     border: 1px solid var(--border);
     border-radius: 4px;
     background-color: var(--bg-primary);
@@ -517,28 +575,28 @@
         margin-bottom: var(--spacing-xs);
     }
 
+    .modal {
+        padding: var(--spacing-sm);
+    }
+
     .modal-dialog {
-        width: 95%;
         max-width: none;
-        margin: var(--spacing-sm);
+        width: 100%;
     }
 
     .modal-content {
-        max-height: calc(100vh - 2rem);
+        max-height: calc(100vh - 1rem);
     }
 
-    .modal-body {
-        max-height: calc(100vh - 180px);
-    }
-
+    .modal-header,
+    .modal-body,
     .modal-footer {
-        flex-direction: column;
-        gap: var(--spacing-xs);
+        padding-left: var(--spacing-md);
+        padding-right: var(--spacing-md);
     }
 
-    .modal-footer .btn {
-        width: 100%;
-        margin: 0;
+    .pagination-container {
+        margin-top: var(--spacing-lg);
     }
 }
 
@@ -570,11 +628,15 @@
         margin-bottom: var(--spacing-xs);
     }
 
+    .modal {
+        padding: 0;
+        align-items: stretch;
+    }
+
     .modal-dialog {
         width: 100%;
         height: 100%;
-        margin: 0;
-        max-height: 100vh;
+        max-width: none;
     }
 
     .modal-content {
@@ -583,21 +645,30 @@
         border-radius: 0;
     }
 
-    .modal-body {
-        max-height: calc(100vh - 140px);
-        padding: var(--spacing-sm);
+    .modal-footer {
+        flex-direction: column;
+        gap: var(--spacing-xs);
     }
 
-    .modal-header,
-    .modal-footer {
-        padding: var(--spacing-sm);
+    .modal-footer .btn {
+        width: 100%;
+    }
+
+    .pagination {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .page-link {
+        padding: var(--spacing-xs) var(--spacing-sm);
+        min-width: 35px;
     }
 }
 
 /* Ensure modal buttons are always visible */
 @media (max-height: 600px) {
     .modal-body {
-        max-height: calc(100vh - 160px);
+        max-height: calc(100vh - 200px);
     }
 }
 
@@ -624,4 +695,4 @@
     .user-card:hover {
         transform: none;
     }
-}
+    }
