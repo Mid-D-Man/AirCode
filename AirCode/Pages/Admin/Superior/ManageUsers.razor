@@ -59,7 +59,8 @@
                     }
                     @foreach (var student in GetPagedItems(_collections.Students, _paginationState.StudentsCurrentPage))
                     {
-                        <div class="user-card @(student.IsCurrentlyInUse ? "in-use" : "")">
+                    <div class="user-card @GetStatusClass(student)">
+                        }
                             <div class="user-card-header">
                                 <div class="user-id">@student.MatricNumber</div>
                                 <div class="user-type">Level @student.Level</div>

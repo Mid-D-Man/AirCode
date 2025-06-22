@@ -106,7 +106,20 @@ public partial class ManageUsers : ComponentBase
             StateHasChanged();
         }
     }
+    private string GetStatusClass(StudentSkeletonUser student)
+    {
+        return student?.IsCurrentlyInUse == true ? "user-card in-use" : "user-card";
+    }
 
+    private string GetCssClass()
+    {
+        return $"nav-link {(activeTab == "students" ? "active" : "")}";
+    }
+
+    private void HandleClick()
+    {
+        // Centralized click handling
+    }
     
     private PooledTaskWrapper<List<StudentSkeletonUser>> LoadStudentsPooled()
     {
@@ -716,7 +729,13 @@ private async Task CreateLecturerSkeleton()
             notificationComponent?.ShowError($"Error copying to clipboard: {ex.Message}");
         }
     }
-   
+    public void Dispose()
+    {
+        StudentListPool?.Dispose();
+        LecturerListPool?.Dispose();
+        CourseRepListPool?.Dispose();
+        StringBuilderPool?.Dispose();
+     }
     
     private string GenerateLecturerId()
     {
@@ -824,6 +843,7 @@ public class PooledTaskWrapper<T> : IDisposable where T : class
     
     public void Dispose()
     {
+        
         _pool.Return(_pooledObject);
     }
 }
