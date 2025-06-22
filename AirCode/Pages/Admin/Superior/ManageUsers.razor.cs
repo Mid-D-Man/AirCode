@@ -369,18 +369,28 @@ public partial class ManageUsers : ComponentBase
         selectedUser = null;
         selectedUserType = null;
         selectedAssignedUserId = null;
-    }
     
+        // Ensure clean state before next render
+        InvokeAsync(StateHasChanged);
+    }
+    protected override bool ShouldRender()
+    {
+        // Prevent rendering during critical async operations
+        return !loading;
+    }
+    // Replace both methods with single implementation
     private void OnUserTypeChanged(ChangeEventArgs e)
     {
         newUserType = e.Value?.ToString() ?? "Student";
-        
+    
         // Reset max usage based on user type
-        if (newUserType == "Lecturer")
-            newMaxUsage = 1;
-        else if (newUserType == "CourseRep")
-            newMaxUsage = 2;
-            
+        newMaxUsage = newUserType switch
+        {
+            "Lecturer" => 1,
+            "CourseRep" => 2,
+            _ => 1
+        };
+    
         StateHasChanged();
     }
     private void OnUserTypeChangedWithBinding(ChangeEventArgs e)
@@ -400,6 +410,9 @@ public partial class ManageUsers : ComponentBase
     {
         try
         {
+            loading = true;
+            StateHasChanged(); // Ensure UI reflects loading state
+        
             switch (newUserType)
             {
                 case "Student":
@@ -412,7 +425,7 @@ public partial class ManageUsers : ComponentBase
                     await CreateCourseRepSkeleton();
                     break;
             }
-            
+        
             notificationComponent?.ShowSuccess("Skeleton user created successfully!");
             CloseModals();
             await LoadAllUsers();
@@ -420,6 +433,11 @@ public partial class ManageUsers : ComponentBase
         catch (Exception ex)
         {
             notificationComponent?.ShowError($"Error creating skeleton user: {ex.Message}");
+        }
+        finally
+        {
+            loading = false;
+            StateHasChanged();
         }
     }
     
