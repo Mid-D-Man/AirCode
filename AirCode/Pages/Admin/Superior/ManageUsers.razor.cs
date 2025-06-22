@@ -4,7 +4,6 @@ using System.Security.Cryptography;
 using AirCode.Components.SharedPrefabs.Cards;
 using AirCode.Services.Firebase;
 using AirCode.Domain.ValueObjects;
-using AirCode.Utilities.ObjectPooling;
 using Microsoft.JSInterop;
 
 namespace AirCode.Pages.Admin.Superior;
@@ -13,20 +12,8 @@ public partial class ManageUsers : ComponentBase
 {
     [Inject] private IFirestoreService FirestoreService { get; set; }
     [Inject] private IJSRuntime JSRuntime { get; set; }
-    // Object Pools
-    private static readonly MID_ComponentObjectPool<List<StudentSkeletonUser>> StudentListPool = 
-        new(() => new List<StudentSkeletonUser>(), list => list.Clear(), maxPoolSize: 10);
     
-    private static readonly MID_ComponentObjectPool<List<LecturerSkeletonUser>> LecturerListPool = 
-        new(() => new List<LecturerSkeletonUser>(), list => list.Clear(), maxPoolSize: 10);
-    
-    private static readonly MID_ComponentObjectPool<List<CourseRepSkeletonUser>> CourseRepListPool = 
-        new(() => new List<CourseRepSkeletonUser>(), list => list.Clear(), maxPoolSize: 10);
-    
-    private static readonly MID_ComponentObjectPool<StringBuilder> StringBuilderPool = 
-        new(() => new StringBuilder(), sb => sb.Clear(), maxPoolSize: 20);
-    
-    // Collections - now using pooled objects
+    // Collections - simplified without pooling
     private readonly Collections _collections = new();
     
     // Constants
@@ -69,6 +56,8 @@ public partial class ManageUsers : ComponentBase
     // Reference to notification component
     private NotificationComponent notificationComponent;
     
+    // Rendering control
+    private bool _isUpdatingCollections = false;
     
     protected override async Task OnInitializedAsync()
     {
@@ -80,12 +69,13 @@ public partial class ManageUsers : ComponentBase
         try
         {
             loading = true;
-            StateHasChanged(); // Immediate UI feedback
+            _isUpdatingCollections = true;
+            StateHasChanged();
         
-            // Sequential loading to prevent DOM conflicts
-            await LoadStudentsPooled().Task;
-            await LoadLecturersPooled().Task;
-            await LoadCourseRepsPooled().Task;
+            // Load sequentially to prevent concurrent modification
+            await LoadStudents();
+            await LoadLecturers();
+            await LoadCourseReps();
         
             _paginationState.ResetAllPages();
         }
@@ -95,141 +85,128 @@ public partial class ManageUsers : ComponentBase
         }
         finally
         {
+            _isUpdatingCollections = false;
             loading = false;
             StateHasChanged();
         }
     }
+
     private string GetStatusClass(StudentSkeletonUser student)
     {
         return student?.IsCurrentlyInUse == true ? "user-card in-use" : "user-card";
     }
-
     
-    private PooledTaskWrapper<List<StudentSkeletonUser>> LoadStudentsPooled()
+    private async Task LoadStudents()
     {
-        return new PooledTaskWrapper<List<StudentSkeletonUser>>(
-            StudentListPool,
-            async (pooledList) =>
+        var tempStudents = new List<StudentSkeletonUser>();
+        
+        try
+        {
+            // Load from all student level documents
+            for (int level = 100; level <= 500; level += 100)
             {
-                try
+                var docName = $"StudentLevel{level}";
+                var levelData = await FirestoreService.GetDocumentAsync<StudentLevelDocument>(STUDENTS_COLLECTION, docName);
+                
+                if (levelData?.ValidStudentMatricNumbers != null)
                 {
-                    // Load from all student level documents
-                    for (int level = 100; level <= 500; level += 100)
+                    // Filter out course reps to prevent them showing in students tab
+                    var courseRepMatricNumbers = _collections.CourseReps.Select(cr => cr.AdminInfo.MatricNumber).ToHashSet();
+                    
+                    foreach (var student in levelData.ValidStudentMatricNumbers)
                     {
-                        var docName = $"StudentLevel{level}";
-                        var levelData = await FirestoreService.GetDocumentAsync<StudentLevelDocument>(STUDENTS_COLLECTION, docName);
-                        
-                        if (levelData?.ValidStudentMatricNumbers != null)
+                        // Only add if not a course rep
+                        if (!courseRepMatricNumbers.Contains(student.MatricNumber))
                         {
-                            // Filter out course reps to prevent them showing in students tab
-                            var courseRepMatricNumbers = _collections.CourseReps.Select(cr => cr.AdminInfo.MatricNumber).ToHashSet();
-                            
-                            foreach (var student in levelData.ValidStudentMatricNumbers)
-                            {
-                                // Only add if not a course rep
-                                if (!courseRepMatricNumbers.Contains(student.MatricNumber))
-                                {
-                                    pooledList.Add(student);
-                                }
-                            }
+                            tempStudents.Add(student);
                         }
                     }
-                    
-                    _collections.Students.Clear();
-                    _collections.Students.AddRange(pooledList);
                 }
-                catch (Exception ex)
-                {
-                    notificationComponent?.ShowError($"Error loading students: {ex.Message}");
-                }
-                
-                return pooledList;
             }
-        );
+            
+            // Atomic update
+            _collections.Students.Clear();
+            _collections.Students.AddRange(tempStudents);
+        }
+        catch (Exception ex)
+        {
+            notificationComponent?.ShowError($"Error loading students: {ex.Message}");
+        }
     }
-    private PooledTaskWrapper<List<LecturerSkeletonUser>> LoadLecturersPooled()
+    
+    private async Task LoadLecturers()
     {
-        return new PooledTaskWrapper<List<LecturerSkeletonUser>>(
-            LecturerListPool,
-            async (pooledList) =>
+        var tempLecturers = new List<LecturerSkeletonUser>();
+        
+        try
+        {
+            var lecturerDoc = await FirestoreService.GetDocumentAsync<LecturerAdminDocument>(ADMIN_IDS_COLLECTION, LECTURER_ADMIN_DOC);
+            if (lecturerDoc?.Ids != null)
             {
-                try
+                foreach (var adminData in lecturerDoc.Ids)
                 {
-                    var lecturerDoc = await FirestoreService.GetDocumentAsync<LecturerAdminDocument>(ADMIN_IDS_COLLECTION, LECTURER_ADMIN_DOC);
-                    if (lecturerDoc?.Ids != null)
+                    tempLecturers.Add(new LecturerSkeletonUser
                     {
-                        foreach (var adminData in lecturerDoc.Ids)
+                        AdminId = adminData.AdminId,
+                        LecturerId = adminData.LecturerId,
+                        CurrentUsage = adminData.CurrentUsage,
+                        MaxUsage = adminData.MaxUsage,
+                        UserIds = new List<string>(adminData.UserIds) // Defensive copy
+                    });
+                }
+            }
+            
+            // Atomic update
+            _collections.Lecturers.Clear();
+            _collections.Lecturers.AddRange(tempLecturers);
+        }
+        catch (Exception ex)
+        {
+            notificationComponent?.ShowError($"Error loading lecturers: {ex.Message}");
+        }
+    }
+    
+   private async Task LoadCourseReps()
+    {
+        var tempCourseReps = new List<CourseRepSkeletonUser>();
+        
+        try
+        {
+            var courseRepDoc = await FirestoreService.GetDocumentAsync<CourseRepAdminDocument>(ADMIN_IDS_COLLECTION, COURSEREP_ADMIN_DOC);
+            if (courseRepDoc?.Ids != null)
+            {
+                foreach (var adminData in courseRepDoc.Ids)
+                {
+                    // Find corresponding student data
+                    var studentInfo = await FindStudentByMatricNumberAsync(adminData.MatricNumber);
+                    if (studentInfo != null)
+                    {
+                        tempCourseReps.Add(new CourseRepSkeletonUser
                         {
-                            pooledList.Add(new LecturerSkeletonUser
+                            AdminInfo = new CourseRepAdminInfo
                             {
                                 AdminId = adminData.AdminId,
-                                LecturerId = adminData.LecturerId,
+                                MatricNumber = adminData.MatricNumber,
                                 CurrentUsage = adminData.CurrentUsage,
                                 MaxUsage = adminData.MaxUsage,
-                                UserIds = adminData.UserIds
-                            });
-                        }
+                                UserIds = new List<string>(adminData.UserIds) // Defensive copy
+                            },
+                            StudentInfo = studentInfo
+                        });
                     }
-                    
-                    _collections.Lecturers.Clear();
-                    _collections.Lecturers.AddRange(pooledList);
                 }
-                catch (Exception ex)
-                {
-                    notificationComponent?.ShowError($"Error loading lecturers: {ex.Message}");
-                }
-                
-                return pooledList;
             }
-        );
+            
+            // Atomic update
+            _collections.CourseReps.Clear();
+            _collections.CourseReps.AddRange(tempCourseReps);
+        }
+        catch (Exception ex)
+        {
+            notificationComponent?.ShowError($"Error loading course reps: {ex.Message}");
+        }
     }
-
     
-   private PooledTaskWrapper<List<CourseRepSkeletonUser>> LoadCourseRepsPooled()
-    {
-        return new PooledTaskWrapper<List<CourseRepSkeletonUser>>(
-            CourseRepListPool,
-            async (pooledList) =>
-            {
-                try
-                {
-                    var courseRepDoc = await FirestoreService.GetDocumentAsync<CourseRepAdminDocument>(ADMIN_IDS_COLLECTION, COURSEREP_ADMIN_DOC);
-                    if (courseRepDoc?.Ids != null)
-                    {
-                        foreach (var adminData in courseRepDoc.Ids)
-                        {
-                            // Find corresponding student data
-                            var studentInfo = await FindStudentByMatricNumberAsync(adminData.MatricNumber);
-                            if (studentInfo != null)
-                            {
-                                pooledList.Add(new CourseRepSkeletonUser
-                                {
-                                    AdminInfo = new CourseRepAdminInfo
-                                    {
-                                        AdminId = adminData.AdminId,
-                                        MatricNumber = adminData.MatricNumber,
-                                        CurrentUsage = adminData.CurrentUsage,
-                                        MaxUsage = adminData.MaxUsage,
-                                        UserIds = adminData.UserIds
-                                    },
-                                    StudentInfo = studentInfo
-                                });
-                            }
-                        }
-                    }
-                    
-                    _collections.CourseReps.Clear();
-                    _collections.CourseReps.AddRange(pooledList);
-                }
-                catch (Exception ex)
-                {
-                    notificationComponent?.ShowError($"Error loading course reps: {ex.Message}");
-                }
-                
-                return pooledList;
-            }
-        );
-    }
     private async Task<StudentSkeletonUser> FindStudentByMatricNumberAsync(string matricNumber)
     {
         // Check all level documents for the student
@@ -249,10 +226,11 @@ public partial class ManageUsers : ComponentBase
         
         return null;
     }
+    
     // Pagination Methods
     private IEnumerable<T> GetPagedItems<T>(List<T> items, int currentPage)
     {
-        if (items == null || !items.Any())
+        if (items == null || !items.Any() || _isUpdatingCollections)
             return Enumerable.Empty<T>();
     
         return items
@@ -267,6 +245,8 @@ public partial class ManageUsers : ComponentBase
 
     private void NavigateToPage(string userType, int page)
     {
+        if (_isUpdatingCollections) return;
+        
         switch (userType)
         {
             case STUDENT_ID:
@@ -282,41 +262,36 @@ public partial class ManageUsers : ComponentBase
         StateHasChanged();
     }
     
-    // Generate ID methods using pooled StringBuilder
+    // Generate ID methods - fixed for HTML attribute safety
     private string GenerateAdminId()
     {
-        using var sbWrapper = StringBuilderPool.GetPooled();
-        var sb = sbWrapper.Object;
-
-        var saltBytes = new byte[2];
-        using (var rng = RandomNumberGenerator.Create())
-        {
-            rng.GetBytes(saltBytes);
-        }
-        var saltString = Convert.ToHexString(saltBytes).ToUpper();
-
-        var randomBytes = new byte[12];
+        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        var randomBytes = new byte[8];
         using (var rng = RandomNumberGenerator.Create())
         {
             rng.GetBytes(randomBytes);
         }
-    
-        // Fix: Use URL-safe base64 encoding for HTML attribute compatibility
-        var base64String = Convert.ToBase64String(randomBytes)
-            .Replace("+", "-")
-            .Replace("/", "_")
-            .Replace("=", "");
+        
+        // Use only alphanumeric characters for HTML safety
+        var randomString = Convert.ToHexString(randomBytes).ToLower();
+        return $"AIRCODE-{timestamp}-{randomString}";
+    }
 
-        sb.Append("AIRCODE-")
-            .Append(saltString)
-            .Append('-')
-            .Append(base64String);
-      
-        return sb.ToString();
+    private string GenerateLecturerId()
+    {
+        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        var randomBytes = new byte[3];
+        using (var rng = RandomNumberGenerator.Create())
+        {
+            rng.GetBytes(randomBytes);
+        }
+        var randomString = Convert.ToHexString(randomBytes).ToLower();
+        return $"LEC-{timestamp}-{randomString}";
     }
 
     private void SetActiveTab(string tab)
     {
+        if (_isUpdatingCollections) return;
         activeTab = tab;
         StateHasChanged();
     }
@@ -357,11 +332,9 @@ public partial class ManageUsers : ComponentBase
     
     protected override bool ShouldRender()
     {
-        // Enhanced rendering control
-        return !loading && _collections != null && 
-               (_collections.Students != null || _collections.Lecturers != null || _collections.CourseReps != null);
+        // Prevent rendering during collection updates
+        return !_isUpdatingCollections && !loading && _collections != null;
     }
-
 
     private void CloseModals()
     {
@@ -377,7 +350,6 @@ public partial class ManageUsers : ComponentBase
         selectedAssignedUserId = null;
     }
 
-    // Replace both methods with single implementation
     private void OnUserTypeChanged(ChangeEventArgs e)
     {
         newUserType = e.Value?.ToString() ?? "Student";
@@ -392,11 +364,7 @@ public partial class ManageUsers : ComponentBase
     
         StateHasChanged();
     }
-    private void OnUserTypeChangedWithBinding(ChangeEventArgs e)
-    {
-        newUserType = e.Value?.ToString() ?? "Student";
-        OnUserTypeChanged(e); // Call existing logic
-    }
+    
     private void ResetCreateForm()
     {
         newUserType = "Student";
@@ -410,7 +378,7 @@ public partial class ManageUsers : ComponentBase
         try
         {
             loading = true;
-            StateHasChanged(); // Ensure UI reflects loading state
+            StateHasChanged();
         
             switch (newUserType)
             {
@@ -440,102 +408,103 @@ public partial class ManageUsers : ComponentBase
         }
     }
     
- private async Task CreateStudentSkeleton()
-{
-    if (string.IsNullOrWhiteSpace(newMatricNumber))
-        throw new ArgumentException("Matriculation number is required");
-
-    var matricNumber = newMatricNumber.ToUpper().Replace(" ", "").Replace("_", "");
-
-    // Check if student already exists
-    if (_collections.Students.Any(s => s.MatricNumber.Equals(matricNumber, StringComparison.OrdinalIgnoreCase)))
-        throw new InvalidOperationException("Student with this matriculation number already exists");
-
-    var newStudent = new StudentSkeletonUser
+    private async Task CreateStudentSkeleton()
     {
-        CurrentUserId = "",
-        IsCurrentlyInUse = false,
-        Level = newLevel,
-        MatricNumber = matricNumber
-    };
+        if (string.IsNullOrWhiteSpace(newMatricNumber))
+            throw new ArgumentException("Matriculation number is required");
 
-    var docName = $"StudentLevel{newLevel}";
+        var matricNumber = newMatricNumber.ToUpper().Replace(" ", "").Replace("_", "");
 
-    // Get existing document or create new one
-    var existingDoc = await FirestoreService.GetDocumentAsync<StudentLevelDocument>(STUDENTS_COLLECTION, docName);
-    if (existingDoc == null)
-    {
-        existingDoc = new StudentLevelDocument { ValidStudentMatricNumbers = new List<StudentSkeletonUser>() };
+        // Check if student already exists
+        if (_collections.Students.Any(s => s.MatricNumber.Equals(matricNumber, StringComparison.OrdinalIgnoreCase)))
+            throw new InvalidOperationException("Student with this matriculation number already exists");
+
+        var newStudent = new StudentSkeletonUser
+        {
+            CurrentUserId = "",
+            IsCurrentlyInUse = false,
+            Level = newLevel,
+            MatricNumber = matricNumber
+        };
+
+        var docName = $"StudentLevel{newLevel}";
+
+        // Get existing document or create new one
+        var existingDoc = await FirestoreService.GetDocumentAsync<StudentLevelDocument>(STUDENTS_COLLECTION, docName);
+        if (existingDoc == null)
+        {
+            existingDoc = new StudentLevelDocument { ValidStudentMatricNumbers = new List<StudentSkeletonUser>() };
+        }
+
+        existingDoc.ValidStudentMatricNumbers.Add(newStudent);
+
+        await FirestoreService.UpdateDocumentAsync(STUDENTS_COLLECTION, docName, existingDoc);
     }
 
-    existingDoc.ValidStudentMatricNumbers.Add(newStudent);
-
-    await FirestoreService.UpdateDocumentAsync(STUDENTS_COLLECTION, docName, existingDoc);
-}
-
-private async Task CreateCourseRepSkeleton()
-{
-    if (string.IsNullOrWhiteSpace(newMatricNumber))
-        throw new ArgumentException("Matriculation number is required");
-
-    var matricNumber = newMatricNumber.ToUpper().Replace(" ", "").Replace("_", "");
-
-    // Check if course rep already exists
-    if (_collections.CourseReps.Any(cr => cr.AdminInfo.MatricNumber.Equals(matricNumber, StringComparison.OrdinalIgnoreCase)))
-        throw new InvalidOperationException("Course rep with this matriculation number already exists");
-
-    // Create student entry first
-    await CreateStudentSkeleton();
-
-    // Create admin entry with updated ID generation
-    var adminId = GenerateAdminId(); // Updated call
-
-    var newCourseRepAdmin = new CourseRepAdminInfo
+    private async Task CreateCourseRepSkeleton()
     {
-        AdminId = adminId,
-        MatricNumber = matricNumber,
-        CurrentUsage = 0,
-        MaxUsage = newMaxUsage,
-        UserIds = new List<string>()
-    };
+        if (string.IsNullOrWhiteSpace(newMatricNumber))
+            throw new ArgumentException("Matriculation number is required");
 
-    // Get existing document or create new one
-    var existingDoc = await FirestoreService.GetDocumentAsync<CourseRepAdminDocument>(ADMIN_IDS_COLLECTION, COURSEREP_ADMIN_DOC);
-    if (existingDoc == null)
-    {
-        existingDoc = new CourseRepAdminDocument { Ids = new List<CourseRepAdminInfo>() };
+        var matricNumber = newMatricNumber.ToUpper().Replace(" ", "").Replace("_", "");
+
+        // Check if course rep already exists
+        if (_collections.CourseReps.Any(cr => cr.AdminInfo.MatricNumber.Equals(matricNumber, StringComparison.OrdinalIgnoreCase)))
+            throw new InvalidOperationException("Course rep with this matriculation number already exists");
+
+        // Create student entry first
+        await CreateStudentSkeleton();
+
+        // Create admin entry
+        var adminId = GenerateAdminId();
+
+        var newCourseRepAdmin = new CourseRepAdminInfo
+        {
+            AdminId = adminId,
+            MatricNumber = matricNumber,
+            CurrentUsage = 0,
+            MaxUsage = newMaxUsage,
+            UserIds = new List<string>()
+        };
+
+        // Get existing document or create new one
+        var existingDoc = await FirestoreService.GetDocumentAsync<CourseRepAdminDocument>(ADMIN_IDS_COLLECTION, COURSEREP_ADMIN_DOC);
+        if (existingDoc == null)
+        {
+            existingDoc = new CourseRepAdminDocument { Ids = new List<CourseRepAdminInfo>() };
+        }
+
+        existingDoc.Ids.Add(newCourseRepAdmin);
+
+        await FirestoreService.UpdateDocumentAsync(ADMIN_IDS_COLLECTION, COURSEREP_ADMIN_DOC, existingDoc);
     }
-
-    existingDoc.Ids.Add(newCourseRepAdmin);
-
-    await FirestoreService.UpdateDocumentAsync(ADMIN_IDS_COLLECTION, COURSEREP_ADMIN_DOC, existingDoc);
-}
-    
-private async Task CreateLecturerSkeleton()
-{
-    var adminId = GenerateAdminId(); // Updated call
-    var lecturerId = GenerateLecturerId();
-    
-    var newLecturerAdmin = new LecturerAdminInfo
+        
+    private async Task CreateLecturerSkeleton()
     {
-        AdminId = adminId,
-        LecturerId = lecturerId,
-        CurrentUsage = 0,
-        MaxUsage = newMaxUsage,
-        UserIds = new List<string>()
-    };
-    
-    // Get existing document or create new one
-    var existingDoc = await FirestoreService.GetDocumentAsync<LecturerAdminDocument>(ADMIN_IDS_COLLECTION, LECTURER_ADMIN_DOC);
-    if (existingDoc == null)
-    {
-        existingDoc = new LecturerAdminDocument { Ids = new List<LecturerAdminInfo>() };
+        var adminId = GenerateAdminId();
+        var lecturerId = GenerateLecturerId();
+        
+        var newLecturerAdmin = new LecturerAdminInfo
+        {
+            AdminId = adminId,
+            LecturerId = lecturerId,
+            CurrentUsage = 0,
+            MaxUsage = newMaxUsage,
+            UserIds = new List<string>()
+        };
+        
+        // Get existing document or create new one
+        var existingDoc = await FirestoreService.GetDocumentAsync<LecturerAdminDocument>(ADMIN_IDS_COLLECTION, LECTURER_ADMIN_DOC);
+        if (existingDoc == null)
+        {
+            existingDoc = new LecturerAdminDocument { Ids = new List<LecturerAdminInfo>() };
+        }
+        
+        existingDoc.Ids.Add(newLecturerAdmin);
+        
+        await FirestoreService.UpdateDocumentAsync(ADMIN_IDS_COLLECTION, LECTURER_ADMIN_DOC, existingDoc);
     }
     
-    existingDoc.Ids.Add(newLecturerAdmin);
-    
-    await FirestoreService.UpdateDocumentAsync(ADMIN_IDS_COLLECTION, LECTURER_ADMIN_DOC, existingDoc);
-}
     private async Task UpdateMaxUsage()
     {
         try
@@ -618,7 +587,7 @@ private async Task CreateLecturerSkeleton()
     {
         var docName = $"StudentLevel{student.Level}";
         var levelDoc = await FirestoreService.GetDocumentAsync<StudentLevelDocument>(STUDENTS_COLLECTION, docName);
-        //remember update document dosent work for some reason
+        
         if (levelDoc?.ValidStudentMatricNumbers != null)
         {
             levelDoc.ValidStudentMatricNumbers.RemoveAll(s => s.MatricNumber.Equals(student.MatricNumber, StringComparison.OrdinalIgnoreCase));
@@ -703,6 +672,7 @@ private async Task CreateLecturerSkeleton()
             }
         }
     }
+    
     private async Task CopyToClipboard(string text)
     {
         try
@@ -713,45 +683,6 @@ private async Task CreateLecturerSkeleton()
         catch (Exception ex)
         {
             notificationComponent?.ShowError($"Error copying to clipboard: {ex.Message}");
-        }
-    }
-    public void Dispose()
-    {
-        StudentListPool?.Dispose();
-        LecturerListPool?.Dispose();
-        CourseRepListPool?.Dispose();
-        StringBuilderPool?.Dispose();
-     }
-    
-    private string GenerateLecturerId()
-    {
-        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
-        var randomBytes = new byte[3];
-        using (var rng = RandomNumberGenerator.Create())
-        {
-            rng.GetBytes(randomBytes);
-        }
-        var randomString = Convert.ToHexString(randomBytes).ToLower();
-        return $"LEC_{timestamp}_{randomString}";
-    }
-    private class Collections
-    {
-        public List<StudentSkeletonUser> Students { get; } = new();
-        public List<LecturerSkeletonUser> Lecturers { get; } = new();
-        public List<CourseRepSkeletonUser> CourseReps { get; } = new();
-    }
-    
-    private class PaginationState
-    {
-        public int StudentsCurrentPage { get; set; } = 1;
-        public int LecturersCurrentPage { get; set; } = 1;
-        public int CourseRepsCurrentPage { get; set; } = 1;
-        
-        public void ResetAllPages()
-        {
-            StudentsCurrentPage = 1;
-            LecturersCurrentPage = 1;
-            CourseRepsCurrentPage = 1;
         }
     }
 }
