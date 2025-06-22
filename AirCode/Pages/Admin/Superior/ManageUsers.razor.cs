@@ -3,14 +3,7 @@ using System.Text;
 using System.Security.Cryptography;
 using AirCode.Components.SharedPrefabs.Cards;
 using AirCode.Services.Firebase;
-using AirCode.Domain.Enums;
-
-using Microsoft.AspNetCore.Components;
-using System.Text;
-using System.Security.Cryptography;
-using AirCode.Components.SharedPrefabs.Cards;
-using AirCode.Services.Firebase;
-using AirCode.Domain.Enums;
+using AirCode.Domain.ValueObjects;
 using AirCode.Utilities.ObjectPooling;
 using Microsoft.JSInterop;
 
@@ -111,15 +104,6 @@ public partial class ManageUsers : ComponentBase
         return student?.IsCurrentlyInUse == true ? "user-card in-use" : "user-card";
     }
 
-    private string GetCssClass()
-    {
-        return $"nav-link {(activeTab == "students" ? "active" : "")}";
-    }
-
-    private void HandleClick()
-    {
-        // Centralized click handling
-    }
     
     private PooledTaskWrapper<List<StudentSkeletonUser>> LoadStudentsPooled()
     {
@@ -268,17 +252,22 @@ public partial class ManageUsers : ComponentBase
     // Pagination Methods
     private IEnumerable<T> GetPagedItems<T>(List<T> items, int currentPage)
     {
-        var totalPages = GetTotalPages(items.Count);
-        var safePage = Math.Max(1, Math.Min(currentPage, Math.Max(1, totalPages)));
+        if (items == null || !items.Any())
+            return Enumerable.Empty<T>();
     
         return items
-            .Skip((safePage - 1) * ITEMS_PER_PAGE)
+            .Skip((currentPage - 1) * ITEMS_PER_PAGE)
             .Take(ITEMS_PER_PAGE);
     }
-    
-    private void NavigateToPage(string tabType, int page)
+
+    private int GetTotalPages(int totalItems)
     {
-        switch (tabType)
+        return (int)Math.Ceiling((double)totalItems / ITEMS_PER_PAGE);
+    }
+
+    private void NavigateToPage(string userType, int page)
+    {
+        switch (userType)
         {
             case STUDENT_ID:
                 _paginationState.StudentsCurrentPage = page;
@@ -292,8 +281,6 @@ public partial class ManageUsers : ComponentBase
         }
         StateHasChanged();
     }
-    
-    private int GetTotalPages(int itemCount) => (int)Math.Ceiling(itemCount / (double)ITEMS_PER_PAGE);
     
     // Generate ID methods using pooled StringBuilder
     private string GenerateAdminId()
@@ -375,22 +362,21 @@ public partial class ManageUsers : ComponentBase
                (_collections.Students != null || _collections.Lecturers != null || _collections.CourseReps != null);
     }
 
+
     private void CloseModals()
     {
         showCreateModal = false;
         showMaxUsageModal = false;
         showDeleteModal = false;
         showRemoveUserModal = false;
+    
+        // Clear form state
+        newMatricNumber = "";
         selectedUser = null;
         selectedUserType = null;
         selectedAssignedUserId = null;
-
-        // Critical: Ensure state consistency before re-render
-        InvokeAsync(() => {
-            StateHasChanged();
-            return Task.CompletedTask;
-        });
     }
+
     // Replace both methods with single implementation
     private void OnUserTypeChanged(ChangeEventArgs e)
     {
@@ -767,83 +753,5 @@ private async Task CreateLecturerSkeleton()
             LecturersCurrentPage = 1;
             CourseRepsCurrentPage = 1;
         }
-    }
-}
-
-// Domain Models
-public class StudentSkeletonUser
-{
-    public string CurrentUserId { get; set; } = "";
-    public bool IsCurrentlyInUse { get; set; } = false;
-    public string Level { get; set; } = "";
-    public string MatricNumber { get; set; } = "";
-}
-
-public class LecturerSkeletonUser
-{
-    public string AdminId { get; set; } = "";
-    public string LecturerId { get; set; } = "";
-    public int CurrentUsage { get; set; } = 0;
-    public int MaxUsage { get; set; } = 1;
-    public List<string> UserIds { get; set; } = new();
-}
-
-public class CourseRepSkeletonUser
-{
-    public CourseRepAdminInfo AdminInfo { get; set; } = new();
-    public StudentSkeletonUser StudentInfo { get; set; } = new();
-}
-
-public class CourseRepAdminInfo
-{
-    public string AdminId { get; set; } = "";
-    public string MatricNumber { get; set; } = "";
-    public int CurrentUsage { get; set; } = 0;
-    public int MaxUsage { get; set; } = 2;
-    public List<string> UserIds { get; set; } = new();
-}
-
-// Firebase Document Models
-public class StudentLevelDocument
-{
-    public List<StudentSkeletonUser> ValidStudentMatricNumbers { get; set; } = new();
-}
-
-public class LecturerAdminDocument
-{
-    public List<LecturerAdminInfo> Ids { get; set; } = new();
-}
-
-public class LecturerAdminInfo
-{
-    public string AdminId { get; set; } = "";
-    public string LecturerId { get; set; } = "";
-    public int CurrentUsage { get; set; } = 0;
-    public int MaxUsage { get; set; } = 1;
-    public List<string> UserIds { get; set; } = new();
-}
-
-public class CourseRepAdminDocument
-{
-    public List<CourseRepAdminInfo> Ids { get; set; } = new();
-}
-// Pooled Task Wrapper for async operations
-public class PooledTaskWrapper<T> : IDisposable where T : class
-{
-    private readonly MID_ComponentObjectPool<T> _pool;
-    private readonly T _pooledObject;
-    public Task<T> Task { get; }
-    
-    public PooledTaskWrapper(MID_ComponentObjectPool<T> pool, Func<T, Task<T>> asyncOperation)
-    {
-        _pool = pool;
-        _pooledObject = pool.Get();
-        Task = asyncOperation(_pooledObject);
-    }
-    
-    public void Dispose()
-    {
-        
-        _pool.Return(_pooledObject);
     }
 }
