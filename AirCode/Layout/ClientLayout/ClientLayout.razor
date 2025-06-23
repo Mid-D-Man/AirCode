@@ -1,10 +1,12 @@
 @* Layout/ClientLayout/ClientLayout.razor *@
 @namespace AirCode.Layout.ClientLayout
+@* Enhanced ClientLayout.razor with user picture support *@
+@namespace AirCode.Layout.ClientLayout
 @using Blazored.Toast
 @using Blazored.Toast.Configuration
 @inherits LayoutComponentBase
 @inject AirCode.Services.VisualElements.ISvgIconService SvgIconService
-
+@inject AirCode.Services.Auth.IAuthService AuthService
 
 <div class="client-layout">
     <div class="main-content">
@@ -31,13 +33,17 @@
                     </span>
                 </div>
                 <div class="profile-button" @onclick="OpenProfile">
-                    @if (!string.IsNullOrEmpty(userIconSvg))
+                    @if (!string.IsNullOrEmpty(userPictureUrl))
+                    {
+                        <img src="@userPictureUrl" alt="Profile" class="profile-image" @onerror="HandleImageError"/>
+                    }
+                    else if (!string.IsNullOrEmpty(userIconSvg))
                     {
                         @((MarkupString)userIconSvg)
                     }
                     else
                     {
-                        <img src="/svgs/Users_Icon.svg" alt="Profile" class="profile-image"/>
+                        <i class="oi oi-person" style="font-size: 20px;"></i>
                     }
                 </div>
             </div>
@@ -52,18 +58,54 @@
 @code {
     private int NotificationCount = 3;
     private string userIconSvg = string.Empty;
+    private string userPictureUrl = string.Empty;
+    private bool imageLoadFailed = false;
     
     protected override async Task OnInitializedAsync()
     {
-        // Load user icon SVG
+        await LoadUserProfileAsync();
+    }
+
+    private async Task LoadUserProfileAsync()
+    {
         try
         {
-            userIconSvg = await SvgIconService.GetSvgContentAsync("CrowGuy_Icon");
+            // First try to get user picture from Auth0/Gravatar
+            userPictureUrl = await AuthService.GetUserPictureAsync();
+            
+            if (string.IsNullOrEmpty(userPictureUrl))
+            {
+                // Fall back to SVG icon service
+                userIconSvg = await SvgIconService.GetSvgContentAsync("CrowGuy_Icon");
+            }
         }
-        catch
+        catch (Exception ex)
         {
-            // Fallback to static image if SVG service fails
+            Console.WriteLine($"Error loading user profile: {ex.Message}");
+            // Final fallback to default icon
             userIconSvg = string.Empty;
+            userPictureUrl = string.Empty;
+        }
+    }
+
+    private async Task HandleImageError()
+    {
+        if (!imageLoadFailed)
+        {
+            imageLoadFailed = true;
+            userPictureUrl = string.Empty;
+            
+            // Try to load SVG fallback
+            try
+            {
+                userIconSvg = await SvgIconService.GetSvgContentAsync("CrowGuy_Icon");
+            }
+            catch
+            {
+                userIconSvg = string.Empty;
+            }
+            
+            StateHasChanged();
         }
     }
     

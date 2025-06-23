@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
 using Microsoft.JSInterop;
@@ -61,7 +62,65 @@ namespace AirCode.Services.Auth
             var authState = await _authStateProvider.GetAuthenticationStateAsync();
             return authState.User.Identity.IsAuthenticated;
         }
+// Add this method to your existing AuthService.cs
 
+        public async Task<string> GetUserPictureAsync()
+        {
+            var authState = await _authStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+    
+            if (!user.Identity.IsAuthenticated)
+                return string.Empty;
+
+            // Check for Auth0 picture claim
+            var pictureClaim = user.FindFirst("picture");
+            if (pictureClaim != null && !string.IsNullOrEmpty(pictureClaim.Value))
+            {
+                // Validate the URL to ensure it's accessible
+                if (await IsImageUrlAccessibleAsync(pictureClaim.Value))
+                {
+                    return pictureClaim.Value;
+                }
+            }
+
+            // Check for Gravatar using email
+            var emailClaim = user.FindFirst("email") ?? user.FindFirst(ClaimTypes.Email);
+            if (emailClaim != null && !string.IsNullOrEmpty(emailClaim.Value))
+            {
+                var gravatarUrl = GenerateGravatarUrl(emailClaim.Value);
+                if (await IsImageUrlAccessibleAsync(gravatarUrl))
+                {
+                    return gravatarUrl;
+                }
+            }
+
+            return string.Empty; // Will fall back to icon service
+        }
+
+        private async Task<bool> IsImageUrlAccessibleAsync(string imageUrl)
+        {
+            try
+            {
+                using var httpClient = new HttpClient();
+                httpClient.Timeout = TimeSpan.FromSeconds(3);
+        
+                var response = await httpClient.SendAsync(new HttpRequestMessage(HttpMethod.Head, imageUrl));
+                return response.IsSuccessStatusCode && 
+                       response.Content.Headers.ContentType?.MediaType?.StartsWith("image/") == true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private string GenerateGravatarUrl(string email, int size = 80)
+        {
+            using var md5 = System.Security.Cryptography.MD5.Create();
+            var hash = md5.ComputeHash(System.Text.Encoding.UTF8.GetBytes(email.Trim().ToLower()));
+            var hashString = Convert.ToHexString(hash).ToLower();
+            return $"https://www.gravatar.com/avatar/{hashString}?s={size}&d=404";
+        }
         public async Task<string> GetUserRoleAsync()
         {
             var authState = await _authStateProvider.GetAuthenticationStateAsync();

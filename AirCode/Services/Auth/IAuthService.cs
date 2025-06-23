@@ -27,7 +27,8 @@ namespace AirCode.Services.Auth
         /// Gets the authenticated user's role from their claims
         /// </summary>
         Task<string> GetUserRoleAsync();
-    
+//try get user pic
+        Task<string> GetUserPictureAsync();
         /// <summary>
         /// Gets the authenticated user's ID from their claims
         /// </summary>
