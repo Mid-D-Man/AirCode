@@ -11,9 +11,12 @@ namespace AirCode.Pages.Admin.Superior;
 
 public partial class ManageUsers : ComponentBase
 {
+    #region Dependency Injection
     [Inject] private IFirestoreService FirestoreService { get; set; }
     [Inject] private IJSRuntime JSRuntime { get; set; }
-    // Object Pools
+    #endregion
+
+    #region Object Pooling
     private static readonly MID_ComponentObjectPool<List<StudentSkeletonUser>> StudentListPool = 
         new(() => new List<StudentSkeletonUser>(), list => list.Clear(), maxPoolSize: 10);
     
@@ -25,11 +28,14 @@ public partial class ManageUsers : ComponentBase
     
     private static readonly MID_ComponentObjectPool<StringBuilder> StringBuilderPool = 
         new(() => new StringBuilder(), sb => sb.Clear(), maxPoolSize: 20);
-    
-    // Collections - now using pooled objects
+    #endregion
+
+    #region Collections & State
     private readonly Collections _collections = new();
-    
-    // Constants
+    private readonly PaginationState _paginationState = new();
+    #endregion
+
+    #region Constants
     private const string STUDENTS_COLLECTION = "STUDENTS_MATRICULATION_NUMBERS";
     private const string ADMIN_IDS_COLLECTION = "VALID_ADMIN_IDS";
     private const string LECTURER_ADMIN_DOC = "LecturerAdminIdsDoc";
@@ -37,16 +43,12 @@ public partial class ManageUsers : ComponentBase
     private const string STUDENT_ID = "students";
     private const string COURSEREP_ID = "coursereps";
     private const string LECTURER_ID = "lecturers";
-    
-    // Pagination Constants
     private const int ITEMS_PER_PAGE = 10;
-    
-    // UI State
+    #endregion
+
+    #region UI State Variables
     private bool loading = true;
     private string activeTab = "students";
-    
-    // Pagination State
-    private readonly PaginationState _paginationState = new();
     
     // Modal states
     private bool showCreateModal = false;
@@ -68,21 +70,38 @@ public partial class ManageUsers : ComponentBase
     
     // Reference to notification component
     private NotificationComponent notificationComponent;
-    
-    
+    #endregion
+
+    #region Lifecycle Methods
     protected override async Task OnInitializedAsync()
     {
         await LoadAllUsers();
     }
-    
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            StateHasChanged();
+        }
+        await base.OnAfterRenderAsync(firstRender);
+    }
+
+    protected override bool ShouldRender()
+    {
+        return !loading && _collections != null && 
+               (_collections.Students != null || _collections.Lecturers != null || _collections.CourseReps != null);
+    }
+    #endregion
+
+    #region Data Loading Methods
     private async Task LoadAllUsers()
     {
         try
         {
             loading = true;
-            StateHasChanged(); // Immediate UI feedback
+            StateHasChanged();
         
-            // Sequential loading to prevent DOM conflicts
             await LoadStudentsPooled().Task;
             await LoadLecturersPooled().Task;
             await LoadCourseRepsPooled().Task;
@@ -99,21 +118,7 @@ public partial class ManageUsers : ComponentBase
             StateHasChanged();
         }
     }
-    private string GetStatusClass(StudentSkeletonUser student)
-    {
-        return student?.IsCurrentlyInUse == true ? "user-card in-use" : "user-card";
-    }
 
-    // In your ManageUsers.razor.cs - add proper initialization
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            // Ensure component reference is properly initialized
-            StateHasChanged();
-        }
-        await base.OnAfterRenderAsync(firstRender);
-    }
     private PooledTaskWrapper<List<StudentSkeletonUser>> LoadStudentsPooled()
     {
         return new PooledTaskWrapper<List<StudentSkeletonUser>>(
@@ -122,7 +127,6 @@ public partial class ManageUsers : ComponentBase
             {
                 try
                 {
-                    // Load from all student level documents
                     for (int level = 100; level <= 500; level += 100)
                     {
                         var docName = $"StudentLevel{level}";
@@ -130,12 +134,10 @@ public partial class ManageUsers : ComponentBase
                         
                         if (levelData?.ValidStudentMatricNumbers != null)
                         {
-                            // Filter out course reps to prevent them showing in students tab
                             var courseRepMatricNumbers = _collections.CourseReps.Select(cr => cr.AdminInfo.MatricNumber).ToHashSet();
                             
                             foreach (var student in levelData.ValidStudentMatricNumbers)
                             {
-                                // Only add if not a course rep
                                 if (!courseRepMatricNumbers.Contains(student.MatricNumber))
                                 {
                                     pooledList.Add(student);
@@ -156,6 +158,7 @@ public partial class ManageUsers : ComponentBase
             }
         );
     }
+
     private PooledTaskWrapper<List<LecturerSkeletonUser>> LoadLecturersPooled()
     {
         return new PooledTaskWrapper<List<LecturerSkeletonUser>>(
@@ -193,8 +196,7 @@ public partial class ManageUsers : ComponentBase
         );
     }
 
-    
-   private PooledTaskWrapper<List<CourseRepSkeletonUser>> LoadCourseRepsPooled()
+    private PooledTaskWrapper<List<CourseRepSkeletonUser>> LoadCourseRepsPooled()
     {
         return new PooledTaskWrapper<List<CourseRepSkeletonUser>>(
             CourseRepListPool,
@@ -207,7 +209,6 @@ public partial class ManageUsers : ComponentBase
                     {
                         foreach (var adminData in courseRepDoc.Ids)
                         {
-                            // Find corresponding student data
                             var studentInfo = await FindStudentByMatricNumberAsync(adminData.MatricNumber);
                             if (studentInfo != null)
                             {
@@ -239,9 +240,9 @@ public partial class ManageUsers : ComponentBase
             }
         );
     }
+
     private async Task<StudentSkeletonUser> FindStudentByMatricNumberAsync(string matricNumber)
     {
-        // Check all level documents for the student
         for (int level = 100; level <= 500; level += 100)
         {
             var docName = $"StudentLevel{level}";
@@ -258,7 +259,9 @@ public partial class ManageUsers : ComponentBase
         
         return null;
     }
-    // Pagination Methods
+    #endregion
+
+    #region Pagination Methods
     private IEnumerable<T> GetPagedItems<T>(List<T> items, int currentPage)
     {
         if (items == null || !items.Any())
@@ -290,44 +293,43 @@ public partial class ManageUsers : ComponentBase
         }
         StateHasChanged();
     }
-    
-    // Generate ID methods using pooled StringBuilder
-    private string GenerateAdminId()
-    {
-        using var sbWrapper = StringBuilderPool.GetPooled();
-        var sb = sbWrapper.Object;
+    #endregion
 
-        var saltBytes = new byte[2];
-        using (var rng = RandomNumberGenerator.Create())
-        {
-            rng.GetBytes(saltBytes);
-        }
-        var saltString = Convert.ToHexString(saltBytes).ToUpper();
-
-        var randomBytes = new byte[12];
-        using (var rng = RandomNumberGenerator.Create())
-        {
-            rng.GetBytes(randomBytes);
-        }
-
-        // Generate alphanumeric string for HTML attribute compatibility
-        var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-        var random = new Random();
-        var randomString = new string(Enumerable.Repeat(chars, 16)
-            .Select(s => s[random.Next(s.Length)]).ToArray());
-
-        sb.Append("AIRCODE")
-            .Append(saltString)
-            .Append(randomString);
-
-        return sb.ToString();
-    }
+    #region UI Event Handlers
     private void SetActiveTab(string tab)
     {
         activeTab = tab;
         StateHasChanged();
     }
+
+    private string GetStatusClass(StudentSkeletonUser student)
+    {
+        return student?.IsCurrentlyInUse == true ? "user-card in-use" : "user-card";
+    }
+
+    private void OnUserTypeChanged(ChangeEventArgs e)
+    {
+        newUserType = e.Value?.ToString() ?? "Student";
     
+        // Updated max usage logic - Course Reps now default to 1
+        newMaxUsage = newUserType switch
+        {
+            "Lecturer" => 1,
+            "CourseRep" => 1, // Changed from 2 to 1
+            _ => 1
+        };
+    
+        StateHasChanged();
+    }
+
+    private void OnUserTypeChangedWithBinding(ChangeEventArgs e)
+    {
+        newUserType = e.Value?.ToString() ?? "Student";
+        OnUserTypeChanged(e);
+    }
+    #endregion
+
+    #region Modal Management
     private void ShowCreateUserModal()
     {
         ResetCreateForm();
@@ -361,14 +363,6 @@ public partial class ManageUsers : ComponentBase
         selectedUserType = userType;
         showRemoveUserModal = true;
     }
-    
-    protected override bool ShouldRender()
-    {
-        // Enhanced rendering control
-        return !loading && _collections != null && 
-               (_collections.Students != null || _collections.Lecturers != null || _collections.CourseReps != null);
-    }
-
 
     private void CloseModals()
     {
@@ -377,33 +371,12 @@ public partial class ManageUsers : ComponentBase
         showDeleteModal = false;
         showRemoveUserModal = false;
     
-        // Clear form state
         newMatricNumber = "";
         selectedUser = null;
         selectedUserType = null;
         selectedAssignedUserId = null;
     }
 
-    // Replace both methods with single implementation
-    private void OnUserTypeChanged(ChangeEventArgs e)
-    {
-        newUserType = e.Value?.ToString() ?? "Student";
-    
-        // Reset max usage based on user type
-        newMaxUsage = newUserType switch
-        {
-            "Lecturer" => 1,
-            "CourseRep" => 2,
-            _ => 1
-        };
-    
-        StateHasChanged();
-    }
-    private void OnUserTypeChangedWithBinding(ChangeEventArgs e)
-    {
-        newUserType = e.Value?.ToString() ?? "Student";
-        OnUserTypeChanged(e); // Call existing logic
-    }
     private void ResetCreateForm()
     {
         newUserType = "Student";
@@ -411,13 +384,59 @@ public partial class ManageUsers : ComponentBase
         newLevel = "100";
         newMaxUsage = 1;
     }
-    
+    #endregion
+
+    #region ID Generation
+    private string GenerateAdminId()
+    {
+        using var sbWrapper = StringBuilderPool.GetPooled();
+        var sb = sbWrapper.Object;
+
+        var saltBytes = new byte[2];
+        using (var rng = RandomNumberGenerator.Create())
+        {
+            rng.GetBytes(saltBytes);
+        }
+        var saltString = Convert.ToHexString(saltBytes).ToUpper();
+
+        var randomBytes = new byte[12];
+        using (var rng = RandomNumberGenerator.Create())
+        {
+            rng.GetBytes(randomBytes);
+        }
+
+        var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        var random = new Random();
+        var randomString = new string(Enumerable.Repeat(chars, 16)
+            .Select(s => s[random.Next(s.Length)]).ToArray());
+
+        sb.Append("AIRCODE")
+            .Append(saltString)
+            .Append(randomString);
+
+        return sb.ToString();
+    }
+
+    private string GenerateLecturerId()
+    {
+        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
+        var randomBytes = new byte[3];
+        using (var rng = RandomNumberGenerator.Create())
+        {
+            rng.GetBytes(randomBytes);
+        }
+        var randomString = Convert.ToHexString(randomBytes).ToLower();
+        return $"LEC_{timestamp}_{randomString}";
+    }
+    #endregion
+
+    #region Create Operations
     private async Task CreateSkeletonUser()
     {
         try
         {
             loading = true;
-            StateHasChanged(); // Ensure UI reflects loading state
+            StateHasChanged();
         
             switch (newUserType)
             {
@@ -446,103 +465,99 @@ public partial class ManageUsers : ComponentBase
             StateHasChanged();
         }
     }
-    
- private async Task CreateStudentSkeleton()
-{
-    if (string.IsNullOrWhiteSpace(newMatricNumber))
-        throw new ArgumentException("Matriculation number is required");
 
-    var matricNumber = newMatricNumber.ToUpper().Replace(" ", "").Replace("_", "");
-
-    // Check if student already exists
-    if (_collections.Students.Any(s => s.MatricNumber.Equals(matricNumber, StringComparison.OrdinalIgnoreCase)))
-        throw new InvalidOperationException("Student with this matriculation number already exists");
-
-    var newStudent = new StudentSkeletonUser
+    private async Task CreateStudentSkeleton()
     {
-        CurrentUserId = "",
-        IsCurrentlyInUse = false,
-        Level = newLevel,
-        MatricNumber = matricNumber
-    };
+        if (string.IsNullOrWhiteSpace(newMatricNumber))
+            throw new ArgumentException("Matriculation number is required");
 
-    var docName = $"StudentLevel{newLevel}";
+        var matricNumber = newMatricNumber.ToUpper().Replace(" ", "").Replace("_", "");
 
-    // Get existing document or create new one
-    var existingDoc = await FirestoreService.GetDocumentAsync<StudentLevelDocument>(STUDENTS_COLLECTION, docName);
-    if (existingDoc == null)
-    {
-        existingDoc = new StudentLevelDocument { ValidStudentMatricNumbers = new List<StudentSkeletonUser>() };
+        if (_collections.Students.Any(s => s.MatricNumber.Equals(matricNumber, StringComparison.OrdinalIgnoreCase)))
+            throw new InvalidOperationException("Student with this matriculation number already exists");
+
+        var newStudent = new StudentSkeletonUser
+        {
+            CurrentUserId = "",
+            IsCurrentlyInUse = false,
+            Level = newLevel,
+            MatricNumber = matricNumber
+        };
+
+        var docName = $"StudentLevel{newLevel}";
+
+        var existingDoc = await FirestoreService.GetDocumentAsync<StudentLevelDocument>(STUDENTS_COLLECTION, docName);
+        if (existingDoc == null)
+        {
+            existingDoc = new StudentLevelDocument { ValidStudentMatricNumbers = new List<StudentSkeletonUser>() };
+        }
+
+        existingDoc.ValidStudentMatricNumbers.Add(newStudent);
+
+        await FirestoreService.UpdateDocumentAsync(STUDENTS_COLLECTION, docName, existingDoc);
     }
 
-    existingDoc.ValidStudentMatricNumbers.Add(newStudent);
-
-    await FirestoreService.UpdateDocumentAsync(STUDENTS_COLLECTION, docName, existingDoc);
-}
-
-private async Task CreateCourseRepSkeleton()
-{
-    if (string.IsNullOrWhiteSpace(newMatricNumber))
-        throw new ArgumentException("Matriculation number is required");
-
-    var matricNumber = newMatricNumber.ToUpper().Replace(" ", "").Replace("_", "");
-
-    // Check if course rep already exists
-    if (_collections.CourseReps.Any(cr => cr.AdminInfo.MatricNumber.Equals(matricNumber, StringComparison.OrdinalIgnoreCase)))
-        throw new InvalidOperationException("Course rep with this matriculation number already exists");
-
-    // Create student entry first
-    await CreateStudentSkeleton();
-
-    // Create admin entry with updated ID generation
-    var adminId = GenerateAdminId(); // Updated call
-
-    var newCourseRepAdmin = new CourseRepAdminInfo
+    private async Task CreateCourseRepSkeleton()
     {
-        AdminId = adminId,
-        MatricNumber = matricNumber,
-        CurrentUsage = 0,
-        MaxUsage = newMaxUsage,
-        UserIds = new List<string>()
-    };
+        if (string.IsNullOrWhiteSpace(newMatricNumber))
+            throw new ArgumentException("Matriculation number is required");
 
-    // Get existing document or create new one
-    var existingDoc = await FirestoreService.GetDocumentAsync<CourseRepAdminDocument>(ADMIN_IDS_COLLECTION, COURSEREP_ADMIN_DOC);
-    if (existingDoc == null)
-    {
-        existingDoc = new CourseRepAdminDocument { Ids = new List<CourseRepAdminInfo>() };
-    }
+        var matricNumber = newMatricNumber.ToUpper().Replace(" ", "").Replace("_", "");
 
-    existingDoc.Ids.Add(newCourseRepAdmin);
+        if (_collections.CourseReps.Any(cr => cr.AdminInfo.MatricNumber.Equals(matricNumber, StringComparison.OrdinalIgnoreCase)))
+            throw new InvalidOperationException("Course rep with this matriculation number already exists");
 
-    await FirestoreService.UpdateDocumentAsync(ADMIN_IDS_COLLECTION, COURSEREP_ADMIN_DOC, existingDoc);
-}
-    
-private async Task CreateLecturerSkeleton()
-{
-    var adminId = GenerateAdminId(); // Updated call
-    var lecturerId = GenerateLecturerId();
-    
-    var newLecturerAdmin = new LecturerAdminInfo
-    {
-        AdminId = adminId,
-        LecturerId = lecturerId,
-        CurrentUsage = 0,
-        MaxUsage = newMaxUsage,
-        UserIds = new List<string>()
-    };
-    
-    // Get existing document or create new one
-    var existingDoc = await FirestoreService.GetDocumentAsync<LecturerAdminDocument>(ADMIN_IDS_COLLECTION, LECTURER_ADMIN_DOC);
-    if (existingDoc == null)
-    {
-        existingDoc = new LecturerAdminDocument { Ids = new List<LecturerAdminInfo>() };
+        await CreateStudentSkeleton();
+
+        var adminId = GenerateAdminId();
+
+        var newCourseRepAdmin = new CourseRepAdminInfo
+        {
+            AdminId = adminId,
+            MatricNumber = matricNumber,
+            CurrentUsage = 0,
+            MaxUsage = newMaxUsage,
+            UserIds = new List<string>()
+        };
+
+        var existingDoc = await FirestoreService.GetDocumentAsync<CourseRepAdminDocument>(ADMIN_IDS_COLLECTION, COURSEREP_ADMIN_DOC);
+        if (existingDoc == null)
+        {
+            existingDoc = new CourseRepAdminDocument { Ids = new List<CourseRepAdminInfo>() };
+        }
+
+        existingDoc.Ids.Add(newCourseRepAdmin);
+
+        await FirestoreService.UpdateDocumentAsync(ADMIN_IDS_COLLECTION, COURSEREP_ADMIN_DOC, existingDoc);
     }
     
-    existingDoc.Ids.Add(newLecturerAdmin);
-    
-    await FirestoreService.UpdateDocumentAsync(ADMIN_IDS_COLLECTION, LECTURER_ADMIN_DOC, existingDoc);
-}
+    private async Task CreateLecturerSkeleton()
+    {
+        var adminId = GenerateAdminId();
+        var lecturerId = GenerateLecturerId();
+        
+        var newLecturerAdmin = new LecturerAdminInfo
+        {
+            AdminId = adminId,
+            LecturerId = lecturerId,
+            CurrentUsage = 0,
+            MaxUsage = newMaxUsage,
+            UserIds = new List<string>()
+        };
+        
+        var existingDoc = await FirestoreService.GetDocumentAsync<LecturerAdminDocument>(ADMIN_IDS_COLLECTION, LECTURER_ADMIN_DOC);
+        if (existingDoc == null)
+        {
+            existingDoc = new LecturerAdminDocument { Ids = new List<LecturerAdminInfo>() };
+        }
+        
+        existingDoc.Ids.Add(newLecturerAdmin);
+        
+        await FirestoreService.UpdateDocumentAsync(ADMIN_IDS_COLLECTION, LECTURER_ADMIN_DOC, existingDoc);
+    }
+    #endregion
+
+    #region Update Operations
     private async Task UpdateMaxUsage()
     {
         try
@@ -593,11 +608,16 @@ private async Task CreateLecturerSkeleton()
             }
         }
     }
-    
+    #endregion
+
+    #region Delete Operations (Fixed Implementation)
     private async Task DeleteSkeletonUser()
     {
         try
         {
+            loading = true;
+            StateHasChanged();
+
             switch (selectedUserType)
             {
                 case "student":
@@ -619,17 +639,23 @@ private async Task CreateLecturerSkeleton()
         {
             notificationComponent?.ShowError($"Error deleting skeleton user: {ex.Message}");
         }
+        finally
+        {
+            loading = false;
+            StateHasChanged();
+        }
     }
     
     private async Task DeleteStudentSkeleton(StudentSkeletonUser student)
     {
         var docName = $"StudentLevel{student.Level}";
         var levelDoc = await FirestoreService.GetDocumentAsync<StudentLevelDocument>(STUDENTS_COLLECTION, docName);
-        //remember update document dosent work for some reason
+        
         if (levelDoc?.ValidStudentMatricNumbers != null)
         {
             levelDoc.ValidStudentMatricNumbers.RemoveAll(s => s.MatricNumber.Equals(student.MatricNumber, StringComparison.OrdinalIgnoreCase));
-            await FirestoreService.UpdateDocumentAsync(STUDENTS_COLLECTION, docName, levelDoc);
+            // Use AddDocumentAsync with explicit ID instead of UpdateDocumentAsync
+            await FirestoreService.AddDocumentAsync(STUDENTS_COLLECTION, levelDoc, docName);
         }
     }
     
@@ -640,7 +666,8 @@ private async Task CreateLecturerSkeleton()
         if (lecturerDoc?.Ids != null)
         {
             lecturerDoc.Ids.RemoveAll(l => l.AdminId == lecturer.AdminId);
-            await FirestoreService.UpdateDocumentAsync(ADMIN_IDS_COLLECTION, LECTURER_ADMIN_DOC, lecturerDoc);
+            // Use AddDocumentAsync with explicit ID instead of UpdateDocumentAsync
+            await FirestoreService.AddDocumentAsync(ADMIN_IDS_COLLECTION, lecturerDoc, LECTURER_ADMIN_DOC);
         }
     }
     
@@ -651,13 +678,16 @@ private async Task CreateLecturerSkeleton()
         if (courseRepDoc?.Ids != null)
         {
             courseRepDoc.Ids.RemoveAll(cr => cr.AdminId == courseRep.AdminInfo.AdminId);
-            await FirestoreService.UpdateDocumentAsync(ADMIN_IDS_COLLECTION, COURSEREP_ADMIN_DOC, courseRepDoc);
+            // Use AddDocumentAsync with explicit ID instead of UpdateDocumentAsync
+            await FirestoreService.AddDocumentAsync(ADMIN_IDS_COLLECTION, courseRepDoc, COURSEREP_ADMIN_DOC);
         }
         
         // Delete from student collection
         await DeleteStudentSkeleton(courseRep.StudentInfo);
     }
-    
+    #endregion
+
+    #region Remove User Operations
     private async Task RemoveAssignedUser()
     {
         try
@@ -710,6 +740,9 @@ private async Task CreateLecturerSkeleton()
             }
         }
     }
+    #endregion
+
+    #region Utility Methods
     private async Task CopyToClipboard(string text)
     {
         try
@@ -722,6 +755,7 @@ private async Task CreateLecturerSkeleton()
             await ShowNotification($"Error copying to clipboard: {ex.Message}", false);
         }
     }
+
     private async Task ShowNotification(string message, bool isSuccess = true)
     {
         if (notificationComponent != null)
@@ -734,24 +768,38 @@ private async Task CreateLecturerSkeleton()
             await InvokeAsync(StateHasChanged);
         }
     }
+    #endregion
+
+    #region Disposal
     public void Dispose()
     {
         StudentListPool?.Dispose();
         LecturerListPool?.Dispose();
         CourseRepListPool?.Dispose();
         StringBuilderPool?.Dispose();
-     }
-    //pretty sure we are doing this from auth0 though
-    private string GenerateLecturerId()
+    }
+    #endregion
+
+    #region Inner Classes
+    private class Collections
     {
-        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
-        var randomBytes = new byte[3];
-        using (var rng = RandomNumberGenerator.Create())
-        {
-            rng.GetBytes(randomBytes);
-        }
-        var randomString = Convert.ToHexString(randomBytes).ToLower();
-        return $"LEC_{timestamp}_{randomString}";
+        public List<StudentSkeletonUser> Students { get; } = new();
+        public List<LecturerSkeletonUser> Lecturers { get; } = new();
+        public List<CourseRepSkeletonUser> CourseReps { get; } = new();
     }
     
+    private class PaginationState
+    {
+        public int StudentsCurrentPage { get; set; } = 1;
+        public int LecturersCurrentPage { get; set; } = 1;
+        public int CourseRepsCurrentPage { get; set; } = 1;
+        
+        public void ResetAllPages()
+        {
+            StudentsCurrentPage = 1;
+            LecturersCurrentPage = 1;
+            CourseRepsCurrentPage = 1;
+        }
+    }
+    #endregion
 }
