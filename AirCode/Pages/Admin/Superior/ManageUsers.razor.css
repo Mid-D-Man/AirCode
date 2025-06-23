@@ -81,7 +81,7 @@
     overflow: hidden;
     transition: all 0.3s ease;
     border: 1px solid var(--border);
-    color: var(--text-primary); /* Ensure text is visible in all themes */
+    color: var(--text-primary);
 }
 
 .user-card:hover {
@@ -100,6 +100,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    position: relative;
 }
 
 .user-id {
@@ -107,7 +108,9 @@
     font-family: monospace;
     font-weight: bold;
     word-break: break-all;
-    color: inherit; /* Inherit from parent to maintain theme consistency */
+    color: var(--nav-text);
+    flex: 1;
+    margin-right: var(--spacing-sm);
 }
 
 .user-type {
@@ -117,12 +120,38 @@
     font-size: 0.8rem;
     font-weight: bold;
     white-space: nowrap;
-    color: var(--nav-text); /* Explicit color for contrast */
+    color: var(--nav-text);
+    margin-right: var(--spacing-sm);
+}
+
+/* Remove User Icon Positioning */
+.remove-user-icon {
+    position: absolute;
+    top: var(--spacing-xs);
+    right: var(--spacing-xs);
+    z-index: 10;
+}
+
+.remove-user-icon .btn {
+    padding: 4px 6px;
+    font-size: 0.75rem;
+    min-width: auto;
+    border-radius: 3px;
+    background-color: rgba(220, 38, 38, 0.1);
+    border-color: rgba(220, 38, 38, 0.3);
+    color: var(--error);
+    transition: all 0.2s ease;
+}
+
+.remove-user-icon .btn:hover {
+    background-color: var(--error);
+    color: white;
+    transform: scale(1.05);
 }
 
 .user-card-body {
     padding: var(--spacing-md);
-    color: var(--text-primary); /* Explicit text color for body content */
+    color: var(--text-primary);
 }
 
 .user-details {
@@ -145,7 +174,7 @@
 .detail-value {
     flex: 1;
     word-break: break-word;
-    color: var(--text-primary); /* Ensure value text is visible */
+    color: var(--text-primary);
 }
 
 .admin-id-text {
@@ -154,7 +183,7 @@
     background-color: var(--bg-tertiary);
     padding: 2px 6px;
     border-radius: 3px;
-    color: var(--text-primary); /* Explicit color for admin ID */
+    color: var(--text-primary);
 }
 
 /* Assigned Users Section */
@@ -192,7 +221,7 @@
     font-family: monospace;
     font-size: 0.85rem;
     flex: 1;
-    color: var(--text-primary); /* Ensure compact user ID is visible */
+    color: var(--text-primary);
 }
 
 .user-card-footer {
@@ -252,9 +281,9 @@
     color: var(--text-secondary) !important;
 }
 
-/* Pagination Styles - Enhanced positioning */
+/* Pagination Styles */
 .pagination-container {
-    margin-top: var(--spacing-xl); /* Increased spacing from content above */
+    margin-top: var(--spacing-xl);
     margin-bottom: var(--spacing-lg);
     display: flex;
     justify-content: center;
@@ -297,7 +326,7 @@
     color: var(--button-text);
 }
 
-/* Modal Styles - Fixed positioning and sizing */
+/* Modal Styles - Enhanced for mobile visibility */
 .modal {
     position: fixed;
     top: 0;
@@ -310,7 +339,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: var(--spacing-md); /* Add padding for smaller screens */
+    padding: var(--spacing-md);
 }
 
 .modal.show {
@@ -324,6 +353,7 @@
     margin: 0;
     display: flex;
     flex-direction: column;
+    z-index: 1060;
 }
 
 .modal-content {
@@ -338,7 +368,7 @@
     outline: 0;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
     overflow: hidden;
-    max-height: calc(100vh - 2rem); /* Prevent modal from exceeding viewport */
+    max-height: calc(100vh - 2rem);
 }
 
 .modal-header {
@@ -391,7 +421,7 @@
     flex: 1 1 auto;
     padding: var(--spacing-md) var(--spacing-lg);
     overflow-y: auto;
-    color: var(--text-primary); /* Ensure modal text is visible */
+    color: var(--text-primary);
 }
 
 .modal-footer {
@@ -405,14 +435,19 @@
     flex-shrink: 0;
 }
 
+/* Enhanced Modal Backdrop - Full Coverage */
 .modal-backdrop {
     position: fixed;
     top: 0;
     left: 0;
+    right: 0;
+    bottom: 0;
     z-index: 1040;
     width: 100vw;
     height: 100vh;
     background-color: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
 }
 
 .modal-backdrop.show {
@@ -479,7 +514,7 @@
     color: var(--info);
 }
 
-/* Button Styles - Updated to use theme colors */
+/* Button Styles */
 .btn {
     display: inline-block;
     padding: var(--spacing-sm) var(--spacing-md);
@@ -544,10 +579,55 @@
     color: var(--button-text);
 }
 
+.btn-outline-danger {
+    background-color: transparent;
+    color: var(--error);
+    border-color: var(--error);
+}
+
+.btn-outline-danger:hover:not(:disabled) {
+    background-color: var(--error);
+    color: white;
+}
+
 .btn-sm {
     padding: 0.25rem 0.5rem;
     font-size: 0.8rem;
     min-width: 60px;
+}
+
+/* Dark Mode Text Enforcement */
+@media (prefers-color-scheme: dark) {
+    .user-card,
+    .user-card *,
+    .modal-content,
+    .modal-content * {
+        color: white !important;
+    }
+
+    .user-card .user-id,
+    .user-card .user-type,
+    .user-card .detail-value,
+    .user-card .user-id-compact {
+        color: white !important;
+    }
+
+    .modal-body,
+    .modal-body *,
+    .form-control,
+    .alert {
+        color: white !important;
+    }
+}
+
+/* Explicit dark theme class support */
+[data-theme="dark"] .user-card,
+[data-theme="dark"] .user-card *,
+[data-theme="dark"] .modal-content,
+[data-theme="dark"] .modal-content *,
+[data-theme="dark"] .form-control,
+[data-theme="dark"] .alert {
+    color: white !important;
 }
 
 /* Responsive Design */
@@ -597,6 +677,11 @@
 
     .pagination-container {
         margin-top: var(--spacing-lg);
+    }
+
+    /* Enhanced mobile modal backdrop */
+    .modal-backdrop {
+        background-color: rgba(0, 0, 0, 0.8);
     }
 }
 
@@ -663,6 +748,19 @@
         padding: var(--spacing-xs) var(--spacing-sm);
         min-width: 35px;
     }
+
+    /* Full-screen modal backdrop for mobile */
+    .modal-backdrop {
+        background-color: rgba(0, 0, 0, 0.9);
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100vw;
+        height: 100vh;
+        z-index: 1040;
+    }
 }
 
 /* Ensure modal buttons are always visible */
@@ -695,4 +793,4 @@
     .user-card:hover {
         transform: none;
     }
-    }
+}
