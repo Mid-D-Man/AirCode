@@ -681,7 +681,7 @@ public partial class ManageUsers : ComponentBase
             // Use AddDocumentAsync with explicit ID instead of UpdateDocumentAsync
             await FirestoreService.AddDocumentAsync(ADMIN_IDS_COLLECTION, courseRepDoc, COURSEREP_ADMIN_DOC);
         }
-        
+      
         // Delete from student collection
         await DeleteStudentSkeleton(courseRep.StudentInfo);
     }
