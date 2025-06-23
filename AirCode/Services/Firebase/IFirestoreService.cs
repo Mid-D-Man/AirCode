@@ -29,7 +29,6 @@ namespace AirCode.Services.Firebase
         Task<bool> RemoveFieldsAsync(string collection, string docId, List<string> fieldNames);
         Task<T> GetFieldAsync<T>(string collection, string docId, string fieldName);
 
-        Task<bool> RemoveNestedFieldAsync(string collection, string docId, string fieldPath);
         // ==================== SUBCOLLECTION OPERATIONS ====================
         Task<string> AddToSubcollectionAsync<T>(string collection, string docId, string subcollection, T data, string customId = null) where T : class;
         Task<List<T>> GetSubcollectionAsync<T>(string collection, string docId, string subcollection) where T : class;

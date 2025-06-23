@@ -124,103 +124,86 @@ namespace AirCode.Services.Firebase
             }
         }
 
-     
-       // ==================== FIELD OPERATIONS (FIXED) ====================
+        // ==================== FIELD OPERATIONS ====================
 
-public async Task<bool> AddOrUpdateFieldAsync<T>(string collection, string docId, string fieldName, T value)
-{
-    try
-    {
-        if (!_isInitialized) await InitializeAsync();
-        var json = JsonConvert.SerializeObject(value, _jsonSettings);
-        return await _jsRuntime.InvokeAsync<bool>("firestoreModule.addOrUpdateField", collection, docId, fieldName, json);
-    }
-    catch (Exception ex)
-    {
-        MID_HelperFunctions.DebugMessage($"Error updating field: {ex.Message}", DebugClass.Exception);
-        return false;
-    }
-}
+        public async Task<bool> AddOrUpdateFieldAsync<T>(string collection, string docId, string fieldName, T value)
+        {
+            try
+            {
+                if (!_isInitialized) await InitializeAsync();
+                var json = JsonConvert.SerializeObject(value, _jsonSettings);
+                return await _jsRuntime.InvokeAsync<bool>("firestoreModule.addOrUpdateField", collection, docId, fieldName, json);
+            }
+            catch (Exception ex)
+            {
+                MID_HelperFunctions.DebugMessage($"Error updating field: {ex.Message}", DebugClass.Exception);
+                return false;
+            }
+        }
 
-public async Task<bool> UpdateFieldsAsync<T>(string collection, string docId, T fields) where T : class
-{
-    try
-    {
-        if (!_isInitialized) await InitializeAsync();
-        var json = JsonConvert.SerializeObject(fields, _jsonSettings);
-        return await _jsRuntime.InvokeAsync<bool>("firestoreModule.updateFields", collection, docId, json);
-    }
-    catch (Exception ex)
-    {
-        MID_HelperFunctions.DebugMessage($"Error updating fields: {ex.Message}", DebugClass.Exception);
-        return false;
-    }
-}
+        public async Task<bool> UpdateFieldsAsync<T>(string collection, string docId, T fields) where T : class
+        {
+            try
+            {
+                if (!_isInitialized) await InitializeAsync();
+                var json = JsonConvert.SerializeObject(fields, _jsonSettings);
+                return await _jsRuntime.InvokeAsync<bool>("firestoreModule.updateFields", collection, docId, json);
+            }
+            catch (Exception ex)
+            {
+                MID_HelperFunctions.DebugMessage($"Error updating fields: {ex.Message}", DebugClass.Exception);
+                return false;
+            }
+        }
 
-// Remove the duplicate - keep only this one
-public async Task<bool> RemoveFieldAsync(string collection, string docId, string fieldName)
-{
-    try
-    {
-        if (!_isInitialized) await InitializeAsync();
-        return await _jsRuntime.InvokeAsync<bool>("firestoreModule.removeField", collection, docId, fieldName);
-    }
-    catch (Exception ex)
-    {
-        MID_HelperFunctions.DebugMessage($"Error removing field: {ex.Message}", DebugClass.Exception);
-        return false;
-    }
-}
+        public async Task<bool> RemoveFieldAsync(string collection, string docId, string fieldName)
+        {
+            try
+            {
+                if (!_isInitialized) await InitializeAsync();
+                return await _jsRuntime.InvokeAsync<bool>("firestoreModule.removeField", collection, docId, fieldName);
+            }
+            catch (Exception ex)
+            {
+                MID_HelperFunctions.DebugMessage($"Error removing field: {ex.Message}", DebugClass.Exception);
+                return false;
+            }
+        }
 
-// Remove nested field with proper path handling
-public async Task<bool> RemoveNestedFieldAsync(string collection, string docId, string fieldPath)
-{
-    try
-    {
-        if (!_isInitialized) await InitializeAsync();
-        return await _jsRuntime.InvokeAsync<bool>("firestoreModule.removeNestedField", collection, docId, fieldPath);
-    }
-    catch (Exception ex)
-    {
-        MID_HelperFunctions.DebugMessage($"Error removing nested field: {ex.Message}", DebugClass.Exception);
-        return false;
-    }
-}
+        public async Task<bool> RemoveFieldsAsync(string collection, string docId, List<string> fieldNames)
+        {
+            try
+            {
+                if (!_isInitialized) await InitializeAsync();
+                var json = JsonConvert.SerializeObject(fieldNames, _jsonSettings);
+                return await _jsRuntime.InvokeAsync<bool>("firestoreModule.removeFields", collection, docId, json);
+            }
+            catch (Exception ex)
+            {
+                MID_HelperFunctions.DebugMessage($"Error removing fields: {ex.Message}", DebugClass.Exception);
+                return false;
+            }
+        }
 
-public async Task<bool> RemoveFieldsAsync(string collection, string docId, List<string> fieldNames)
-{
-    try
-    {
-        if (!_isInitialized) await InitializeAsync();
-        var json = JsonConvert.SerializeObject(fieldNames, _jsonSettings);
-        return await _jsRuntime.InvokeAsync<bool>("firestoreModule.removeFields", collection, docId, json);
-    }
-    catch (Exception ex)
-    {
-        MID_HelperFunctions.DebugMessage($"Error removing fields: {ex.Message}", DebugClass.Exception);
-        return false;
-    }
-}
-
-public async Task<T> GetFieldAsync<T>(string collection, string docId, string fieldName)
-{
-    try
-    {
-        if (!_isInitialized) await InitializeAsync();
-        var jsonResult = await _jsRuntime.InvokeAsync<string>("firestoreModule.getField", collection, docId, fieldName);
-        
-        if (string.IsNullOrEmpty(jsonResult))
-            return default(T);
-        
-        return JsonConvert.DeserializeObject<T>(jsonResult, _jsonSettings);
-    }
-    catch (Exception ex)
-    {
-        MID_HelperFunctions.DebugMessage($"Error getting field: {ex.Message}", DebugClass.Exception);
-        return default(T);
-    }
-}
-
+        public async Task<T> GetFieldAsync<T>(string collection, string docId, string fieldName)
+        {
+            try
+            {
+                if (!_isInitialized) await InitializeAsync();
+                var jsonResult = await _jsRuntime.InvokeAsync<string>("firestoreModule.getField", collection, docId, fieldName);
+                
+                if (string.IsNullOrEmpty(jsonResult))
+                    return default(T);
+                
+                return JsonConvert.DeserializeObject<T>(jsonResult, _jsonSettings);
+            }
+            catch (Exception ex)
+            {
+                MID_HelperFunctions.DebugMessage($"Error getting field: {ex.Message}", DebugClass.Exception);
+                return default(T);
+            }
+        }
+       
         // ==================== SUBCOLLECTION OPERATIONS ====================
 
         public async Task<string> AddToSubcollectionAsync<T>(string collection, string docId, string subcollection, T data, string customId = null) where T : class
