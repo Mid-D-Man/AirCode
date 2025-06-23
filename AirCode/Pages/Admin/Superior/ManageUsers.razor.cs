@@ -610,7 +610,7 @@ public partial class ManageUsers : ComponentBase
     }
     #endregion
 
-    #region Delete Operations (Fixed Implementation)
+    #region Delete Operations (Updated Implementation)
     private async Task DeleteSkeletonUser()
     {
         try
@@ -621,16 +621,16 @@ public partial class ManageUsers : ComponentBase
             switch (selectedUserType)
             {
                 case "student":
-                    await DeleteStudentSkeleton(selectedUser as StudentSkeletonUser);
+                    await DeleteStudentSkeletonField(selectedUser as StudentSkeletonUser);
                     break;
                 case "lecturer":
-                    await DeleteLecturerSkeleton(selectedUser as LecturerSkeletonUser);
+                    await DeleteLecturerSkeletonField(selectedUser as LecturerSkeletonUser);
                     break;
                 case "courserep":
-                    await DeleteCourseRepSkeleton(selectedUser as CourseRepSkeletonUser);
+                    await DeleteCourseRepSkeletonField(selectedUser as CourseRepSkeletonUser);
                     break;
             }
-            
+        
             notificationComponent?.ShowSuccess("Skeleton user deleted successfully!");
             CloseModals();
             await LoadAllUsers();
@@ -645,45 +645,30 @@ public partial class ManageUsers : ComponentBase
             StateHasChanged();
         }
     }
-    
-    private async Task DeleteStudentSkeleton(StudentSkeletonUser student)
+
+    private async Task DeleteStudentSkeletonField(StudentSkeletonUser student)
     {
-        var docName = $"StudentLevel{student.Level}";
-        var levelDoc = await FirestoreService.GetDocumentAsync<StudentLevelDocument>(STUDENTS_COLLECTION, docName);
-        
-        if (levelDoc?.ValidStudentMatricNumbers != null)
-        {
-            levelDoc.ValidStudentMatricNumbers.RemoveAll(s => s.MatricNumber.Equals(student.MatricNumber, StringComparison.OrdinalIgnoreCase));
-            // Use AddDocumentAsync with explicit ID instead of UpdateDocumentAsync
-            await FirestoreService.AddDocumentAsync(STUDENTS_COLLECTION, levelDoc, docName);
-        }
-    }
+        var documentId = $"StudentLevel{student.Level}";
+        var fieldPath = $"ValidStudentMatricNumbers.{student.MatricNumber}";
     
-    private async Task DeleteLecturerSkeleton(LecturerSkeletonUser lecturer)
+        await FirestoreService.DeleteFieldAsync(STUDENTS_COLLECTION, documentId, fieldPath);
+    }
+
+    private async Task DeleteLecturerSkeletonField(LecturerSkeletonUser lecturer)
     {
-        var lecturerDoc = await FirestoreService.GetDocumentAsync<LecturerAdminDocument>(ADMIN_IDS_COLLECTION, LECTURER_ADMIN_DOC);
-        
-        if (lecturerDoc?.Ids != null)
-        {
-            lecturerDoc.Ids.RemoveAll(l => l.AdminId == lecturer.AdminId);
-            // Use AddDocumentAsync with explicit ID instead of UpdateDocumentAsync
-            await FirestoreService.AddDocumentAsync(ADMIN_IDS_COLLECTION, lecturerDoc, LECTURER_ADMIN_DOC);
-        }
-    }
+        var fieldPath = $"Ids.{lecturer.AdminId}";
     
-    private async Task DeleteCourseRepSkeleton(CourseRepSkeletonUser courseRep)
+        await FirestoreService.DeleteFieldAsync(ADMIN_IDS_COLLECTION, LECTURER_ADMIN_DOC, fieldPath);
+    }
+
+    private async Task DeleteCourseRepSkeletonField(CourseRepSkeletonUser courseRep)
     {
         // Delete from admin collection
-        var courseRepDoc = await FirestoreService.GetDocumentAsync<CourseRepAdminDocument>(ADMIN_IDS_COLLECTION, COURSEREP_ADMIN_DOC);
-        if (courseRepDoc?.Ids != null)
-        {
-            courseRepDoc.Ids.RemoveAll(cr => cr.AdminId == courseRep.AdminInfo.AdminId);
-            // Use AddDocumentAsync with explicit ID instead of UpdateDocumentAsync
-            await FirestoreService.AddDocumentAsync(ADMIN_IDS_COLLECTION, courseRepDoc, COURSEREP_ADMIN_DOC);
-        }
-      
-        // Delete from student collection
-        await DeleteStudentSkeleton(courseRep.StudentInfo);
+        var adminFieldPath = $"Ids.{courseRep.AdminInfo.AdminId}";
+        await FirestoreService.DeleteFieldAsync(ADMIN_IDS_COLLECTION, COURSEREP_ADMIN_DOC, adminFieldPath);
+    
+        // Delete associated student record
+        await DeleteStudentSkeletonField(courseRep.StudentInfo);
     }
     #endregion
 

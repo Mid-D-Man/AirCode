@@ -203,7 +203,26 @@ namespace AirCode.Services.Firebase
                 return default(T);
             }
         }
+        public async Task<bool> DeleteFieldAsync(string collectionName, string documentId, string fieldPath)
+        {
+            try
+            {
+                if (!IsInitialized)
+                {
+                    await InitializeAsync();
+                }
 
+                var result = await _jsRuntime.InvokeAsync<bool>("firestoreModule.removeField", 
+                    collectionName, documentId, fieldPath);
+        
+                return result;
+            }
+            catch (Exception ex)
+            {
+                MID_HelperFunctions.DebugMessage($"Error deleting field: {ex.Message}", DebugClass.Exception);
+                return false;
+            }
+        }
         // ==================== SUBCOLLECTION OPERATIONS ====================
 
         public async Task<string> AddToSubcollectionAsync<T>(string collection, string docId, string subcollection, T data, string customId = null) where T : class
