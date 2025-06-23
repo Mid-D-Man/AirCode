@@ -611,7 +611,7 @@ public partial class ManageUsers : ComponentBase
     }
     #endregion
 
-    #region Delete Operations (Fixed Implementation)
+   #region Delete Operations (Updated Implementation)
 
 private async Task DeleteSkeletonUser()
 {
@@ -663,17 +663,30 @@ private async Task<bool> DeleteStudentSkeletonField(StudentSkeletonUser student)
     try
     {
         var documentId = $"StudentLevel{student.Level}";
-        var fieldPath = $"ValidStudentMatricNumbers.{student.MatricNumber}";
-
-        MID_HelperFunctions.DebugMessage($"Deleting student field: {fieldPath} from document: {documentId}", DebugClass.Info);
-
-        // Use RemoveNestedFieldAsync for nested field paths
-        var result = await FirestoreService.RemoveNestedFieldAsync(STUDENTS_COLLECTION, documentId, fieldPath);
         
-        if (!result)
+        // Get the current document
+        var existingDoc = await FirestoreService.GetDocumentAsync<StudentLevelDocument>(STUDENTS_COLLECTION, documentId);
+        if (existingDoc?.ValidStudentMatricNumbers == null)
         {
-            MID_HelperFunctions.DebugMessage($"Failed to delete student field: {fieldPath}", DebugClass.Warning);
+            MID_HelperFunctions.DebugMessage($"Student document not found: {documentId}", DebugClass.Warning);
+            return false;
         }
+
+        // Remove the student from the list
+        var updatedList = existingDoc.ValidStudentMatricNumbers
+            .Where(s => !s.MatricNumber.Equals(student.MatricNumber, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        if (updatedList.Count == existingDoc.ValidStudentMatricNumbers.Count)
+        {
+            MID_HelperFunctions.DebugMessage($"Student not found in document: {student.MatricNumber}", DebugClass.Warning);
+            return false;
+        }
+
+        // Update the entire ValidStudentMatricNumbers field
+        var result = await FirestoreService.AddOrUpdateFieldAsync(STUDENTS_COLLECTION, documentId, "ValidStudentMatricNumbers", updatedList);
+        
+        MID_HelperFunctions.DebugMessage($"Deleted student {student.MatricNumber}. Success: {result}", DebugClass.Info);
         
         return result;
     }
@@ -688,17 +701,29 @@ private async Task<bool> DeleteLecturerSkeletonField(LecturerSkeletonUser lectur
 {
     try
     {
-        var fieldPath = $"Ids.{lecturer.AdminId}";
-
-        MID_HelperFunctions.DebugMessage($"Deleting lecturer field: {fieldPath}", DebugClass.Info);
-
-        // Use RemoveNestedFieldAsync for nested field paths
-        var result = await FirestoreService.RemoveNestedFieldAsync(ADMIN_IDS_COLLECTION, LECTURER_ADMIN_DOC, fieldPath);
-        
-        if (!result)
+        // Get the current document
+        var existingDoc = await FirestoreService.GetDocumentAsync<LecturerAdminDocument>(ADMIN_IDS_COLLECTION, LECTURER_ADMIN_DOC);
+        if (existingDoc?.Ids == null)
         {
-            MID_HelperFunctions.DebugMessage($"Failed to delete lecturer field: {fieldPath}", DebugClass.Warning);
+            MID_HelperFunctions.DebugMessage("Lecturer document or Ids collection is null", DebugClass.Warning);
+            return false;
         }
+
+        // Remove the lecturer from the list
+        var updatedList = existingDoc.Ids
+            .Where(l => l.AdminId != lecturer.AdminId)
+            .ToList();
+
+        if (updatedList.Count == existingDoc.Ids.Count)
+        {
+            MID_HelperFunctions.DebugMessage($"Lecturer not found: {lecturer.AdminId}", DebugClass.Warning);
+            return false;
+        }
+
+        // Update the entire Ids field
+        var result = await FirestoreService.AddOrUpdateFieldAsync(ADMIN_IDS_COLLECTION, LECTURER_ADMIN_DOC, "Ids", updatedList);
+        
+        MID_HelperFunctions.DebugMessage($"Deleted lecturer {lecturer.AdminId}. Success: {result}", DebugClass.Info);
         
         return result;
     }
@@ -717,14 +742,18 @@ private async Task<bool> DeleteCourseRepSkeletonField(CourseRepSkeletonUser cour
         bool studentSuccess = false;
 
         // Delete from admin collection
-        var adminFieldPath = $"Ids.{courseRep.AdminInfo.AdminId}";
-        MID_HelperFunctions.DebugMessage($"Deleting course rep admin field: {adminFieldPath}", DebugClass.Info);
-        
-        adminSuccess = await FirestoreService.RemoveNestedFieldAsync(ADMIN_IDS_COLLECTION, COURSEREP_ADMIN_DOC, adminFieldPath);
-
-        if (!adminSuccess)
+        var existingDoc = await FirestoreService.GetDocumentAsync<CourseRepAdminDocument>(ADMIN_IDS_COLLECTION, COURSEREP_ADMIN_DOC);
+        if (existingDoc?.Ids != null)
         {
-            MID_HelperFunctions.DebugMessage($"Failed to delete course rep admin field: {adminFieldPath}", DebugClass.Warning);
+            var updatedList = existingDoc.Ids
+                .Where(cr => cr.AdminId != courseRep.AdminInfo.AdminId)
+                .ToList();
+
+            if (updatedList.Count < existingDoc.Ids.Count)
+            {
+                adminSuccess = await FirestoreService.AddOrUpdateFieldAsync(ADMIN_IDS_COLLECTION, COURSEREP_ADMIN_DOC, "Ids", updatedList);
+                MID_HelperFunctions.DebugMessage($"Deleted course rep admin {courseRep.AdminInfo.AdminId}. Success: {adminSuccess}", DebugClass.Info);
+            }
         }
 
         // Delete associated student record
@@ -742,7 +771,7 @@ private async Task<bool> DeleteCourseRepSkeletonField(CourseRepSkeletonUser cour
 
 #endregion
 
-  #region Remove User Operations (Fixed Implementation)
+#region Remove User Operations (Updated Implementation)
 
 private async Task RemoveAssignedUser()
 {
@@ -802,12 +831,12 @@ private async Task<bool> RemoveUserFromLecturer(LecturerSkeletonUser lecturer, s
             return false;
         }
 
-        // Remove the user ID
+        // Remove the user ID and update usage
         lecturerToUpdate.UserIds.Remove(userId);
         lecturerToUpdate.CurrentUsage = lecturerToUpdate.UserIds.Count;
 
-        // Update the document
-        var result = await FirestoreService.UpdateDocumentAsync(ADMIN_IDS_COLLECTION, LECTURER_ADMIN_DOC, lecturerDoc);
+        // Update the entire Ids field with the modified data
+        var result = await FirestoreService.AddOrUpdateFieldAsync(ADMIN_IDS_COLLECTION, LECTURER_ADMIN_DOC, "Ids", lecturerDoc.Ids);
         
         MID_HelperFunctions.DebugMessage($"Removed user {userId} from lecturer {lecturer.AdminId}. Success: {result}", DebugClass.Info);
         
@@ -845,12 +874,12 @@ private async Task<bool> RemoveUserFromCourseRep(CourseRepAdminInfo courseRepAdm
             return false;
         }
 
-        // Remove the user ID
+        // Remove the user ID and update usage
         courseRepToUpdate.UserIds.Remove(userId);
         courseRepToUpdate.CurrentUsage = courseRepToUpdate.UserIds.Count;
 
-        // Update the document
-        var result = await FirestoreService.UpdateDocumentAsync(ADMIN_IDS_COLLECTION, COURSEREP_ADMIN_DOC, courseRepDoc);
+        // Update the entire Ids field with the modified data
+        var result = await FirestoreService.AddOrUpdateFieldAsync(ADMIN_IDS_COLLECTION, COURSEREP_ADMIN_DOC, "Ids", courseRepDoc.Ids);
         
         MID_HelperFunctions.DebugMessage($"Removed user {userId} from courserep {courseRepAdmin.AdminId}. Success: {result}", DebugClass.Info);
         
