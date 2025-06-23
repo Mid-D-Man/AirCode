@@ -161,8 +161,9 @@ window.firestoreModule = (function () {
     }
 
     // ==================== FIELD OPERATIONS ====================
+// ==================== ENHANCED FIELD OPERATIONS ====================
 
-    // Add/Update a specific field in a document
+// Add/Update a specific field in a document
     async function addOrUpdateField(collection, docId, fieldName, jsonValue) {
         try {
             if (!isInitialized) await initializeFirestore();
@@ -180,7 +181,7 @@ window.firestoreModule = (function () {
         }
     }
 
-    // Add/Update multiple fields in a document
+// Add/Update multiple fields in a document
     async function updateFields(collection, docId, jsonFields) {
         try {
             if (!isInitialized) await initializeFirestore();
@@ -197,7 +198,7 @@ window.firestoreModule = (function () {
         }
     }
 
-    // Remove a specific field from a document
+// Remove a specific field from a document
     async function removeField(collection, docId, fieldName) {
         try {
             if (!isInitialized) await initializeFirestore();
@@ -214,7 +215,40 @@ window.firestoreModule = (function () {
         }
     }
 
-    // Remove multiple fields from a document
+// NEW: Remove nested field with proper path handling
+    async function removeNestedField(collection, docId, fieldPath) {
+        try {
+            if (!isInitialized) await initializeFirestore();
+
+            console.log(`Attempting to remove nested field: ${fieldPath} from ${collection}/${docId}`);
+
+            // For nested field paths like "ValidStudentMatricNumbers.12345"
+            const updateData = {};
+            updateData[fieldPath] = firebase.firestore.FieldValue.delete();
+
+            await db.collection(collection).doc(docId).update(updateData);
+            console.log(`Nested field ${fieldPath} removed from ${collection}/${docId}`);
+            return true;
+        } catch (error) {
+            console.error(`Error removing nested field ${fieldPath} from ${collection}/${docId}:`, error);
+
+            // Additional debugging
+            try {
+                const doc = await db.collection(collection).doc(docId).get();
+                if (doc.exists) {
+                    console.log("Document exists, current data:", doc.data());
+                } else {
+                    console.log("Document does not exist");
+                }
+            } catch (debugError) {
+                console.error("Error debugging document:", debugError);
+            }
+
+            return false;
+        }
+    }
+
+// Remove multiple fields from a document
     async function removeFields(collection, docId, fieldNames) {
         try {
             if (!isInitialized) await initializeFirestore();
@@ -230,12 +264,12 @@ window.firestoreModule = (function () {
             console.log(`Fields ${fieldsArray.join(', ')} removed from ${collection}/${docId}`);
             return true;
         } catch (error) {
-            console.error(`Error removing fields:`, error);
+            console.error(`Error removing fields from ${collection}/${docId}:`, error);
             return false;
         }
     }
 
-    // Get specific field value from a document
+// Get specific field value from a document
     async function getField(collection, docId, fieldName) {
         try {
             if (!isInitialized) await initializeFirestore();
@@ -249,11 +283,41 @@ window.firestoreModule = (function () {
             }
             return null;
         } catch (error) {
-            console.error(`Error getting field ${fieldName}:`, error);
+            console.error(`Error getting field ${fieldName} from ${collection}/${docId}:`, error);
             return null;
         }
     }
 
+// NEW: Get nested field value from a document
+    async function getNestedField(collection, docId, fieldPath) {
+        try {
+            if (!isInitialized) await initializeFirestore();
+
+            const doc = await db.collection(collection).doc(docId).get();
+
+            if (doc.exists) {
+                const data = doc.data();
+
+                // Navigate through nested field path
+                const pathParts = fieldPath.split('.');
+                let current = data;
+
+                for (const part of pathParts) {
+                    if (current && typeof current === 'object' && part in current) {
+                        current = current[part];
+                    } else {
+                        return null;
+                    }
+                }
+
+                return current !== undefined ? JSON.stringify(current) : null;
+            }
+            return null;
+        } catch (error) {
+            console.error(`Error getting nested field ${fieldPath} from ${collection}/${docId}:`, error);
+            return null;
+        }
+    }
     // ==================== SUBCOLLECTION OPERATIONS ====================
 
     // Add document to subcollection
@@ -693,8 +757,10 @@ window.firestoreModule = (function () {
         addOrUpdateField,
         updateFields,
         removeField,
+        removeNestedField,  // NEW
         removeFields,
         getField,
+        getNestedField,     // NEW
 
         // Subcollection operations
         addToSubcollection,
