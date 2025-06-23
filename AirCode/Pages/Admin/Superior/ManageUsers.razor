@@ -47,76 +47,84 @@
     else
     {
         <!-- Students Tab -->
-        <!-- Students Tab - FIXED VERSION -->
-<div class="tab-content @(activeTab == "students" ? "active" : "")">
-    @if (_collections.Students == null || !_collections.Students.Any())
-    {
-        <div class="empty-state">
-            <i class="fas fa-user-graduate fa-3x"></i>
-            <p>No student skeleton users found. Create one to get started.</p>
-        </div>
-    }
-    else
-    {
-        <div class="user-list">
-            @foreach (var student in GetPagedItems(_collections.Students, _paginationState.StudentsCurrentPage))
+        <div class="tab-content @(activeTab == "students" ? "active" : "")">
+            @if (_collections.Students == null || !_collections.Students.Any())
             {
-                <div class="@GetStatusClass(student)">
-                    <div class="user-card-header">
-                        <div class="user-id">@student.MatricNumber</div>
-                        <div class="user-type">Level @student.Level</div>
-                    </div>
-                    <div class="user-card-body">
-                        <div class="user-details">
-                            <div class="detail-row">
-                                <span class="detail-label">Level:</span>
-                                <span class="detail-value">@student.Level</span>
-                            </div>
-                            <div class="detail-row">
-                                <span class="detail-label">Status:</span>
-                                <span class="detail-value @(student.IsCurrentlyInUse ? "text-success" : "text-secondary")">
-                                    @(student.IsCurrentlyInUse ? "In Use" : "Available")
-                                </span>
-                            </div>
-                            @if (!string.IsNullOrEmpty(student.CurrentUserId))
-                            {
-                                <div class="detail-row">
-                                    <span class="detail-label">User ID:</span>
-                                    <span class="detail-value">@student.CurrentUserId</span>
-                                </div>
-                            }
-                        </div>
-                    </div>
-                    <div class="user-card-footer">
-                        <button class="btn btn-danger" @onclick="() => ShowDeleteUserModal(student, STUDENT_ID)">
-                            <i class="fas fa-trash"></i> Delete
-                        </button>
-                        <button class="btn btn-secondary" @onclick="() => CopyToClipboard(student.MatricNumber)">
-                            <i class="fas fa-copy"></i> Copy
-                        </button>
-                    </div>
+                <div class="empty-state">
+                    <i class="fas fa-user-graduate fa-3x"></i>
+                    <p>No student skeleton users found. Create one to get started.</p>
                 </div>
+            }
+            else
+            {
+                <div class="user-list">
+                    @foreach (var student in GetPagedItems(_collections.Students, _paginationState.StudentsCurrentPage))
+                    {
+                        <div class="@GetStatusClass(student)">
+                            <div class="user-card-header">
+                                <div class="user-id">@student.MatricNumber</div>
+                                <div class="user-type">Level @student.Level</div>
+                                @if (!string.IsNullOrEmpty(student.CurrentUserId))
+                                {
+                                    <div class="remove-user-icon">
+                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => ShowRemoveUserModal(student, student.CurrentUserId, STUDENT_ID)" title="Remove assigned user">
+                                            🗑️
+                                        </button>
+                                    </div>
+                                }
+                            </div>
+                            <div class="user-card-body">
+                                <div class="user-details">
+                                    <div class="detail-row">
+                                        <span class="detail-label">Level:</span>
+                                        <span class="detail-value">@student.Level</span>
+                                    </div>
+                                    <div class="detail-row">
+                                        <span class="detail-label">Status:</span>
+                                        <span class="detail-value @(student.IsCurrentlyInUse ? "text-success" : "text-secondary")">
+                                            @(student.IsCurrentlyInUse ? "In Use" : "Available")
+                                        </span>
+                                    </div>
+                                    @if (!string.IsNullOrEmpty(student.CurrentUserId))
+                                    {
+                                        <div class="detail-row">
+                                            <span class="detail-label">User ID:</span>
+                                            <span class="detail-value">@student.CurrentUserId</span>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                            <div class="user-card-footer">
+                                <button class="btn btn-danger" @onclick="() => ShowDeleteUserModal(student, STUDENT_ID)">
+                                    <i class="fas fa-trash"></i> Delete
+                                </button>
+                                <button class="btn btn-secondary" @onclick="() => CopyToClipboard(student.MatricNumber)">
+                                    <i class="fas fa-copy"></i> Copy
+                                </button>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <!-- Pagination for Students -->
+                @if (_collections.Students.Count > ITEMS_PER_PAGE)
+                {
+                    <div class="pagination-container">
+                        <nav>
+                            <ul class="pagination justify-content-center">
+                                @for (int i = 1; i <= GetTotalPages(_collections.Students.Count); i++)
+                                {
+                                    <li class="page-item @(_paginationState.StudentsCurrentPage == i ? "active" : "")">
+                                        <button class="page-link" @onclick="() => NavigateToPage(STUDENT_ID, i)">@i</button>
+                                    </li>
+                                }
+                            </ul>
+                        </nav>
+                    </div>
+                }
             }
         </div>
 
-        <!-- Pagination for Students -->
-        @if (_collections.Students.Count > ITEMS_PER_PAGE)
-        {
-            <div class="pagination-container">
-                <nav>
-                    <ul class="pagination justify-content-center">
-                        @for (int i = 1; i <= GetTotalPages(_collections.Students.Count); i++)
-                        {
-                            <li class="page-item @(_paginationState.StudentsCurrentPage == i ? "active" : "")">
-                                <button class="page-link" @onclick="() => NavigateToPage(STUDENT_ID, i)">@i</button>
-                            </li>
-                        }
-                    </ul>
-                </nav>
-            </div>
-        }
-    }
-</div>
         <!-- Lecturers Tab -->
         <div class="tab-content @(activeTab == "lecturers" ? "active" : "")">
             @if (_collections.Lecturers == null || !_collections.Lecturers.Any())
@@ -163,8 +171,8 @@
                                             {
                                                 <li class="user-item-compact">
                                                     <span class="user-id-compact">@userId</span>
-                                                    <button class="btn btn-sm btn-danger" @onclick="() => ShowRemoveUserModal(lecturer, userId, LECTURER_ID)">
-                                                        <i class="fas fa-times"></i>
+                                                    <button class="btn btn-sm btn-danger" @onclick="() => ShowRemoveUserModal(lecturer, userId, LECTURER_ID)" title="Remove assigned user">
+                                                        🗑️
                                                     </button>
                                                 </li>
                                             }
@@ -224,6 +232,14 @@
                             <div class="user-card-header">
                                 <div class="user-id">@courseRep.StudentInfo.MatricNumber</div>
                                 <div class="user-type">Course Rep - Level @courseRep.StudentInfo.Level</div>
+                                @if (!string.IsNullOrEmpty(courseRep.StudentInfo.CurrentUserId))
+                                {
+                                    <div class="remove-user-icon">
+                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => ShowRemoveUserModal(courseRep.StudentInfo, courseRep.StudentInfo.CurrentUserId, COURSEREP_ID)" title="Remove assigned student user">
+                                            🗑️
+                                        </button>
+                                    </div>
+                                }
                             </div>
                             <div class="user-card-body">
                                 <div class="user-details">
@@ -249,14 +265,14 @@
                                 @if (courseRep.AdminInfo.UserIds.Any())
                                 {
                                     <div class="assigned-users">
-                                        <h6>Assigned Users:</h6>
+                                        <h6>Assigned Admin Users:</h6>
                                         <ul class="user-list-compact">
                                             @foreach (var userId in courseRep.AdminInfo.UserIds)
                                             {
                                                 <li class="user-item-compact">
                                                     <span class="user-id-compact">@userId</span>
-                                                    <button class="btn btn-sm btn-danger" @onclick="() => ShowRemoveUserModal(courseRep.AdminInfo, userId, COURSEREP_ID)">
-                                                        <i class="fas fa-times"></i>
+                                                    <button class="btn btn-sm btn-danger" @onclick="() => ShowRemoveUserModal(courseRep.AdminInfo, userId, COURSEREP_ID)" title="Remove assigned admin user">
+                                                        🗑️
                                                     </button>
                                                 </li>
                                             }
@@ -416,6 +432,9 @@
                         <strong>User ID:</strong> @selectedAssignedUserId
                     </div>
                 }
+                <div class="alert alert-warning">
+                    <strong>Note:</strong> This will unassign the user from this skeleton account, making the skeleton available for new assignments.
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" @onclick="CloseModals">Cancel</button>
