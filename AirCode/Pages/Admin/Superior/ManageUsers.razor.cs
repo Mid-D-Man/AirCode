@@ -625,7 +625,7 @@ private async Task DeleteSkeletonUser()
         switch (selectedUserType)
         {
             case "student":
-                success = await DeleteStudentSkeletonField(selectedUser as StudentSkeletonUser);
+               await DeleteStudentSkeleton(selectedUser as StudentSkeletonUser);
                 break;
             case "lecturer":
                 success = await DeleteLecturerSkeletonField(selectedUser as LecturerSkeletonUser);
@@ -659,64 +659,44 @@ private async Task DeleteSkeletonUser()
     }
 }
 
-private async Task<bool> DeleteStudentSkeletonField(StudentSkeletonUser student)
-{
-    if (student == null)
+private async Task DeleteStudentSkeleton(StudentSkeletonUser student)
     {
-        Console.WriteLine("DeleteStudentSkeletonField: Student parameter is null");
-        return false;
+        var docName = $"StudentLevel{student.Level}";
+        var levelDoc = await FirestoreService.GetDocumentAsync<StudentLevelDocument>(STUDENTS_COLLECTION, docName);
+        
+        //remember update document dosent work for some reason
+        if (levelDoc?.ValidStudentMatricNumbers != null)
+        {
+            levelDoc.ValidStudentMatricNumbers.RemoveAll(s => s.MatricNumber.Equals(student.MatricNumber, StringComparison.OrdinalIgnoreCase));
+            await FirestoreService.UpdateDocumentAsync(STUDENTS_COLLECTION, docName, levelDoc);
+        }
     }
-
-    try
+    
+    private async Task DeleteLecturerSkeleton(LecturerSkeletonUser lecturer)
     {
-        var documentId = $"StudentLevel{student.Level}";
-        Console.WriteLine($"DeleteStudentSkeletonField: Starting deletion for student '{student.MatricNumber}' from document '{documentId}'");
+        var lecturerDoc = await FirestoreService.GetDocumentAsync<LecturerAdminDocument>(ADMIN_IDS_COLLECTION, LECTURER_ADMIN_DOC);
         
-        // Get the current document to find the student
-        var existingDoc = await FirestoreService.GetDocumentAsync<StudentLevelDocument>(STUDENTS_COLLECTION, documentId);
-        if (existingDoc?.ValidStudentMatricNumbers == null)
+        if (lecturerDoc?.Ids != null)
         {
-            Console.WriteLine($"DeleteStudentSkeletonField: Document '{documentId}' not found or ValidStudentMatricNumbers is null");
-            return false;
+            lecturerDoc.Ids.RemoveAll(l => l.AdminId == lecturer.AdminId);
+            await FirestoreService.UpdateDocumentAsync(ADMIN_IDS_COLLECTION, LECTURER_ADMIN_DOC, lecturerDoc);
         }
-
-        // Check if student exists
-        var studentExists = existingDoc.ValidStudentMatricNumbers
-            .Any(s => s.MatricNumber.Equals(student.MatricNumber, StringComparison.OrdinalIgnoreCase));
-
-        if (!studentExists)
+    }
+    
+    private async Task DeleteCourseRepSkeleton(CourseRepSkeletonUser courseRep)
+    {
+        // Delete from admin collection
+        var courseRepDoc = await FirestoreService.GetDocumentAsync<CourseRepAdminDocument>(ADMIN_IDS_COLLECTION, COURSEREP_ADMIN_DOC);
+        if (courseRepDoc?.Ids != null)
         {
-            Console.WriteLine($"DeleteStudentSkeletonField: Student '{student.MatricNumber}' not found in document '{documentId}'");
-            return false;
-        }
-
-        // Remove the student from the list
-        var updatedList = existingDoc.ValidStudentMatricNumbers
-            .Where(s => !s.MatricNumber.Equals(student.MatricNumber, StringComparison.OrdinalIgnoreCase))
-            .ToList();
-
-        // Update the field with the new list
-        var result = await FirestoreService.AddOrUpdateFieldAsync(STUDENTS_COLLECTION, documentId, "ValidStudentMatricNumbers", updatedList);
-        
-        if (result)
-        {
-            Console.WriteLine($"DeleteStudentSkeletonField: Successfully deleted student '{student.MatricNumber}' from '{documentId}'");
-        }
-        else
-        {
-            Console.WriteLine($"DeleteStudentSkeletonField: Failed to delete student '{student.MatricNumber}' from '{documentId}'");
+            courseRepDoc.Ids.RemoveAll(cr => cr.AdminId == courseRep.AdminInfo.AdminId);
+            await FirestoreService.UpdateDocumentAsync(ADMIN_IDS_COLLECTION, COURSEREP_ADMIN_DOC, courseRepDoc);
         }
         
-        return result;
+        // Delete from student collection
+        await DeleteStudentSkeleton(courseRep.StudentInfo);
     }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"DeleteStudentSkeletonField: Exception occurred while deleting student '{student?.MatricNumber}': {ex.Message}");
-        Console.WriteLine($"DeleteStudentSkeletonField: Stack trace: {ex.StackTrace}");
-        return false;
-    }
-}
-
+    
 private async Task<bool> DeleteLecturerSkeletonField(LecturerSkeletonUser lecturer)
 {
     if (lecturer == null)
@@ -812,7 +792,7 @@ private async Task<bool> DeleteCourseRepSkeletonField(CourseRepSkeletonUser cour
         }
 
         // Delete associated student record
-        studentSuccess = await DeleteStudentSkeletonField(courseRep.StudentInfo);
+        await DeleteStudentSkeleton(courseRep.StudentInfo);
         Console.WriteLine($"DeleteCourseRepSkeletonField: Student deletion result for '{courseRep.StudentInfo.MatricNumber}': {studentSuccess}");
 
         // Return true only if both operations succeeded
