@@ -58,28 +58,167 @@ using AirCode.Components.SharedPrefabs.Others;
 private bool isEndingSession = false;
 private bool isSessionEnded = false;
 
+// Session restoration and loading states
+private bool isRestoringSession = false;
+private bool isSearchingForSessions = false;
+private bool hasExistingSessions = false;
+private string restorationMessage = string.Empty;
+private List<SessionData> storedSessions = new();
+private bool showSessionRestoreDialog = false;
+private SessionData selectedStoredSession;
+
        protected override async Task OnInitializedAsync()
 {
     sessionModel.Duration = 30;
 
-    // Initialize SessionStateService with persistence recovery
-    await SessionStateService.InitializeAsync();
-    
-    RefreshSessionLists();
-    await CheckForExistingSessionAsync();
+    try
+    {
+        isSearchingForSessions = true;
+        restorationMessage = "Searching for existing sessions...";
+        StateHasChanged();
 
-    SessionStateService.StateChanged += OnStateChanged;
+        // Initialize SessionStateService with persistence recovery
+        await SessionStateService.InitializeAsync();
+        
+        // Clean up expired sessions first
+        await SessionStateService.CleanupExpiredSessionsAsync();
+        
+        RefreshSessionLists();
+        
+        // Check for stored sessions that might need restoration
+        await CheckForStoredSessionsAsync();
+        
+        // Check for active sessions that need immediate restoration
+        await CheckForExistingSessionAsync();
 
-    countdownTimer = new System.Threading.Timer(
-        async _ => await InvokeAsync(async () => {
-            await SessionStateService.CleanupExpiredSessionsAsync();
-            RefreshSessionLists();
-            StateHasChanged();
-        }),
-        null,
-        TimeSpan.Zero,
-        TimeSpan.FromSeconds(1)
-    );
+        SessionStateService.StateChanged += OnStateChanged;
+
+        countdownTimer = new System.Threading.Timer(
+            async _ => await InvokeAsync(async () => {
+                await SessionStateService.CleanupExpiredSessionsAsync();
+                RefreshSessionLists();
+                StateHasChanged();
+            }),
+            null,
+            TimeSpan.Zero,
+            TimeSpan.FromSeconds(1)
+        );
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error during initialization: {ex.Message}");
+        restorationMessage = "Error occurred while checking for existing sessions";
+    }
+    finally
+    {
+        isSearchingForSessions = false;
+        StateHasChanged();
+    }
+}
+private async Task CheckForStoredSessionsAsync()
+{
+    try
+    {
+        // Get all stored sessions that haven't been restored yet
+        storedSessions = await SessionStateService.GetStoredSessionsAsync();
+        
+        // Filter out expired sessions
+        storedSessions = storedSessions.Where(s => 
+            s.StartTime.AddMinutes(s.Duration) > DateTime.UtcNow).ToList();
+            
+        hasExistingSessions = storedSessions.Any();
+        
+        if (hasExistingSessions && !isSessionStarted)
+        {
+            restorationMessage = $"Found {storedSessions.Count} stored session(s) that can be restored";
+            showSessionRestoreDialog = true;
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error checking for stored sessions: {ex.Message}");
+    }
+}
+
+private async Task RestoreSelectedSessionAsync()
+{
+    if (selectedStoredSession == null) return;
+
+    try
+    {
+        isRestoringSession = true;
+        restorationMessage = "Restoring session...";
+        showSessionRestoreDialog = false;
+        StateHasChanged();
+
+        // Find corresponding active session
+        var activeSession = allActiveSessions.FirstOrDefault(s =>
+            s.SessionId == selectedStoredSession.SessionId);
+
+        if (activeSession != null)
+        {
+            await RestoreExistingSessionAsync(activeSession, selectedStoredSession);
+            restorationMessage = "Session restored successfully";
+        }
+        else
+        {
+            // Session might have expired or been removed
+            await SessionStateService.RemoveStoredSessionAsync(selectedStoredSession.SessionId);
+            restorationMessage = "Session no longer available - removed from storage";
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error restoring session: {ex.Message}");
+        restorationMessage = "Failed to restore session";
+    }
+    finally
+    {
+        isRestoringSession = false;
+        selectedStoredSession = null;
+        
+        // Clear message after 3 seconds
+        _ = Task.Delay(3000).ContinueWith(_ => 
+        {
+            restorationMessage = string.Empty;
+            InvokeAsync(StateHasChanged);
+        });
+        
+        StateHasChanged();
+    }
+}
+
+private void DismissSessionRestoreDialog()
+{
+    showSessionRestoreDialog = false;
+    selectedStoredSession = null;
+    restorationMessage = string.Empty;
+}
+
+private void SelectStoredSession(SessionData session)
+{
+    selectedStoredSession = session;
+}
+
+private async Task DeleteStoredSessionAsync(SessionData session)
+{
+    try
+    {
+        await SessionStateService.RemoveStoredSessionAsync(session.SessionId);
+        storedSessions.Remove(session);
+        
+        hasExistingSessions = storedSessions.Any();
+        if (!hasExistingSessions)
+        {
+            showSessionRestoreDialog = false;
+        }
+        
+        StateHasChanged();
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error deleting stored session: {ex.Message}");
+    }
 }
         private void ShowInfoPopup(InfoPopup.InfoType infoType)
         {
@@ -156,25 +295,41 @@ private bool isSessionEnded = false;
                 otherActiveSessions = allActiveSessions.ToList();
             }
         }
-
-  private async Task CheckForExistingSessionAsync()
+private async Task CheckForExistingSessionAsync()
 {
-    var existingSession = SessionStateService.GetCurrentSession("default");
-    if (existingSession != null)
+    try
     {
-        var activeSession = allActiveSessions.FirstOrDefault(s =>
-            s.CourseId == existingSession.CourseId &&
-            DateTime.UtcNow < s.EndTime);
+        var existingSession = SessionStateService.GetCurrentSession("default");
+        if (existingSession != null)
+        {
+            isRestoringSession = true;
+            restorationMessage = "Restoring active session...";
+            StateHasChanged();
 
-        if (activeSession != null)
-        {
-            await RestoreExistingSessionAsync(activeSession, existingSession);
+            var activeSession = allActiveSessions.FirstOrDefault(s =>
+                s.CourseId == existingSession.CourseId &&
+                DateTime.UtcNow < s.EndTime);
+
+            if (activeSession != null)
+            {
+                await RestoreExistingSessionAsync(activeSession, existingSession);
+                restorationMessage = "Active session restored";
+            }
+            else
+            {
+                // Session has expired, clean up
+                await SessionStateService.RemoveCurrentSessionAsync("default");
+                restorationMessage = "Previous session expired - cleaned up";
+            }
+            
+            isRestoringSession = false;
         }
-        else
-        {
-            // Session has expired, clean up
-            await SessionStateService.RemoveCurrentSessionAsync("default");
-        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error checking for existing session: {ex.Message}");
+        isRestoringSession = false;
+        restorationMessage = "Error occurred while restoring session";
     }
 }
 private async Task RestoreExistingSessionAsync(ActiveSessionData activeSession, SessionData sessionData)
@@ -235,10 +390,16 @@ private async Task StartSessionAsync()
 {
     if (selectedCourse == null) return;
 
+    // Prevent starting if we're in the middle of restoration
+    if (isRestoringSession || isSearchingForSessions)
+    {
+        return;
+    }
+
     // Check if there's already an active session for this course
     if (allActiveSessions.Any(s => s.CourseId == selectedCourse.CourseCode))
     {
-        // Show error message - session already exists for this course
+        restorationMessage = "Session already exists for this course";
         return;
     }
 
