@@ -550,7 +550,346 @@ body.dark-mode .floating-qr-icon:hover {
     background: var(--button-primary-hover);
     transform: scale(1.1);
 }
+/* Session Restoration Loading Backdrop */
+.loading-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    animation: fadeIn 0.3s ease-out;
+}
 
+.loading-container {
+    background: rgba(255, 255, 255, 0.95);
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    min-width: 320px;
+    text-align: center;
+}
+
+/* Session Restore Dialog */
+.session-restore-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    animation: fadeIn 0.3s ease-out;
+}
+
+.session-restore-dialog {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+    max-width: 600px;
+    width: 90vw;
+    max-height: 80vh;
+    overflow: hidden;
+    animation: slideUp 0.3s ease-out;
+}
+
+.dialog-header {
+    padding: 1.5rem 2rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.dialog-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.close-button {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+}
+
+.close-button:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.dialog-content {
+    padding: 1.5rem 2rem;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.dialog-message {
+    color: #4a5568;
+    margin-bottom: 1rem;
+    font-size: 0.95rem;
+}
+
+.stored-sessions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.stored-session-item {
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+}
+
+.stored-session-item:hover {
+    border-color: #cbd5e0;
+    background: #f7fafc;
+}
+
+.stored-session-item.selected {
+    border-color: #667eea;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+}
+
+.session-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    flex: 1;
+}
+
+.session-details strong {
+    color: #2d3748;
+    font-size: 0.95rem;
+}
+
+.session-time,
+.session-started {
+    color: #718096;
+    font-size: 0.85rem;
+}
+
+.delete-session-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.5rem;
+    font-size: 1rem;
+    color: #e53e3e;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.delete-session-btn:hover {
+    background: rgba(229, 62, 62, 0.1);
+}
+
+.dialog-actions {
+    padding: 1rem 2rem 1.5rem;
+    background: #f7fafc;
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+}
+
+.secondary-button {
+    background: #e2e8f0;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    color: #4a5568;
+    transition: all 0.2s;
+}
+
+.secondary-button:hover {
+    background: #cbd5e0;
+}
+
+/* Status Message Display */
+.status-message {
+    margin: 1rem 0;
+    padding: 1rem;
+    border-radius: 8px;
+    font-weight: 500;
+    text-align: center;
+    animation: slideDown 0.3s ease-out;
+}
+
+.status-message.success {
+    background: linear-gradient(135deg, rgba(72, 187, 120, 0.1) 0%, rgba(56, 178, 172, 0.1) 100%);
+    border: 1px solid #48bb78;
+    color: #2f855a;
+}
+
+.status-message.error {
+    background: linear-gradient(135deg, rgba(229, 62, 62, 0.1) 0%, rgba(245, 101, 101, 0.1) 100%);
+    border: 1px solid #e53e3e;
+    color: #c53030;
+}
+
+/* Animation Keyframes */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 640px) {
+    .session-restore-dialog {
+        width: 95vw;
+        margin: 1rem;
+    }
+    
+    .dialog-header {
+        padding: 1rem 1.5rem;
+    }
+    
+    .dialog-content {
+        padding: 1rem 1.5rem;
+    }
+    
+    .dialog-actions {
+        padding: 1rem 1.5rem;
+        flex-direction: column;
+    }
+    
+    .loading-container {
+        margin: 1rem;
+        min-width: auto;
+        width: calc(100vw - 2rem);
+    }
+    
+    .stored-session-item {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+    }
+    
+    .delete-session-btn {
+        align-self: flex-end;
+    }
+}
+
+/* Enhanced Loading States */
+.loading-backdrop .loading-container {
+    position: relative;
+    overflow: hidden;
+}
+
+.loading-backdrop .loading-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+    0% {
+        left: -100%;
+    }
+    100% {
+        left: 100%;
+    }
+}
+
+/* Focus States for Accessibility */
+.stored-session-item:focus {
+    outline: 2px solid #667eea;
+    outline-offset: 2px;
+}
+
+.close-button:focus,
+.delete-session-btn:focus,
+.secondary-button:focus {
+    outline: 2px solid #667eea;
+    outline-offset: 2px;
+}
+
+/* Improved Visual Hierarchy */
+.dialog-header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.stored-sessions-list {
+    border-top: 1px solid #e2e8f0;
+    padding-top: 1rem;
+}
+
+.session-details strong {
+    font-weight: 600;
+}
+
+/* Enhanced Interaction States */
+.stored-session-item {
+    transform: translateZ(0);
+}
+
+.stored-session-item:active {
+    transform: scale(0.98);
+}
+
+.delete-session-btn:active {
+    transform: scale(0.95);
+    }
 /* Responsive Design */
 
 /* Large Screens (1025px+) */
