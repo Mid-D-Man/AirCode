@@ -241,8 +241,7 @@ private async Task RestoreExistingSessionAsync(ActiveSessionData activeSession, 
             showCourseSelection = false;
             StateHasChanged();
         }
-
-        private async void StartSession()
+private async Task StartSessionAsync()
 {
     if (selectedCourse == null) return;
 
@@ -302,7 +301,7 @@ private async Task RestoreExistingSessionAsync(ActiveSessionData activeSession, 
         // Create Firebase attendance event document (keep existing functionality)
         await CreateFirebaseAttendanceEvent();
 
-        // Add to active sessions via service
+        // Create active session data
         currentActiveSession = new ActiveSessionData
         {
             SessionId = sessionModel.SessionId,
@@ -315,11 +314,12 @@ private async Task RestoreExistingSessionAsync(ActiveSessionData activeSession, 
             Theme = selectedTheme,
             UseTemporalKeyRefresh = useTemporalKeyRefresh,
             SecurityFeatures = securityFeatures,
-            TemporalKey = temporalKey // Add this property
+            TemporalKey = temporalKey
         };
         
-        SessionStateService.AddActiveSession(currentActiveSession);
-        SessionStateService.UpdateCurrentSession("default", sessionModel);
+        // Add to active sessions with persistence
+        await SessionStateService.AddActiveSessionAsync(currentActiveSession);
+        await SessionStateService.UpdateCurrentSessionAsync("default", sessionModel);
 
         // Start temporal key update timer if enabled
         if (useTemporalKeyRefresh)
@@ -335,7 +335,6 @@ private async Task RestoreExistingSessionAsync(ActiveSessionData activeSession, 
     catch (Exception ex)
     {
         Console.WriteLine($"Error starting session: {ex.Message}");
-        
     }
     finally
     {
@@ -355,33 +354,58 @@ private async Task RestoreExistingSessionAsync(ActiveSessionData activeSession, 
             }
         }
 
-        private async Task UpdateTemporalKey()
-        {
-            if (!useTemporalKeyRefresh || !isSessionStarted || currentActiveSession == null)
-                return;
+private async Task UpdateTemporalKeyAsync()
+{
+    if (!useTemporalKeyRefresh || !isSessionStarted || currentActiveSession == null)
+        return;
 
-            try
-            {
-                string newTemporalKey = GenerateTemporalKey(sessionModel.SessionId, sessionModel.StartTime);
-        
-                // Update Supabase first
-                await AttendanceSessionService.UpdateTemporalKeyAsync(sessionModel.SessionId, newTemporalKey);
-        
-                // Update current active session's temporal key
-                currentActiveSession.TemporalKey = newTemporalKey;
-                SessionStateService.UpdateActiveSession(currentActiveSession);
-        
-                // Trigger QR component refresh via parameter change
-                await InvokeAsync(StateHasChanged);
-        
-                Console.WriteLine($"Updated temporal key for session: {sessionModel.SessionId}");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error updating temporal key: {ex.Message}");
-            }
-        }
+    try
+    {
+        string newTemporalKey = GenerateTemporalKey(sessionModel.SessionId, sessionModel.StartTime);
 
+        // Update Supabase first
+        await AttendanceSessionService.UpdateTemporalKeyAsync(sessionModel.SessionId, newTemporalKey);
+
+        // Update current active session's temporal key
+        currentActiveSession.TemporalKey = newTemporalKey;
+        await SessionStateService.UpdateActiveSessionAsync(currentActiveSession);
+
+        // Trigger QR component refresh via parameter change
+        await InvokeAsync(StateHasChanged);
+
+        Console.WriteLine($"Updated temporal key for session: {sessionModel.SessionId}");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error updating temporal key: {ex.Message}");
+    }
+}
+// Update the timer callback to use async version
+private void StartTemporalKeyUpdateTimer()
+{
+    var interval = TimeSpan.FromMinutes(temporalKeyRefreshInterval);
+    
+    temporalKeyUpdateTimer = new System.Threading.Timer(
+        async _ => await UpdateTemporalKeyAsync(),
+        null,
+        interval,
+        interval
+    );
+}
+
+// Update Dispose to clean up persistence if needed
+public async ValueTask DisposeAsync()
+{
+    countdownTimer?.Dispose();
+    temporalKeyUpdateTimer?.Dispose();
+    SessionStateService.StateChanged -= OnStateChanged;
+    
+    // Clean up any remaining sessions on app shutdown
+    if (currentActiveSession != null)
+    {
+        await SessionStateService.RemoveActiveSessionAsync(currentActiveSession.SessionId);
+    }
+}
 
         private async Task CreateFirebaseAttendanceEvent()
         {
@@ -454,7 +478,43 @@ private async Task RestoreExistingSessionAsync(ActiveSessionData activeSession, 
                 throw;
             }
         }
+private async Task EndSessionAsync()
+{
+    try
+    {
+        isEndingSession = true;
+       
+        if (currentActiveSession != null)
+        {
+            // Stop temporal key timer
+            temporalKeyUpdateTimer?.Dispose();
+    
+            // Update Firebase document to mark session as ended
+            await UpdateFirebaseAttendanceEventStatus("Ended");
 
+            // Remove from active sessions with persistence cleanup
+            await SessionStateService.RemoveActiveSessionAsync(currentActiveSession.SessionId);
+        }
+
+        await SessionStateService.RemoveCurrentSessionAsync("default");
+        await MigrateAttendanceDataToFirebase();
+
+        isSessionStarted = false;
+        currentActiveSession = null;
+        selectedCourse = null;
+        RefreshSessionLists();
+        StateHasChanged();
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error ending session: {ex.Message}");
+        isEndingSession = false;
+    }
+    finally
+    {
+        isEndingSession = false;
+    }
+}
         private async void EndSession()
         {
             try
