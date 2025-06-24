@@ -120,14 +120,22 @@ private async Task CheckForStoredSessionsAsync()
     try
     {
         // Get all stored sessions that haven't been restored yet
-        storedSessions = await SessionStateService.GetStoredSessionsAsync();
-        
-        // Filter out expired sessions
-        storedSessions = storedSessions.Where(s => 
-            s.StartTime.AddMinutes(s.Duration) > DateTime.UtcNow).ToList();
-            
+        var persistentSessions = await SessionStateService.GetStoredSessionsAsync();
+        storedSessions = persistentSessions
+            .Where(s => s.StartTime.AddMinutes(s.Duration) > DateTime.UtcNow)
+            .Select(ps => new SessionData
+            {
+                SessionId = ps.SessionId,
+                CourseId = ps.CourseId,
+                CourseName = ps.CourseName,
+                StartTime = ps.StartTime,
+                Duration = ps.Duration,
+                // If you need to set Date or LectureId, do it here as well
+            })
+            .ToList();
+
         hasExistingSessions = storedSessions.Any();
-        
+
         if (hasExistingSessions && !isSessionStarted)
         {
             restorationMessage = $"Found {storedSessions.Count} stored session(s) that can be restored";
