@@ -103,7 +103,7 @@ namespace AirCode.Pages.Client
                 // Create offline attendance record
                 var offlineRecord = new OfflineAttendanceRecord
                 {
-                    Id = Guid.NewGuid(),
+                    Id = Guid.NewGuid().ToString(),
                     SessionId = decodedData.SessionId,
                     CourseCode = decodedData.CourseCode,
                     MatricNumber = currentUserMatricNumber,
@@ -117,7 +117,6 @@ namespace AirCode.Pages.Client
                     SyncStatus = SyncStatus.Pending,
                     SyncAttempts = 0
                 };
-
                 MID_HelperFunctions.DebugMessage($"Offline attendance record: {MID_HelperFunctions.ToJson(offlineRecord)}", DebugClass.Log);
 
                 // Process the offline record

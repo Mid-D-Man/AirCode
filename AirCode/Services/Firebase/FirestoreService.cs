@@ -6,8 +6,6 @@ using System.Threading.Tasks;
 using Microsoft.JSInterop;
 using AirCode.Utilities.HelperScripts;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-
 namespace AirCode.Services.Firebase
 {
     /// <summary>

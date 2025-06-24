@@ -119,17 +119,7 @@ private bool isSessionEnded = false;
     
             return Math.Max(0, (int)remaining.TotalSeconds);
         }
-        private void StartTemporalKeyUpdateTimer()
-        {
-            var interval = TimeSpan.FromMinutes(temporalKeyRefreshInterval);
-            
-            temporalKeyUpdateTimer = new System.Threading.Timer(
-                async _ => await UpdateTemporalKey(),
-                null,
-                interval,
-                interval
-            );
-        }
+    
 
         private string GetSecurityFeatureDescription(AdvancedSecurityFeatures feature)
         {

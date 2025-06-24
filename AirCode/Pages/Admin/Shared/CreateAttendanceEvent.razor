@@ -15,7 +15,7 @@
         @if (!isSessionStarted)
         {
             <div class="form-container">
-                <EditForm Model="sessionModel" OnValidSubmit="StartSession">
+                <EditForm Model="sessionModel" OnValidSubmit="StartSessionAsync">
                     <DataAnnotationsValidator />
                     <ValidationSummary />
                     
@@ -134,7 +134,7 @@
                     
                     <div class="button-container">
                         <PrimaryButton Text="Start Session" 
-                                     OnClick="StartSession" 
+                                     OnClick="StartSessionAsync" 
                                      Disabled="@(selectedCourse == null || isCreatingSession)" />
                         @if (isCreatingSession)
                         {
