@@ -3,14 +3,44 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using AirCode.Models.QRCode;
+using AirCode.Services.Storage;
+using AirCode.Services.Firebase;
+using Microsoft.Extensions.Logging;
+using System.Text.Json;
+
 namespace AirCode.Services.Attendance
 {
     public class SessionStateService
     {
         private readonly List<ActiveSessionData> _activeSessions = new();
         private readonly Dictionary<string, SessionData> _currentSessions = new();
+        private readonly IBlazorAppLocalStorageService _localStorage;
+        private readonly IFirestoreService _firestoreService;
+        private readonly ILogger<SessionStateService> _logger;
+
+        private const string PERSISTENT_SESSIONS_KEY = "aircode_persistent_sessions";
+        private const string CURRENT_SESSIONS_KEY = "aircode_current_sessions";
 
         public event Action StateChanged;
+
+        public SessionStateService(
+            IBlazorAppLocalStorageService localStorage,
+            IFirestoreService firestoreService,
+            ILogger<SessionStateService> logger)
+        {
+            _localStorage = localStorage;
+            _firestoreService = firestoreService;
+            _logger = logger;
+        }
+
+        /// <summary>
+        /// Initialize service and recover any orphaned sessions
+        /// </summary>
+        public async Task InitializeAsync()
+        {
+            await RestorePersistedSessions();
+            await RecoverOrphanedSessions();
+        }
 
         public List<ActiveSessionData> GetActiveSessions() => _activeSessions.ToList();
 
@@ -20,42 +50,51 @@ namespace AirCode.Services.Attendance
             return session;
         }
 
-        public void AddActiveSession(ActiveSessionData session)
+        public async Task AddActiveSessionAsync(ActiveSessionData session)
         {
             _activeSessions.Add(session);
+            await PersistSessionAsync(session);
             StateChanged?.Invoke();
         }
 
-        public void RemoveActiveSession(string sessionId)
+        public async Task RemoveActiveSessionAsync(string sessionId)
         {
-            _activeSessions.RemoveAll(s => s.SessionId == sessionId);
-            StateChanged?.Invoke();
+            var removedSession = _activeSessions.FirstOrDefault(s => s.SessionId == sessionId);
+            if (removedSession != null)
+            {
+                _activeSessions.RemoveAll(s => s.SessionId == sessionId);
+                await RemovePersistedSessionAsync(sessionId);
+                StateChanged?.Invoke();
+            }
         }
 
-        public void UpdateActiveSession(ActiveSessionData updatedSession)
+        public async Task UpdateActiveSessionAsync(ActiveSessionData updatedSession)
         {
             var existingSession = _activeSessions.FirstOrDefault(s => s.SessionId == updatedSession.SessionId);
             if (existingSession != null)
             {
                 var index = _activeSessions.IndexOf(existingSession);
                 _activeSessions[index] = updatedSession;
+                await PersistSessionAsync(updatedSession);
                 StateChanged?.Invoke();
             }
         }
 
-        public void UpdateCurrentSession(string courseId, SessionData session)
+        public async Task UpdateCurrentSessionAsync(string courseId, SessionData session)
         {
             _currentSessions[courseId] = session;
+            await PersistCurrentSessionsAsync();
             StateChanged?.Invoke();
         }
 
-        public void RemoveCurrentSession(string courseId)
+        public async Task RemoveCurrentSessionAsync(string courseId)
         {
             _currentSessions.Remove(courseId);
+            await PersistCurrentSessionsAsync();
             StateChanged?.Invoke();
         }
 
-        public void CleanupExpiredSessions()
+        public async Task CleanupExpiredSessionsAsync()
         {
             var expiredSessions = _activeSessions
                 .Where(s => DateTime.UtcNow >= s.EndTime)
@@ -64,11 +103,16 @@ namespace AirCode.Services.Attendance
             foreach (var expired in expiredSessions)
             {
                 _activeSessions.Remove(expired);
+                await RemovePersistedSessionAsync(expired.SessionId);
+                
+                // Update Firebase to mark session as expired
+                await MarkFirebaseSessionExpired(expired);
             }
 
             if (expiredSessions.Any())
             {
                 StateChanged?.Invoke();
+                _logger.LogInformation("Cleaned up {Count} expired sessions", expiredSessions.Count);
             }
         }
 
@@ -76,8 +120,302 @@ namespace AirCode.Services.Attendance
         {
             return _activeSessions.Any(s => s.CourseId == courseId && DateTime.UtcNow < s.EndTime);
         }
+
+        /// <summary>
+        /// Persist active session data to local storage
+        /// </summary>
+        private async Task PersistSessionAsync(ActiveSessionData session)
+        {
+            try
+            {
+                var persistentData = new PersistentSessionData
+                {
+                    SessionId = session.SessionId,
+                    CourseId = session.CourseId,
+                    CourseName = session.CourseName,
+                    StartTime = session.StartTime,
+                    EndTime = session.EndTime,
+                    Duration = session.Duration,
+                    CreatedAt = DateTime.UtcNow,
+                    QrCodePayload = session.QrCodePayload,
+                    Theme = session.Theme,
+                    UseTemporalKeyRefresh = session.UseTemporalKeyRefresh,
+                    SecurityFeatures = session.SecurityFeatures,
+                    TemporalKey = session.TemporalKey
+                };
+
+                var existingSessions = await GetPersistedSessionsAsync();
+                existingSessions[session.SessionId] = persistentData;
+
+                await _localStorage.SetItemAsync(PERSISTENT_SESSIONS_KEY, existingSessions);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to persist session {SessionId}", session.SessionId);
+            }
+        }
+
+        /// <summary>
+        /// Remove persisted session data
+        /// </summary>
+        private async Task RemovePersistedSessionAsync(string sessionId)
+        {
+            try
+            {
+                var existingSessions = await GetPersistedSessionsAsync();
+                if (existingSessions.Remove(sessionId))
+                {
+                    await _localStorage.SetItemAsync(PERSISTENT_SESSIONS_KEY, existingSessions);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to remove persisted session {SessionId}", sessionId);
+            }
+        }
+
+        /// <summary>
+        /// Get all persisted sessions from local storage
+        /// </summary>
+        private async Task<Dictionary<string, PersistentSessionData>> GetPersistedSessionsAsync()
+        {
+            try
+            {
+                var sessions = await _localStorage.GetItemAsync<Dictionary<string, PersistentSessionData>>(PERSISTENT_SESSIONS_KEY);
+                return sessions ?? new Dictionary<string, PersistentSessionData>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to get persisted sessions");
+                return new Dictionary<string, PersistentSessionData>();
+            }
+        }
+
+        /// <summary>
+        /// Persist current session data
+        /// </summary>
+        private async Task PersistCurrentSessionsAsync()
+        {
+            try
+            {
+                await _localStorage.SetItemAsync(CURRENT_SESSIONS_KEY, _currentSessions);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to persist current sessions");
+            }
+        }
+
+        /// <summary>
+        /// Restore sessions from local storage on app startup
+        /// </summary>
+        private async Task RestorePersistedSessions()
+        {
+            try
+            {
+                // Restore active sessions
+                var persistedSessions = await GetPersistedSessionsAsync();
+                foreach (var kvp in persistedSessions)
+                {
+                    var persistentData = kvp.Value;
+                    var activeSession = new ActiveSessionData
+                    {
+                        SessionId = persistentData.SessionId,
+                        CourseId = persistentData.CourseId,
+                        CourseName = persistentData.CourseName,
+                        StartTime = persistentData.StartTime,
+                        EndTime = persistentData.EndTime,
+                        Duration = persistentData.Duration,
+                        QrCodePayload = persistentData.QrCodePayload,
+                        Theme = persistentData.Theme,
+                        UseTemporalKeyRefresh = persistentData.UseTemporalKeyRefresh,
+                        SecurityFeatures = persistentData.SecurityFeatures,
+                        TemporalKey = persistentData.TemporalKey
+                    };
+
+                    _activeSessions.Add(activeSession);
+                }
+
+                // Restore current sessions
+                var currentSessions = await _localStorage.GetItemAsync<Dictionary<string, SessionData>>(CURRENT_SESSIONS_KEY);
+                if (currentSessions != null)
+                {
+                    foreach (var kvp in currentSessions)
+                    {
+                        _currentSessions[kvp.Key] = kvp.Value;
+                    }
+                }
+
+                _logger.LogInformation("Restored {ActiveCount} active sessions and {CurrentCount} current sessions", 
+                    _activeSessions.Count, _currentSessions.Count);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to restore persisted sessions");
+            }
+        }
+
+        /// <summary>
+        /// Check for orphaned sessions and clean them up
+        /// </summary>
+        private async Task RecoverOrphanedSessions()
+        {
+            try
+            {
+                var persistedSessions = await GetPersistedSessionsAsync();
+                var orphanedSessions = new List<string>();
+
+                foreach (var kvp in persistedSessions)
+                {
+                    var sessionData = kvp.Value;
+                    
+                    // Check if session has expired
+                    if (DateTime.UtcNow >= sessionData.EndTime)
+                    {
+                        orphanedSessions.Add(sessionData.SessionId);
+                        
+                        // Mark Firebase session as expired
+                        await MarkFirebaseSessionExpired(sessionData);
+                        
+                        // Remove from active sessions if present
+                        _activeSessions.RemoveAll(s => s.SessionId == sessionData.SessionId);
+                    }
+                }
+
+                // Clean up orphaned sessions from persistence
+                foreach (var sessionId in orphanedSessions)
+                {
+                    await RemovePersistedSessionAsync(sessionId);
+                }
+
+                if (orphanedSessions.Any())
+                {
+                    _logger.LogInformation("Recovered {Count} orphaned sessions", orphanedSessions.Count);
+                    StateChanged?.Invoke();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to recover orphaned sessions");
+            }
+        }
+
+        /// <summary>
+        /// Mark Firebase session as expired/ended
+        /// </summary>
+        private async Task MarkFirebaseSessionExpired(ActiveSessionData session)
+        {
+            try
+            {
+                var documentId = $"AttendanceEvent_{session.CourseId}";
+                var eventFieldName = $"Event_{session.SessionId}_{session.StartTime:yyyyMMdd}";
+                
+                await _firestoreService.AddOrUpdateFieldAsync(
+                    "ATTENDANCE_EVENTS", 
+                    documentId, 
+                    $"{eventFieldName}.Status", 
+                    "Expired"
+                );
+                
+                await _firestoreService.AddOrUpdateFieldAsync(
+                    "ATTENDANCE_EVENTS", 
+                    documentId, 
+                    $"{eventFieldName}.ActualEndTime", 
+                    DateTime.UtcNow
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to mark Firebase session as expired: {SessionId}", session.SessionId);
+            }
+        }
+
+        /// <summary>
+        /// Mark Firebase session as expired using persistent data
+        /// </summary>
+        private async Task MarkFirebaseSessionExpired(PersistentSessionData session)
+        {
+            try
+            {
+                var documentId = $"AttendanceEvent_{session.CourseId}";
+                var eventFieldName = $"Event_{session.SessionId}_{session.StartTime:yyyyMMdd}";
+                
+                await _firestoreService.AddOrUpdateFieldAsync(
+                    "ATTENDANCE_EVENTS", 
+                    documentId, 
+                    $"{eventFieldName}.Status", 
+                    "Expired"
+                );
+                
+                await _firestoreService.AddOrUpdateFieldAsync(
+                    "ATTENDANCE_EVENTS", 
+                    documentId, 
+                    $"{eventFieldName}.ActualEndTime", 
+                    DateTime.UtcNow
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to mark Firebase session as expired: {SessionId}", session.SessionId);
+            }
+        }
+
+        /// <summary>
+        /// Clear all persisted data (use when sessions are properly ended)
+        /// </summary>
+        public async Task ClearPersistedDataAsync()
+        {
+            try
+            {
+                await _localStorage.RemoveItemAsync(PERSISTENT_SESSIONS_KEY);
+                await _localStorage.RemoveItemAsync(CURRENT_SESSIONS_KEY);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to clear persisted data");
+            }
+        }
+
+        // Legacy methods for backward compatibility
+        public void AddActiveSession(ActiveSessionData session) => 
+            AddActiveSessionAsync(session).ConfigureAwait(false);
+        
+        public void RemoveActiveSession(string sessionId) => 
+            RemoveActiveSessionAsync(sessionId).ConfigureAwait(false);
+        
+        public void UpdateActiveSession(ActiveSessionData updatedSession) => 
+            UpdateActiveSessionAsync(updatedSession).ConfigureAwait(false);
+        
+        public void UpdateCurrentSession(string courseId, SessionData session) => 
+            UpdateCurrentSessionAsync(courseId, session).ConfigureAwait(false);
+        
+        public void RemoveCurrentSession(string courseId) => 
+            RemoveCurrentSessionAsync(courseId).ConfigureAwait(false);
+        
+        public void CleanupExpiredSessions() => 
+            CleanupExpiredSessionsAsync().ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Simplified session data for persistence
+    /// </summary>
+    public class PersistentSessionData
+    {
+        public string SessionId { get; set; }
+        public string CourseId { get; set; }
+        public string CourseName { get; set; }
+        public DateTime StartTime { get; set; }
+        public DateTime EndTime { get; set; }
+        public int Duration { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public string QrCodePayload { get; set; }
+        public string Theme { get; set; }
+        public bool UseTemporalKeyRefresh { get; set; }
+        public AdvancedSecurityFeatures SecurityFeatures { get; set; }
+        public string TemporalKey { get; set; }
+    }
+
+    // Existing classes remain unchanged
     public class ActiveSessionData
     {
         public string SessionId { get; set; }
