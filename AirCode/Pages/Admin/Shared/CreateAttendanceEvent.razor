@@ -10,7 +10,7 @@
 
 <div class="create-session-page">
     <h1>Create Attendance Event</h1>
-    
+
     <!-- Session Restoration Dialog -->
     @if (showSessionRestoreDialog && !isRestoringSession)
     {
@@ -18,64 +18,115 @@
             <div class="session-restore-dialog">
                 <div class="dialog-header">
                     <h3>Restore Previous Sessions</h3>
-                    <button class="close-button" @onclick="DismissSessionRestoreDialog">×</button>
+                    <button class="close-button" @onclick="DismissSessionRestoreDialogAsync">×</button>
                 </div>
                 <div class="dialog-content">
-                    <p class="dialog-message">Found @storedSessions.Count stored session(s) that can be restored:</p>
+                    <p class="dialog-message">Found @storedSessions.Count stored session(s) from previous usage:</p>
+                    <div class="dialog-warning">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+                        </svg>
+                        Choose to restore a session or clean up all stored sessions to start fresh.
+                    </div>
                     <div class="stored-sessions-list">
                         @foreach (var session in storedSessions)
                         {
                             <div class="stored-session-item @(selectedStoredSession?.SessionId == session.SessionId ? "selected" : "")"
                                  @onclick="() => SelectStoredSession(session)">
                                 <div class="session-details">
-                                    <strong>@session.CourseName (@session.CourseId)</strong>
-                                    <span class="session-time">Duration: @session.Duration min</span>
-                                    <span class="session-started">Started: @session.StartTime.ToString("HH:mm")</span>
+                                    <strong>@session.CourseName</strong>
+                                    <span class="session-course-id">(@session.CourseId)</span>
+                                    <div class="session-metadata">
+                                        <span class="session-time">Duration: @session.Duration min</span>
+                                        <span class="session-started">Started: @session.StartTime.ToString("MMM dd, HH:mm")</span>
+                                        <span class="session-remaining">
+                                        @{
+                                                var remaining = session.StartTime.AddMinutes(session.Duration) - DateTime.UtcNow;
+                                                var remainingText = remaining.TotalMinutes > 60
+                                                    ? $"{remaining.Hours}h {remaining.Minutes}m remaining"
+                                                    : $"{(int)remaining.TotalMinutes}m remaining";
+                                            }
+                                            @remainingText
+                                    </span>
+                                    </div>
                                 </div>
-                                <button class="delete-session-btn" @onclick="() => DeleteStoredSessionAsync(session)" 
-                                        @onclick:stopPropagation="true" title="Delete stored session">
-                                    🗑️
+                                <button class="delete-session-btn" @onclick="() => DeleteStoredSessionAsync(session)"
+                                        @onclick:stopPropagation="true" title="Delete this stored session">
+                                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                                    </svg>
                                 </button>
                             </div>
                         }
                     </div>
                 </div>
                 <div class="dialog-actions">
-                    <button class="secondary-button" @onclick="DismissSessionRestoreDialog">
+                    <button class="secondary-button" @onclick="DismissSessionRestoreDialogAsync" title="Keep stored sessions but start new">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                        </svg>
                         Start New Session
                     </button>
-                    <PrimaryButton Text="Restore Selected" 
-                                 OnClick="RestoreSelectedSessionAsync" 
-                                 Disabled="@(selectedStoredSession == null)" />
+                    <button class="danger-button" @onclick="AbandonStoredSessionsAsync" title="Delete all stored sessions">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                        </svg>
+                        Clean Up All Sessions
+                    </button>
+                    <PrimaryButton Text="Restore Selected"
+                                   OnClick="RestoreSelectedSessionAsync"
+                                   Disabled="@(selectedStoredSession == null)"
+                                   title="Restore the selected session" />
                 </div>
             </div>
         </div>
     }
 
-    <!-- Loading Backdrop for Session Operations -->
+    <!-- Enhanced Loading Backdrop -->
     @if (isSearchingForSessions || isRestoringSession)
     {
         <div class="loading-backdrop">
             <div class="loading-container">
                 @if (isSearchingForSessions)
                 {
-                    <LoadingSpinner Title="Searching Sessions" 
-                                  Subtitle="Checking for existing and stored sessions..." />
+                    <LoadingSpinner Title="Initializing Session Manager"
+                                    Subtitle="Scanning for existing sessions and cleaning up expired data..." />
                 }
                 else if (isRestoringSession)
                 {
-                    <LoadingSpinner Title="Restoring Session" 
-                                  Subtitle="@restorationMessage" />
+                    <LoadingSpinner Title="Processing Request"
+                                    Subtitle="@restorationMessage" />
                 }
             </div>
         </div>
     }
 
-    <!-- Status Message Display -->
-    @if (!string.IsNullOrEmpty(restorationMessage) && !isSearchingForSessions && !isRestoringSession)
+    <!-- Enhanced Status Message Display -->
+    @if (!string.IsNullOrEmpty(restorationMessage) && !isSearchingForSessions && !isRestoringSession && !showSessionRestoreDialog)
     {
-        <div class="status-message @(restorationMessage.Contains("Error") || restorationMessage.Contains("Failed") ? "error" : "success")">
-            @restorationMessage
+        <div class="status-message-container">
+            <div class="status-message @GetStatusMessageClass(restorationMessage)">
+                <div class="status-icon">
+                    @if (IsErrorMessage(restorationMessage))
+                    {
+                        <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                        </svg>
+                    }
+                    else
+                    {
+                        <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                        </svg>
+                    }
+                </div>
+                <span class="status-text">@restorationMessage</span>
+                <button class="status-dismiss" @onclick="() => restorationMessage = string.Empty" title="Dismiss">
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                    </svg>
+                </button>
+            </div>
         </div>
     }
     

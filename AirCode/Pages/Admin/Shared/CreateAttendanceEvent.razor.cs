@@ -67,7 +67,7 @@ private List<SessionData> storedSessions = new();
 private bool showSessionRestoreDialog = false;
 private SessionData selectedStoredSession;
 
-       protected override async Task OnInitializedAsync()
+protected override async Task OnInitializedAsync()
 {
     sessionModel.Duration = 30;
 
@@ -85,11 +85,8 @@ private SessionData selectedStoredSession;
         
         RefreshSessionLists();
         
-        // Check for stored sessions that might need restoration
+        // Check for stored sessions - NO AUTOMATIC RESTORATION
         await CheckForStoredSessionsAsync();
-        
-        // Check for active sessions that need immediate restoration
-        await CheckForExistingSessionAsync();
 
         SessionStateService.StateChanged += OnStateChanged;
 
@@ -130,7 +127,6 @@ private async Task CheckForStoredSessionsAsync()
                 CourseName = ps.CourseName,
                 StartTime = ps.StartTime,
                 Duration = ps.Duration,
-                // If you need to set Date or LectureId, do it here as well
             })
             .ToList();
 
@@ -138,15 +134,22 @@ private async Task CheckForStoredSessionsAsync()
 
         if (hasExistingSessions && !isSessionStarted)
         {
-            restorationMessage = $"Found {storedSessions.Count} stored session(s) that can be restored";
+            restorationMessage = $"Found {storedSessions.Count} stored session(s) available for restoration";
             showSessionRestoreDialog = true;
+        }
+        else
+        {
+            // Clear any lingering restoration messages
+            restorationMessage = string.Empty;
         }
     }
     catch (Exception ex)
     {
         Console.WriteLine($"Error checking for stored sessions: {ex.Message}");
+        restorationMessage = "Error occurred while checking for stored sessions";
     }
 }
+
 
 private async Task RestoreSelectedSessionAsync()
 {
@@ -155,8 +158,8 @@ private async Task RestoreSelectedSessionAsync()
     try
     {
         isRestoringSession = true;
-        restorationMessage = "Restoring session...";
-        showSessionRestoreDialog = false;
+        restorationMessage = "Restoring selected session...";
+        showSessionRestoreDialog = false; // Close dialog immediately
         StateHasChanged();
 
         // Find corresponding active session
@@ -166,67 +169,172 @@ private async Task RestoreSelectedSessionAsync()
         if (activeSession != null)
         {
             await RestoreExistingSessionAsync(activeSession, selectedStoredSession);
-            restorationMessage = "Session restored successfully";
+            
+            // Clear restoration state completely
+            await ClearRestorationStateAsync("Session restored successfully");
         }
         else
         {
             // Session might have expired or been removed
             await SessionStateService.RemoveStoredSessionAsync(selectedStoredSession.SessionId);
-            restorationMessage = "Session no longer available - removed from storage";
+            await ClearRestorationStateAsync("Session no longer available - removed from storage");
         }
     }
     catch (Exception ex)
     {
         Console.WriteLine($"Error restoring session: {ex.Message}");
-        restorationMessage = "Failed to restore session";
-    }
-    finally
-    {
-        isRestoringSession = false;
-        selectedStoredSession = null;
-        
-        // Clear message after 3 seconds
-        _ = Task.Delay(3000).ContinueWith(_ => 
-        {
-            restorationMessage = string.Empty;
-            InvokeAsync(StateHasChanged);
-        });
-        
-        StateHasChanged();
+        await ClearRestorationStateAsync("Failed to restore session");
     }
 }
 
-private void DismissSessionRestoreDialog()
+private async Task AbandonStoredSessionsAsync()
 {
+    try
+    {
+        isRestoringSession = true;
+        restorationMessage = "Cleaning up stored sessions...";
+        showSessionRestoreDialog = false; // Close dialog immediately
+        StateHasChanged();
+
+        // Remove all stored sessions (equivalent to EndSession cleanup)
+        foreach (var session in storedSessions.ToList())
+        {
+            await SessionStateService.RemoveStoredSessionAsync(session.SessionId);
+            
+            // Also remove from active sessions if present
+            var activeSession = allActiveSessions.FirstOrDefault(s => s.SessionId == session.SessionId);
+            if (activeSession != null)
+            {
+                SessionStateService.RemoveActiveSession(activeSession.SessionId);
+            }
+        }
+
+        // Clear local state
+        storedSessions.Clear();
+        hasExistingSessions = false;
+        
+        await ClearRestorationStateAsync("Previous sessions cleaned up - ready for new session");
+        
+        // Refresh the session lists
+        RefreshSessionLists();
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error abandoning stored sessions: {ex.Message}");
+        await ClearRestorationStateAsync("Error occurred while cleaning up sessions");
+    }
+}
+
+private async Task ClearRestorationStateAsync(string finalMessage = "")
+{
+    // Reset all restoration-related state
+    isRestoringSession = false;
+    selectedStoredSession = null;
+    showSessionRestoreDialog = false;
+    
+    // Set final message if provided
+    if (!string.IsNullOrEmpty(finalMessage))
+    {
+        restorationMessage = finalMessage;
+        StateHasChanged();
+        
+        // Clear message after 3 seconds
+        await Task.Delay(3000);
+        restorationMessage = string.Empty;
+    }
+    else
+    {
+        restorationMessage = string.Empty;
+    }
+    
+    StateHasChanged();
+}
+
+private async Task DismissSessionRestoreDialogAsync()
+{
+    // Simply close dialog without any cleanup operations
     showSessionRestoreDialog = false;
     selectedStoredSession = null;
     restorationMessage = string.Empty;
+    StateHasChanged();
 }
 
 private void SelectStoredSession(SessionData session)
 {
     selectedStoredSession = session;
+    StateHasChanged(); // Ensure UI updates to show selection
 }
 
 private async Task DeleteStoredSessionAsync(SessionData session)
 {
     try
     {
+        // Remove from storage
         await SessionStateService.RemoveStoredSessionAsync(session.SessionId);
-        storedSessions.Remove(session);
         
+        // Remove from active sessions if present
+        var activeSession = allActiveSessions.FirstOrDefault(s => s.SessionId == session.SessionId);
+        if (activeSession != null)
+        {
+            SessionStateService.RemoveActiveSession(activeSession.SessionId);
+        }
+        
+        // Update local state
+        storedSessions.Remove(session);
         hasExistingSessions = storedSessions.Any();
+        
+        // Close dialog if no more sessions
         if (!hasExistingSessions)
         {
             showSessionRestoreDialog = false;
+            restorationMessage = "All stored sessions removed";
+            
+            // Clear message after delay
+            _ = Task.Delay(3000).ContinueWith(_ => 
+            {
+                restorationMessage = string.Empty;
+                InvokeAsync(StateHasChanged);
+            });
         }
         
+        // Refresh session lists
+        RefreshSessionLists();
         StateHasChanged();
     }
     catch (Exception ex)
     {
         Console.WriteLine($"Error deleting stored session: {ex.Message}");
+        restorationMessage = "Error occurred while deleting session";
+        StateHasChanged();
     }
+}
+
+private async Task RestoreExistingSessionAsync(ActiveSessionData activeSession, SessionData sessionData)
+{
+    sessionModel = sessionData;
+    currentActiveSession = activeSession;
+    isSessionStarted = true;
+    qrCodePayload = activeSession.QrCodePayload;
+    selectedTheme = activeSession.Theme;
+    sessionEndTime = activeSession.EndTime;
+
+    // Restore temporal key settings if available
+    useTemporalKeyRefresh = activeSession.UseTemporalKeyRefresh;
+    securityFeatures = activeSession.SecurityFeatures;
+
+    // Restore selected course
+    if (!string.IsNullOrEmpty(sessionData.CourseId))
+    {
+        selectedCourse = await CourseService.GetCourseByIdAsync(sessionData.CourseId);
+    }
+
+    // Restart temporal key timer if it was enabled
+    if (useTemporalKeyRefresh)
+    {
+        StartTemporalKeyUpdateTimer();
+    }
+
+    StateHasChanged();
 }
         private void ShowInfoPopup(InfoPopup.InfoType infoType)
         {
@@ -340,33 +448,7 @@ private async Task CheckForExistingSessionAsync()
         restorationMessage = "Error occurred while restoring session";
     }
 }
-private async Task RestoreExistingSessionAsync(ActiveSessionData activeSession, SessionData sessionData)
-{
-    sessionModel = sessionData;
-    currentActiveSession = activeSession;
-    isSessionStarted = true;
-    qrCodePayload = activeSession.QrCodePayload;
-    selectedTheme = activeSession.Theme;
-    sessionEndTime = activeSession.EndTime;
 
-    // Restore temporal key settings if available
-    useTemporalKeyRefresh = activeSession.UseTemporalKeyRefresh;
-    securityFeatures = activeSession.SecurityFeatures;
-
-    // Restore selected course
-    if (!string.IsNullOrEmpty(sessionData.CourseId))
-    {
-        selectedCourse = await CourseService.GetCourseByIdAsync(sessionData.CourseId);
-    }
-
-    // Restart temporal key timer if it was enabled
-    if (useTemporalKeyRefresh)
-    {
-        StartTemporalKeyUpdateTimer();
-    }
-
-    StateHasChanged();
-}
 
         private void OnStateChanged()
         {
@@ -674,41 +756,75 @@ private async Task EndSessionAsync()
         isEndingSession = false;
     }
 }
-        private async void EndSession()
+private async Task EndSession()
+{
+    try
+    {
+        isEndingSession = true;
+        StateHasChanged();
+
+        if (currentActiveSession != null)
         {
-            try
-            {
-                isEndingSession = true;
-           
-                if (currentActiveSession != null)
-                {
-                    // Stop temporal key timer
-                    temporalKeyUpdateTimer?.Dispose();
+            // Stop temporal key timer
+            temporalKeyUpdateTimer?.Dispose();
+
+            // Update Firebase document to mark session as ended
+            await UpdateFirebaseAttendanceEventStatus("Ended");
+
+            // Remove from active sessions
+            SessionStateService.RemoveActiveSession(currentActiveSession.SessionId);
             
-                    // Update Firebase document to mark session as ended
-                    await UpdateFirebaseAttendanceEventStatus("Ended");
-
-                    SessionStateService.RemoveActiveSession(currentActiveSession.SessionId);
-                }
-
-                SessionStateService.RemoveCurrentSession("default");
-                await MigrateAttendanceDataToFirebase();
-
-                isSessionStarted = false;
-                currentActiveSession = null;
-                selectedCourse = null;
-                RefreshSessionLists();
-                StateHasChanged();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error ending session: {ex.Message}");
-                
-                isEndingSession = false;
-            }finally{
-            isEndingSession = false;
-            }
+            // Remove stored session as well
+            await SessionStateService.RemoveStoredSessionAsync(currentActiveSession.SessionId);
         }
+
+        // Clean up current session
+        SessionStateService.RemoveCurrentSession("default");
+        await MigrateAttendanceDataToFirebase();
+
+        // Reset component state
+        isSessionStarted = false;
+        currentActiveSession = null;
+        selectedCourse = null;
+        
+        RefreshSessionLists();
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error ending session: {ex.Message}");
+    }
+    finally
+    {
+        isEndingSession = false;
+        StateHasChanged();
+    }
+}
+// UI Helper Methods for Message Display
+private string GetStatusMessageClass(string message)
+{
+    if (IsErrorMessage(message))
+        return "error";
+    else if (IsWarningMessage(message))
+        return "warning";
+    else
+        return "success";
+}
+
+private bool IsErrorMessage(string message)
+{
+    if (string.IsNullOrEmpty(message)) return false;
+    
+    var errorKeywords = new[] { "error", "failed", "exception", "unable" };
+    return errorKeywords.Any(keyword => message.ToLower().Contains(keyword));
+}
+
+private bool IsWarningMessage(string message)
+{
+    if (string.IsNullOrEmpty(message)) return false;
+    
+    var warningKeywords = new[] { "expired", "removed", "unavailable", "cleaned" };
+    return warningKeywords.Any(keyword => message.ToLower().Contains(keyword));
+}
         private async Task HandleSessionEnd()
         {
             // This is where you'll add your session end logic
