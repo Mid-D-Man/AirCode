@@ -1,6 +1,112 @@
-@page "/OfflineScanPage"
-<h3>OfflineScanPage</h3>
+@page "/Client/OfflineScan"
+@layout AirCode.Layout.ClientLayout.ClientLayout
+@inject IJSRuntime JSRuntime
+@using AirCode.Models.Supabase
+@using AirCode.Services.SupaBase
+@using ReactorBlazorQRCodeScanner
+@using AirCode.Utilities.HelperScripts
+@using AirCode.Services.Attendance
+@inject QRCodeDecoder QRDecoder
+@inject IOfflineSyncService OfflineSyncService
 
-@code {
+<div class="offline-scan-page">
+    <div class="scan-header">
+        <h3>Offline Attendance Scan</h3>
+        <p>Scan QR codes for offline attendance recording</p>
+        <div class="offline-indicator">
+            <span class="offline-badge">📴 Offline Mode</span>
+        </div>
+    </div>
     
-}
+    <div class="scan-container @(isProcessing ? "processing" : "") @(scanComplete ? "scan-complete" : "")">
+        <div class="qr-scanner-container">
+            <QRCodeScanner ShowOutput="false" Width="100%" />
+        </div>
+
+        <!-- Scan frame overlay -->
+        <div class="scan-frame">
+            <div class="corner top-left"></div>
+            <div class="corner top-right"></div>
+            <div class="corner bottom-left"></div>
+            <div class="corner bottom-right"></div>
+            <div class="scan-line"></div>
+        </div>
+
+        <!-- Processing overlay -->
+        @if (isProcessing)
+        {
+            <div class="processing-overlay">
+                <div class="spinner"></div>
+                <span>Processing QR Code...</span>
+            </div>
+        }
+
+        <!-- Result overlay -->
+        @if (showResult && !isProcessing)
+        {
+            <div class="result-overlay @(resultSuccess ? "success" : "error")">
+                <div class="result-icon">
+                    @if (resultSuccess)
+                    {
+                        <span class="success-icon">✓</span>
+                    }
+                    else
+                    {
+                        <span class="error-icon">✗</span>
+                    }
+                </div>
+                <div class="result-message">@((MarkupString)resultMessage)</div>
+                <button class="continue-btn" @onclick="ContinueScanning">Continue Scanning</button>
+            </div>
+        }
+
+        <div class="scan-controls">
+            @if (isScanning)
+            {
+                <button class="control-btn" @onclick="StopScanning">
+                    <span class="btn-icon">⏸</span>
+                    Stop Scanner
+                </button>
+            }
+            else
+            {
+                <button class="control-btn" @onclick="StartScanning">
+                    <span class="btn-icon">▶</span>
+                    Start Scanner
+                </button>
+            }
+        </div>
+
+        <!-- Offline status panel -->
+        <div class="offline-status-panel">
+            <div class="status-header">
+                <span class="status-icon">💾</span>
+                <span>Offline Records</span>
+            </div>
+            <div class="status-info">
+                <div class="status-item">
+                    <span class="label">Pending Records:</span>
+                    <span class="value">@pendingRecordsCount</span>
+                </div>
+                <div class="status-item">
+                    <span class="label">Last Sync:</span>
+                    <span class="value">@(lastSyncTime?.ToString("HH:mm") ?? "Never")</span>
+                </div>
+            </div>
+            @if (pendingRecordsCount > 0)
+            {
+                <button class="sync-btn" @onclick="TrySync" disabled="@isSyncing">
+                    @if (isSyncing)
+                    {
+                        <span class="spinner-small"></span>
+                        <span>Syncing...</span>
+                    }
+                    else
+                    {
+                        <span>🔄 Try Sync</span>
+                    }
+                </button>
+            }
+        </div>
+    </div>
+</div>
