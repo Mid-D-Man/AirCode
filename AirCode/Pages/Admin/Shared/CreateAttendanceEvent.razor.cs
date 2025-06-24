@@ -58,27 +58,29 @@ using AirCode.Components.SharedPrefabs.Others;
 private bool isEndingSession = false;
 private bool isSessionEnded = false;
 
-        protected override void OnInitialized()
-        {
-            sessionModel.Duration = 30;
+       protected override async Task OnInitializedAsync()
+{
+    sessionModel.Duration = 30;
 
+    // Initialize SessionStateService with persistence recovery
+    await SessionStateService.InitializeAsync();
+    
+    RefreshSessionLists();
+    await CheckForExistingSessionAsync();
+
+    SessionStateService.StateChanged += OnStateChanged;
+
+    countdownTimer = new System.Threading.Timer(
+        async _ => await InvokeAsync(async () => {
+            await SessionStateService.CleanupExpiredSessionsAsync();
             RefreshSessionLists();
-            CheckForExistingSession();
-
-            SessionStateService.StateChanged += OnStateChanged;
-
-            countdownTimer = new System.Threading.Timer(
-                _ => InvokeAsync(() => {
-                    SessionStateService.CleanupExpiredSessions();
-                    RefreshSessionLists();
-                    StateHasChanged();
-                }),
-                null,
-                TimeSpan.Zero,
-                TimeSpan.FromSeconds(1)
-            );
-        }
-
+            StateHasChanged();
+        }),
+        null,
+        TimeSpan.Zero,
+        TimeSpan.FromSeconds(1)
+    );
+}
         private void ShowInfoPopup(InfoPopup.InfoType infoType)
         {
             currentInfoType = infoType;
@@ -165,22 +167,27 @@ private bool isSessionEnded = false;
             }
         }
 
-        private void CheckForExistingSession()
-        {
-            var existingSession = SessionStateService.GetCurrentSession("default");
-            if (existingSession != null)
-            {
-                var activeSession = allActiveSessions.FirstOrDefault(s =>
-                    s.CourseId == existingSession.CourseId &&
-                    DateTime.UtcNow < s.EndTime);
+  private async Task CheckForExistingSessionAsync()
+{
+    var existingSession = SessionStateService.GetCurrentSession("default");
+    if (existingSession != null)
+    {
+        var activeSession = allActiveSessions.FirstOrDefault(s =>
+            s.CourseId == existingSession.CourseId &&
+            DateTime.UtcNow < s.EndTime);
 
-                if (activeSession != null)
-                {
-                    RestoreExistingSession(activeSession, existingSession);
-                }
-            }
+        if (activeSession != null)
+        {
+            await RestoreExistingSessionAsync(activeSession, existingSession);
         }
-private async void RestoreExistingSession(ActiveSessionData activeSession, SessionData sessionData)
+        else
+        {
+            // Session has expired, clean up
+            await SessionStateService.RemoveCurrentSessionAsync("default");
+        }
+    }
+}
+private async Task RestoreExistingSessionAsync(ActiveSessionData activeSession, SessionData sessionData)
 {
     sessionModel = sessionData;
     currentActiveSession = activeSession;
