@@ -24,6 +24,104 @@ jobs:
         with:
           dotnet-version: '7.0.x'
 
+      - name: Update Project Structure
+        run: |
+          # Create project structure documentation
+          echo "Generating project structure..."
+          
+          # Function to generate tree structure for specific directories
+          generate_structure() {
+            local base_dir="$1"
+            local output_file="$2"
+            
+            # Main project folders to include
+            main_folders=(
+              "Components"
+              "Domain" 
+              "Layout"
+              "Models"
+              "Pages"
+              "Services"
+              "Shared"
+              "TestData"
+              "Utilities"
+            )
+            
+            # Project root files
+            echo "" > "$output_file"
+            for item in *.csproj *.sln *.razor *.json; do
+              if [ -f "$item" ]; then
+                echo "$item" >> "$output_file"
+              fi
+            done
+            
+            # Add main directories
+            for folder in "${main_folders[@]}"; do
+              if [ -d "$folder" ]; then
+                echo "" >> "$output_file"
+                echo "./$folder:" >> "$output_file"
+                find "$folder" -type f -name "*.cs" -o -name "*.razor" -o -name "*.css" -o -name "*.json" | \
+                  sed 's|^|.|' | sort >> "$output_file"
+                
+                # Add subdirectory structure
+                find "$folder" -type d | while read -r dir; do
+                  if [ "$dir" != "$folder" ]; then
+                    echo "" >> "$output_file"
+                    echo "./$dir:" >> "$output_file"
+                    find "$dir" -maxdepth 1 -type f -name "*.cs" -o -name "*.razor" -o -name "*.css" -o -name "*.json" | \
+                      sed 's|.*/||' | sort >> "$output_file"
+                  fi
+                done
+              fi
+            done
+            
+            # Add wwwroot with filtered content
+            if [ -d "wwwroot" ]; then
+              echo "" >> "$output_file"
+              echo "./wwwroot:" >> "$output_file"
+              
+              # Root level files in wwwroot
+              find wwwroot -maxdepth 1 -type f | sed 's|wwwroot/||' | sort >> "$output_file"
+              
+              # Specific subdirectories: css, js, wasm
+              for subdir in "css" "js" "wasm"; do
+                if [ -d "wwwroot/$subdir" ]; then
+                  echo "" >> "$output_file"
+                  echo "./wwwroot/$subdir:" >> "$output_file"
+                  find "wwwroot/$subdir" -type f | sed 's|wwwroot/||' | sort >> "$output_file"
+                  
+                  # Add subdirectory structure for these folders
+                  find "wwwroot/$subdir" -type d | while read -r dir; do
+                    if [ "$dir" != "wwwroot/$subdir" ]; then
+                      echo "" >> "$output_file"
+                      echo "./$dir:" >> "$output_file"
+                      find "$dir" -maxdepth 1 -type f | sed 's|.*/||' | sort >> "$output_file"
+                    fi
+                  done
+                fi
+              done
+            fi
+          }
+          
+          # Generate the structure
+          generate_structure "." "AirCode/Others/ProjectStructure.txt"
+          
+          echo "Project structure updated successfully"
+
+      - name: Commit Updated Project Structure
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          
+          # Check if there are changes to commit
+          if git diff --quiet AirCode/Others/ProjectStructure.txt; then
+            echo "No changes to project structure"
+          else
+            git add AirCode/Others/ProjectStructure.txt
+            git commit -m "Auto-update project structure [skip ci]"
+            git push
+          fi
+
       - name: Restore and Build
         run: |
           dotnet restore
@@ -97,5 +195,3 @@ jobs:
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4
-        
-     
