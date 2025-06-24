@@ -81,7 +81,7 @@ namespace AirCode.Services.Attendance
                 _logger.LogDebug("Processing offline attendance record: {RecordId}", record.Id);
                 
                 // Check if corresponding offline session exists in Supabase
-                var offlineSession = await GetOfflineSessionFromSupabaseAsync(record.EncryptedQRPayload);
+                var offlineSession = await GetOfflineSessionFromSupabaseAsync(record.EncryptedQrPayload);
                 if (offlineSession == null)
                 {
                     return new SyncResult
@@ -104,7 +104,7 @@ namespace AirCode.Services.Attendance
                 };
 
                 // Create edge function request
-                var edgeRequest = await CreateOfflineEdgeFunctionRequestAsync(record.EncryptedQRPayload, attendanceRecord);
+                var edgeRequest = await CreateOfflineEdgeFunctionRequestAsync(record.EncryptedQrPayload, attendanceRecord);
                 
                 // Process through edge function
                 var result = await _edgeService.ProcessAttendanceWithPayloadAsync(edgeRequest);
@@ -337,7 +337,7 @@ namespace AirCode.Services.Attendance
                 var offlineRecord = new OfflineAttendanceRecord
                 {
                     Id = Guid.NewGuid().ToString(),
-                    EncryptedQRPayload = encryptedQRPayload,
+                    EncryptedQrPayload = encryptedQRPayload,
                     ScannedAt = DateTime.UtcNow,
                     DeviceId = deviceId,
                     Status = SyncStatus.Pending,
