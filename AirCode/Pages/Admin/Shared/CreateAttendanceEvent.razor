@@ -11,6 +11,74 @@
 <div class="create-session-page">
     <h1>Create Attendance Event</h1>
     
+    <!-- Session Restoration Dialog -->
+    @if (showSessionRestoreDialog && !isRestoringSession)
+    {
+        <div class="session-restore-backdrop">
+            <div class="session-restore-dialog">
+                <div class="dialog-header">
+                    <h3>Restore Previous Sessions</h3>
+                    <button class="close-button" @onclick="DismissSessionRestoreDialog">×</button>
+                </div>
+                <div class="dialog-content">
+                    <p class="dialog-message">Found @storedSessions.Count stored session(s) that can be restored:</p>
+                    <div class="stored-sessions-list">
+                        @foreach (var session in storedSessions)
+                        {
+                            <div class="stored-session-item @(selectedStoredSession?.SessionId == session.SessionId ? "selected" : "")"
+                                 @onclick="() => SelectStoredSession(session)">
+                                <div class="session-details">
+                                    <strong>@session.CourseName (@session.CourseId)</strong>
+                                    <span class="session-time">Duration: @session.Duration min</span>
+                                    <span class="session-started">Started: @session.StartTime.ToString("HH:mm")</span>
+                                </div>
+                                <button class="delete-session-btn" @onclick="() => DeleteStoredSessionAsync(session)" 
+                                        @onclick:stopPropagation="true" title="Delete stored session">
+                                    🗑️
+                                </button>
+                            </div>
+                        }
+                    </div>
+                </div>
+                <div class="dialog-actions">
+                    <button class="secondary-button" @onclick="DismissSessionRestoreDialog">
+                        Start New Session
+                    </button>
+                    <PrimaryButton Text="Restore Selected" 
+                                 OnClick="RestoreSelectedSessionAsync" 
+                                 Disabled="@(selectedStoredSession == null)" />
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Loading Backdrop for Session Operations -->
+    @if (isSearchingForSessions || isRestoringSession)
+    {
+        <div class="loading-backdrop">
+            <div class="loading-container">
+                @if (isSearchingForSessions)
+                {
+                    <LoadingSpinner Title="Searching Sessions" 
+                                  Subtitle="Checking for existing and stored sessions..." />
+                }
+                else if (isRestoringSession)
+                {
+                    <LoadingSpinner Title="Restoring Session" 
+                                  Subtitle="@restorationMessage" />
+                }
+            </div>
+        </div>
+    }
+
+    <!-- Status Message Display -->
+    @if (!string.IsNullOrEmpty(restorationMessage) && !isSearchingForSessions && !isRestoringSession)
+    {
+        <div class="status-message @(restorationMessage.Contains("Error") || restorationMessage.Contains("Failed") ? "error" : "success")">
+            @restorationMessage
+        </div>
+    }
+    
     <div class="content-container @(isSessionStarted ? "session-active" : "")">
         @if (!isSessionStarted)
         {
