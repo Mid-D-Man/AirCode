@@ -1,7 +1,7 @@
 Project Structure Documentation
-Generated: Wed Jun 25 01:05:28 UTC 2025
+Generated: Wed Jun 25 01:20:24 UTC 2025
 Repository: Mid-D-Man/AirCode
-Commit: 2afbfe222aa96010f410a10edc6f60390d402ae6
+Commit: 7c7f99315891384b17646fb4b9731125ab044d44
 ==================================
 
 Source Files:
@@ -146,8 +146,6 @@ Pages/Auth/Authentication.razor
 Pages/Auth/Authentication.razor.css
 Pages/Client/ClientProfile.razor
 Pages/Client/ClientProfile.razor.css
-Pages/Client/ClientSettings.razor
-Pages/Client/ClientSettings.razor.css
 Pages/Client/OfflineScanPage.razor
 Pages/Client/OfflineScanPage.razor.cs
 Pages/Client/OfflineScanPage.razor.css
@@ -397,9 +395,9 @@ Directory Structure:
 File Count Summary:
 ==================
 .cs       : 81 files
-.razor    : 72 files
+.razor    : 71 files
 .csproj   : 1 files
 .json     : 12 files
-.css      : 80 files
+.css      : 79 files
 .js       : 42 files
 .html     : 3 files
