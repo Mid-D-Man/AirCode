@@ -26,109 +26,139 @@ jobs:
 
       - name: Update Project Structure
         run: |
-          # Create project structure documentation
-          echo "Generating project structure..."
+          echo "Generating comprehensive project structure..."
           
-          # Function to generate tree structure for specific directories
-          generate_structure() {
-            local base_dir="$1"
+          # Verify project directory structure
+          echo "Repository root contents:"
+          ls -la
+          
+          # Navigate to project directory and validate
+          if [ -d "AirCode" ]; then
+            cd AirCode
+            echo "AirCode directory contents:"
+            ls -la
+          else
+            echo "Warning: AirCode directory not found, using repository root"
+          fi
+          
+          # Enhanced structure generation function
+          generate_comprehensive_structure() {
+            local base_path="$1"
             local output_file="$2"
           
-            # Main project folders to include
-            main_folders=(
-              "Components"
-              "Domain" 
-              "Layout"
-              "Models"
-              "Pages"
-              "Services"
-              "Shared"
-              "TestData"
-              "Utilities"
-            )
+            # Initialize output file with metadata
+            {
+              echo "Project Structure Documentation"
+              echo "Generated: $(date -u)"
+              echo "Repository: ${{ github.repository }}"
+              echo "Commit: ${{ github.sha }}"
+              echo "=================================="
+              echo
+            } > "$output_file"
           
-            # Project root files
-            echo "" > "$output_file"
-            for item in *.csproj *.sln *.razor *.json; do
-              if [ -f "$item" ]; then
-                echo "$item" >> "$output_file"
+            # Capture all project-relevant files
+            echo "Source Files:" >> "$output_file"
+            echo "============" >> "$output_file"
+            find "$base_path" -type f \( \
+              -name "*.cs" -o \
+              -name "*.razor" -o \
+              -name "*.csproj" -o \
+              -name "*.sln" -o \
+              -name "*.json" -o \
+              -name "*.css" -o \
+              -name "*.scss" -o \
+              -name "*.js" -o \
+              -name "*.ts" -o \
+              -name "*.html" -o \
+              -name "*.md" \
+            \) -not -path "*/bin/*" \
+              -not -path "*/obj/*" \
+              -not -path "*/.git/*" \
+              -not -path "*/node_modules/*" | \
+            sed "s|^$base_path/||" | sort >> "$output_file"
+          
+            echo >> "$output_file"
+            echo "Directory Structure:" >> "$output_file"
+            echo "==================" >> "$output_file"
+          
+            # Generate hierarchical directory tree
+            find "$base_path" -type d \
+              -not -path "*/bin" \
+              -not -path "*/bin/*" \
+              -not -path "*/obj" \
+              -not -path "*/obj/*" \
+              -not -path "*/.git" \
+              -not -path "*/.git/*" \
+              -not -path "*/node_modules" \
+              -not -path "*/node_modules/*" | \
+            sed "s|^$base_path||" | \
+            sed 's|^/||' | \
+            sort | \
+            sed 's|[^/]*/|  |g' | \
+            sed 's|^|./|' >> "$output_file"
+          
+            echo >> "$output_file"
+            echo "File Count Summary:" >> "$output_file"
+            echo "==================" >> "$output_file"
+          
+            # Generate file type statistics
+            for ext in cs razor csproj sln json css js html; do
+              count=$(find "$base_path" -name "*.$ext" -not -path "*/bin/*" -not -path "*/obj/*" | wc -l)
+              if [ "$count" -gt 0 ]; then
+                printf "%-10s: %d files\n" ".$ext" "$count" >> "$output_file"
               fi
             done
-          
-            # Add main directories
-            for folder in "${main_folders[@]}"; do
-              if [ -d "$folder" ]; then
-                echo "" >> "$output_file"
-                echo "./$folder:" >> "$output_file"
-                find "$folder" -type f -name "*.cs" -o -name "*.razor" -o -name "*.css" -o -name "*.json" | \
-                  sed 's|^|.|' | sort >> "$output_file"
-          
-                # Add subdirectory structure
-                find "$folder" -type d | while read -r dir; do
-                  if [ "$dir" != "$folder" ]; then
-                    echo "" >> "$output_file"
-                    echo "./$dir:" >> "$output_file"
-                    find "$dir" -maxdepth 1 -type f -name "*.cs" -o -name "*.razor" -o -name "*.css" -o -name "*.json" | \
-                      sed 's|.*/||' | sort >> "$output_file"
-                  fi
-                done
-              fi
-            done
-          
-            # Add wwwroot with filtered content
-            if [ -d "wwwroot" ]; then
-              echo "" >> "$output_file"
-              echo "./wwwroot:" >> "$output_file"
-          
-              # Root level files in wwwroot
-              find wwwroot -maxdepth 1 -type f | sed 's|wwwroot/||' | sort >> "$output_file"
-          
-              # Specific subdirectories: css, js, wasm
-              for subdir in "css" "js" "wasm"; do
-                if [ -d "wwwroot/$subdir" ]; then
-                  echo "" >> "$output_file"
-                  echo "./wwwroot/$subdir:" >> "$output_file"
-                  find "wwwroot/$subdir" -type f | sed 's|wwwroot/||' | sort >> "$output_file"
-          
-                  # Add subdirectory structure for these folders
-                  find "wwwroot/$subdir" -type d | while read -r dir; do
-                    if [ "$dir" != "wwwroot/$subdir" ]; then
-                      echo "" >> "$output_file"
-                      echo "./$dir:" >> "$output_file"
-                      find "$dir" -maxdepth 1 -type f | sed 's|.*/||' | sort >> "$output_file"
-                    fi
-                  done
-                fi
-              done
-            fi
           }
           
-          # Generate the structure
-          generate_structure "." "AirCode/Others/ProjectStructure.txt"
+          # Determine correct base path and output location
+          if [ -d "AirCode" ]; then
+            # Ensure output directory exists
+            mkdir -p "AirCode/Others"
+            generate_comprehensive_structure "AirCode" "AirCode/Others/ProjectStructure.txt"
+          else
+            # Fallback to repository root
+            mkdir -p "Others"
+            generate_comprehensive_structure "." "Others/ProjectStructure.txt"
+          fi
           
-          echo "Project structure updated successfully"
+          echo "Project structure documentation completed successfully"
 
       - name: Commit Updated Project Structure
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           
-          # Check if there are changes to commit
-          if git diff --quiet AirCode/Others/ProjectStructure.txt; then
-            echo "No changes to project structure"
+          # Determine structure file location
+          STRUCTURE_FILE=""
+          if [ -f "AirCode/Others/ProjectStructure.txt" ]; then
+            STRUCTURE_FILE="AirCode/Others/ProjectStructure.txt"
+          elif [ -f "Others/ProjectStructure.txt" ]; then
+            STRUCTURE_FILE="Others/ProjectStructure.txt"
+          fi
+          
+          if [ -n "$STRUCTURE_FILE" ]; then
+            # Verify changes exist before committing
+            if ! git diff --quiet "$STRUCTURE_FILE" 2>/dev/null; then
+              git add "$STRUCTURE_FILE"
+              git commit -m "Auto-update project structure documentation [skip ci]"
+              git push
+              echo "Project structure committed successfully"
+            else
+              echo "No changes detected in project structure"
+            fi
           else
-            git add AirCode/Others/ProjectStructure.txt
-            git commit -m "Auto-update project structure [skip ci]"
-            git push
+            echo "Warning: Project structure file not found"
           fi
 
       - name: Restore and Build
+        working-directory: ./AirCode
         run: |
           dotnet restore
           dotnet build --configuration Release --no-restore
 
       - name: Publish
-        run: dotnet publish --configuration Release --no-build --output ./dist
+        working-directory: ./AirCode
+        run: dotnet publish --configuration Release --no-build --output ../dist
 
       - name: Prepare Pages
         run: |
@@ -136,21 +166,22 @@ jobs:
           cp -r ./dist/wwwroot/* ./pages/
           touch ./pages/.nojekyll
           
-          # Copy SVG files if they exist in a different location
+          # Copy additional assets if they exist
           if [ -d "./AirCode/svgs" ]; then
             mkdir -p ./pages/svgs
             cp -r ./AirCode/svgs/* ./pages/svgs/
           fi
           
-          
-          # Create 404.html with SPA routing script
+          # Create 404.html for SPA routing support
           cat > ./pages/404.html << 'EOF'
           <!DOCTYPE html>
-          <html>
+          <html lang="en">
             <head>
               <meta charset="utf-8">
               <title>Single Page Apps for GitHub Pages</title>
               <script type="text/javascript">
+                // Single Page Apps for GitHub Pages
+                // https://github.com/rafgraph/spa-github-pages
                 var pathSegmentsToKeep = 1;
                 var l = window.location;
                 l.replace(
@@ -167,17 +198,19 @@ jobs:
           </html>
           EOF
           
-          # Update base href in index.html
+          # Configure base href for GitHub Pages deployment
           sed -i 's|<base href="/" />|<base href="/${{ github.event.repository.name }}/" />|g' ./pages/index.html
           
-          # Add SPA routing script to index.html after the base tag
-          sed -i '/<base href="[^"]*" \/>/a\    \n    <!-- SPA routing fix for GitHub Pages -->\n    <script type="text/javascript">\n        (function(l) {\n            if (l.search[1] === "/" ) {\n                var decoded = l.search.slice(1).split("&").map(function(s) { \n                return s.replace(/~and~/g, "&")\n                }).join("?");\n                window.history.replaceState(null, null,\n                    l.pathname.slice(0, -1) + decoded + l.hash\n                );\n            }\n        }(window.location))\n    </script>' ./pages/index.html
+          # Inject SPA routing script into index.html
+          sed -i '/<base href="[^"]*" \/>/a\    \n    <!-- SPA routing support for GitHub Pages -->\n    <script type="text/javascript">\n        (function(l) {\n            if (l.search[1] === "/" ) {\n                var decoded = l.search.slice(1).split("&").map(function(s) { \n                return s.replace(/~and~/g, "&")\n                }).join("?");\n                window.history.replaceState(null, null,\n                    l.pathname.slice(0, -1) + decoded + l.hash\n                );\n            }\n        }(window.location))\n    </script>' ./pages/index.html
           
-          # Fix service worker references
+          # Configure service worker for GitHub Pages
           if [ -f "./pages/service-worker.published.js" ]; then
             cp ./pages/service-worker.published.js ./pages/service-worker.js
             sed -i 's|"/|"/${{ github.event.repository.name }}/|g' ./pages/service-worker.js
           fi
+          
+          echo "GitHub Pages deployment preparation completed"
 
       - name: Upload Pages
         uses: actions/upload-pages-artifact@v3
