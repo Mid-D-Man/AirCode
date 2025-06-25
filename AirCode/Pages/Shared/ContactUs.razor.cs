@@ -3,8 +3,7 @@ using Microsoft.JSInterop;
 using System.ComponentModel.DataAnnotations;
 
 namespace AirCode.Pages.Shared
-{
-    /// <summary>
+{/// <summary>
  // this page is supposed to handle clients requesting support and looking up commonly gound issues
  /// </summary>
     public partial class ContactUs : ComponentBase
@@ -330,16 +329,16 @@ namespace AirCode.Pages.Shared
             switch (actionType)
             {
                 case "navigate_login":
-                    await JSRuntime.InvokeVoidAsync("navigateToPage", "/Authentication");
+                    await JSRuntime.InvokeVoidAsync("navigateToPage", "Authentication");
                     break;
                 case "navigate_scan":
-                    await JSRuntime.InvokeVoidAsync("navigateToPage", "/ScanPage");
+                    await JSRuntime.InvokeVoidAsync("navigateToPage", "Client/ScanPage");
                     break;
                 case "navigate_stats":
-                    await JSRuntime.InvokeVoidAsync("navigateToPage", "/ClientStats");
+                    await JSRuntime.InvokeVoidAsync("navigateToPage", "Client/ClientStats");
                     break;
                 case "navigate_courses":
-                    await JSRuntime.InvokeVoidAsync("navigateToPage", "/LecturerCoursesPage");
+                    await JSRuntime.InvokeVoidAsync("navigateToPage", "Admin/LecturerCoursesPage");
                     break;
                 case "check_connection":
                     await JSRuntime.InvokeVoidAsync("checkInternetConnection");
