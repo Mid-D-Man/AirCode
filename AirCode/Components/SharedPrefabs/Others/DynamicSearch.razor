@@ -129,6 +129,7 @@
     [Parameter] public int MaxSuggestions { get; set; } = 8;
     [Parameter] public int MaxResults { get; set; } = 15;
     [Parameter] public EventCallback<string> OnSearch { get; set; }
+    [Parameter] public EventCallback<string> OnSearchChanged { get; set; } // Added missing parameter
     [Parameter] public EventCallback<SearchSuggestion> OnSuggestionSelected { get; set; }
     [Parameter] public EventCallback<SearchResult> OnResultSelected { get; set; }
 
@@ -177,9 +178,15 @@
         }
     }
 
-    private void OnSearchTermChanged()
+    private async void OnSearchTermChanged()
     {
         SelectedIndex = -1;
+        
+        // Invoke the OnSearchChanged callback if it's set
+        if (OnSearchChanged.HasDelegate)
+        {
+            await OnSearchChanged.InvokeAsync(SearchTerm);
+        }
         
         _debounceTimer?.Dispose();
         _debounceTimer = new Timer(async _ => await PerformSearch(), null, 300, Timeout.Infinite);
