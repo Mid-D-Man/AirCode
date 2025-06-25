@@ -1,3 +1,405 @@
+Project Structure Documentation
+Generated: Wed Jun 25 01:05:28 UTC 2025
+Repository: Mid-D-Man/AirCode
+Commit: 2afbfe222aa96010f410a10edc6f60390d402ae6
+==================================
 
-AirCode.sln
-global.json
+Source Files:
+============
+AirCode.csproj
+App.razor
+App.razor.css
+Components/Admin/Dashboard/QuickStats.razor
+Components/Admin/Dashboard/QuickStats.razor.css
+Components/Admin/Dashboard/StandardAdminContent.razor
+Components/Admin/Dashboard/StandardAdminContent.razor.css
+Components/Admin/Dashboard/SuperiorAdminContent.razor
+Components/Admin/Dashboard/SuperiorAdminContent.razor.css
+Components/Admin/Shared/AdminCard.razor
+Components/Admin/Shared/AdminCard.razor.css
+Components/Admin/Shared/Burger.razor
+Components/Admin/Shared/Burger.razor.css
+Components/Admin/Shared/DashboardButtonIcon.razor
+Components/Admin/Shared/DashboardButtonIcon.razor.css
+Components/Admin/Shared/NavMenuButton.razor
+Components/Admin/Shared/NavMenuButton.razor.css
+Components/Admin/Shared/StatCard.razor
+Components/Admin/Shared/StatCard.razor.css
+Components/Admin/Shared/UserCard.razor
+Components/Admin/Shared/UserCard.razor.css
+Components/Auth/AccessControl.razor
+Components/Auth/AccessControl.razor.css
+Components/Auth/TokenDebugger.razor
+Components/Guards/AppAuthorizeRouteViewComponent.razor
+Components/Guards/AppAuthorizeRouteViewComponent.razor.css
+Components/Guards/BusinessHoursComponentBase.razor
+Components/Guards/BusinessHoursComponentBase.razor.css
+Components/Guards/ProtectedComponent.razor
+Components/Guards/ProtectedComponent.razor.css
+Components/Loading/LoadingScreen.razor
+Components/Loading/LoadingScreen.razor.css
+Components/SharedPrefabs/Buttons/CircularNavigationButton.razor
+Components/SharedPrefabs/Buttons/CircularNavigationButton.razor.css
+Components/SharedPrefabs/Buttons/PrimaryButton.razor
+Components/SharedPrefabs/Buttons/PrimaryButton.razor.css
+Components/SharedPrefabs/Buttons/SecondaryButton.razor
+Components/SharedPrefabs/Buttons/SecondaryButton.razor.css
+Components/SharedPrefabs/Buttons/ThemeToggle.razor
+Components/SharedPrefabs/Buttons/ThemeToggle.razor.css
+Components/SharedPrefabs/Cards/CourseCard.razor
+Components/SharedPrefabs/Cards/CourseCard.razor.css
+Components/SharedPrefabs/Cards/NotificationComponent.razor
+Components/SharedPrefabs/Cards/NotificationComponent.razor.css
+Components/SharedPrefabs/Fields/FormField.razor
+Components/SharedPrefabs/Fields/FormField.razor.css
+Components/SharedPrefabs/Others/AttendanceChart.razor
+Components/SharedPrefabs/Others/AttendanceChart.razor.css
+Components/SharedPrefabs/Others/BlobBackground.razor
+Components/SharedPrefabs/Others/BlobBackground.razor.css
+Components/SharedPrefabs/Others/ConnectionModal.razor
+Components/SharedPrefabs/Others/ConnectionModal.razor.css
+Components/SharedPrefabs/Others/CourseManagementComponent.razor
+Components/SharedPrefabs/Others/CourseManagementComponent.razor.css
+Components/SharedPrefabs/Others/CourseSelectionComponent.razor
+Components/SharedPrefabs/Others/CourseSelectionComponent.razor.css
+Components/SharedPrefabs/Others/DynamicBlob.razor
+Components/SharedPrefabs/Others/DynamicSearch.razor
+Components/SharedPrefabs/Others/DynamicSearch.razor.css
+Components/SharedPrefabs/Others/InfoPopup.razor
+Components/SharedPrefabs/Others/InfoPopup.razor.css
+Components/SharedPrefabs/Others/SvgIcon.razor
+Components/SharedPrefabs/Others/SvgIcon.razor.css
+Components/SharedPrefabs/QrCode/FloatingQRWindow.razor
+Components/SharedPrefabs/QrCode/FloatingQRWindow.razor.css
+Components/SharedPrefabs/QrCode/QRCodeCompo.razor
+Components/SharedPrefabs/QrCode/QRCodeCompo.razor.css
+Components/SharedPrefabs/Scanner/BasicQRCodeScanner.razor
+Components/SharedPrefabs/Scanner/BasicQRCodeScanner.razor.css
+Components/SharedPrefabs/Spinner/LoadingSpinner.razor
+Components/SharedPrefabs/Spinner/LoadingSpinner.razor.css
+CustomAccountFactory.cs
+Domain/Entities/CourseEntity.cs
+Domain/Entities/DepartmentEntity.cs
+Domain/Entities/LecturerEntity.cs
+Domain/Entities/OfflineAttendanceRecord.cs
+Domain/Entities/ReportEntity.cs
+Domain/Entities/SessionEntity.cs
+Domain/Entities/StudentEntity.cs
+Domain/Entities/UserEntity.cs
+Domain/Enums/AttendanceEnums.cs
+Domain/Enums/CourseEnums.cs
+Domain/Enums/UserEnums.cs
+Domain/Interfaces/ISecurityEntity.cs
+Domain/ValueObjects/AttendanceEventDetails.cs
+Domain/ValueObjects/AttendanceRecord.cs
+Domain/ValueObjects/CourseSchedule.cs
+Domain/ValueObjects/PaginationData.cs
+Extensions/AuthExtensions.cs
+Extensions/BusinessHoursServiceExtensions.cs
+Extensions/ServiceExtensions.cs
+Extensions/Supabase.cs
+Layout/AdminLayout/Superior/SuperiorAdminLayout.razor
+Layout/AdminLayout/Superior/SuperiorAdminLayout.razor.css
+Layout/AdminLayout/Superior/SuperiorAdminNavMenu.razor
+Layout/AdminLayout/Superior/SuperiorAdminNavMenu.razor.css
+Layout/ClientLayout/ClientLayout.razor
+Layout/ClientLayout/ClientLayout.razor.css
+Layout/ClientLayout/ClientNavMenu.razor
+Layout/ClientLayout/ClientNavMenu.razor.css
+Layout/Main/MainLayout.razor
+Layout/Main/MainLayout.razor.css
+Models/QRCode/QRCodePayloadData.cs
+Models/Supabase/AttendanceSession.cs
+Models/Supabase/TestData.cs
+Pages/Admin/Shared/CreateAttendanceEvent.razor
+Pages/Admin/Shared/CreateAttendanceEvent.razor.cs
+Pages/Admin/Shared/CreateAttendanceEvent.razor.css
+Pages/Admin/Shared/OfflineAttendanceEvent.razor
+Pages/Admin/Shared/OfflineAttendanceEvent.razor.cs
+Pages/Admin/Shared/OfflineAttendanceEvent.razor.css
+Pages/Admin/Shared/Reports.razor
+Pages/Admin/Shared/Reports.razor.css
+Pages/Admin/Shared/Settings.razor
+Pages/Admin/Shared/Settings.razor.css
+Pages/Admin/Standard/Dashboard.razor
+Pages/Admin/Standard/Dashboard.razor.css
+Pages/Admin/Standard/LecturerCoursesPage.razor
+Pages/Admin/Standard/LecturerCoursesPage.razor.cs
+Pages/Admin/Standard/LecturerCoursesPage.razor.css
+Pages/Admin/Superior/ManageAcademicSession.razor
+Pages/Admin/Superior/ManageAcademicSession.razor.cs
+Pages/Admin/Superior/ManageAcademicSession.razor.css
+Pages/Admin/Superior/ManageAdmins.razor
+Pages/Admin/Superior/ManageAdmins.razor.css
+Pages/Admin/Superior/ManageCourses.razor
+Pages/Admin/Superior/ManageCourses.razor.cs
+Pages/Admin/Superior/ManageCourses.razor.css
+Pages/Admin/Superior/ManageDepartments.razor
+Pages/Admin/Superior/ManageDepartments.razor.cs
+Pages/Admin/Superior/ManageDepartments.razor.css
+Pages/Admin/Superior/ManageUsers.razor
+Pages/Admin/Superior/ManageUsers.razor.cs
+Pages/Admin/Superior/ManageUsers.razor.css
+Pages/Admin/Superior/SuperiorDashboard.razor
+Pages/Admin/Superior/SuperiorDashboard.razor.css
+Pages/Auth/Authentication.razor
+Pages/Auth/Authentication.razor.css
+Pages/Client/ClientProfile.razor
+Pages/Client/ClientProfile.razor.css
+Pages/Client/ClientSettings.razor
+Pages/Client/ClientSettings.razor.css
+Pages/Client/OfflineScanPage.razor
+Pages/Client/OfflineScanPage.razor.cs
+Pages/Client/OfflineScanPage.razor.css
+Pages/Client/ScanPage.razor
+Pages/Client/ScanPage.razor.css
+Pages/Main/Index.razor
+Pages/Main/Index.razor.css
+Pages/Shared/ClientStats.razor
+Pages/Shared/ClientStats.razor.cs
+Pages/Shared/ClientStats.razor.css
+Pages/Shared/ContactUs.razor
+Pages/Shared/ContactUs.razor.css
+Pages/Shared/LogoutPage.razor
+Pages/Shared/LogoutPage.razor.css
+Pages/Shared/OutsideBussinessHours.razor
+Pages/Shared/OutsideBussinessHours.razor.css
+Pages/Shared/PersonalCourseManagement.razor
+Pages/Shared/PersonalCourseManagement.razor.cs
+Pages/Shared/PersonalCourseManagement.razor.css
+Pages/Shared/UnknownError.razor
+Pages/Shared/UnknownError.razor.css
+Pages/TestPages/Example.razor
+Pages/TestPages/Example.razor.cs
+Pages/TestPages/Example.razor.css
+Pages/TestPages/FirebaseTest.razor
+Pages/TestPages/FirebaseTest.razor.css
+Pages/TestPages/RandomStuffTest.razor
+Pages/TestPages/RandomStuffTest.razor.css
+Pages/TestPages/ShaderPage1.razor
+Pages/TestPages/SupabaseTest.razor
+Pages/TestPages/SupabaseTest.razor.css
+Pages/TestPages/TestPage.razor
+Pages/TestPages/TestPage.razor.css
+Program.cs
+Properties/launchSettings.json
+Services/Attendance/AttendanceSessionService.cs
+Services/Attendance/IAttendanceSessionService.cs
+Services/Attendance/IOfflineSyncService.cs
+Services/Attendance/OfflineSyncService.cs
+Services/Attendance/SessionStateService.cs
+Services/Auth/AuthService.cs
+Services/Auth/CustomAuthStateProvider.cs
+Services/Auth/IAuthService.cs
+Services/Auth/IOfflineCredentialsService.cs
+Services/Auth/OfflineCredentialsService.cs
+Services/Courses/CourseService.cs
+Services/Courses/ICourseService.cs
+Services/Cryptography/CryptographyService.cs
+Services/Cryptography/ICryptographyService.cs
+Services/Department/DepartmentService.cs
+Services/Department/IDepartmentService.cs
+Services/Firebase/FirestoreService.cs
+Services/Firebase/IFirestoreService.cs
+Services/Guards/BusinessHoursGuard.cs
+Services/Guards/IBusinessHoursGuard.cs
+Services/Guards/IRouteGuardService.cs
+Services/Guards/RouteGuardService.cs
+Services/Permissions/IPermissionService.cs
+Services/Permissions/PermissionService.cs
+Services/Search/ISearchContextService.cs
+Services/Search/SearchContextService.cs
+Services/Storage/BlazorAppLocalStorageService.cs
+Services/Storage/IBlazorAppLocalStorageService.cs
+Services/SupaBase/CatService.cs
+Services/SupaBase/ISupabaseAuthService.cs
+Services/SupaBase/ISupabaseDatabase.cs
+Services/SupaBase/ISupabaseEdgeFunctionService.cs
+Services/SupaBase/SupabaseAuthService.cs
+Services/SupaBase/SupabaseDatabase.cs
+Services/SupaBase/SupabaseEdgeFunctionService.cs
+Services/Time/IServerTimeService.cs
+Services/Time/ServerTimeService.cs
+Services/VisualElements/ISvgIconService.cs
+Services/VisualElements/SvgIconService.cs
+Utilities/DataStructures/NavItem.cs
+Utilities/DataStructures/QRCodeData.cs
+Utilities/HelperScripts/JsonHelper.cs
+Utilities/HelperScripts/MID_HelperFunctions.cs
+Utilities/HelperScripts/QRCodeDecoder.cs
+Utilities/ObjectPooling/MID_ComponentObjectPool.cs
+_Imports.razor
+dist/wwwroot/AirCode.styles.css
+dist/wwwroot/_content/Microsoft.AspNetCore.Components.WebAssembly.Authentication/AuthenticationService.js
+dist/wwwroot/_content/ReactorBlazorQRCodeScanner/ReactorBlazorQRCodeScanner.bundle.scp.css
+dist/wwwroot/_content/ReactorBlazorQRCodeScanner/ReactorBlazorQRCodeScanner.lib.module.js
+dist/wwwroot/_content/ReactorBlazorQRCodeScanner/jsQR.js
+dist/wwwroot/_content/ReactorBlazorQRCodeScanner/qrCodeScannerJsInterop.js
+dist/wwwroot/_framework/blazor.boot.json
+dist/wwwroot/_framework/blazor.webassembly.js
+dist/wwwroot/_framework/dotnet.7.0.17.5xcw3lqzx7.js
+dist/wwwroot/appsettings.json
+dist/wwwroot/css/app.css
+dist/wwwroot/css/bootstrap/bootstrap.min.css
+dist/wwwroot/css/colors.css
+dist/wwwroot/css/open-iconic/README.md
+dist/wwwroot/css/open-iconic/font/css/open-iconic-bootstrap.min.css
+dist/wwwroot/css/responsive.css
+dist/wwwroot/index.html
+dist/wwwroot/js/authHelper.js
+dist/wwwroot/js/connectivityServices.js
+dist/wwwroot/js/cryptographyHandler.js
+dist/wwwroot/js/debug.js
+dist/wwwroot/js/firestoreModule.js
+dist/wwwroot/js/floatingQrDrag.js
+dist/wwwroot/js/offlineCredentialsHandler.js
+dist/wwwroot/js/pageNavigator.js
+dist/wwwroot/js/qrCodeModule.js
+dist/wwwroot/js/shaderRenderer1.js
+dist/wwwroot/js/supabaseModule.js
+dist/wwwroot/js/themeSwitcher.js
+dist/wwwroot/manifest.json
+dist/wwwroot/sample-data/weather.json
+dist/wwwroot/service-worker-assets.js
+dist/wwwroot/service-worker.js
+dist/wwwroot/wasm/package.json
+dist/wwwroot/wasm/qr_code_generator.d.ts
+dist/wwwroot/wasm/qr_code_generator.js
+dist/wwwroot/wasm/qr_code_generator_bg.wasm.d.ts
+firebase.json
+firestore.indexes.json
+wwwroot/404.html
+wwwroot/appsettings.json
+wwwroot/css/app.css
+wwwroot/css/bootstrap/bootstrap.min.css
+wwwroot/css/colors.css
+wwwroot/css/open-iconic/README.md
+wwwroot/css/open-iconic/font/css/open-iconic-bootstrap.min.css
+wwwroot/css/responsive.css
+wwwroot/index.html
+wwwroot/js/authHelper.js
+wwwroot/js/cameraUtil.js
+wwwroot/js/charts.js
+wwwroot/js/connectivityServices.js
+wwwroot/js/cryptographyHandler.js
+wwwroot/js/debug.js
+wwwroot/js/enrollmentChart.js
+wwwroot/js/firestoreModule.js
+wwwroot/js/floatingQrDrag.js
+wwwroot/js/gpuPerformance.js
+wwwroot/js/offlineCredentialsHandler.js
+wwwroot/js/pageNavigator.js
+wwwroot/js/qrCodeModule.js
+wwwroot/js/search-helpers.js
+wwwroot/js/shaderRenderer1.js
+wwwroot/js/site.js
+wwwroot/js/supabaseModule.js
+wwwroot/js/themeSwitcher.js
+wwwroot/manifest.json
+wwwroot/sample-data/weather.json
+wwwroot/service-worker.js
+wwwroot/service-worker.published.js
+wwwroot/wasm/package.json
+wwwroot/wasm/qr_code_generator.d.ts
+wwwroot/wasm/qr_code_generator.js
+wwwroot/wasm/qr_code_generator_bg.wasm.d.ts
+
+Directory Structure:
+==================
+./
+./Components
+./  Admin
+./    Dashboard
+./    Shared
+./  Auth
+./  Guards
+./  Loading
+./  SharedPrefabs
+./    Buttons
+./    Cards
+./    Fields
+./    Others
+./    QrCode
+./    Scanner
+./    Spinner
+./Domain
+./  Entities
+./  Enums
+./  Interfaces
+./  ValueObjects
+./Extensions
+./Layout
+./  AdminLayout
+./    Superior
+./  ClientLayout
+./  Main
+./Models
+./  QRCode
+./  Supabase
+./Others
+./Pages
+./  Admin
+./    Shared
+./    Standard
+./    Superior
+./  Auth
+./  Client
+./  Main
+./  Shared
+./  TestPages
+./Properties
+./Services
+./  Attendance
+./  Auth
+./  Courses
+./  Cryptography
+./  Department
+./  Firebase
+./  Guards
+./  Permissions
+./  Search
+./  Storage
+./  SupaBase
+./  Time
+./  VisualElements
+./Utilities
+./  DataStructures
+./  HelperScripts
+./  ObjectPooling
+./dist
+./  wwwroot
+./    _content
+./      Microsoft.AspNetCore.Components.WebAssembly.Authentication
+./      ReactorBlazorQRCodeScanner
+./    _framework
+./    css
+./      bootstrap
+./      open-iconic
+./        font
+./          css
+./          fonts
+./    js
+./    sample-data
+./    svgs
+./    wasm
+./wwwroot
+./  css
+./    bootstrap
+./    open-iconic
+./      font
+./        css
+./        fonts
+./  js
+./  sample-data
+./  svgs
+./  wasm
+
+File Count Summary:
+==================
+.cs       : 81 files
+.razor    : 72 files
+.csproj   : 1 files
+.json     : 12 files
+.css      : 80 files
+.js       : 42 files
+.html     : 3 files
