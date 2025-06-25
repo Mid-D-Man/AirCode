@@ -1,6 +1,284 @@
 @page "/ContactUs"
-<h3>ContactUs</h3>
+@using AirCode.Components.SharedPrefabs.Others
+@using AirCode.Components.SharedPrefabs.Buttons
+@using AirCode.Components.SharedPrefabs.Fields
+@using AirCode.Components.SharedPrefabs.Cards
+@inject IJSRuntime JSRuntime
 
-@code {
-    
+<div class="contact-container">
+    <!-- Header Section -->
+    <div class="contact-header">
+        <div class="header-content">
+            <h1 class="contact-title">Get Help & Support</h1>
+            <p class="contact-subtitle">Find answers to common questions or reach out to our support team</p>
+        </div>
+        <div class="header-animation">
+            <div class="floating-icon support-icon"></div>
+            <div class="floating-icon help-icon"></div>
+            <div class="floating-icon chat-icon"></div>
+        </div>
+    </div>
+
+    <!-- Search Section -->
+    <div class="search-section">
+        <div class="search-container">
+            <DynamicSearch 
+                @bind-SearchTerm="searchTerm"
+                Placeholder="Search for help topics, error codes, or guides..."
+                OnSearchChanged="HandleSearchChanged" />
+        </div>
+    </div>
+
+    <!-- Navigation Pills -->
+    <div class="nav-pills">
+        <button class="pill @(activeSection == FAQ_SECTION ? "active" : "")" 
+                @onclick="() => ShowSection(FAQ_SECTION)">
+            <span class="pill-icon">❓</span>
+            FAQ
+        </button>
+        <button class="pill @(activeSection == GUIDES_SECTION ? "active" : "")" 
+                @onclick="() => ShowSection(GUIDES_SECTION)">
+            <span class="pill-icon">📚</span>
+            Guides
+        </button>
+        <button class="pill @(activeSection == CONTACT_SECTION ? "active" : "")" 
+                @onclick="() => ShowSection(CONTACT_SECTION)">
+            <span class="pill-icon">📧</span>
+            Contact
+        </button>
+        <button class="pill @(activeSection == STATUS_SECTION ? "active" : "")" 
+                @onclick="() => ShowSection(STATUS_SECTION)">
+            <span class="pill-icon">🔄</span>
+            Status
+        </button>
+    </div>
+
+    <!-- Content Sections -->
+    <div class="content-sections">
+        
+        <!-- FAQ Section -->
+        @if (activeSection == FAQ_SECTION)
+        {
+            <div class="section-content fade-in">
+                <div class="section-header">
+                    <h2>Frequently Asked Questions</h2>
+                    <p>Find quick answers to the most common questions</p>
+                </div>
+                
+                <div class="faq-grid">
+                    @foreach (var faq in filteredFaqs)
+                    {
+                        <div class="faq-card" @onclick="() => ToggleFaq(faq.Id)">
+                            <div class="faq-question">
+                                <span class="faq-icon">@faq.Icon</span>
+                                <h3>@faq.Question</h3>
+                                <span class="expand-icon @(expandedFaqIds.Contains(faq.Id) ? "expanded" : "")">▼</span>
+                            </div>
+                            @if (expandedFaqIds.Contains(faq.Id))
+                            {
+                                <div class="faq-answer">
+                                    <p>@faq.Answer</p>
+                                    @if (!string.IsNullOrEmpty(faq.ActionText))
+                                    {
+                                        <PrimaryButton 
+                                            Text="@faq.ActionText" 
+                                            OnClick="() => HandleFaqAction(faq.ActionType)" 
+                                            Class="faq-action-btn" />
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        <!-- Guides Section -->
+        @if (activeSection == GUIDES_SECTION)
+        {
+            <div class="section-content fade-in">
+                <div class="section-header">
+                    <h2>Help Guides</h2>
+                    <p>Step-by-step instructions for common tasks</p>
+                </div>
+                
+                <div class="guides-grid">
+                    @foreach (var guide in filteredGuides)
+                    {
+                        <div class="guide-card" @onclick="() => NavigateToGuide(guide.Id)">
+                            <div class="guide-icon">@guide.Icon</div>
+                            <h3>@guide.Title</h3>
+                            <p>@guide.Description</p>
+                            <div class="guide-meta">
+                                <span class="difficulty @guide.Difficulty.ToLower()">@guide.Difficulty</span>
+                                <span class="duration">@guide.EstimatedTime</span>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        <!-- Contact Section -->
+        @if (activeSection == CONTACT_SECTION)
+        {
+            <div class="section-content fade-in">
+                <div class="section-header">
+                    <h2>Contact Support</h2>
+                    <p>Can't find what you're looking for? Get in touch with our team</p>
+                </div>
+                
+                <div class="contact-grid">
+                    <div class="contact-methods">
+                        <div class="contact-method" @onclick="() => HandleContactMethod(EMAIL_CONTACT)">
+                            <div class="method-icon">📧</div>
+                            <h3>Email Support</h3>
+                            <p>Get detailed help via email</p>
+                            <span class="response-time">Response within 24 hours</span>
+                        </div>
+                        
+                        <div class="contact-method" @onclick="() => HandleContactMethod(LIVE_CHAT)">
+                            <div class="method-icon">💬</div>
+                            <h3>Live Chat</h3>
+                            <p>Chat with our support team</p>
+                            <span class="response-time">Available 9 AM - 6 PM</span>
+                        </div>
+                        
+                        <div class="contact-method" @onclick="() => HandleContactMethod(REPORT_BUG)">
+                            <div class="method-icon">🐛</div>
+                            <h3>Report Bug</h3>
+                            <p>Found a technical issue?</p>
+                            <span class="response-time">Priority handling</span>
+                        </div>
+                    </div>
+                    
+                    <div class="contact-form-container">
+                        <div class="contact-form">
+                            <h3>Send us a message</h3>
+                            
+                            <FormField 
+                                Label="Subject"
+                                @bind-Value="contactForm.Subject"
+                                Type="text"
+                                Placeholder="What can we help you with?" />
+                            
+                            <FormField 
+                                Label="Category"
+                                @bind-Value="contactForm.Category"
+                                Type="select"
+                                Options="@contactCategories" />
+                            
+                            <FormField 
+                                Label="Message"
+                                @bind-Value="contactForm.Message"
+                                Type="textarea"
+                                Placeholder="Describe your issue or question in detail..."
+                                Rows="6" />
+                            
+                            <FormField 
+                                Label="Email"
+                                @bind-Value="contactForm.Email"
+                                Type="email"
+                                Placeholder="your@email.com" />
+                            
+                            <div class="form-actions">
+                                <PrimaryButton 
+                                    Text="Send Message" 
+                                    OnClick="SubmitContactForm"
+                                    IsLoading="@isSubmitting"
+                                    Class="submit-btn" />
+                                <SecondaryButton 
+                                    Text="Clear Form" 
+                                    OnClick="ClearContactForm"
+                                    Class="clear-btn" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- Status Section -->
+        @if (activeSection == STATUS_SECTION)
+        {
+            <div class="section-content fade-in">
+                <div class="section-header">
+                    <h2>System Status</h2>
+                    <p>Current status of our services and recent incidents</p>
+                </div>
+                
+                <div class="status-overview">
+                    <div class="status-indicator @(systemStatus.ToLower())">
+                        <div class="status-dot"></div>
+                        <span>@systemStatus</span>
+                    </div>
+                    <div class="last-updated">
+                        Last updated: @lastStatusUpdate.ToString("MMM dd, yyyy HH:mm")
+                    </div>
+                </div>
+                
+                <div class="services-status">
+                    @foreach (var service in serviceStatuses)
+                    {
+                        <div class="service-status">
+                            <div class="service-info">
+                                <h4>@service.Name</h4>
+                                <p>@service.Description</p>
+                            </div>
+                            <div class="service-indicator @(service.Status.ToLower())">
+                                <div class="indicator-dot"></div>
+                                <span>@service.Status</span>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- Error Reporting Modal -->
+    @if (showErrorModal)
+    {
+        <div class="modal-overlay" @onclick="CloseErrorModal">
+            <div class="error-modal" @onclick:stopPropagation="true">
+                <div class="modal-header">
+                    <h3>Report Error</h3>
+                    <button class="close-btn" @onclick="CloseErrorModal">×</button>
+                </div>
+                <div class="modal-content">
+                    <p>Help us improve by reporting the error you encountered.</p>
+                    <FormField 
+                        Label="Error Description"
+                        @bind-Value="errorReport.Description"
+                        Type="textarea"
+                        Placeholder="Describe what happened and what you were trying to do..."
+                        Rows="4" />
+                    <FormField 
+                        Label="Steps to Reproduce"
+                        @bind-Value="errorReport.Steps"
+                        Type="textarea"
+                        Placeholder="List the steps that led to this error..."
+                        Rows="3" />
+                </div>
+                <div class="modal-actions">
+                    <PrimaryButton 
+                        Text="Submit Report" 
+                        OnClick="SubmitErrorReport"
+                        IsLoading="@isSubmittingError" />
+                    <SecondaryButton 
+                        Text="Cancel" 
+                        OnClick="CloseErrorModal" />
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Success/Error Notifications -->
+@if (showNotification)
+{
+    <NotificationComponent 
+        Message="@notificationMessage"
+        Type="@notificationType"
+        OnClose="() => showNotification = false" />
 }
