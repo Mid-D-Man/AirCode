@@ -1,7 +1,7 @@
 Project Structure Documentation
-Generated: Wed Jun 25 01:20:24 UTC 2025
+Generated: Wed Jun 25 06:23:25 UTC 2025
 Repository: Mid-D-Man/AirCode
-Commit: 7c7f99315891384b17646fb4b9731125ab044d44
+Commit: ba14d72ee85077b3f3b6eda6c6e36e2ded6279c1
 ==================================
 
 Source Files:
@@ -157,7 +157,9 @@ Pages/Shared/ClientStats.razor
 Pages/Shared/ClientStats.razor.cs
 Pages/Shared/ClientStats.razor.css
 Pages/Shared/ContactUs.razor
+Pages/Shared/ContactUs.razor.cs
 Pages/Shared/ContactUs.razor.css
+Pages/Shared/ContactUs.razor.js
 Pages/Shared/LogoutPage.razor
 Pages/Shared/LogoutPage.razor.css
 Pages/Shared/OutsideBussinessHours.razor
@@ -394,10 +396,10 @@ Directory Structure:
 
 File Count Summary:
 ==================
-.cs       : 81 files
+.cs       : 82 files
 .razor    : 71 files
 .csproj   : 1 files
 .json     : 12 files
 .css      : 79 files
-.js       : 42 files
+.js       : 43 files
 .html     : 3 files
