@@ -20,6 +20,7 @@ using AirCode.Services.VisualElements;
 using AirCode.Utilities.DataStructures;
 using AirCode.Utilities.HelperScripts;
 using Blazored.Toast;
+using Microsoft.JSInterop;
 
 // ============================================================================
 // AirCode Blazor WebAssembly Application Configuration
@@ -115,6 +116,21 @@ builder.Services.AddHttpClient("AirCodeAPI",
 // Primary HTTP client service (uses authenticated client)
 builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>()
     .CreateClient("AirCodeAPI"));
+
+
+
+// ============================================================================
+// Core Logging 
+// ============================================================================
+// Add logging
+builder.Services.AddLogging();
+
+var app = builder.Build();
+
+// Initialize MID_HelperFunctions after building the app
+var logger = app.Services.GetRequiredService<ILogger<Program>>();
+var jsRuntime = app.Services.GetRequiredService<IJSRuntime>();
+MID_HelperFunctions.Initialize(logger, jsRuntime);
 
 // ============================================================================
 // Core Authentication & Security Services

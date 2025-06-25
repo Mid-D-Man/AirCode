@@ -610,32 +610,30 @@ public partial class ManageUsers : ComponentBase
         }
     }
     #endregion
-    
-    #region Delete Operations (Updated Implementation)
+    #region Delete Operations (Improved Implementation)
 
 private async Task DeleteSkeletonUser()
 {
+    if (selectedUser == null || string.IsNullOrEmpty(selectedUserType))
+    {
+        notificationComponent?.ShowError("Invalid user selection.");
+        return;
+    }
+
     try
     {
         loading = true;
         StateHasChanged();
 
-        bool success = false;
-        
-        switch (selectedUserType)
+        var result = selectedUserType switch
         {
-            case "student":
-                success = await DeleteStudentSkeleton(selectedUser as StudentSkeletonUser);
-                break;
-            case "lecturer":
-                success = await DeleteLecturerSkeletonField(selectedUser as LecturerSkeletonUser);
-                break;
-            case "courserep":
-                success = await DeleteCourseRepSkeletonField(selectedUser as CourseRepSkeletonUser);
-                break;
-        }
+            "student" => await DeleteStudentSkeleton(selectedUser as StudentSkeletonUser),
+            "lecturer" => await DeleteLecturerSkeletonField(selectedUser as LecturerSkeletonUser),
+            "courserep" => await DeleteCourseRepSkeletonField(selectedUser as CourseRepSkeletonUser),
+            _ => new OperationResult { Success = false, ErrorMessage = "Unknown user type" }
+        };
 
-        if (success)
+        if (result.Success)
         {
             notificationComponent?.ShowSuccess("Skeleton user deleted successfully!");
             CloseModals();
@@ -643,13 +641,12 @@ private async Task DeleteSkeletonUser()
         }
         else
         {
-            notificationComponent?.ShowError("Failed to delete skeleton user. Please try again.");
+            notificationComponent?.ShowError($"Failed to delete skeleton user: {result.ErrorMessage}");
         }
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"DeleteSkeletonUser: Exception occurred: {ex.Message}");
-        Console.WriteLine($"DeleteSkeletonUser: Stack trace: {ex.StackTrace}");
+        await MID_HelperFunctions.DebugMessageAsync($"DeleteSkeletonUser: Exception occurred: {ex.Message}", DebugClass.Exception);
         notificationComponent?.ShowError($"Error deleting skeleton user: {ex.Message}");
     }
     finally
@@ -659,176 +656,181 @@ private async Task DeleteSkeletonUser()
     }
 }
 
-private async Task<bool> DeleteStudentSkeleton(StudentSkeletonUser student)
+private async Task<OperationResult> DeleteStudentSkeleton(StudentSkeletonUser student)
 {
+    if (student?.MatricNumber == null || student?.Level  == null)
+    {
+        return new OperationResult { Success = false, ErrorMessage = "Invalid student data" };
+    }
+
     try
     {
         var docName = $"StudentLevel{student.Level}";
         var levelDoc = await FirestoreService.GetDocumentAsync<StudentLevelDocument>(STUDENTS_COLLECTION, docName);
         
-        if (levelDoc?.ValidStudentMatricNumbers != null)
+        if (levelDoc?.ValidStudentMatricNumbers == null)
         {
-            var initialCount = levelDoc.ValidStudentMatricNumbers.Count;
-            levelDoc.ValidStudentMatricNumbers.RemoveAll(s => s.MatricNumber.Equals(student.MatricNumber, StringComparison.OrdinalIgnoreCase));
-            
-            if (levelDoc.ValidStudentMatricNumbers.Count < initialCount)
-            {
-                var result = await FirestoreService.UpdateDocumentAsync(STUDENTS_COLLECTION, docName, levelDoc);
-                Console.WriteLine($"DeleteStudentSkeleton: Student '{student.MatricNumber}' deletion result: {result}");
-                return result;
-            }
-            else
-            {
-                Console.WriteLine($"DeleteStudentSkeleton: Student '{student.MatricNumber}' not found in level {student.Level}");
-                return false;
-            }
+            return new OperationResult { Success = false, ErrorMessage = $"Level document for {student.Level} not found" };
         }
+
+        var initialCount = levelDoc.ValidStudentMatricNumbers.Count;
+        levelDoc.ValidStudentMatricNumbers.RemoveAll(s => 
+            string.Equals(s.MatricNumber, student.MatricNumber, StringComparison.OrdinalIgnoreCase));
         
-        Console.WriteLine($"DeleteStudentSkeleton: Level document for {student.Level} not found or empty");
-        return false;
+        if (levelDoc.ValidStudentMatricNumbers.Count >= initialCount)
+        {
+            return new OperationResult { Success = false, ErrorMessage = $"Student '{student.MatricNumber}' not found in level {student.Level}" };
+        }
+
+        var updateSuccess = await FirestoreService.UpdateDocumentAsync(STUDENTS_COLLECTION, docName, levelDoc);
+        
+        return new OperationResult 
+        { 
+            Success = updateSuccess, 
+            ErrorMessage = updateSuccess ? null : "Failed to update Firestore document" 
+        };
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"DeleteStudentSkeleton: Exception occurred: {ex.Message}");
-        return false;
+        await MID_HelperFunctions.DebugMessageAsync($"DeleteStudentSkeleton: Exception for {student.MatricNumber}: {ex.Message}", DebugClass.Exception);
+        return new OperationResult { Success = false, ErrorMessage = ex.Message };
     }
 }
 
-private async Task<bool> DeleteCourseRepSkeletonField(CourseRepSkeletonUser courseRep)
+private async Task<OperationResult> DeleteCourseRepSkeletonField(CourseRepSkeletonUser courseRep)
 {
-    if (courseRep?.AdminInfo == null || courseRep.StudentInfo == null)
+    if (courseRep?.AdminInfo?.AdminId == null || courseRep.StudentInfo == null)
     {
-        Console.WriteLine("DeleteCourseRepSkeletonField: CourseRep parameter or its properties are null");
-        return false;
+        return new OperationResult { Success = false, ErrorMessage = "Invalid course rep data" };
     }
 
     try
     {
-        Console.WriteLine($"DeleteCourseRepSkeletonField: Starting deletion for course rep '{courseRep.AdminInfo.AdminId}'");
+        await MID_HelperFunctions.DebugMessageAsync($"DeleteCourseRepSkeletonField: Starting deletion for '{courseRep.AdminInfo.AdminId}'", DebugClass.Info);
         
-        bool adminSuccess = false;
-        bool studentSuccess = false;
-
-        // Delete from admin collection first
-        var existingDoc = await FirestoreService.GetDocumentAsync<CourseRepAdminDocument>(ADMIN_IDS_COLLECTION, COURSEREP_ADMIN_DOC);
-        if (existingDoc?.Ids != null)
-        {
-            var courseRepExists = existingDoc.Ids.Any(cr => cr.AdminId == courseRep.AdminInfo.AdminId);
-            if (courseRepExists)
-            {
-                var updatedList = existingDoc.Ids
-                    .Where(cr => cr.AdminId != courseRep.AdminInfo.AdminId)
-                    .ToList();
-
-                adminSuccess = await FirestoreService.AddOrUpdateFieldAsync(ADMIN_IDS_COLLECTION, COURSEREP_ADMIN_DOC, "Ids", updatedList);
-                Console.WriteLine($"DeleteCourseRepSkeletonField: Admin deletion result for '{courseRep.AdminInfo.AdminId}': {adminSuccess}");
-            }
-            else
-            {
-                Console.WriteLine($"DeleteCourseRepSkeletonField: Course rep admin '{courseRep.AdminInfo.AdminId}' not found");
-                adminSuccess = true; // Consider as success if not found
-            }
-        }
-        else
-        {
-            Console.WriteLine("DeleteCourseRepSkeletonField: Course rep admin document not found or Ids collection is null");
-        }
-
+        // Delete admin record
+        var adminResult = await DeleteCourseRepAdmin(courseRep.AdminInfo.AdminId);
+        
         // Delete associated student record
-        studentSuccess = await DeleteStudentSkeleton(courseRep.StudentInfo);
-        Console.WriteLine($"DeleteCourseRepSkeletonField: Student deletion result for '{courseRep.StudentInfo.MatricNumber}': {studentSuccess}");
+        var studentResult = await DeleteStudentSkeleton(courseRep.StudentInfo);
 
-        // Return true only if both operations succeeded
-        var overallSuccess = adminSuccess && studentSuccess;
-        Console.WriteLine($"DeleteCourseRepSkeletonField: Overall deletion result for course rep '{courseRep.AdminInfo.AdminId}': {overallSuccess}");
-        
-        return overallSuccess;
+        if (!adminResult.Success || !studentResult.Success)
+        {
+            var errors = new List<string>();
+            if (!adminResult.Success) errors.Add($"Admin deletion: {adminResult.ErrorMessage}");
+            if (!studentResult.Success) errors.Add($"Student deletion: {studentResult.ErrorMessage}");
+            
+            return new OperationResult 
+            { 
+                Success = false, 
+                ErrorMessage = string.Join("; ", errors) 
+            };
+        }
+
+        return new OperationResult { Success = true };
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"DeleteCourseRepSkeletonField: Exception occurred while deleting course rep '{courseRep?.AdminInfo?.AdminId}': {ex.Message}");
-        Console.WriteLine($"DeleteCourseRepSkeletonField: Stack trace: {ex.StackTrace}");
-        return false;
+        await MID_HelperFunctions.DebugMessageAsync($"DeleteCourseRepSkeletonField: Exception for '{courseRep.AdminInfo.AdminId}': {ex.Message}", DebugClass.Exception);
+        return new OperationResult { Success = false, ErrorMessage = ex.Message };
     }
 }
-private async Task<bool> DeleteLecturerSkeletonField(LecturerSkeletonUser lecturer)
-{
-    if (lecturer == null)
-    {
-        Console.WriteLine("DeleteLecturerSkeletonField: Lecturer parameter is null");
-        return false;
-    }
 
+private async Task<OperationResult> DeleteCourseRepAdmin(string adminId)
+{
     try
     {
-        Console.WriteLine($"DeleteLecturerSkeletonField: Starting deletion for lecturer '{lecturer.AdminId}'");
+        var existingDoc = await FirestoreService.GetDocumentAsync<CourseRepAdminDocument>(ADMIN_IDS_COLLECTION, COURSEREP_ADMIN_DOC);
         
-        // Get the current document
-        var existingDoc = await FirestoreService.GetDocumentAsync<LecturerAdminDocument>(ADMIN_IDS_COLLECTION, LECTURER_ADMIN_DOC);
         if (existingDoc?.Ids == null)
         {
-            Console.WriteLine("DeleteLecturerSkeletonField: Lecturer document not found or Ids collection is null");
-            return false;
+            return new OperationResult { Success = false, ErrorMessage = "Course rep admin document not found" };
         }
 
-        // Check if lecturer exists
-        var lecturerExists = existingDoc.Ids.Any(l => l.AdminId == lecturer.AdminId);
-        if (!lecturerExists)
+        if (!existingDoc.Ids.Any(cr => cr.AdminId == adminId))
         {
-            Console.WriteLine($"DeleteLecturerSkeletonField: Lecturer '{lecturer.AdminId}' not found in document");
-            return false;
+            await MID_HelperFunctions.DebugMessageAsync($"Course rep admin '{adminId}' not found - treating as success", DebugClass.Warning);
+            return new OperationResult { Success = true }; // Not found is considered success for deletion
         }
 
-        // Remove the lecturer from the list
-        var updatedList = existingDoc.Ids
-            .Where(l => l.AdminId != lecturer.AdminId)
-            .ToList();
+        var updatedList = existingDoc.Ids.Where(cr => cr.AdminId != adminId).ToList();
+        var updateSuccess = await FirestoreService.AddOrUpdateFieldAsync(ADMIN_IDS_COLLECTION, COURSEREP_ADMIN_DOC, "Ids", updatedList);
 
-        // Update the field with the new list
-        var result = await FirestoreService.AddOrUpdateFieldAsync(ADMIN_IDS_COLLECTION, LECTURER_ADMIN_DOC, "Ids", updatedList);
-        
-        if (result)
-        {
-            Console.WriteLine($"DeleteLecturerSkeletonField: Successfully deleted lecturer '{lecturer.AdminId}'");
-        }
-        else
-        {
-            Console.WriteLine($"DeleteLecturerSkeletonField: Failed to delete lecturer '{lecturer.AdminId}'");
-        }
-        
-        return result;
+        return new OperationResult 
+        { 
+            Success = updateSuccess, 
+            ErrorMessage = updateSuccess ? null : "Failed to update admin document" 
+        };
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"DeleteLecturerSkeletonField: Exception occurred while deleting lecturer '{lecturer?.AdminId}': {ex.Message}");
-        Console.WriteLine($"DeleteLecturerSkeletonField: Stack trace: {ex.StackTrace}");
-        return false;
+        return new OperationResult { Success = false, ErrorMessage = ex.Message };
     }
 }
 
+private async Task<OperationResult> DeleteLecturerSkeletonField(LecturerSkeletonUser lecturer)
+{
+    if (string.IsNullOrEmpty(lecturer?.AdminId))
+    {
+        return new OperationResult { Success = false, ErrorMessage = "Invalid lecturer data" };
+    }
+
+    try
+    {
+        await MID_HelperFunctions.DebugMessageAsync($"DeleteLecturerSkeletonField: Starting deletion for '{lecturer.AdminId}'", DebugClass.Info);
+        
+        var existingDoc = await FirestoreService.GetDocumentAsync<LecturerAdminDocument>(ADMIN_IDS_COLLECTION, LECTURER_ADMIN_DOC);
+        
+        if (existingDoc?.Ids == null)
+        {
+            return new OperationResult { Success = false, ErrorMessage = "Lecturer document not found" };
+        }
+
+        if (!existingDoc.Ids.Any(l => l.AdminId == lecturer.AdminId))
+        {
+            return new OperationResult { Success = false, ErrorMessage = $"Lecturer '{lecturer.AdminId}' not found" };
+        }
+
+        var updatedList = existingDoc.Ids.Where(l => l.AdminId != lecturer.AdminId).ToList();
+        var updateSuccess = await FirestoreService.AddOrUpdateFieldAsync(ADMIN_IDS_COLLECTION, LECTURER_ADMIN_DOC, "Ids", updatedList);
+        
+        return new OperationResult 
+        { 
+            Success = updateSuccess, 
+            ErrorMessage = updateSuccess ? null : "Failed to update lecturer document" 
+        };
+    }
+    catch (Exception ex)
+    {
+        await MID_HelperFunctions.DebugMessageAsync($"DeleteLecturerSkeletonField: Exception for '{lecturer.AdminId}': {ex.Message}", DebugClass.Exception);
+        return new OperationResult { Success = false, ErrorMessage = ex.Message };
+    }
+}
 
 #endregion
 
-#region Remove User Operations (Updated Implementation)
+#region Remove User Operations (Improved Implementation)
 
 private async Task RemoveAssignedUser()
 {
+    if (selectedUser == null || string.IsNullOrEmpty(selectedAssignedUserId))
+    {
+        notificationComponent?.ShowError("Invalid selection for user removal.");
+        return;
+    }
+
     try
     {
-        Console.WriteLine($"RemoveAssignedUser: Starting removal for user '{selectedAssignedUserId}' from '{selectedUserType}'");
+        await MID_HelperFunctions.DebugMessageAsync($"RemoveAssignedUser: Starting removal for user '{selectedAssignedUserId}' from '{selectedUserType}'", DebugClass.Info);
         
-        bool success = false;
-        
-        if (selectedUser is LecturerSkeletonUser lecturer)
+        var result = selectedUser switch
         {
-            success = await RemoveUserFromLecturer(lecturer, selectedAssignedUserId);
-        }
-        else if (selectedUser is CourseRepAdminInfo courseRepAdmin)
-        {
-            success = await RemoveUserFromCourseRep(courseRepAdmin, selectedAssignedUserId);
-        }
+            LecturerSkeletonUser lecturer => await RemoveUserFromLecturer(lecturer, selectedAssignedUserId),
+            CourseRepAdminInfo courseRepAdmin => await RemoveUserFromCourseRep(courseRepAdmin, selectedAssignedUserId),
+            _ => new OperationResult { Success = false, ErrorMessage = "Unsupported user type for removal" }
+        };
 
-        if (success)
+        if (result.Success)
         {
             notificationComponent?.ShowSuccess("User removed successfully!");
             CloseModals();
@@ -836,137 +838,123 @@ private async Task RemoveAssignedUser()
         }
         else
         {
-            notificationComponent?.ShowError("Failed to remove user. Please try again.");
+            notificationComponent?.ShowError($"Failed to remove user: {result.ErrorMessage}");
         }
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"RemoveAssignedUser: Exception occurred: {ex.Message}");
-        Console.WriteLine($"RemoveAssignedUser: Stack trace: {ex.StackTrace}");
+        await MID_HelperFunctions.DebugMessageAsync($"RemoveAssignedUser: Exception occurred: {ex.Message}", DebugClass.Exception);
         notificationComponent?.ShowError($"Error removing user: {ex.Message}");
     }
 }
 
-private async Task<bool> RemoveUserFromLecturer(LecturerSkeletonUser lecturer, string userId)
+private async Task<OperationResult> RemoveUserFromLecturer(LecturerSkeletonUser lecturer, string userId)
 {
-    if (lecturer == null || string.IsNullOrWhiteSpace(userId))
+    if (lecturer?.AdminId == null || string.IsNullOrWhiteSpace(userId))
     {
-        Console.WriteLine($"RemoveUserFromLecturer: Invalid parameters - lecturer: {lecturer != null}, userId: '{userId}'");
-        return false;
+        return new OperationResult { Success = false, ErrorMessage = "Invalid parameters for lecturer user removal" };
     }
 
     try
     {
-        Console.WriteLine($"RemoveUserFromLecturer: Removing user '{userId}' from lecturer '{lecturer.AdminId}'");
+        await MID_HelperFunctions.DebugMessageAsync($"RemoveUserFromLecturer: Removing user '{userId}' from lecturer '{lecturer.AdminId}'", DebugClass.Info);
         
         var lecturerDoc = await FirestoreService.GetDocumentAsync<LecturerAdminDocument>(ADMIN_IDS_COLLECTION, LECTURER_ADMIN_DOC);
         
         if (lecturerDoc?.Ids == null)
         {
-            Console.WriteLine("RemoveUserFromLecturer: Lecturer document not found or Ids collection is null");
-            return false;
+            return new OperationResult { Success = false, ErrorMessage = "Lecturer document not found" };
         }
 
         var lecturerToUpdate = lecturerDoc.Ids.FirstOrDefault(l => l.AdminId == lecturer.AdminId);
         if (lecturerToUpdate == null)
         {
-            Console.WriteLine($"RemoveUserFromLecturer: Lecturer with AdminId '{lecturer.AdminId}' not found in document");
-            return false;
+            return new OperationResult { Success = false, ErrorMessage = $"Lecturer '{lecturer.AdminId}' not found in document" };
         }
 
         if (!lecturerToUpdate.UserIds.Contains(userId))
         {
-            Console.WriteLine($"RemoveUserFromLecturer: UserId '{userId}' not found in lecturer's UserIds");
-            return false;
+            return new OperationResult { Success = false, ErrorMessage = $"User '{userId}' not assigned to lecturer" };
         }
 
-        // Remove the user ID and update usage
+        // Update the lecturer's user list
         lecturerToUpdate.UserIds.Remove(userId);
         lecturerToUpdate.CurrentUsage = lecturerToUpdate.UserIds.Count;
 
-        // Update the entire Ids field with the modified data
-        var result = await FirestoreService.AddOrUpdateFieldAsync(ADMIN_IDS_COLLECTION, LECTURER_ADMIN_DOC, "Ids", lecturerDoc.Ids);
+        var updateSuccess = await FirestoreService.AddOrUpdateFieldAsync(ADMIN_IDS_COLLECTION, LECTURER_ADMIN_DOC, "Ids", lecturerDoc.Ids);
         
-        if (result)
-        {
-            Console.WriteLine($"RemoveUserFromLecturer: Successfully removed user '{userId}' from lecturer '{lecturer.AdminId}'");
-        }
-        else
-        {
-            Console.WriteLine($"RemoveUserFromLecturer: Failed to remove user '{userId}' from lecturer '{lecturer.AdminId}'");
-        }
-        
-        return result;
+        return new OperationResult 
+        { 
+            Success = updateSuccess, 
+            ErrorMessage = updateSuccess ? null : "Failed to update lecturer document" 
+        };
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"RemoveUserFromLecturer: Exception occurred while removing user '{userId}' from lecturer '{lecturer?.AdminId}': {ex.Message}");
-        Console.WriteLine($"RemoveUserFromLecturer: Stack trace: {ex.StackTrace}");
-        return false;
+        await MID_HelperFunctions.DebugMessageAsync($"RemoveUserFromLecturer: Exception for lecturer '{lecturer.AdminId}': {ex.Message}", DebugClass.Exception);
+        return new OperationResult { Success = false, ErrorMessage = ex.Message };
     }
 }
 
-private async Task<bool> RemoveUserFromCourseRep(CourseRepAdminInfo courseRepAdmin, string userId)
+private async Task<OperationResult> RemoveUserFromCourseRep(CourseRepAdminInfo courseRepAdmin, string userId)
 {
-    if (courseRepAdmin == null || string.IsNullOrWhiteSpace(userId))
+    if (courseRepAdmin?.AdminId == null || string.IsNullOrWhiteSpace(userId))
     {
-        Console.WriteLine($"RemoveUserFromCourseRep: Invalid parameters - courseRepAdmin: {courseRepAdmin != null}, userId: '{userId}'");
-        return false;
+        return new OperationResult { Success = false, ErrorMessage = "Invalid parameters for course rep user removal" };
     }
 
     try
     {
-        Console.WriteLine($"RemoveUserFromCourseRep: Removing user '{userId}' from course rep '{courseRepAdmin.AdminId}'");
+        await MID_HelperFunctions.DebugMessageAsync($"RemoveUserFromCourseRep: Removing user '{userId}' from course rep '{courseRepAdmin.AdminId}'", DebugClass.Info);
         
         var courseRepDoc = await FirestoreService.GetDocumentAsync<CourseRepAdminDocument>(ADMIN_IDS_COLLECTION, COURSEREP_ADMIN_DOC);
         
         if (courseRepDoc?.Ids == null)
         {
-            Console.WriteLine("RemoveUserFromCourseRep: CourseRep document not found or Ids collection is null");
-            return false;
+            return new OperationResult { Success = false, ErrorMessage = "CourseRep document not found" };
         }
 
         var courseRepToUpdate = courseRepDoc.Ids.FirstOrDefault(cr => cr.AdminId == courseRepAdmin.AdminId);
         if (courseRepToUpdate == null)
         {
-            Console.WriteLine($"RemoveUserFromCourseRep: CourseRep with AdminId '{courseRepAdmin.AdminId}' not found in document");
-            return false;
+            return new OperationResult { Success = false, ErrorMessage = $"CourseRep '{courseRepAdmin.AdminId}' not found in document" };
         }
 
         if (!courseRepToUpdate.UserIds.Contains(userId))
         {
-            Console.WriteLine($"RemoveUserFromCourseRep: UserId '{userId}' not found in course rep's UserIds");
-            return false;
+            return new OperationResult { Success = false, ErrorMessage = $"User '{userId}' not assigned to course rep" };
         }
 
-        // Remove the user ID and update usage
+        // Update the course rep's user list
         courseRepToUpdate.UserIds.Remove(userId);
         courseRepToUpdate.CurrentUsage = courseRepToUpdate.UserIds.Count;
 
-        // Update the entire Ids field with the modified data
-        var result = await FirestoreService.AddOrUpdateFieldAsync(ADMIN_IDS_COLLECTION, COURSEREP_ADMIN_DOC, "Ids", courseRepDoc.Ids);
+        var updateSuccess = await FirestoreService.AddOrUpdateFieldAsync(ADMIN_IDS_COLLECTION, COURSEREP_ADMIN_DOC, "Ids", courseRepDoc.Ids);
         
-        if (result)
-        {
-            Console.WriteLine($"RemoveUserFromCourseRep: Successfully removed user '{userId}' from course rep '{courseRepAdmin.AdminId}'");
-        }
-        else
-        {
-            Console.WriteLine($"RemoveUserFromCourseRep: Failed to remove user '{userId}' from course rep '{courseRepAdmin.AdminId}'");
-        }
-        
-        return result;
+        return new OperationResult 
+        { 
+            Success = updateSuccess, 
+            ErrorMessage = updateSuccess ? null : "Failed to update course rep document" 
+        };
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"RemoveUserFromCourseRep: Exception occurred while removing user '{userId}' from course rep '{courseRepAdmin?.AdminId}': {ex.Message}");
-        Console.WriteLine($"RemoveUserFromCourseRep: Stack trace: {ex.StackTrace}");
-        return false;
+        await MID_HelperFunctions.DebugMessageAsync($"RemoveUserFromCourseRep: Exception for course rep '{courseRepAdmin.AdminId}': {ex.Message}", DebugClass.Exception);
+        return new OperationResult { Success = false, ErrorMessage = ex.Message };
     }
 }
 
 #endregion
-    
+
+#region Helper Classes
+
+public class OperationResult
+{
+    public bool Success { get; set; }
+    public string? ErrorMessage { get; set; }
+}
+
+#endregion
     #region Utility Methods
     private async Task CopyToClipboard(string text)
     {
