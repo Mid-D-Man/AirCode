@@ -43,6 +43,18 @@ public interface IOfflineCredentialsService
     /// Clears stored credentials
     /// </summary>
     Task<bool> ClearCredentialsAsync();
+
+    /// <summary>
+    /// Checks if offline credentials exist and are still valid (not expired)
+    /// If expired, automatically clears them
+    /// </summary>
+    Task<bool> AreCredentialsValidAsync();
+
+    /// <summary>
+    /// Checks and cleans up expired credentials
+    /// Returns true if credentials were expired and cleaned up, false if they were valid or didn't exist
+    /// </summary>
+    Task<bool> CheckAndCleanExpiredCredentialsAsync();
 }
 
 /// <summary>

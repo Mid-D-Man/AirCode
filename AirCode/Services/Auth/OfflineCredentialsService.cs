@@ -3,6 +3,11 @@ using Microsoft.JSInterop;
 using Microsoft.AspNetCore.Components.Authorization;
 using System.Security.Claims;
 
+using AirCode.Services.Cryptography;
+using Microsoft.JSInterop;
+using Microsoft.AspNetCore.Components.Authorization;
+using System.Security.Claims;
+
 namespace AirCode.Services.Auth;
 
 /// <summary>
@@ -144,12 +149,19 @@ public class OfflineCredentialsService : IOfflineCredentialsService
     }
 
     /// <summary>
-    /// Retrieves user credentials if available and valid
+    /// Retrieves user credentials if available and valid (automatically cleans expired credentials)
     /// </summary>
     public async Task<OfflineUserCredentials> GetCredentialsAsync()
     {
         try
         {
+            // First check if credentials are valid and clean up if expired
+            bool areValid = await AreCredentialsValidAsync();
+            if (!areValid)
+            {
+                return null;
+            }
+
             var credentialsJson = await _jsRuntime.InvokeAsync<string>(
                 "offlineCredentialsHandler.getCredentials");
 
@@ -169,6 +181,8 @@ public class OfflineCredentialsService : IOfflineCredentialsService
         catch (Exception ex)
         {
             Console.Error.WriteLine($"Failed to retrieve offline credentials: {ex.Message}");
+            // Clear potentially corrupted credentials
+            await ClearCredentialsAsync();
             return null;
         }
     }
@@ -180,6 +194,13 @@ public class OfflineCredentialsService : IOfflineCredentialsService
     {
         try
         {
+            // Check if credentials are valid first
+            bool areValid = await AreCredentialsValidAsync();
+            if (!areValid)
+            {
+                return null;
+            }
+
             return await _jsRuntime.InvokeAsync<string>(
                 "offlineCredentialsHandler.getUserRole");
         }
@@ -197,6 +218,13 @@ public class OfflineCredentialsService : IOfflineCredentialsService
     {
         try
         {
+            // Check if credentials are valid first
+            bool areValid = await AreCredentialsValidAsync();
+            if (!areValid)
+            {
+                return null;
+            }
+
             return await _jsRuntime.InvokeAsync<string>(
                 "offlineCredentialsHandler.getUserId");
         }
@@ -220,6 +248,44 @@ public class OfflineCredentialsService : IOfflineCredentialsService
         catch (Exception ex)
         {
             Console.Error.WriteLine($"Failed to clear credentials: {ex.Message}");
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Checks if offline credentials exist and are still valid (not expired)
+    /// If expired, automatically clears them
+    /// </summary>
+    public async Task<bool> AreCredentialsValidAsync()
+    {
+        try
+        {
+            bool isAuthenticated = await _jsRuntime.InvokeAsync<bool>(
+                "offlineCredentialsHandler.isAuthenticated");
+            
+            return isAuthenticated;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Failed to check credential validity: {ex.Message}");
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Checks and cleans up expired credentials
+    /// Returns true if credentials were expired and cleaned up, false if they were valid or didn't exist
+    /// </summary>
+    public async Task<bool> CheckAndCleanExpiredCredentialsAsync()
+    {
+        try
+        {
+            return await _jsRuntime.InvokeAsync<bool>(
+                "offlineCredentialsHandler.checkAndCleanExpiredCredentials");
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Failed to check and clean expired credentials: {ex.Message}");
             return false;
         }
     }
