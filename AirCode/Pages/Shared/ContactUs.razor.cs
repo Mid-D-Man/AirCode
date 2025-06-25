@@ -4,6 +4,9 @@ using System.ComponentModel.DataAnnotations;
 
 namespace AirCode.Pages.Shared
 {
+    /// <summary>
+ // this page is supposed to handle clients requesting support and looking up commonly gound issues
+ /// </summary>
     public partial class ContactUs : ComponentBase
     {
         #region Constants
