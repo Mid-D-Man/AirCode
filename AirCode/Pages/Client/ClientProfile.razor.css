@@ -123,12 +123,128 @@
     background-color: var(--primary-rgb);
 }
 
+/* Settings Styles */
+.setting-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.setting-item:last-child {
+    border-bottom: none;
+}
+
+.setting-info {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.setting-title {
+    font-weight: 500;
+    color: var(--dark-text-color);
+    margin-bottom: 0.25rem;
+}
+
+.setting-description {
+    font-size: 0.85rem;
+    color: var(--h2-color);
+}
+
+.setting-control {
+    margin-left: 1rem;
+}
+
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 28px;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: 0.4s;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: 0.4s;
+}
+
+input:checked + .slider {
+    background-color: var(--primary-color);
+}
+
+input:focus + .slider {
+    box-shadow: 0 0 1px var(--primary-color);
+}
+
+input:checked + .slider:before {
+    transform: translateX(22px);
+}
+
+.slider.round {
+    border-radius: 28px;
+}
+
+.slider.round:before {
+    border-radius: 50%;
+}
+
+.notification-select {
+    padding: 0.5rem;
+    border: 1px solid var(--primary-color);
+    border-radius: 5px;
+    background-color: var(--bg);
+    color: var(--dark-text-color);
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+.reset-settings-btn {
+    width: 100%;
+    padding: 0.75rem;
+    background-color: #ff6b6b;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    font-size: 0.9rem;
+}
+
+.reset-settings-btn:hover {
+    background-color: #ff5252;
+}
+
 .profile-actions {
     display: flex;
     justify-content: center;
     gap: 1rem;
     width: 100%;
     max-width: 500px;
+    flex-wrap: wrap;
 }
 
 .btn {
@@ -138,6 +254,9 @@
     font-size: 1rem;
     cursor: pointer;
     transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 .btn-edit {
@@ -158,6 +277,7 @@
 .btn-logout {
     background-color: #F44336;
     color: var(--button-text-color);
+    font-weight: 500;
 }
 
 .btn:hover {
@@ -169,4 +289,29 @@
     color: #F44336;
     margin-top: 1rem;
     text-align: center;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .profile-actions {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .btn {
+        width: 100%;
+        max-width: 300px;
+        justify-content: center;
+    }
+
+    .setting-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .setting-control {
+        margin-left: 0;
+        align-self: flex-end;
+    }
 }

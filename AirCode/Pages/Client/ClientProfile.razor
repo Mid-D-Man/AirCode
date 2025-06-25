@@ -1,13 +1,14 @@
 @page "/client/profile"
 @using AirCode.Services.Auth
+@using ILocalStorageService = AirCode.Services.Storage.IBlazorAppLocalStorageService
 @layout AirCode.Layout.ClientLayout.ClientLayout
 @inject NavigationManager NavigationManager
+@inject ILocalStorageService BlazorAppLocalStorage
 
 <div class="client-profile-page">
     <div class="profile-header">
         <div class="profile-avatar-container">
             <img src="@ProfileImagePath" alt="Profile" class="profile-avatar" />
-            <!--input type="file" accept="image/*" @ref="fileInput" @onchange="OnFileSelected" style="display: none;" /-->
             <button class="change-avatar-btn" @onclick="TriggerFileInput">
                 <i class="oi oi-camera"></i>
             </button>
@@ -52,6 +53,75 @@
                 @(IsChangingPassword ? "Cancel" : "Change Password")
             </button>
         </div>
+
+        <div class="profile-section">
+            <h4>App Settings</h4>
+            <div class="setting-item">
+                <div class="setting-info">
+                    <span class="setting-title">Dark Mode</span>
+                    <span class="setting-description">Switch between light and dark themes</span>
+                </div>
+                <div class="setting-control">
+                    <label class="toggle-switch">
+                        <input type="checkbox" 
+                               checked="@isDarkModeEnabled" 
+                               @onchange="ToggleDarkMode" />
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="setting-item">
+                <div class="setting-info">
+                    <span class="setting-title">Two-Factor Authentication</span>
+                    <span class="setting-description">Add an extra layer of security to your account</span>
+                </div>
+                <div class="setting-control">
+                    <label class="toggle-switch">
+                        <input type="checkbox" 
+                               checked="@isTwoFactorEnabled" 
+                               @onchange="ToggleTwoFactor" />
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="setting-item">
+                <div class="setting-info">
+                    <span class="setting-title">Notification Preferences</span>
+                    <span class="setting-description">Manage how you receive notifications</span>
+                </div>
+                <div class="setting-control">
+                    <select class="notification-select" @bind="selectedNotificationPreference">
+                        <option value="all">All Notifications</option>
+                        <option value="important">Important Only</option>
+                        <option value="none">No Notifications</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="setting-item">
+                <div class="setting-info">
+                    <span class="setting-title">Data Collection</span>
+                    <span class="setting-description">Allow anonymous usage data collection</span>
+                </div>
+                <div class="setting-control">
+                    <label class="toggle-switch">
+                        <input type="checkbox" 
+                               checked="@isDataCollectionEnabled" 
+                               @onchange="ToggleDataCollection" />
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="profile-section">
+            <h4>Advanced Settings</h4>
+            <button class="reset-settings-btn" @onclick="ResetToDefaultSettings">
+                Reset to Default Settings
+            </button>
+        </div>
     </div>
 
     <div class="profile-actions">
@@ -64,7 +134,9 @@
         {
             <button class="btn btn-edit" @onclick="StartEditing">Edit Profile</button>
         }
-        <button class="btn btn-logout" @onclick="Logout">Logout</button>
+        <button class="btn btn-logout" @onclick="Logout">
+            <i class="oi oi-account-logout"></i> Logout
+        </button>
     </div>
 
     @if (!string.IsNullOrEmpty(ErrorMessage))
@@ -87,11 +159,23 @@
     private string ConfirmNewPassword = "";
     private string ErrorMessage = "";
 
+    // Settings properties
+    private bool isDarkModeEnabled = false;
+    private bool isTwoFactorEnabled = false;
+    private bool isDataCollectionEnabled = false;
+    private string selectedNotificationPreference = "all";
+
     protected override async Task OnInitializedAsync()
     {
+        // Load user profile data
         // TODO: Load user data from user storage service
         // var userData = await UserStorageService.GetCurrentUserAsync();
-        // Populate user details
+
+        // Load settings from local storage
+        isDarkModeEnabled = await BlazorAppLocalStorage.GetItemAsync<bool>("darkMode");
+        isTwoFactorEnabled = await BlazorAppLocalStorage.GetItemAsync<bool>("twoFactor");
+        isDataCollectionEnabled = await BlazorAppLocalStorage.GetItemAsync<bool>("dataCollection");
+        selectedNotificationPreference = await BlazorAppLocalStorage.GetItemAsync<string>("notificationPreference") ?? "all";
     }
 
     private void TriggerFileInput()
@@ -177,11 +261,49 @@
         ConfirmNewPassword = "";
     }
 
+    // Settings methods
+    private async Task ToggleDarkMode(ChangeEventArgs e)
+    {
+        isDarkModeEnabled = (bool)e.Value;
+        await BlazorAppLocalStorage.SetItemAsync("darkMode", isDarkModeEnabled);
+        // TODO: Actually implement dark mode theme switching
+    }
+
+    private async Task ToggleTwoFactor(ChangeEventArgs e)
+    {
+        isTwoFactorEnabled = (bool)e.Value;
+        await BlazorAppLocalStorage.SetItemAsync("twoFactor", isTwoFactorEnabled);
+        // TODO: Implement 2FA setup/disable logic
+    }
+
+    private async Task ToggleDataCollection(ChangeEventArgs e)
+    {
+        isDataCollectionEnabled = (bool)e.Value;
+        await BlazorAppLocalStorage.SetItemAsync("dataCollection", isDataCollectionEnabled);
+        // TODO: Handle data collection opt-in/out
+    }
+
+    private async Task ResetToDefaultSettings()
+    {
+        isDarkModeEnabled = false;
+        isTwoFactorEnabled = false;
+        isDataCollectionEnabled = false;
+        selectedNotificationPreference = "all";
+
+        await BlazorAppLocalStorage.SetItemAsync("darkMode", isDarkModeEnabled);
+        await BlazorAppLocalStorage.SetItemAsync("twoFactor", isTwoFactorEnabled);
+        await BlazorAppLocalStorage.SetItemAsync("dataCollection", isDataCollectionEnabled);
+        await BlazorAppLocalStorage.SetItemAsync("notificationPreference", selectedNotificationPreference);
+
+        StateHasChanged();
+    }
+
     private async Task Logout()
     {
         // TODO: Implement logout logic
         // 1. Clear user session
-        // 2. Navigate to login page
+        // 2. Clear local storage if needed
+        // 3. Navigate to login page
         NavigationManager.NavigateTo("/auth/login");
     }
 }
