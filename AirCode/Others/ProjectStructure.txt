@@ -1,7 +1,7 @@
 Project Structure Documentation
-Generated: Wed Jun 25 08:23:03 UTC 2025
+Generated: Wed Jun 25 08:42:40 UTC 2025
 Repository: Mid-D-Man/AirCode
-Commit: 72718a782f3fb595cff9ae5f9eda91c5620db57a
+Commit: 0c50e8df31f7975ca699d2c502ffb41628992279
 ==================================
 
 Source Files:
@@ -118,6 +118,7 @@ Pages/Admin/Shared/OfflineAttendanceEvent.razor
 Pages/Admin/Shared/OfflineAttendanceEvent.razor.cs
 Pages/Admin/Shared/OfflineAttendanceEvent.razor.css
 Pages/Admin/Shared/Reports.razor
+Pages/Admin/Shared/Reports.razor.cs
 Pages/Admin/Shared/Reports.razor.css
 Pages/Admin/Shared/Settings.razor
 Pages/Admin/Shared/Settings.razor.css
@@ -396,7 +397,7 @@ Directory Structure:
 
 File Count Summary:
 ==================
-.cs       : 82 files
+.cs       : 83 files
 .razor    : 71 files
 .csproj   : 1 files
 .json     : 12 files
