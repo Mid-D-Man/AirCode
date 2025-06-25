@@ -122,6 +122,7 @@ builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>()
 builder.Services.AddScoped<ICryptographyService, CryptographyService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IOfflineCredentialsService, OfflineCredentialsService>();
+builder.Services.AddScoped<IOfflineSyncService, OfflineSyncService>();
 builder.Services.AddScoped<IBlazorAppLocalStorageService, BlazorAppLocalStorageService>();
 
 // ============================================================================
@@ -135,7 +136,6 @@ builder.Services.AddScoped<IPermissionService, PermissionService>();
 // Academic structure services
 builder.Services.AddScoped<IDepartmentService, DepartmentService>();
 builder.Services.AddScoped<ICourseService, CourseService>();
-
 // Application state and utility services
 builder.Services.AddScoped<ISearchContextService, SearchContextService>();
 builder.Services.AddScoped<SessionStateService>();
