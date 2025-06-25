@@ -625,7 +625,7 @@ private async Task DeleteSkeletonUser()
         switch (selectedUserType)
         {
             case "student":
-               await DeleteStudentSkeleton(selectedUser as StudentSkeletonUser);
+                success = await DeleteStudentSkeleton(selectedUser as StudentSkeletonUser);
                 break;
             case "lecturer":
                 success = await DeleteLecturerSkeletonField(selectedUser as LecturerSkeletonUser);
@@ -659,44 +659,98 @@ private async Task DeleteSkeletonUser()
     }
 }
 
-private async Task DeleteStudentSkeleton(StudentSkeletonUser student)
+private async Task<bool> DeleteStudentSkeleton(StudentSkeletonUser student)
+{
+    try
     {
         var docName = $"StudentLevel{student.Level}";
         var levelDoc = await FirestoreService.GetDocumentAsync<StudentLevelDocument>(STUDENTS_COLLECTION, docName);
         
-        //remember update document dosent work for some reason
         if (levelDoc?.ValidStudentMatricNumbers != null)
         {
+            var initialCount = levelDoc.ValidStudentMatricNumbers.Count;
             levelDoc.ValidStudentMatricNumbers.RemoveAll(s => s.MatricNumber.Equals(student.MatricNumber, StringComparison.OrdinalIgnoreCase));
-            await FirestoreService.UpdateDocumentAsync(STUDENTS_COLLECTION, docName, levelDoc);
-        }
-    }
-    
-    private async Task DeleteLecturerSkeleton(LecturerSkeletonUser lecturer)
-    {
-        var lecturerDoc = await FirestoreService.GetDocumentAsync<LecturerAdminDocument>(ADMIN_IDS_COLLECTION, LECTURER_ADMIN_DOC);
-        
-        if (lecturerDoc?.Ids != null)
-        {
-            lecturerDoc.Ids.RemoveAll(l => l.AdminId == lecturer.AdminId);
-            await FirestoreService.UpdateDocumentAsync(ADMIN_IDS_COLLECTION, LECTURER_ADMIN_DOC, lecturerDoc);
-        }
-    }
-    
-    private async Task DeleteCourseRepSkeleton(CourseRepSkeletonUser courseRep)
-    {
-        // Delete from admin collection
-        var courseRepDoc = await FirestoreService.GetDocumentAsync<CourseRepAdminDocument>(ADMIN_IDS_COLLECTION, COURSEREP_ADMIN_DOC);
-        if (courseRepDoc?.Ids != null)
-        {
-            courseRepDoc.Ids.RemoveAll(cr => cr.AdminId == courseRep.AdminInfo.AdminId);
-            await FirestoreService.UpdateDocumentAsync(ADMIN_IDS_COLLECTION, COURSEREP_ADMIN_DOC, courseRepDoc);
+            
+            if (levelDoc.ValidStudentMatricNumbers.Count < initialCount)
+            {
+                var result = await FirestoreService.UpdateDocumentAsync(STUDENTS_COLLECTION, docName, levelDoc);
+                Console.WriteLine($"DeleteStudentSkeleton: Student '{student.MatricNumber}' deletion result: {result}");
+                return result;
+            }
+            else
+            {
+                Console.WriteLine($"DeleteStudentSkeleton: Student '{student.MatricNumber}' not found in level {student.Level}");
+                return false;
+            }
         }
         
-        // Delete from student collection
-        await DeleteStudentSkeleton(courseRep.StudentInfo);
+        Console.WriteLine($"DeleteStudentSkeleton: Level document for {student.Level} not found or empty");
+        return false;
     }
-    
+    catch (Exception ex)
+    {
+        Console.WriteLine($"DeleteStudentSkeleton: Exception occurred: {ex.Message}");
+        return false;
+    }
+}
+
+private async Task<bool> DeleteCourseRepSkeletonField(CourseRepSkeletonUser courseRep)
+{
+    if (courseRep?.AdminInfo == null || courseRep.StudentInfo == null)
+    {
+        Console.WriteLine("DeleteCourseRepSkeletonField: CourseRep parameter or its properties are null");
+        return false;
+    }
+
+    try
+    {
+        Console.WriteLine($"DeleteCourseRepSkeletonField: Starting deletion for course rep '{courseRep.AdminInfo.AdminId}'");
+        
+        bool adminSuccess = false;
+        bool studentSuccess = false;
+
+        // Delete from admin collection first
+        var existingDoc = await FirestoreService.GetDocumentAsync<CourseRepAdminDocument>(ADMIN_IDS_COLLECTION, COURSEREP_ADMIN_DOC);
+        if (existingDoc?.Ids != null)
+        {
+            var courseRepExists = existingDoc.Ids.Any(cr => cr.AdminId == courseRep.AdminInfo.AdminId);
+            if (courseRepExists)
+            {
+                var updatedList = existingDoc.Ids
+                    .Where(cr => cr.AdminId != courseRep.AdminInfo.AdminId)
+                    .ToList();
+
+                adminSuccess = await FirestoreService.AddOrUpdateFieldAsync(ADMIN_IDS_COLLECTION, COURSEREP_ADMIN_DOC, "Ids", updatedList);
+                Console.WriteLine($"DeleteCourseRepSkeletonField: Admin deletion result for '{courseRep.AdminInfo.AdminId}': {adminSuccess}");
+            }
+            else
+            {
+                Console.WriteLine($"DeleteCourseRepSkeletonField: Course rep admin '{courseRep.AdminInfo.AdminId}' not found");
+                adminSuccess = true; // Consider as success if not found
+            }
+        }
+        else
+        {
+            Console.WriteLine("DeleteCourseRepSkeletonField: Course rep admin document not found or Ids collection is null");
+        }
+
+        // Delete associated student record
+        studentSuccess = await DeleteStudentSkeleton(courseRep.StudentInfo);
+        Console.WriteLine($"DeleteCourseRepSkeletonField: Student deletion result for '{courseRep.StudentInfo.MatricNumber}': {studentSuccess}");
+
+        // Return true only if both operations succeeded
+        var overallSuccess = adminSuccess && studentSuccess;
+        Console.WriteLine($"DeleteCourseRepSkeletonField: Overall deletion result for course rep '{courseRep.AdminInfo.AdminId}': {overallSuccess}");
+        
+        return overallSuccess;
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"DeleteCourseRepSkeletonField: Exception occurred while deleting course rep '{courseRep?.AdminInfo?.AdminId}': {ex.Message}");
+        Console.WriteLine($"DeleteCourseRepSkeletonField: Stack trace: {ex.StackTrace}");
+        return false;
+    }
+}
 private async Task<bool> DeleteLecturerSkeletonField(LecturerSkeletonUser lecturer)
 {
     if (lecturer == null)
@@ -752,62 +806,6 @@ private async Task<bool> DeleteLecturerSkeletonField(LecturerSkeletonUser lectur
     }
 }
 
-private async Task<bool> DeleteCourseRepSkeletonField(CourseRepSkeletonUser courseRep)
-{
-    if (courseRep?.AdminInfo == null || courseRep.StudentInfo == null)
-    {
-        Console.WriteLine("DeleteCourseRepSkeletonField: CourseRep parameter or its properties are null");
-        return false;
-    }
-
-    try
-    {
-        Console.WriteLine($"DeleteCourseRepSkeletonField: Starting deletion for course rep '{courseRep.AdminInfo.AdminId}'");
-        
-        bool adminSuccess = false;
-        bool studentSuccess = false;
-
-        // Delete from admin collection first
-        var existingDoc = await FirestoreService.GetDocumentAsync<CourseRepAdminDocument>(ADMIN_IDS_COLLECTION, COURSEREP_ADMIN_DOC);
-        if (existingDoc?.Ids != null)
-        {
-            var courseRepExists = existingDoc.Ids.Any(cr => cr.AdminId == courseRep.AdminInfo.AdminId);
-            if (courseRepExists)
-            {
-                var updatedList = existingDoc.Ids
-                    .Where(cr => cr.AdminId != courseRep.AdminInfo.AdminId)
-                    .ToList();
-
-                adminSuccess = await FirestoreService.AddOrUpdateFieldAsync(ADMIN_IDS_COLLECTION, COURSEREP_ADMIN_DOC, "Ids", updatedList);
-                Console.WriteLine($"DeleteCourseRepSkeletonField: Admin deletion result for '{courseRep.AdminInfo.AdminId}': {adminSuccess}");
-            }
-            else
-            {
-                Console.WriteLine($"DeleteCourseRepSkeletonField: Course rep admin '{courseRep.AdminInfo.AdminId}' not found");
-            }
-        }
-        else
-        {
-            Console.WriteLine("DeleteCourseRepSkeletonField: Course rep admin document not found or Ids collection is null");
-        }
-
-        // Delete associated student record
-        await DeleteStudentSkeleton(courseRep.StudentInfo);
-        Console.WriteLine($"DeleteCourseRepSkeletonField: Student deletion result for '{courseRep.StudentInfo.MatricNumber}': {studentSuccess}");
-
-        // Return true only if both operations succeeded
-        var overallSuccess = adminSuccess && studentSuccess;
-        Console.WriteLine($"DeleteCourseRepSkeletonField: Overall deletion result for course rep '{courseRep.AdminInfo.AdminId}': {overallSuccess}");
-        
-        return overallSuccess;
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"DeleteCourseRepSkeletonField: Exception occurred while deleting course rep '{courseRep?.AdminInfo?.AdminId}': {ex.Message}");
-        Console.WriteLine($"DeleteCourseRepSkeletonField: Stack trace: {ex.StackTrace}");
-        return false;
-    }
-}
 
 #endregion
 
