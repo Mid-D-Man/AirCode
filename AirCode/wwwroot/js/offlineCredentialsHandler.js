@@ -2,7 +2,8 @@
 // Enhanced offline credentials handler for AirCode app
 // Now includes lecturer ID and matric number support
 // Enhanced offline credentials handler for AirCode app
-// recent changes mad => Simplified device fingerprinting - stable and consistent
+// recent changes made => Simplified device fingerprinting - stable and consistent
+// Added automatic expiration checking and cleanup
 
 window.offlineCredentialsHandler = {
     // Storage keys
@@ -106,6 +107,118 @@ window.offlineCredentialsHandler = {
         localStorage.setItem(this.STORAGE_KEYS.DEVICE_ID, fingerprintId);
 
         return fingerprintId;
+    },
+
+    // Check if credentials exist and are not expired
+    // Returns false if expired or don't exist, automatically cleans up expired credentials
+    areCredentialsValid: async function() {
+        try {
+            console.log('[OfflineCredentials] Checking credential validity...');
+
+            // Get encrypted credentials from storage
+            const encryptedCredentials = localStorage.getItem(this.STORAGE_KEYS.CREDENTIALS);
+            const key = localStorage.getItem(this.STORAGE_KEYS.AUTH_KEY);
+            const iv = localStorage.getItem(this.STORAGE_KEYS.AUTH_IV);
+
+            if (!encryptedCredentials || !key || !iv) {
+                console.log('[OfflineCredentials] No credentials found');
+                return false;
+            }
+
+            try {
+                // Decrypt credentials to check expiration
+                const decryptedStr = await window.cryptographyHandler.decryptData(
+                    encryptedCredentials,
+                    key,
+                    iv
+                );
+
+                const signedCredentials = JSON.parse(decryptedStr);
+
+                // Check if credentials have expired
+                const expiresAt = new Date(signedCredentials.expiresAt);
+                const now = new Date();
+
+                if (expiresAt < now) {
+                    console.log('[OfflineCredentials] Credentials have expired, cleaning up...');
+                    this.clearCredentials();
+                    return false;
+                }
+
+                // Additional validation: check device fingerprint
+                const currentDeviceFingerprint = await this.createDeviceFingerprint();
+                if (signedCredentials.deviceFingerprint &&
+                    signedCredentials.deviceFingerprint !== currentDeviceFingerprint) {
+                    console.warn('[OfflineCredentials] Device fingerprint mismatch, clearing credentials');
+                    this.clearCredentials();
+                    return false;
+                }
+
+                console.log('[OfflineCredentials] Credentials are valid');
+                return true;
+
+            } catch (decryptionError) {
+                console.error('[OfflineCredentials] Failed to decrypt credentials:', decryptionError);
+                this.clearCredentials();
+                return false;
+            }
+
+        } catch (error) {
+            console.error('[OfflineCredentials] Error checking credential validity:', error);
+            return false;
+        }
+    },
+
+    // Check for expired credentials and clean them up
+    // Returns true if credentials were expired and cleaned up, false otherwise
+    checkAndCleanExpiredCredentials: async function() {
+        try {
+            console.log('[OfflineCredentials] Checking for expired credentials...');
+
+            // Get encrypted credentials from storage
+            const encryptedCredentials = localStorage.getItem(this.STORAGE_KEYS.CREDENTIALS);
+            const key = localStorage.getItem(this.STORAGE_KEYS.AUTH_KEY);
+            const iv = localStorage.getItem(this.STORAGE_KEYS.AUTH_IV);
+
+            if (!encryptedCredentials || !key || !iv) {
+                console.log('[OfflineCredentials] No credentials to check');
+                return false;
+            }
+
+            try {
+                // Decrypt credentials to check expiration
+                const decryptedStr = await window.cryptographyHandler.decryptData(
+                    encryptedCredentials,
+                    key,
+                    iv
+                );
+
+                const signedCredentials = JSON.parse(decryptedStr);
+
+                // Check if credentials have expired
+                const expiresAt = new Date(signedCredentials.expiresAt);
+                const now = new Date();
+
+                if (expiresAt < now) {
+                    console.log('[OfflineCredentials] Found expired credentials, cleaning up...');
+                    this.clearCredentials();
+                    return true; // Credentials were expired and cleaned up
+                }
+
+                console.log('[OfflineCredentials] Credentials are still valid');
+                return false; // Credentials are still valid
+
+            } catch (decryptionError) {
+                console.error('[OfflineCredentials] Failed to decrypt credentials during expiration check:', decryptionError);
+                console.log('[OfflineCredentials] Clearing potentially corrupted credentials...');
+                this.clearCredentials();
+                return true; // Credentials were corrupted and cleaned up
+            }
+
+        } catch (error) {
+            console.error('[OfflineCredentials] Error during expiration check:', error);
+            return false;
+        }
     },
 
     // Enhanced credential storage with lecturer ID and matric number support
@@ -229,6 +342,12 @@ window.offlineCredentialsHandler = {
     // Enhanced credential retrieval with validation
     getCredentials: async function() {
         try {
+            // First check if credentials are valid (this will clean up expired ones)
+            const areValid = await this.areCredentialsValid();
+            if (!areValid) {
+                return null;
+            }
+
             // Get encrypted credentials from storage
             const encryptedCredentials = localStorage.getItem(this.STORAGE_KEYS.CREDENTIALS);
             const key = localStorage.getItem(this.STORAGE_KEYS.AUTH_KEY);
@@ -247,26 +366,6 @@ window.offlineCredentialsHandler = {
             );
 
             const signedCredentials = JSON.parse(decryptedStr);
-
-            // Verify credentials haven't expired
-            const expiresAt = new Date(signedCredentials.expiresAt);
-            const now = new Date();
-
-            if (expiresAt < now) {
-                console.warn('[OfflineCredentials] Credentials have expired');
-                this.clearCredentials();
-                return null;
-            }
-
-            // Get current device fingerprint for validation
-            const currentDeviceFingerprint = await this.createDeviceFingerprint();
-
-            // Verify device fingerprint matches
-            if (signedCredentials.deviceFingerprint &&
-                signedCredentials.deviceFingerprint !== currentDeviceFingerprint) {
-                console.warn('[OfflineCredentials] Device fingerprint validation failed');
-                return null;
-            }
 
             // Verify signature integrity
             const { signature, ...credentialsWithoutSignature } = signedCredentials;
@@ -411,10 +510,10 @@ window.offlineCredentialsHandler = {
     },
 
     // Check if credentials are valid and not expired
+    // This method matches what the C# service expects
     isAuthenticated: async function() {
         try {
-            const credentials = await this.getCredentials();
-            return credentials !== null;
+            return await this.areCredentialsValid();
         } catch (error) {
             console.error('[OfflineCredentials] Failed to check authentication status:', error);
             return false;
@@ -445,17 +544,22 @@ window.offlineCredentialsHandler = {
             const deviceGuid = this.getDeviceGuid();
 
             let credentialInfo = null;
+            let isValid = false;
+
             if (hasCredentials && hasKey && hasIv) {
-                const credentials = await this.getCredentials();
-                if (credentials) {
-                    const parsed = JSON.parse(credentials);
-                    credentialInfo = {
-                        userId: parsed.userId,
-                        role: parsed.role,
-                        expiresAt: parsed.expiresAt,
-                        lecturerId: parsed.lecturerId || 'N/A',
-                        matricNumber: parsed.matricNumber || 'N/A'
-                    };
+                isValid = await this.areCredentialsValid();
+                if (isValid) {
+                    const credentials = await this.getCredentials();
+                    if (credentials) {
+                        const parsed = JSON.parse(credentials);
+                        credentialInfo = {
+                            userId: parsed.userId,
+                            role: parsed.role,
+                            expiresAt: parsed.expiresAt,
+                            lecturerId: parsed.lecturerId || 'N/A',
+                            matricNumber: parsed.matricNumber || 'N/A'
+                        };
+                    }
                 }
             }
 
@@ -464,7 +568,7 @@ window.offlineCredentialsHandler = {
                 hasKey,
                 hasIv,
                 hasSession,
-                isValid: credentialInfo !== null,
+                isValid,
                 deviceGuid,
                 credentialInfo
             };
