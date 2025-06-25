@@ -82,12 +82,12 @@
             <div class="section-header">
                 <h3>My Courses</h3>
                 <div class="course-filters">
-                    <select @bind="SelectedSemesterFilter" @onchange="FilterCourses" class="filter-select">
+                    <select @bind="SelectedSemesterFilter" @bind:after="FilterCourses" class="filter-select">
                         <option value="">All Semesters</option>
                         <option value="First">First Semester</option>
                         <option value="Second">Second Semester</option>
                     </select>
-                    <select @bind="SelectedStatusFilter" @onchange="FilterCourses" class="filter-select">
+                    <select @bind="SelectedStatusFilter" @bind:after="FilterCourses" class="filter-select">
                         <option value="">All Status</option>
                         <option value="Enrolled">Enrolled</option>
                         <option value="Carryover">Carry Over</option>
@@ -280,14 +280,14 @@
                 <div class="records-header">
                     <h4>Attendance Records</h4>
                     <div class="records-filters">
-                        <select @bind="SelectedMonthFilter" @onchange="FilterAttendanceRecords" class="filter-select">
+                        <select @bind="SelectedMonthFilter" @bind:after="FilterAttendanceRecords" class="filter-select">
                             <option value="">All Months</option>
                             @foreach (var month in GetAvailableMonths())
                             {
                                 <option value="@month.Key">@month.Value</option>
                             }
                         </select>
-                        <select @bind="SelectedAttendanceFilter" @onchange="FilterAttendanceRecords" class="filter-select">
+                        <select @bind="SelectedAttendanceFilter" @bind:after="FilterAttendanceRecords" class="filter-select">
                             <option value="">All Records</option>
                             <option value="Present">Present Only</option>
                             <option value="Absent">Absent Only</option>
