@@ -41,9 +41,9 @@ public partial class ManageUsers : ComponentBase
     private const string ADMIN_IDS_COLLECTION = "VALID_ADMIN_IDS";
     private const string LECTURER_ADMIN_DOC = "LecturerAdminIdsDoc";
     private const string COURSEREP_ADMIN_DOC = "CourseRepAdminIdsDoc";
-    private const string STUDENT_ID = "students";
-    private const string COURSEREP_ID = "coursereps";
-    private const string LECTURER_ID = "lecturers";
+    private const string STUDENT_ID = "student";
+    private const string COURSEREP_ID = "courserep";
+    private const string LECTURER_ID = "lecturer";
     private const int ITEMS_PER_PAGE = 10;
     #endregion
 
@@ -610,51 +610,55 @@ public partial class ManageUsers : ComponentBase
         }
     }
     #endregion
+    
     #region Delete Operations (Improved Implementation)
 
-private async Task DeleteSkeletonUser()
-{
-    if (selectedUser == null || string.IsNullOrEmpty(selectedUserType))
+    private async Task DeleteSkeletonUser()
     {
-        notificationComponent?.ShowError("Invalid user selection.");
-        return;
-    }
-
-    try
-    {
-        loading = true;
-        StateHasChanged();
-
-        var result = selectedUserType switch
+        if (selectedUser == null || string.IsNullOrEmpty(selectedUserType))
         {
-            "student" => await DeleteStudentSkeleton(selectedUser as StudentSkeletonUser),
-            "lecturer" => await DeleteLecturerSkeletonField(selectedUser as LecturerSkeletonUser),
-            "courserep" => await DeleteCourseRepSkeletonField(selectedUser as CourseRepSkeletonUser),
-            _ => new OperationResult { Success = false, ErrorMessage = "Unknown user type" }
-        };
-
-        if (result.Success)
-        {
-            notificationComponent?.ShowSuccess("Skeleton user deleted successfully!");
-            CloseModals();
-            await LoadAllUsers();
+            notificationComponent?.ShowError("Invalid user selection.");
+            return;
         }
-        else
+
+        try
         {
-            notificationComponent?.ShowError($"Failed to delete skeleton user: {result.ErrorMessage}");
+            loading = true;
+            StateHasChanged();
+
+            // Add debug logging
+            await MID_HelperFunctions.DebugMessageAsync($"DeleteSkeletonUser: UserType='{selectedUserType}', UserObjectType='{selectedUser?.GetType().Name}'", DebugClass.Info);
+
+            var result = selectedUserType switch
+            {
+                STUDENT_ID => await DeleteStudentSkeleton(selectedUser as StudentSkeletonUser),
+                LECTURER_ID => await DeleteLecturerSkeletonField(selectedUser as LecturerSkeletonUser),
+                COURSEREP_ID => await DeleteCourseRepSkeletonField(selectedUser as CourseRepSkeletonUser),
+                _ => new OperationResult { Success = false, ErrorMessage = $"Unknown user type '{selectedUserType}'. User object type: {selectedUser?.GetType().Name}" }
+            };
+
+            if (result.Success)
+            {
+                notificationComponent?.ShowSuccess("Skeleton user deleted successfully!");
+                CloseModals();
+                await LoadAllUsers();
+            }
+            else
+            {
+                notificationComponent?.ShowError($"Failed to delete skeleton user: {result.ErrorMessage}");
+            }
+        }
+        catch (Exception ex)
+        {
+            await MID_HelperFunctions.DebugMessageAsync($"DeleteSkeletonUser: Exception occurred: {ex.Message}", DebugClass.Exception);
+            notificationComponent?.ShowError($"Error deleting skeleton user: {ex.Message}");
+        }
+        finally
+        {
+            loading = false;
+            StateHasChanged();
         }
     }
-    catch (Exception ex)
-    {
-        await MID_HelperFunctions.DebugMessageAsync($"DeleteSkeletonUser: Exception occurred: {ex.Message}", DebugClass.Exception);
-        notificationComponent?.ShowError($"Error deleting skeleton user: {ex.Message}");
-    }
-    finally
-    {
-        loading = false;
-        StateHasChanged();
-    }
-}
 
 private async Task<OperationResult> DeleteStudentSkeleton(StudentSkeletonUser student)
 {
@@ -823,11 +827,11 @@ private async Task RemoveAssignedUser()
     {
         await MID_HelperFunctions.DebugMessageAsync($"RemoveAssignedUser: Starting removal for user '{selectedAssignedUserId}' from '{selectedUserType}'", DebugClass.Info);
         
-        var result = selectedUser switch
+        var result = selectedUserType switch
         {
-            LecturerSkeletonUser lecturer => await RemoveUserFromLecturer(lecturer, selectedAssignedUserId),
-            CourseRepAdminInfo courseRepAdmin => await RemoveUserFromCourseRep(courseRepAdmin, selectedAssignedUserId),
-            _ => new OperationResult { Success = false, ErrorMessage = "Unsupported user type for removal" }
+            LECTURER_ID when selectedUser is LecturerSkeletonUser lecturer => await RemoveUserFromLecturer(lecturer, selectedAssignedUserId),
+            COURSEREP_ID when selectedUser is CourseRepSkeletonUser courseRep => await RemoveUserFromCourseRep(courseRep.AdminInfo, selectedAssignedUserId),
+            _ => new OperationResult { Success = false, ErrorMessage = $"Unsupported user type '{selectedUserType}' for removal. User object type: {selectedUser?.GetType().Name}" }
         };
 
         if (result.Success)
@@ -955,6 +959,7 @@ public class OperationResult
 }
 
 #endregion
+
     #region Utility Methods
     private async Task CopyToClipboard(string text)
     {
