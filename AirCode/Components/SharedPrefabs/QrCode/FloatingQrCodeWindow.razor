@@ -6,8 +6,8 @@
 @if (IsVisible && SessionData != null)
 {
     <div class="floating-qr-overlay" @onclick="HandleOverlayClick">
-        <div class="floating-qr-window @(isFullscreen ? "fullscreen" : "")" @onclick:stopPropagation="true" style="@WindowStyle">
-            <div class="floating-qr-header" @onmousedown="HandleMouseDown" @ontouchstart="HandleTouchStart">
+        <div @ref="windowElement" class="floating-qr-window @(isFullscreen ? "fullscreen" : "")" @onclick:stopPropagation="true" style="@WindowStyle">
+            <div class="floating-qr-header" @ref="headerElement">
                 <div class="drag-handle">
                     <span>QR Code - @SessionData.CourseName</span>
                 </div>
@@ -50,10 +50,45 @@
     [Parameter] public FloatingSessionData SessionData { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
     
+    private ElementReference windowElement;
+    private ElementReference headerElement;
     private string WindowStyle = "top: 50px; left: 50px;";
     private System.Threading.Timer countdownTimer;
     private bool isFullscreen = false;
     private string previousWindowStyle = "";
+    private string componentId;
+    private IJSObjectReference jsModule;
+    private DotNetObjectReference<FloatingQrCodeWindow> dotNetRef;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                // Import the JavaScript module
+                jsModule = await JS.InvokeAsync<IJSObjectReference>("import", 
+                    "./Components/SharedPrefabs/QrCode/FloatingQrCodeWindow.razor.js");
+                
+                // Create DotNet reference for callbacks
+                dotNetRef = DotNetObjectReference.Create(this);
+                
+                if (IsVisible && windowElement.Context != null)
+                {
+                    await InitializeDragFunctionality();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error initializing FloatingQR: {ex.Message}");
+                // Fallback: component will work without drag functionality
+            }
+        }
+        else if (IsVisible && windowElement.Context != null && string.IsNullOrEmpty(componentId))
+        {
+            await InitializeDragFunctionality();
+        }
+    }
 
     protected override void OnParametersSet()
     {
@@ -67,11 +102,22 @@
         }
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    private async Task InitializeDragFunctionality()
     {
-        if (firstRender && IsVisible)
+        if (jsModule != null && windowElement.Context != null)
         {
-            await JS.InvokeVoidAsync("floatingQrDrag.registerComponent", DotNetObjectReference.Create(this));
+            try
+            {
+                // Register component with the JavaScript drag system
+                componentId = await jsModule.InvokeAsync<string>("registerComponent", 
+                    dotNetRef, windowElement);
+                
+                Console.WriteLine($"FloatingQR drag initialized with ID: {componentId}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error registering drag functionality: {ex.Message}");
+            }
         }
     }
 
@@ -112,23 +158,7 @@
         }
     }
 
-    private async Task HandleMouseDown(MouseEventArgs e)
-    {
-        if (!isFullscreen)
-        {
-            await JS.InvokeVoidAsync("floatingQrDrag.startDrag", e);
-        }
-    }
-
-    private async Task HandleTouchStart(TouchEventArgs e)
-    {
-        if (!isFullscreen)
-        {
-            await JS.InvokeVoidAsync("floatingQrDrag.startDrag", e);
-        }
-    }
-
-    private void ToggleFullscreen()
+    private async Task ToggleFullscreen()
     {
         if (isFullscreen)
         {
@@ -143,6 +173,20 @@
             isFullscreen = true;
             WindowStyle = "top: 2.5vh; left: 2.5vw; width: 95vw; height: 95vh;";
         }
+
+        // Update JavaScript module with fullscreen state
+        if (jsModule != null && !string.IsNullOrEmpty(componentId))
+        {
+            try
+            {
+                await jsModule.InvokeVoidAsync("setFullscreenState", componentId, isFullscreen);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error updating fullscreen state: {ex.Message}");
+            }
+        }
+        
         StateHasChanged();
     }
     
@@ -247,9 +291,29 @@
         };
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         StopCountdownTimer();
+        
+        // Cleanup JavaScript resources
+        if (jsModule != null && !string.IsNullOrEmpty(componentId))
+        {
+            try
+            {
+                await jsModule.InvokeVoidAsync("unregisterComponent", componentId);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error during cleanup: {ex.Message}");
+            }
+        }
+
+        // Dispose references
+        dotNetRef?.Dispose();
+        if (jsModule != null)
+        {
+            await jsModule.DisposeAsync();
+        }
     }
 
     public class FloatingSessionData

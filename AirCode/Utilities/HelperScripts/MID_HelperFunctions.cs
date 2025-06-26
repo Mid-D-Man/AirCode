@@ -10,6 +10,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Serialization;
+using AirCode.Domain.Enums;
 using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 using Newtonsoft.Json;
@@ -329,6 +330,62 @@ namespace AirCode.Utilities.HelperScripts
                 .Select(s => s[random.Next(s.Length)]).ToArray());
         }
 
+public static LevelType DetermineStudentLevel(string matricNumber)
+{
+    if (string.IsNullOrEmpty(matricNumber)) return LevelType.Level100;
+    
+    // Enhanced pattern for format: U{YY}{DEPT}{NNNN}
+    // Example: U21CYS1099, U22CS1009
+    var matricPattern = @"^U(\d{2})([A-Z]{2,4})(\d{4})$";
+    var match = System.Text.RegularExpressions.Regex.Match(matricNumber.ToUpper(), matricPattern);
+    
+    if (!match.Success) return LevelType.Level100;
+    
+    var yearSuffix = int.Parse(match.Groups[1].Value);
+    var departmentCode = match.Groups[2].Value;
+    var studentNumber = match.Groups[3].Value;
+    
+    // Convert 2-digit year to full year
+    var admissionYear = 2000 + yearSuffix;
+    var currentYear = DateTime.Now.Year;
+    
+    // Calculate academic level based on years since admission
+    var academicYearsPassed = currentYear - admissionYear;
+    
+    return academicYearsPassed switch
+    {
+        0 => LevelType.Level100,  // Freshman year
+        1 => LevelType.Level200,  // Sophomore year
+        2 => LevelType.Level300,  // Junior year
+        3 => LevelType.Level400,  // Senior year
+        4 => LevelType.Level500,  // Fifth year/Graduate
+        _ when academicYearsPassed > 4 => LevelType.LevelExtra,  // Extended program
+        _ => LevelType.Level100   // Negative values (future admission) default to 100
+    };
+}
+
+// Optional: Add validation method for matric number format
+public static bool IsValidMatricNumber(string matricNumber)
+{
+    if (string.IsNullOrEmpty(matricNumber)) return false;
+    
+    var matricPattern = @"^U(\d{2})([A-Z]{2,4})(\d{4})$";
+    var match = System.Text.RegularExpressions.Regex.Match(matricNumber.ToUpper(), matricPattern);
+    
+    if (!match.Success) return false;
+    
+    var yearSuffix = int.Parse(match.Groups[1].Value);
+    var studentNumber = int.Parse(match.Groups[3].Value);
+    
+    // Validate year range (assuming 2020-2030 admission window)
+    var admissionYear = 2000 + yearSuffix;
+    if (admissionYear < 2020 || admissionYear > 2040) return false;
+    
+    // Validate student number range (1001-1999 as typical range)
+    if (studentNumber < 1001 || studentNumber > 1999) return false;
+    
+    return true;
+}
         #endregion
 
         #region Debug Utilities and Reflection

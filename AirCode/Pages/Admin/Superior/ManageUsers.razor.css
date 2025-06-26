@@ -333,20 +333,44 @@
     color: var(--button-text);
 }
 
-/* Fixed Modal Styles - Centered and Improved Close Button */
+/* Modal Backdrop - Full Stretch Coverage */
+.modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 1040;
+    background-color: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    margin: 0;
+    padding: 0;
+}
+
+.modal-backdrop.show {
+    opacity: 1;
+}
+
+/* Modal - Centered Container */
 .modal {
     position: fixed;
     top: 0;
     left: 0;
-    z-index: 1050;
+    right: 0;
+    bottom: 0;
     width: 100vw;
     height: 100vh;
-    overflow: auto;
-    outline: 0;
+    z-index: 1050;
     display: none;
     align-items: center;
     justify-content: center;
     padding: var(--spacing-md);
+    margin: 0;
+    overflow: auto;
+    outline: 0;
 }
 
 .modal.show {
@@ -357,7 +381,7 @@
     position: relative;
     width: 100%;
     max-width: 500px;
-    margin: auto;
+    margin: 0;
     display: flex;
     flex-direction: column;
     z-index: 1060;
@@ -462,25 +486,6 @@
     border-top: 1px solid var(--border);
     background-color: var(--bg-secondary);
     flex-shrink: 0;
-}
-
-/* Enhanced Modal Backdrop - Full Coverage */
-.modal-backdrop {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 1040;
-    width: 100vw;
-    height: 100vh;
-    background-color: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(2px);
-    -webkit-backdrop-filter: blur(2px);
-}
-
-.modal-backdrop.show {
-    opacity: 1;
 }
 
 /* Form Styles */
@@ -742,14 +747,11 @@ body.dark-mode .form-text {
 
     .modal {
         padding: var(--spacing-sm);
-        align-items: center;
-        justify-content: center;
     }
 
     .modal-dialog {
         max-width: calc(100vw - 2rem);
         width: 100%;
-        margin: 0;
     }
 
     .modal-content {
@@ -802,14 +804,11 @@ body.dark-mode .form-text {
 
     .modal {
         padding: var(--spacing-xs);
-        align-items: center;
-        justify-content: center;
     }
 
     .modal-dialog {
         width: calc(100vw - 1rem);
         max-width: none;
-        margin: 0;
     }
 
     .modal-content {

@@ -46,7 +46,7 @@ using AirCode.Components.SharedPrefabs.Others;
 
         // Floating QR code properties
         private bool showFloatingQR = false;
-        private FloatingQRWindow.FloatingSessionData floatingSessionData;
+        private FloatingQrCodeWindow.FloatingSessionData floatingSessionData;
         private bool useTemporalKeyRefresh = false;
         private bool allowOfflineSync = true;
         private AdvancedSecurityFeatures securityFeatures = AdvancedSecurityFeatures.Default;
@@ -895,7 +895,7 @@ private bool IsWarningMessage(string message)
 
         private void OpenFloatingQRForSession(ActiveSessionData session)
 {
-    floatingSessionData = new FloatingQRWindow.FloatingSessionData
+    floatingSessionData = new FloatingQrCodeWindow.FloatingSessionData
     {
         SessionId = session.SessionId,
         CourseName = session.CourseName,

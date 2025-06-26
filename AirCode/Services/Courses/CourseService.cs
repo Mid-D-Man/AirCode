@@ -6,6 +6,7 @@ using AirCode.Domain.Entities;
 using AirCode.Domain.Enums;
 using AirCode.Domain.ValueObjects;
 using AirCode.Services.Firebase;
+using AirCode.Services.Storage;
 using AirCode.Utilities.HelperScripts;
 using AirCode.Utilities.ObjectPooling;
 using Newtonsoft.Json;
@@ -16,18 +17,25 @@ namespace AirCode.Services.Courses
     public class CourseService : ICourseService, IDisposable
     {
         private readonly IFirestoreService _firestoreService;
+        private readonly IBlazorAppLocalStorageService _localStorage;
+
         private readonly MID_ComponentObjectPool<List<Course>> _courseListPool;
         private readonly MID_ComponentObjectPool<Dictionary<string, Course>> _courseDictPool;
         private readonly string _courseCollection = "COURSES";
         private readonly string _studentCourseCollection = "STUDENT_COURSES";
         private readonly MID_ComponentObjectPool<List<StudentCourse>> _studentCourseListPool;
+       // Storage key constants
+        private const string ALL_COURSES_KEY = "AllCourses";
+        private const string STUDENT_COURSES_KEY = "AllStudentCourses";
+        private const string USER_COURSES_PREFIX = "UserCourses_";
 
         private bool _disposed;
         
-        public CourseService(IFirestoreService firestoreService)
+        public CourseService(IFirestoreService firestoreService, IBlazorAppLocalStorageService localStorage)
         {
             _firestoreService = firestoreService ?? throw new ArgumentNullException(nameof(firestoreService));
-            
+      
+            _localStorage = localStorage?? throw new ArgumentNullException(nameof(localStorage));
             // Initialize object pools
             _courseListPool = new MID_ComponentObjectPool<List<Course>>(
                 () => new List<Course>(),
@@ -52,67 +60,73 @@ namespace AirCode.Services.Courses
         }
 
         public async Task<List<Course>> GetAllCoursesAsync()
+{
+    if (_disposed) throw new ObjectDisposedException(nameof(CourseService));
+    
+    using var pooledList = _courseListPool.GetPooled();
+    var allCourses = pooledList.Object;
+    
+    try
+    {
+        var levels = new[] { "Courses_100Level", "Courses_200Level", "Courses_300Level", "Courses_400Level", "Courses_500Level" };
+        
+        foreach (var levelDoc in levels)
         {
-            if (_disposed) throw new ObjectDisposedException(nameof(CourseService));
+            var documentData = await _firestoreService.GetDocumentAsync<object>(_courseCollection, levelDoc);
             
-            using var pooledList = _courseListPool.GetPooled();
-            var allCourses = pooledList.Object;
-            
-            try
+            if (documentData != null)
             {
-                var levels = new[] { "Courses_100Level", "Courses_200Level", "Courses_300Level", "Courses_400Level", "Courses_500Level" };
+                var jsonString = JsonConvert.SerializeObject(documentData);
+                var levelCourses = JsonConvert.DeserializeObject<Dictionary<string, object>>(jsonString);
                 
-                foreach (var levelDoc in levels)
+                foreach (var kvp in levelCourses)
                 {
-                    var documentData = await _firestoreService.GetDocumentAsync<object>(_courseCollection, levelDoc);
+                    if (!MID_HelperFunctions.IsValidString(kvp.Key) || 
+                        kvp.Key.StartsWith("Courses_") || 
+                        kvp.Key.Equals("id", StringComparison.OrdinalIgnoreCase) ||
+                        kvp.Value == null) 
+                        continue;
                     
-                    if (documentData != null)
+                    try
                     {
-                        var jsonString = JsonConvert.SerializeObject(documentData);
-                        var levelCourses = JsonConvert.DeserializeObject<Dictionary<string, object>>(jsonString);
+                        var courseJson = JsonConvert.SerializeObject(kvp.Value);
                         
-                        foreach (var kvp in levelCourses)
-                        {
-                            if (!MID_HelperFunctions.IsValidString(kvp.Key) || 
-                                kvp.Key.StartsWith("Courses_") || 
-                                kvp.Key.Equals("id", StringComparison.OrdinalIgnoreCase) ||
-                                kvp.Value == null) 
-                                continue;
+                        if (!MID_HelperFunctions.IsValidString(courseJson) || 
+                            courseJson.Length < 10)
+                            continue;
                             
-                            try
-                            {
-                                var courseJson = JsonConvert.SerializeObject(kvp.Value);
-                                
-                                if (!MID_HelperFunctions.IsValidString(courseJson) || 
-                                    courseJson.Length < 10)
-                                    continue;
-                                    
-                                var courseData = JsonConvert.DeserializeObject<CourseFirestoreModel>(courseJson);
-                                
-                                if (courseData != null && 
-                                    MID_HelperFunctions.IsValidString(courseData.CourseCode) &&
-                                    MID_HelperFunctions.IsValidString(courseData.Name))
-                                {
-                                    var course = MapFirestoreModelToEntity(courseData, GetLevelFromDocument(levelDoc));
-                                    allCourses.Add(course);
-                                }
-                            }
-                            catch (JsonException ex)
-                            {
-                                Console.WriteLine($"Skipping invalid course data for key {kvp.Key}: {ex.Message}");
-                            }
+                        var courseData = JsonConvert.DeserializeObject<CourseFirestoreModel>(courseJson);
+                        
+                        if (courseData != null && 
+                            MID_HelperFunctions.IsValidString(courseData.CourseCode) &&
+                            MID_HelperFunctions.IsValidString(courseData.Name))
+                        {
+                            var course = MapFirestoreModelToEntity(courseData, GetLevelFromDocument(levelDoc));
+                            allCourses.Add(course);
                         }
                     }
+                    catch (JsonException ex)
+                    {
+                        Console.WriteLine($"Skipping invalid course data for key {kvp.Key}: {ex.Message}");
+                    }
                 }
-                
-                return new List<Course>(allCourses);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error getting all courses: {ex.Message}");
-                throw;
             }
         }
+        
+        var coursesList = new List<Course>(allCourses);
+        
+        // Cache the courses locally
+        await SaveCoursesToLocalStorageAsync(coursesList);
+        
+        return coursesList;
+    }
+    catch (Exception ex)
+    {
+       await MID_HelperFunctions.DebugMessageAsync($"Error getting all courses: {ex.Message}",DebugClass.Exception);
+        throw;
+    }
+}
+
 
         public async Task<Course> GetCourseByIdAsync(string courseCode)
         {
@@ -205,9 +219,14 @@ namespace AirCode.Services.Courses
         public async Task<List<Course>> GetCoursesByLecturerAsync(string lecturerId)
         {
             if (_disposed) throw new ObjectDisposedException(nameof(CourseService));
-            
+    
             var allCourses = await GetAllCoursesAsync();
-            return allCourses.Where(c => c.LecturerIds?.Contains(lecturerId) == true).ToList();
+            var lecturerCourses = allCourses.Where(c => c.LecturerIds?.Contains(lecturerId) == true).ToList();
+    
+            // Cache lecturer-specific courses
+            await SaveUserCoursesToLocalStorageAsync(lecturerId, lecturerCourses);
+    
+            return lecturerCourses;
         }
 
         public async Task<List<Course>> GetCoursesBySemesterAsync(SemesterType semester)
@@ -432,7 +451,12 @@ public async Task<List<StudentCourse>> GetAllStudentCoursesAsync()
             }
         }
         
-        return new List<StudentCourse>(allStudentCourses);
+        var studentCoursesList = new List<StudentCourse>(allStudentCourses);
+        
+        // Cache the student courses locally
+        await SaveStudentCoursesToLocalStorageAsync(studentCoursesList);
+        
+        return studentCoursesList;
     }
     catch (Exception ex)
     {
@@ -456,12 +480,17 @@ public async Task<StudentCourse> GetStudentCoursesByMatricAsync(string matricNum
             
             if (studentCourseData != null && MID_HelperFunctions.IsValidString(studentCourseData.StudentMatricNumber))
             {
-                return MapFirestoreModelToStudentEntity(studentCourseData, GetLevelFromStudentDocument(levelDoc));
+                var studentCourse = MapFirestoreModelToStudentEntity(studentCourseData, GetLevelFromStudentDocument(levelDoc));
+                
+                // Cache user-specific courses
+                await SaveUserCoursesToLocalStorageAsync(matricNumber, studentCourse);
+                
+                return studentCourse;
             }
         }
 
-        // NEW: Handle new student case - create default record
-        var defaultLevel = DetermineStudentLevel(matricNumber); // You'll need to implement this
+        // Handle new student case - create default record
+        var defaultLevel = DetermineStudentLevel(matricNumber);
         var newStudentCourse = new StudentCourse(
             matricNumber,
             defaultLevel,
@@ -472,7 +501,15 @@ public async Task<StudentCourse> GetStudentCoursesByMatricAsync(string matricNum
 
         // Auto-create the student record
         var creationSuccess = await AddStudentCourseAsync(newStudentCourse);
-        return creationSuccess ? newStudentCourse : null;
+        
+        if (creationSuccess)
+        {
+            // Cache the new student course
+            await SaveUserCoursesToLocalStorageAsync(matricNumber, newStudentCourse);
+            return newStudentCourse;
+        }
+        
+        return null;
     }
     catch (Exception ex)
     {
@@ -480,62 +517,8 @@ public async Task<StudentCourse> GetStudentCoursesByMatricAsync(string matricNum
         throw;
     }
 }
-private LevelType DetermineStudentLevel(string matricNumber)
-{
-    if (string.IsNullOrEmpty(matricNumber)) return LevelType.Level100;
-    
-    // Enhanced pattern for format: U{YY}{DEPT}{NNNN}
-    // Example: U21CYS1099, U22CS1009
-    var matricPattern = @"^U(\d{2})([A-Z]{2,4})(\d{4})$";
-    var match = System.Text.RegularExpressions.Regex.Match(matricNumber.ToUpper(), matricPattern);
-    
-    if (!match.Success) return LevelType.Level100;
-    
-    var yearSuffix = int.Parse(match.Groups[1].Value);
-    var departmentCode = match.Groups[2].Value;
-    var studentNumber = match.Groups[3].Value;
-    
-    // Convert 2-digit year to full year
-    var admissionYear = 2000 + yearSuffix;
-    var currentYear = DateTime.Now.Year;
-    
-    // Calculate academic level based on years since admission
-    var academicYearsPassed = currentYear - admissionYear;
-    
-    return academicYearsPassed switch
-    {
-        0 => LevelType.Level100,  // Freshman year
-        1 => LevelType.Level200,  // Sophomore year
-        2 => LevelType.Level300,  // Junior year
-        3 => LevelType.Level400,  // Senior year
-        4 => LevelType.Level500,  // Fifth year/Graduate
-        _ when academicYearsPassed > 4 => LevelType.LevelExtra,  // Extended program
-        _ => LevelType.Level100   // Negative values (future admission) default to 100
-    };
-}
 
-// Optional: Add validation method for matric number format
-private bool IsValidMatricNumber(string matricNumber)
-{
-    if (string.IsNullOrEmpty(matricNumber)) return false;
-    
-    var matricPattern = @"^U(\d{2})([A-Z]{2,4})(\d{4})$";
-    var match = System.Text.RegularExpressions.Regex.Match(matricNumber.ToUpper(), matricPattern);
-    
-    if (!match.Success) return false;
-    
-    var yearSuffix = int.Parse(match.Groups[1].Value);
-    var studentNumber = int.Parse(match.Groups[3].Value);
-    
-    // Validate year range (assuming 2020-2030 admission window)
-    var admissionYear = 2000 + yearSuffix;
-    if (admissionYear < 2020 || admissionYear > 2040) return false;
-    
-    // Validate student number range (1001-1999 as typical range)
-    if (studentNumber < 1001 || studentNumber > 1999) return false;
-    
-    return true;
-}
+// New method: GetStudentCoursesByLevelAsync with caching
 public async Task<List<StudentCourse>> GetStudentCoursesByLevelAsync(LevelType level)
 {
     if (_disposed) throw new ObjectDisposedException(nameof(CourseService));
@@ -579,13 +562,74 @@ public async Task<List<StudentCourse>> GetStudentCoursesByLevelAsync(LevelType l
             }
         }
         
-        return new List<StudentCourse>(studentCourses);
+        var studentCoursesList = new List<StudentCourse>(studentCourses);
+        
+        // Cache level-specific student courses
+        await SaveLevelStudentCoursesToLocalStorageAsync(level, studentCoursesList);
+        
+        return studentCoursesList;
     }
     catch (Exception ex)
     {
         Console.WriteLine($"Error getting student courses by level {level}: {ex.Message}");
         throw;
     }
+}
+private LevelType DetermineStudentLevel(string matricNumber)
+{
+    if (string.IsNullOrEmpty(matricNumber)) return LevelType.Level100;
+    
+    // Enhanced pattern for format: U{YY}{DEPT}{NNNN}
+    // Example: U21CYS1099, U22CS1009
+    var matricPattern = @"^U(\d{2})([A-Z]{2,4})(\d{4})$";
+    var match = System.Text.RegularExpressions.Regex.Match(matricNumber.ToUpper(), matricPattern);
+    
+    if (!match.Success) return LevelType.Level100;
+    
+    var yearSuffix = int.Parse(match.Groups[1].Value);
+    var departmentCode = match.Groups[2].Value;
+    var studentNumber = match.Groups[3].Value;
+    
+    // Convert 2-digit year to full year
+    var admissionYear = 2000 + yearSuffix;
+    var currentYear = DateTime.Now.Year;
+    
+    // Calculate academic level based on years since admission
+    var academicYearsPassed = currentYear - admissionYear;
+    
+    return academicYearsPassed switch
+    {
+        0 => LevelType.Level100,  // Freshman year
+        1 => LevelType.Level200,  // Sophomore year
+        2 => LevelType.Level300,  // Junior year
+        3 => LevelType.Level400,  // Senior year
+        4 => LevelType.Level500,  // Fifth year/Graduate
+        _ when academicYearsPassed > 4 => LevelType.LevelExtra,  // Extended program
+        _ => LevelType.Level100   // Negative values (future admission) default to 100
+    };
+}
+
+// Optional: Add validation method for matric number format
+public bool IsValidMatricNumber(string matricNumber)
+{
+    if (string.IsNullOrEmpty(matricNumber)) return false;
+    
+    var matricPattern = @"^U(\d{2})([A-Z]{2,4})(\d{4})$";
+    var match = System.Text.RegularExpressions.Regex.Match(matricNumber.ToUpper(), matricPattern);
+    
+    if (!match.Success) return false;
+    
+    var yearSuffix = int.Parse(match.Groups[1].Value);
+    var studentNumber = int.Parse(match.Groups[3].Value);
+    
+    // Validate year range (assuming 2020-2030 admission window)
+    var admissionYear = 2000 + yearSuffix;
+    if (admissionYear < 2020 || admissionYear > 2040) return false;
+    
+    // Validate student number range (1001-1999 as typical range)
+    if (studentNumber < 1001 || studentNumber > 1999) return false;
+    
+    return true;
 }
 
 public async Task<bool> AddStudentCourseAsync(StudentCourse studentCourse)
@@ -908,6 +952,101 @@ private StudentCourseFirestoreModel MapStudentEntityToFirestoreModel(StudentCour
         ModifiedBy = studentCourse.ModifiedBy
     };
 }
+
+#region Local Storage Functions
+
+private async Task SaveCoursesToLocalStorageAsync(List<Course> courses)
+{
+    try
+    {
+        await _localStorage.SetItemAsync(ALL_COURSES_KEY, courses);
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error saving courses to local storage: {ex.Message}");
+    }
+}
+
+private async Task SaveStudentCoursesToLocalStorageAsync(List<StudentCourse> studentCourses)
+{
+    try
+    {
+        await _localStorage.SetItemAsync(STUDENT_COURSES_KEY, studentCourses);
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error saving student courses to local storage: {ex.Message}");
+    }
+}
+
+private async Task SaveUserCoursesToLocalStorageAsync<T>(string userId, T userCourses)
+{
+    try
+    {
+        var key = $"{USER_COURSES_PREFIX}{userId}";
+        await _localStorage.SetItemAsync(key, userCourses);
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error saving user courses to local storage for {userId}: {ex.Message}");
+    }
+}
+
+private async Task SaveLevelStudentCoursesToLocalStorageAsync(LevelType level, List<StudentCourse> studentCourses)
+{
+    try
+    {
+        var key = $"StudentCourses_{level}";
+        await _localStorage.SetItemAsync(key, studentCourses);
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error saving level student courses to local storage for {level}: {ex.Message}");
+    }
+}
+
+// Optional: Methods to retrieve from local storage (for offline scenarios)
+private async Task<List<Course>> GetCoursesFromLocalStorageAsync()
+{
+    try
+    {
+        return await _localStorage.GetItemAsync<List<Course>>(ALL_COURSES_KEY) ?? new List<Course>();
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error retrieving courses from local storage: {ex.Message}");
+        return new List<Course>();
+    }
+}
+
+private async Task<List<StudentCourse>> GetStudentCoursesFromLocalStorageAsync()
+{
+    try
+    {
+        return await _localStorage.GetItemAsync<List<StudentCourse>>(STUDENT_COURSES_KEY) ?? new List<StudentCourse>();
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error retrieving student courses from local storage: {ex.Message}");
+        return new List<StudentCourse>();
+    }
+}
+
+private async Task<T> GetUserCoursesFromLocalStorageAsync<T>(string userId)
+{
+    try
+    {
+        var key = $"{USER_COURSES_PREFIX}{userId}";
+        return await _localStorage.GetItemAsync<T>(key);
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error retrieving user courses from local storage for {userId}: {ex.Message}");
+        return default(T);
+    }
+}
+
+#endregion
 
 #endregion
 

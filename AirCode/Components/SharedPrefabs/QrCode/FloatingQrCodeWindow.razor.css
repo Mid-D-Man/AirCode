@@ -169,11 +169,11 @@
 }
 
 @keyframes pulse {
-    0%, 100% { 
+    0%, 100% {
         transform: scale(1);
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
     }
-    50% { 
+    50% {
         transform: scale(1.05);
         box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
     }
@@ -270,7 +270,7 @@
     .floating-qr-window {
         border-width: 0.5px;
     }
-    
+
     .fullscreen-button svg,
     .close-button svg {
         width: 14px;
@@ -303,4 +303,4 @@
         min-width: 44px;
         min-height: 44px;
     }
-    }
+}
