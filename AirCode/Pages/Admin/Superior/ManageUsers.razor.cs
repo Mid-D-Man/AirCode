@@ -41,9 +41,9 @@ public partial class ManageUsers : ComponentBase
     private const string ADMIN_IDS_COLLECTION = "VALID_ADMIN_IDS";
     private const string LECTURER_ADMIN_DOC = "LecturerAdminIdsDoc";
     private const string COURSEREP_ADMIN_DOC = "CourseRepAdminIdsDoc";
-    private const string STUDENT_ID = "student";
-    private const string COURSEREP_ID = "courserep";
-    private const string LECTURER_ID = "lecturer";
+    private const string STUDENT_ID = "students";
+    private const string COURSEREP_ID = "coursereps";
+    private const string LECTURER_ID = "lecturers";
     private const int ITEMS_PER_PAGE = 10;
     #endregion
 
