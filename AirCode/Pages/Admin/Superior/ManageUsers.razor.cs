@@ -393,6 +393,7 @@ public partial class ManageUsers : ComponentBase
         using var sbWrapper = StringBuilderPool.GetPooled();
         var sb = sbWrapper.Object;
 
+        // Generate 4-character random salt (2 bytes = 4 hex characters)
         var saltBytes = new byte[2];
         using (var rng = RandomNumberGenerator.Create())
         {
@@ -400,33 +401,30 @@ public partial class ManageUsers : ComponentBase
         }
         var saltString = Convert.ToHexString(saltBytes).ToUpper();
 
-        var randomBytes = new byte[12];
+        // Generate random bytes for base64 encoding
+        var randomBytes = new byte[12]; // 12 bytes will give us 16 base64 characters
         using (var rng = RandomNumberGenerator.Create())
         {
             rng.GetBytes(randomBytes);
         }
+        var base64String = Convert.ToBase64String(randomBytes).Replace("+", "").Replace("/", "").Replace("=", "");
 
-        var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-        var random = new Random();
-        var randomString = new string(Enumerable.Repeat(chars, 16)
-            .Select(s => s[random.Next(s.Length)]).ToArray());
-
-        sb.Append("AIRCODE")
+        // Follow pattern: AIRCODE_(4 salt)_(base64)
+        sb.Append("AIRCODE_")
             .Append(saltString)
-            .Append(randomString);
+            .Append("_")
+            .Append(base64String);
 
         return sb.ToString();
     }
 
     private string GenerateLecturerId()
     {
+      
         var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
-        var randomBytes = new byte[3];
-        using (var rng = RandomNumberGenerator.Create())
-        {
-            rng.GetBytes(randomBytes);
-        }
-        var randomString = Convert.ToHexString(randomBytes).ToLower();
+        var randomBytes =   MID_HelperFunctions.GenerateRandomString(3);
+      
+        var randomString = randomBytes.ToLower();
         return $"LEC_{timestamp}_{randomString}";
     }
     #endregion
@@ -611,58 +609,53 @@ public partial class ManageUsers : ComponentBase
     }
     #endregion
     
-    #region Delete Operations (Improved Implementation)
+   #region Delete Operations
 
-    private async Task DeleteSkeletonUser()
+private async Task DeleteSkeletonUser()
+{
+    if (selectedUser == null || string.IsNullOrEmpty(selectedUserType))
     {
-        if (selectedUser == null || string.IsNullOrEmpty(selectedUserType))
+        notificationComponent?.ShowError("Invalid user selection.");
+        return;
+    }
+
+    try
+    {
+        loading = true;
+        StateHasChanged();
+        var result = selectedUserType switch
         {
-            notificationComponent?.ShowError("Invalid user selection.");
-            return;
+            STUDENT_ID => await DeleteStudentSkeleton(selectedUser as StudentSkeletonUser),
+            LECTURER_ID => await DeleteLecturerSkeleton(selectedUser as LecturerSkeletonUser),
+            COURSEREP_ID => await DeleteCourseRepSkeleton(selectedUser as CourseRepSkeletonUser),
+            _ => new OperationResult { Success = false, ErrorMessage = $"Unknown user type '{selectedUserType}'" }
+        };
+
+        if (result.Success)
+        {
+            notificationComponent?.ShowSuccess("Skeleton user deleted successfully!");
+            CloseModals();
+            await LoadAllUsers();
         }
-
-        try
+        else
         {
-            loading = true;
-            StateHasChanged();
-
-            // Add debug logging
-            await MID_HelperFunctions.DebugMessageAsync($"DeleteSkeletonUser: UserType='{selectedUserType}', UserObjectType='{selectedUser?.GetType().Name}'", DebugClass.Info);
-
-            var result = selectedUserType switch
-            {
-                STUDENT_ID => await DeleteStudentSkeleton(selectedUser as StudentSkeletonUser),
-                LECTURER_ID => await DeleteLecturerSkeletonField(selectedUser as LecturerSkeletonUser),
-                COURSEREP_ID => await DeleteCourseRepSkeletonField(selectedUser as CourseRepSkeletonUser),
-                _ => new OperationResult { Success = false, ErrorMessage = $"Unknown user type '{selectedUserType}'. User object type: {selectedUser?.GetType().Name}" }
-            };
-
-            if (result.Success)
-            {
-                notificationComponent?.ShowSuccess("Skeleton user deleted successfully!");
-                CloseModals();
-                await LoadAllUsers();
-            }
-            else
-            {
-                notificationComponent?.ShowError($"Failed to delete skeleton user: {result.ErrorMessage}");
-            }
-        }
-        catch (Exception ex)
-        {
-            await MID_HelperFunctions.DebugMessageAsync($"DeleteSkeletonUser: Exception occurred: {ex.Message}", DebugClass.Exception);
-            notificationComponent?.ShowError($"Error deleting skeleton user: {ex.Message}");
-        }
-        finally
-        {
-            loading = false;
-            StateHasChanged();
+            notificationComponent?.ShowError($"Failed to delete skeleton user: {result.ErrorMessage}");
         }
     }
+    catch (Exception ex)
+    {
+        notificationComponent?.ShowError($"Error deleting skeleton user: {ex.Message}");
+    }
+    finally
+    {
+        loading = false;
+        StateHasChanged();
+    }
+}
 
 private async Task<OperationResult> DeleteStudentSkeleton(StudentSkeletonUser student)
 {
-    if (student?.MatricNumber == null || student?.Level  == null)
+    if (student?.MatricNumber == null || student?.Level == null)
     {
         return new OperationResult { Success = false, ErrorMessage = "Invalid student data" };
     }
@@ -696,12 +689,11 @@ private async Task<OperationResult> DeleteStudentSkeleton(StudentSkeletonUser st
     }
     catch (Exception ex)
     {
-        await MID_HelperFunctions.DebugMessageAsync($"DeleteStudentSkeleton: Exception for {student.MatricNumber}: {ex.Message}", DebugClass.Exception);
         return new OperationResult { Success = false, ErrorMessage = ex.Message };
     }
 }
 
-private async Task<OperationResult> DeleteCourseRepSkeletonField(CourseRepSkeletonUser courseRep)
+private async Task<OperationResult> DeleteCourseRepSkeleton(CourseRepSkeletonUser courseRep)
 {
     if (courseRep?.AdminInfo?.AdminId == null || courseRep.StudentInfo == null)
     {
@@ -710,8 +702,6 @@ private async Task<OperationResult> DeleteCourseRepSkeletonField(CourseRepSkelet
 
     try
     {
-        await MID_HelperFunctions.DebugMessageAsync($"DeleteCourseRepSkeletonField: Starting deletion for '{courseRep.AdminInfo.AdminId}'", DebugClass.Info);
-        
         // Delete admin record
         var adminResult = await DeleteCourseRepAdmin(courseRep.AdminInfo.AdminId);
         
@@ -735,7 +725,6 @@ private async Task<OperationResult> DeleteCourseRepSkeletonField(CourseRepSkelet
     }
     catch (Exception ex)
     {
-        await MID_HelperFunctions.DebugMessageAsync($"DeleteCourseRepSkeletonField: Exception for '{courseRep.AdminInfo.AdminId}': {ex.Message}", DebugClass.Exception);
         return new OperationResult { Success = false, ErrorMessage = ex.Message };
     }
 }
@@ -753,7 +742,6 @@ private async Task<OperationResult> DeleteCourseRepAdmin(string adminId)
 
         if (!existingDoc.Ids.Any(cr => cr.AdminId == adminId))
         {
-            await MID_HelperFunctions.DebugMessageAsync($"Course rep admin '{adminId}' not found - treating as success", DebugClass.Warning);
             return new OperationResult { Success = true }; // Not found is considered success for deletion
         }
 
@@ -772,7 +760,7 @@ private async Task<OperationResult> DeleteCourseRepAdmin(string adminId)
     }
 }
 
-private async Task<OperationResult> DeleteLecturerSkeletonField(LecturerSkeletonUser lecturer)
+private async Task<OperationResult> DeleteLecturerSkeleton(LecturerSkeletonUser lecturer)
 {
     if (string.IsNullOrEmpty(lecturer?.AdminId))
     {
@@ -781,8 +769,6 @@ private async Task<OperationResult> DeleteLecturerSkeletonField(LecturerSkeleton
 
     try
     {
-        await MID_HelperFunctions.DebugMessageAsync($"DeleteLecturerSkeletonField: Starting deletion for '{lecturer.AdminId}'", DebugClass.Info);
-        
         var existingDoc = await FirestoreService.GetDocumentAsync<LecturerAdminDocument>(ADMIN_IDS_COLLECTION, LECTURER_ADMIN_DOC);
         
         if (existingDoc?.Ids == null)
@@ -806,14 +792,13 @@ private async Task<OperationResult> DeleteLecturerSkeletonField(LecturerSkeleton
     }
     catch (Exception ex)
     {
-        await MID_HelperFunctions.DebugMessageAsync($"DeleteLecturerSkeletonField: Exception for '{lecturer.AdminId}': {ex.Message}", DebugClass.Exception);
         return new OperationResult { Success = false, ErrorMessage = ex.Message };
     }
 }
 
 #endregion
 
-#region Remove User Operations (Improved Implementation)
+#region Remove User Operations
 
 private async Task RemoveAssignedUser()
 {
@@ -825,13 +810,11 @@ private async Task RemoveAssignedUser()
 
     try
     {
-        await MID_HelperFunctions.DebugMessageAsync($"RemoveAssignedUser: Starting removal for user '{selectedAssignedUserId}' from '{selectedUserType}'", DebugClass.Info);
-        
         var result = selectedUserType switch
         {
             LECTURER_ID when selectedUser is LecturerSkeletonUser lecturer => await RemoveUserFromLecturer(lecturer, selectedAssignedUserId),
             COURSEREP_ID when selectedUser is CourseRepSkeletonUser courseRep => await RemoveUserFromCourseRep(courseRep.AdminInfo, selectedAssignedUserId),
-            _ => new OperationResult { Success = false, ErrorMessage = $"Unsupported user type '{selectedUserType}' for removal. User object type: {selectedUser?.GetType().Name}" }
+            _ => new OperationResult { Success = false, ErrorMessage = $"Unsupported user type '{selectedUserType}' for removal" }
         };
 
         if (result.Success)
@@ -847,7 +830,6 @@ private async Task RemoveAssignedUser()
     }
     catch (Exception ex)
     {
-        await MID_HelperFunctions.DebugMessageAsync($"RemoveAssignedUser: Exception occurred: {ex.Message}", DebugClass.Exception);
         notificationComponent?.ShowError($"Error removing user: {ex.Message}");
     }
 }
@@ -861,8 +843,6 @@ private async Task<OperationResult> RemoveUserFromLecturer(LecturerSkeletonUser 
 
     try
     {
-        await MID_HelperFunctions.DebugMessageAsync($"RemoveUserFromLecturer: Removing user '{userId}' from lecturer '{lecturer.AdminId}'", DebugClass.Info);
-        
         var lecturerDoc = await FirestoreService.GetDocumentAsync<LecturerAdminDocument>(ADMIN_IDS_COLLECTION, LECTURER_ADMIN_DOC);
         
         if (lecturerDoc?.Ids == null)
@@ -895,7 +875,6 @@ private async Task<OperationResult> RemoveUserFromLecturer(LecturerSkeletonUser 
     }
     catch (Exception ex)
     {
-        await MID_HelperFunctions.DebugMessageAsync($"RemoveUserFromLecturer: Exception for lecturer '{lecturer.AdminId}': {ex.Message}", DebugClass.Exception);
         return new OperationResult { Success = false, ErrorMessage = ex.Message };
     }
 }
@@ -909,8 +888,6 @@ private async Task<OperationResult> RemoveUserFromCourseRep(CourseRepAdminInfo c
 
     try
     {
-        await MID_HelperFunctions.DebugMessageAsync($"RemoveUserFromCourseRep: Removing user '{userId}' from course rep '{courseRepAdmin.AdminId}'", DebugClass.Info);
-        
         var courseRepDoc = await FirestoreService.GetDocumentAsync<CourseRepAdminDocument>(ADMIN_IDS_COLLECTION, COURSEREP_ADMIN_DOC);
         
         if (courseRepDoc?.Ids == null)
@@ -943,7 +920,6 @@ private async Task<OperationResult> RemoveUserFromCourseRep(CourseRepAdminInfo c
     }
     catch (Exception ex)
     {
-        await MID_HelperFunctions.DebugMessageAsync($"RemoveUserFromCourseRep: Exception for course rep '{courseRepAdmin.AdminId}': {ex.Message}", DebugClass.Exception);
         return new OperationResult { Success = false, ErrorMessage = ex.Message };
     }
 }
