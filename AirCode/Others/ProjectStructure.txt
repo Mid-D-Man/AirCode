@@ -1,7 +1,7 @@
 Project Structure Documentation
-Generated: Thu Jun 26 13:39:19 UTC 2025
+Generated: Thu Jun 26 15:53:54 UTC 2025
 Repository: Mid-D-Man/AirCode
-Commit: d3a621e215ce8173b1249b3731e8c4110ead406f
+Commit: ccef3278c5c7af1752088b5294084edd720bad80
 ==================================
 
 Source Files:
@@ -69,8 +69,9 @@ Components/SharedPrefabs/Others/InfoPopup.razor
 Components/SharedPrefabs/Others/InfoPopup.razor.css
 Components/SharedPrefabs/Others/SvgIcon.razor
 Components/SharedPrefabs/Others/SvgIcon.razor.css
-Components/SharedPrefabs/QrCode/FloatingQRWindow.razor
-Components/SharedPrefabs/QrCode/FloatingQRWindow.razor.css
+Components/SharedPrefabs/QrCode/FloatingQrCodeWindow.razor
+Components/SharedPrefabs/QrCode/FloatingQrCodeWindow.razor.css
+Components/SharedPrefabs/QrCode/FloatingQrCodeWindow.razor.js
 Components/SharedPrefabs/QrCode/QRCodeCompo.razor
 Components/SharedPrefabs/QrCode/QRCodeCompo.razor.css
 Components/SharedPrefabs/Scanner/BasicQRCodeScanner.razor
@@ -402,5 +403,5 @@ File Count Summary:
 .csproj   : 1 files
 .json     : 12 files
 .css      : 79 files
-.js       : 43 files
+.js       : 44 files
 .html     : 3 files
