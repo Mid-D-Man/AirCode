@@ -20,10 +20,10 @@ namespace AirCode.Domain.ValueObjects
     }
     // Small structure for individual time slots - implemented as struct
     public struct TimeSlot
-    {
-        public DayOfWeek Day { get; init; }
-        public TimeSpan StartTime { get; init; }
-        public TimeSpan EndTime { get; init; }
-        public string Location { get; init; }
+{
+    public DayOfWeek Day { get; init; }
+    public TimeSpan StartTime { get; init; }
+    public TimeSpan EndTime { get; init; }
+    public string Location { get; init; } = string.Empty;
     }
 }
