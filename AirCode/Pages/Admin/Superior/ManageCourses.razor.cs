@@ -439,13 +439,7 @@ if (conflictingSlot is not null) // Change from != null to is not null
         
         
 
-        var timeSlot = new TimeSlot
-        {
-            Day = _newDay,
-            StartTime = _newStartTime,
-            EndTime = _newEndTime,
-            Location = _newLocation
-        };
+        var timeSlot = new TimeSlot(_newDay, _newStartTime, _newEndTime, _newLocation);
 
         _timeSlots.Add(timeSlot);
         _newLocation = string.Empty;
