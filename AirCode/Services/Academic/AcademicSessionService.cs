@@ -26,7 +26,7 @@ namespace AirCode.Services.Academic
         private const string LAST_TRANSITION_CHECK_KEY = "last_transition_check";
         private const int MAX_CACHE_AGE_HOURS = 1;
 
-        // Cache
+        // Cache en
         private List<AcademicSession> _cachedSessions;
         private DateTime _lastCacheUpdate;
         private readonly object _cacheLock = new object();
