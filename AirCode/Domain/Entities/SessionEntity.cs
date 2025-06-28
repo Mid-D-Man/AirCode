@@ -2,6 +2,7 @@
 using System.ComponentModel.DataAnnotations;
 using AirCode.Domain.Enums;
 using AirCode.Domain.Interfaces;
+using AirCode.Services.Academic;
 using AirCode.Utilities.HelperScripts;
 
 namespace AirCode.Domain.Entities
@@ -57,5 +58,22 @@ namespace AirCode.Domain.Entities
         {
             return JsonHelper.Serialize(this, true);
         }
+    }
+    // Domain/Entities/TransitionLog.cs
+    public class TransitionLog
+    {
+        public string Id { get; set; }
+        public string SessionId { get; set; }
+        public TransitionType TransitionType { get; set; }
+        public DateTime ProcessedAt { get; set; }
+        public string ProcessedBy { get; set; }
+        public string Status { get; set; }
+    }
+    // Domain/Entities/UserLoginRecord.cs
+    public class UserLoginRecord
+    {
+        public string UserId { get; set; }
+        public DateTime LastLoginTime { get; set; }
+        public DateTime UpdatedAt { get; set; }
     }
 }
