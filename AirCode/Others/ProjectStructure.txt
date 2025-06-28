@@ -1,7 +1,7 @@
 Project Structure Documentation
-Generated: Sat Jun 28 17:08:30 UTC 2025
+Generated: Sat Jun 28 17:22:32 UTC 2025
 Repository: Mid-D-Man/AirCode
-Commit: 64f90db11643d5776db54a6ae6c60b2e14740f94
+Commit: 768fd3abba6263979b7258e345ef891cf9921d08
 ==================================
 
 Source Files:
@@ -185,6 +185,7 @@ Pages/TestPages/TestPage.razor
 Pages/TestPages/TestPage.razor.css
 Program.cs
 Properties/launchSettings.json
+Services/Academic/IAcademicSessionService.cs
 Services/Attendance/AttendanceSessionService.cs
 Services/Attendance/IAttendanceSessionService.cs
 Services/Attendance/IOfflineSyncService.cs
@@ -351,6 +352,7 @@ Directory Structure:
 ./  TestPages
 ./Properties
 ./Services
+./  Academic
 ./  Attendance
 ./  Auth
 ./  Courses
@@ -398,7 +400,7 @@ Directory Structure:
 
 File Count Summary:
 ==================
-.cs       : 83 files
+.cs       : 84 files
 .razor    : 71 files
 .csproj   : 1 files
 .json     : 12 files
