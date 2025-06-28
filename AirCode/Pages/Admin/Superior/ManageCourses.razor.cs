@@ -15,7 +15,16 @@ public partial class ManageCourses : ComponentBase
     [Inject] private NavigationManager NavigationManager { get; set; } = default!;
     [Inject] private ICourseService CourseService { get; set; } = default!;
 
-    // Add reference to notification component
+private enum LoadingOperation
+{
+    LoadingCourses,
+    SavingCourse,
+    UpdatingCourse,
+    DeletingCourse
+}
+
+private LoadingOperation _loadingOperation = LoadingOperation.LoadingCourses;
+    // reference to notification component dam wasted times on this
     private NotificationComponent _notificationComponent = default!;
     private LoadingSpinner _loadingSpinner = default!;
 
@@ -62,6 +71,7 @@ public partial class ManageCourses : ComponentBase
     private async Task LoadCourses()
     {
         _isLoading = true;
+    _loadingOperation = LoadingOperation.LoadingCourses; 
         StateHasChanged();
         
         try
@@ -230,6 +240,7 @@ public partial class ManageCourses : ComponentBase
     {
         try
         {
+        _loadingOperation = LoadingOperation.SavingCourse; 
             // Validate form data
             if (string.IsNullOrWhiteSpace(_courseCode) || string.IsNullOrWhiteSpace(_courseName))
             {
@@ -278,12 +289,13 @@ public partial class ManageCourses : ComponentBase
     {
         try
         {
+        
             if (_selectedCourse == null)
             {
                 _notificationComponent?.ShowError("No course selected for update");
                 return;
             }
-
+_loadingOperation = LoadingOperation.UpdatingCourse; 
             // Validate form data
             if (string.IsNullOrWhiteSpace(_courseCode) || string.IsNullOrWhiteSpace(_courseName))
             {
@@ -342,6 +354,7 @@ public partial class ManageCourses : ComponentBase
         if (_courseToDelete == null || _isDeleting) return;
 
         _isDeleting = true;
+        _loadingOperation = LoadingOperation.DeletingCourse; 
         StateHasChanged();
 
         try
@@ -413,16 +426,18 @@ public partial class ManageCourses : ComponentBase
 
         // Check for time conflicts
         var conflictingSlot = _timeSlots.FirstOrDefault(ts => 
-            ts.Day == _newDay && 
-            ((ts.StartTime <= _newStartTime && ts.EndTime > _newStartTime) ||
-             (ts.StartTime < _newEndTime && ts.EndTime >= _newEndTime) ||
-             (ts.StartTime >= _newStartTime && ts.EndTime <= _newEndTime)));
+    ts.Day == _newDay && 
+    ((ts.StartTime <= _newStartTime && ts.EndTime > _newStartTime) ||
+     (ts.StartTime < _newEndTime && ts.EndTime >= _newEndTime) ||
+     (ts.StartTime >= _newStartTime && ts.EndTime <= _newEndTime)));
 
-        if (conflictingSlot != null)
-        {
-            _notificationComponent?.ShowWarning($"Time conflict with existing slot on {conflictingSlot.Day}");
-            return;
-        }
+if (conflictingSlot is not null) // Change from != null to is not null
+{
+    _notificationComponent?.ShowWarning($"Time conflict with existing slot on {conflictingSlot.Day}");
+    return;
+}
+        
+        
 
         var timeSlot = new TimeSlot
         {
