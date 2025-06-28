@@ -24,6 +24,14 @@ namespace AirCode.Domain.ValueObjects
     public DayOfWeek Day { get; init; }
     public TimeSpan StartTime { get; init; }
     public TimeSpan EndTime { get; init; }
-    public string Location { get; init; } = string.Empty;
+    public string Location { get; init; }
+
+    public TimeSlot(DayOfWeek day, TimeSpan startTime, TimeSpan endTime, string location = "")
+    {
+        Day = day;
+        StartTime = startTime;
+        EndTime = endTime;
+        Location = location ?? string.Empty;
+    }
     }
 }
