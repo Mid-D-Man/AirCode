@@ -431,7 +431,7 @@ _loadingOperation = LoadingOperation.UpdatingCourse;
      (ts.StartTime < _newEndTime && ts.EndTime >= _newEndTime) ||
      (ts.StartTime >= _newStartTime && ts.EndTime <= _newEndTime)));
 
-if (conflictingSlot is not null) // Change from != null to is not null
+if (!conflictingSlot.Equals(default(TimeSlot)))// Change from != null to is not null
 {
     _notificationComponent?.ShowWarning($"Time conflict with existing slot on {conflictingSlot.Day}");
     return;
@@ -439,8 +439,13 @@ if (conflictingSlot is not null) // Change from != null to is not null
         
         
 
-        var timeSlot = new TimeSlot(_newDay, _newStartTime, _newEndTime, _newLocation);
-
+       var timeSlot = new TimeSlot
+{
+    Day = _newDay,
+    StartTime = _newStartTime,
+    EndTime = _newEndTime,
+    Location = _newLocation ?? string.Empty
+};
         _timeSlots.Add(timeSlot);
         _newLocation = string.Empty;
         _newStartTime = new TimeSpan(9, 0, 0);
