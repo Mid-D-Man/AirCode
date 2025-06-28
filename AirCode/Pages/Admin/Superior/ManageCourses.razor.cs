@@ -438,7 +438,10 @@ if (!conflictingSlot.Equals(default(TimeSlot)))// Change from != null to is not 
 }
         
         
-
+/* 
+var timeSlot = new TimeSlot(_newDay, _newStartTime, _newEndTime, _newLocation ?? string.Empty);
+_timeSlots.Add(timeSlot);
+*/
        var timeSlot = new TimeSlot
 {
     Day = _newDay,
