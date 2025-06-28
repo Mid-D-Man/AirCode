@@ -16,6 +16,7 @@ using AirCode.Services.Guards;
 using AirCode.Services.Permissions;
 using AirCode.Services.Search;
 using AirCode.Services.Storage;
+using AirCode.Services.Academic;
 using AirCode.Services.VisualElements;
 using AirCode.Utilities.DataStructures;
 using AirCode.Utilities.HelperScripts;
@@ -152,6 +153,7 @@ builder.Services.AddScoped<IPermissionService, PermissionService>();
 // Academic structure services
 builder.Services.AddScoped<IDepartmentService, DepartmentService>();
 builder.Services.AddScoped<ICourseService, CourseService>();
+builder.Services.AddScoped<IAcademicSessionService, AcademicSessionService>();
 // Application state and utility services
 builder.Services.AddScoped<ISearchContextService, SearchContextService>();
 builder.Services.AddScoped<SessionStateService>();
