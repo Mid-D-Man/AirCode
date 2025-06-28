@@ -850,7 +850,7 @@ namespace AirCode.Services.Academic
             
             return start1 < start2 ? OverlapResolutionAction.TruncateOldSession : OverlapResolutionAction.DelayNewSession;
         }
-
+#endregion 
         // Placeholder methods for actual business
 
 }
