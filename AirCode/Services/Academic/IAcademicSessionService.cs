@@ -4,7 +4,7 @@ using AirCode.Domain.Enums;
 namespace AirCode.Services.Academic
 {
     /// <summary>
-    /// Service for managing academic session lifecycle and transition logic
+    /// Service for za managing academic session lifecycle and transition logic
     /// </summary>
     public interface IAcademicSessionService
     {
