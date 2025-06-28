@@ -2,6 +2,8 @@ using AirCode.Domain.Entities;
 using AirCode.Domain.Enums;
 using AirCode.Domain.ValueObjects;
 using AirCode.Services.Courses;
+using AirCode.Components.SharedPrefabs.Cards;
+using AirCode.Components.SharedPrefabs.Spinner;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 
@@ -13,10 +15,16 @@ public partial class ManageCourses : ComponentBase
     [Inject] private NavigationManager NavigationManager { get; set; } = default!;
     [Inject] private ICourseService CourseService { get; set; } = default!;
 
+    // Add reference to notification component
+    private NotificationComponent _notificationComponent = default!;
+    private LoadingSpinner _loadingSpinner = default!;
+
     private List<Course> _courses = new();
     private Course? _selectedCourse;
     private Course? _courseToDelete;
     private bool _isLoading = true;
+    private bool _isProcessing = false; // For form operations
+    private bool _isDeleting = false; // For delete operations
     private bool _showDeleteConfirmation = false;
     private bool _showEditForm = false;
     private bool _showAddForm = false;
@@ -42,8 +50,7 @@ public partial class ManageCourses : ComponentBase
     private TimeSpan _newEndTime = new(10, 0, 0);
     private string _newLocation = string.Empty;
 
-    
-// Pagination properties
+    // Pagination properties
     private int _currentPage = 1;
     private int _pageSize = 10;
 
@@ -55,18 +62,22 @@ public partial class ManageCourses : ComponentBase
     private async Task LoadCourses()
     {
         _isLoading = true;
+        StateHasChanged();
+        
         try
         {
             _courses = await CourseService.GetAllCoursesAsync();
+            _notificationComponent?.ShowInfo("Courses loaded successfully");
         }
         catch (Exception ex)
         {
-            await JSRuntime.InvokeVoidAsync("alert", $"Error loading courses: {ex.Message}");
+            _notificationComponent?.ShowError($"Failed to load courses: {ex.Message}");
             _courses = new List<Course>();
         }
         finally
         {
             _isLoading = false;
+            StateHasChanged();
         }
     }
 
@@ -95,34 +106,42 @@ public partial class ManageCourses : ComponentBase
     private async Task LoadCoursesByLevel()
     {
         _isLoading = true;
+        StateHasChanged();
+        
         try
         {
             _courses = await CourseService.GetCoursesByLevelAsync(_filterLevel);
+            _notificationComponent?.ShowInfo($"Courses for {_filterLevel} loaded successfully");
         }
         catch (Exception ex)
         {
-            await JSRuntime.InvokeVoidAsync("alert", $"Error loading courses by level: {ex.Message}");
+            _notificationComponent?.ShowError($"Failed to load courses by level: {ex.Message}");
         }
         finally
         {
             _isLoading = false;
+            StateHasChanged();
         }
     }
 
     private async Task LoadCoursesBySemester()
     {
         _isLoading = true;
+        StateHasChanged();
+        
         try
         {
             _courses = await CourseService.GetCoursesBySemesterAsync(_filterSemester);
+            _notificationComponent?.ShowInfo($"Courses for {_filterSemester} loaded successfully");
         }
         catch (Exception ex)
         {
-            await JSRuntime.InvokeVoidAsync("alert", $"Error loading courses by semester: {ex.Message}");
+            _notificationComponent?.ShowError($"Failed to load courses by semester: {ex.Message}");
         }
         finally
         {
             _isLoading = false;
+            StateHasChanged();
         }
     }
 
@@ -131,6 +150,7 @@ public partial class ManageCourses : ComponentBase
         ResetForm();
         _showAddForm = true;
         _showEditForm = false;
+        StateHasChanged();
     }
 
     private void ShowEditForm(Course course)
@@ -139,6 +159,7 @@ public partial class ManageCourses : ComponentBase
         LoadCourseToForm(course);
         _showEditForm = true;
         _showAddForm = false;
+        StateHasChanged();
     }
 
     private void LoadCourseToForm(Course course)
@@ -173,10 +194,16 @@ public partial class ManageCourses : ComponentBase
         _showAddForm = false;
         _showEditForm = false;
         ResetForm();
+        StateHasChanged();
     }
 
     private async Task HandleValidSubmit()
     {
+        if (_isProcessing) return; // Prevent double submission
+
+        _isProcessing = true;
+        StateHasChanged();
+
         try
         {
             if (_showAddForm)
@@ -190,7 +217,12 @@ public partial class ManageCourses : ComponentBase
         }
         catch (Exception ex)
         {
-            await JSRuntime.InvokeVoidAsync("alert", $"Error saving course: {ex.Message}");
+            _notificationComponent?.ShowError($"Operation failed: {ex.Message}");
+        }
+        finally
+        {
+            _isProcessing = false;
+            StateHasChanged();
         }
     }
 
@@ -198,10 +230,17 @@ public partial class ManageCourses : ComponentBase
     {
         try
         {
+            // Validate form data
+            if (string.IsNullOrWhiteSpace(_courseCode) || string.IsNullOrWhiteSpace(_courseName))
+            {
+                _notificationComponent?.ShowWarning("Course code and name are required");
+                return;
+            }
+
             // Check if course ID already exists
             if (_courses.Any(c => c.CourseCode == _courseCode))
             {
-                await JSRuntime.InvokeVoidAsync("alert", "Course ID already exists!");
+                _notificationComponent?.ShowWarning("Course code already exists!");
                 return;
             }
 
@@ -222,16 +261,16 @@ public partial class ManageCourses : ComponentBase
             {
                 await LoadCourses();
                 CancelForm();
-                await JSRuntime.InvokeVoidAsync("alert", "Course added successfully!");
+                _notificationComponent?.ShowSuccess($"Course '{_courseName}' added successfully!");
             }
             else
             {
-                await JSRuntime.InvokeVoidAsync("alert", "Failed to add course!");
+                _notificationComponent?.ShowError("Failed to add course. Please try again.");
             }
         }
         catch (Exception ex)
         {
-            await JSRuntime.InvokeVoidAsync("alert", $"Error adding course: {ex.Message}");
+            _notificationComponent?.ShowError($"Error adding course: {ex.Message}");
         }
     }
 
@@ -239,7 +278,18 @@ public partial class ManageCourses : ComponentBase
     {
         try
         {
-            if (_selectedCourse == null) return;
+            if (_selectedCourse == null)
+            {
+                _notificationComponent?.ShowError("No course selected for update");
+                return;
+            }
+
+            // Validate form data
+            if (string.IsNullOrWhiteSpace(_courseCode) || string.IsNullOrWhiteSpace(_courseName))
+            {
+                _notificationComponent?.ShowWarning("Course code and name are required");
+                return;
+            }
 
             var schedule = new CourseSchedule(_timeSlots);
             var updatedCourse = new Course(
@@ -260,16 +310,16 @@ public partial class ManageCourses : ComponentBase
             {
                 await LoadCourses();
                 CancelForm();
-                await JSRuntime.InvokeVoidAsync("alert", "Course updated successfully!");
+                _notificationComponent?.ShowSuccess($"Course '{_courseName}' updated successfully!");
             }
             else
             {
-                await JSRuntime.InvokeVoidAsync("alert", "Failed to update course!");
+                _notificationComponent?.ShowError("Failed to update course. Please try again.");
             }
         }
         catch (Exception ex)
         {
-            await JSRuntime.InvokeVoidAsync("alert", $"Error updating course: {ex.Message}");
+            _notificationComponent?.ShowError($"Error updating course: {ex.Message}");
         }
     }
 
@@ -277,101 +327,151 @@ public partial class ManageCourses : ComponentBase
     {
         _courseToDelete = course;
         _showDeleteConfirmation = true;
+        StateHasChanged();
     }
 
     private void CancelDelete()
     {
         _courseToDelete = null;
         _showDeleteConfirmation = false;
+        StateHasChanged();
     }
 
     private async Task DeleteCourse()
     {
+        if (_courseToDelete == null || _isDeleting) return;
+
+        _isDeleting = true;
+        StateHasChanged();
+
         try
         {
-            if (_courseToDelete == null) return;
-
+            var courseName = _courseToDelete.Name;
             var success = await CourseService.DeleteCourseAsync(_courseToDelete.CourseCode);
+            
             if (success)
             {
                 await LoadCourses();
-                await JSRuntime.InvokeVoidAsync("alert", "Course deleted successfully!");
+                _notificationComponent?.ShowSuccess($"Course '{courseName}' deleted successfully!");
             }
             else
             {
-                await JSRuntime.InvokeVoidAsync("alert", "Failed to delete course!");
+                _notificationComponent?.ShowError("Failed to delete course. Please try again.");
             }
         }
         catch (Exception ex)
         {
-            await JSRuntime.InvokeVoidAsync("alert", $"Error deleting course: {ex.Message}");
+            _notificationComponent?.ShowError($"Error deleting course: {ex.Message}");
         }
         finally
         {
+            _isDeleting = false;
             CancelDelete();
         }
     }
 
     private void AddLecturer()
     {
-        if (!string.IsNullOrWhiteSpace(_newLecturerId) && !_lecturerIds.Contains(_newLecturerId))
+        if (string.IsNullOrWhiteSpace(_newLecturerId))
         {
-            _lecturerIds.Add(_newLecturerId);
-            _newLecturerId = string.Empty;
+            _notificationComponent?.ShowWarning("Please enter a lecturer ID");
+            return;
         }
+
+        if (_lecturerIds.Contains(_newLecturerId))
+        {
+            _notificationComponent?.ShowWarning("Lecturer already added to this course");
+            return;
+        }
+
+        _lecturerIds.Add(_newLecturerId);
+        _newLecturerId = string.Empty;
+        _notificationComponent?.ShowInfo("Lecturer added to course");
+        StateHasChanged();
     }
 
     private void RemoveLecturer(string lecturerId)
     {
         _lecturerIds.Remove(lecturerId);
+        _notificationComponent?.ShowInfo("Lecturer removed from course");
+        StateHasChanged();
     }
 
     private void AddTimeSlot()
     {
-        if (!string.IsNullOrWhiteSpace(_newLocation) && _newStartTime < _newEndTime)
+        if (string.IsNullOrWhiteSpace(_newLocation))
         {
-            var timeSlot = new TimeSlot
-            {
-                Day = _newDay,
-                StartTime = _newStartTime,
-                EndTime = _newEndTime,
-                Location = _newLocation
-            };
-
-            _timeSlots.Add(timeSlot);
-            _newLocation = string.Empty;
-            _newStartTime = new TimeSpan(9, 0, 0);
-            _newEndTime = new TimeSpan(10, 0, 0);
+            _notificationComponent?.ShowWarning("Please enter a location");
+            return;
         }
+
+        if (_newStartTime >= _newEndTime)
+        {
+            _notificationComponent?.ShowWarning("Start time must be before end time");
+            return;
+        }
+
+        // Check for time conflicts
+        var conflictingSlot = _timeSlots.FirstOrDefault(ts => 
+            ts.Day == _newDay && 
+            ((ts.StartTime <= _newStartTime && ts.EndTime > _newStartTime) ||
+             (ts.StartTime < _newEndTime && ts.EndTime >= _newEndTime) ||
+             (ts.StartTime >= _newStartTime && ts.EndTime <= _newEndTime)));
+
+        if (conflictingSlot != null)
+        {
+            _notificationComponent?.ShowWarning($"Time conflict with existing slot on {conflictingSlot.Day}");
+            return;
+        }
+
+        var timeSlot = new TimeSlot
+        {
+            Day = _newDay,
+            StartTime = _newStartTime,
+            EndTime = _newEndTime,
+            Location = _newLocation
+        };
+
+        _timeSlots.Add(timeSlot);
+        _newLocation = string.Empty;
+        _newStartTime = new TimeSpan(9, 0, 0);
+        _newEndTime = new TimeSpan(10, 0, 0);
+        _notificationComponent?.ShowInfo("Time slot added to schedule");
+        StateHasChanged();
     }
 
     private void RemoveTimeSlot(TimeSlot timeSlot)
     {
         _timeSlots.Remove(timeSlot);
+        _notificationComponent?.ShowInfo("Time slot removed from schedule");
+        StateHasChanged();
     }
 
     private async Task AssignLecturer(string courseId)
     {
-        if (!string.IsNullOrWhiteSpace(_newLecturerId))
+        if (string.IsNullOrWhiteSpace(_newLecturerId))
         {
-            try
+            _notificationComponent?.ShowWarning("Please enter a lecturer ID");
+            return;
+        }
+
+        try
+        {
+            var success = await CourseService.AssignLecturerToCourseAsync(courseId, _newLecturerId);
+            if (success)
             {
-                var success = await CourseService.AssignLecturerToCourseAsync(courseId, _newLecturerId);
-                if (success)
-                {
-                    await LoadCourses();
-                    _newLecturerId = string.Empty;
-                    await JSRuntime.InvokeVoidAsync("alert", "Lecturer assigned successfully!");
-                }
-                else
-                {
-                    await JSRuntime.InvokeVoidAsync("alert", "Failed to assign lecturer!");
-                }
+                await LoadCourses();
+                _newLecturerId = string.Empty;
+                _notificationComponent?.ShowSuccess("Lecturer assigned successfully!");
             }
-            catch (Exception ex)
+            else
             {
-                await JSRuntime.InvokeVoidAsync("alert", $"Error assigning lecturer: {ex.Message}");
+                _notificationComponent?.ShowError("Failed to assign lecturer. Please try again.");
             }
+        }
+        catch (Exception ex)
+        {
+            _notificationComponent?.ShowError($"Error assigning lecturer: {ex.Message}");
         }
     }
 
@@ -383,18 +483,19 @@ public partial class ManageCourses : ComponentBase
             if (success)
             {
                 await LoadCourses();
-                await JSRuntime.InvokeVoidAsync("alert", "Lecturer removed successfully!");
+                _notificationComponent?.ShowSuccess("Lecturer removed successfully!");
             }
             else
             {
-                await JSRuntime.InvokeVoidAsync("alert", "Failed to remove lecturer!");
+                _notificationComponent?.ShowError("Failed to remove lecturer. Please try again.");
             }
         }
         catch (Exception ex)
         {
-            await JSRuntime.InvokeVoidAsync("alert", $"Error removing lecturer: {ex.Message}");
+            _notificationComponent?.ShowError($"Error removing lecturer: {ex.Message}");
         }
     }
+
     private List<Course> PaginatedCourses
     {
         get
@@ -427,7 +528,6 @@ public partial class ManageCourses : ComponentBase
 
     private int CurrentPage => _currentPage;
 
-// Add these methods
     private void ChangePage(int page)
     {
         if (page >= 1 && page <= TotalPages)
@@ -441,6 +541,7 @@ public partial class ManageCourses : ComponentBase
     {
         _currentPage = 1;
     }
+
     private async Task OnLevelFilterChanged(ChangeEventArgs e)
     {
         if (Enum.TryParse<LevelType>(e.Value?.ToString(), out var level))
@@ -449,10 +550,11 @@ public partial class ManageCourses : ComponentBase
             await OnFilterChanged();
         }
     }
-// Update existing methods to reset pagination when filters change
+
     private async Task ApplyFilters()
     {
         ResetPagination();
+        _notificationComponent?.ShowInfo("Filters applied successfully");
         await InvokeAsync(StateHasChanged);
     }
 
@@ -463,6 +565,7 @@ public partial class ManageCourses : ComponentBase
         _filterLevel = LevelType.Level100;
         _filterSemester = SemesterType.FirstSemester;
         ResetPagination();
+        _notificationComponent?.ShowInfo("Filters reset successfully");
         await InvokeAsync(StateHasChanged);
     }
 
@@ -472,7 +575,6 @@ public partial class ManageCourses : ComponentBase
         await InvokeAsync(StateHasChanged);
     }
 
-// Add these helper methods for time handling in the modal
     private void UpdateStartTime(ChangeEventArgs e)
     {
         if (TimeSpan.TryParse(e.Value?.ToString(), out var time))
