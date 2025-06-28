@@ -2,6 +2,7 @@
 @using AirCode.Layout.AdminLayout.Superior
 @using AirCode.Domain.Entities
 @using AirCode.Domain.Enums
+@using AirCode.Components.SharedPrefabs.Cards
 @layout SuperiorAdminLayout
 
 <div class="page-container bg-primary">
@@ -74,57 +75,12 @@
     else
     {
         <!-- Courses Grid -->
-        <div class="card-grid">
+     <div class="card-grid">
             @foreach (var course in PaginatedCourses)
             {
-                <div class="course-card bg-secondary border-theme">
-                    <div class="course-header">
-                        <h3 class="course-title">@course.Name</h3>
-                        <span class="course-code">@course.CourseCode</span>
-                    </div>
-                    <div class="course-info">
-                        <p><strong>Department:</strong> @course.DepartmentId</p>
-                        <p><strong>Level:</strong> @course.Level</p>
-                        <p><strong>Semester:</strong> @course.Semester</p>
-                        <p><strong>Credit Units:</strong> @course.CreditUnits</p>
-                    </div>
-                    <div class="course-schedule">
-                        <h4>Schedule</h4>
-                        @if (course.Schedule.TimeSlots.Count > 0)
-                        {
-                            <ul>
-                                @foreach (var slot in course.Schedule.TimeSlots)
-                                {
-                                    <li>@slot.Day: @slot.StartTime.ToString(@"hh\:mm") - @slot.EndTime.ToString(@"hh\:mm") @slot.Location</li>
-                                }
-                            </ul>
-                        }
-                        else
-                        {
-                            <p>No schedule set</p>
-                        }
-                    </div>
-                    <div class="course-lecturers">
-                        <h4>Lecturers</h4>
-                        @if (course.LecturerIds?.Count > 0)
-                        {
-                            <ul>
-                                @foreach (var lecturerId in course.LecturerIds)
-                                {
-                                    <li>@lecturerId</li>
-                                }
-                            </ul>
-                        }
-                        else
-                        {
-                            <p>No lecturers assigned</p>
-                        }
-                    </div>
-                    <div class="course-actions">
-                        <button class="btn btn-primary" @onclick="() => ShowEditForm(course)">Edit</button>
-                        <button class="btn btn-danger" @onclick="() => ConfirmDelete(course)">Delete</button>
-                    </div>
-                </div>
+                <CourseCard Course="course" 
+                           OnEdit="ShowEditForm" 
+                           OnDelete="ConfirmDelete" />
             }
         </div>
 
