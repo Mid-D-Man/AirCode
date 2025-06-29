@@ -1,7 +1,7 @@
 Project Structure Documentation
-Generated: Sun Jun 29 16:34:24 UTC 2025
+Generated: Sun Jun 29 18:44:03 UTC 2025
 Repository: Mid-D-Man/AirCode
-Commit: c084d70e76b1e310b541b6572b5adf2c64af7a33
+Commit: 4775d10aa1fc7d4e93f4f6964da278a001924400
 ==================================
 
 Source Files:
@@ -97,6 +97,7 @@ Domain/ValueObjects/CourseSchedule.cs
 Domain/ValueObjects/PaginationData.cs
 Extensions/AuthExtensions.cs
 Extensions/BusinessHoursServiceExtensions.cs
+Extensions/PWAServiceExtensions.cs
 Extensions/ServiceExtensions.cs
 Extensions/Supabase.cs
 Layout/AdminLayout/Superior/SuperiorAdminLayout.razor
@@ -209,6 +210,8 @@ Services/Guards/BusinessHoursGuard.cs
 Services/Guards/IBusinessHoursGuard.cs
 Services/Guards/IRouteGuardService.cs
 Services/Guards/RouteGuardService.cs
+Services/PWA/IPWAService.cs
+Services/PWA/PWAService.cs
 Services/Permissions/IPermissionService.cs
 Services/Permissions/PermissionService.cs
 Services/Search/ISearchContextService.cs
@@ -358,6 +361,7 @@ Directory Structure:
 ./  Department
 ./  Firebase
 ./  Guards
+./  PWA
 ./  Permissions
 ./  Search
 ./  Storage
@@ -398,7 +402,7 @@ Directory Structure:
 
 File Count Summary:
 ==================
-.cs       : 85 files
+.cs       : 88 files
 .razor    : 71 files
 .csproj   : 1 files
 .json     : 12 files
