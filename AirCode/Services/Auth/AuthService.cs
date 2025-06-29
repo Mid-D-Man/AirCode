@@ -62,7 +62,7 @@ namespace AirCode.Services.Auth
             var authState = await _authStateProvider.GetAuthenticationStateAsync();
             return authState.User.Identity.IsAuthenticated;
         }
-// Add this method to your existing AuthService.cs
+      // Attempt to get user profile photo based on email
 
         public async Task<string> GetUserPictureAsync()
         {
