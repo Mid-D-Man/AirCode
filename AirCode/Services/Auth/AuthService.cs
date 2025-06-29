@@ -457,13 +457,20 @@ namespace AirCode.Services.Auth
                         loginTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
                     };
                         // Create offline credentials using the service might need to manually handle
-                        var credentialsResult = await _offlineCredentialsService.CreateOfflineCredentialsFromCurrentUserAsync();
+                      //  var credentialsResult = await _offlineCredentialsService.CreateOfflineCredentialsFromCurrentUserAsync();
                                         
                     await _jsRuntime.InvokeVoidAsync("localStorage.setItem", 
                         "AirCode_user_session", 
                         JsonSerializer.Serialize(userData));
                     
-                
+                    var credentialsResult = await _offlineCredentialsService.StoreCredentialsWithAdditionalDataAsync(
+                        userId, userRole, 
+                        OfflineCredentialsService.TEST_KEY, 
+                        OfflineCredentialsService.TEST_IV, 
+                        12, // expiration days
+                        lecturerId, 
+                        matricNumber);
+                    
                     if (credentialsResult)
                     {
                         _logger.LogInformation("Offline credentials created successfully for user {UserId}", userId);

@@ -17,8 +17,8 @@ public class OfflineCredentialsService : IOfflineCredentialsService
     private readonly ILogger<OfflineCredentialsService> _logger;
 
     // Test constants - DO NOT use in production!
-    private const string TEST_KEY = "VGhpcyBpcyBhIHRlc3Qga2V5IGZvciBBaXJDb2RlIHRlc3Rpbmc="; // 32 bytes when decoded
-    private const string TEST_IV = "UmFuZG9tSVZmb3JUZXN0"; // 16 bytes when decoded
+    internal static string TEST_KEY = "VGhpcyBpcyBhIHRlc3Qga2V5IGZvciBBaXJDb2RlIHRlc3Rpbmc="; // 32 bytes when decoded
+    internal static string TEST_IV = "UmFuZG9tSVZmb3JUZXN0"; // 16 bytes when decoded
 
     public OfflineCredentialsService(
         IJSRuntime jsRuntime, 
