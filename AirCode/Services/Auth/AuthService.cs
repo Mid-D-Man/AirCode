@@ -84,80 +84,124 @@ namespace AirCode.Services.Auth
             }
         }
 
-        public async Task<string> GetUserPictureAsync()
+        // Modified methods for AuthService.cs
+
+public async Task<string> GetUserPictureAsync()
+{
+    try
+    {
+        var authState = await _authStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (!user.Identity.IsAuthenticated)
         {
-            try
+            _logger.LogDebug("User not authenticated, returning empty picture URL");
+            return string.Empty;
+        }
+
+        // Priority 1: Check for Auth0 picture claim
+        var pictureClaim = user.FindFirst("picture");
+        if (pictureClaim != null && !string.IsNullOrEmpty(pictureClaim.Value))
+        {
+            // Bypass CORS check for Auth0 URLs - they're typically accessible
+            if (pictureClaim.Value.Contains("auth0.com") || pictureClaim.Value.Contains("gravatar.com"))
             {
-                var authState = await _authStateProvider.GetAuthenticationStateAsync();
-                var user = authState.User;
+                _logger.LogDebug("Using Auth0 profile picture (trusted source)");
+                return pictureClaim.Value;
+            }
+            
+            // For other URLs, attempt CORS-safe validation
+            if (await IsImageUrlAccessibleAsync(pictureClaim.Value))
+            {
+                _logger.LogDebug("Using Auth0 profile picture");
+                return pictureClaim.Value;
+            }
+        }
+
+        // Priority 2: Generate Gravatar URL using JavaScript crypto
+        var emailClaim = user.FindFirst("email") ?? user.FindFirst(ClaimTypes.Email);
+        if (emailClaim != null && !string.IsNullOrEmpty(emailClaim.Value))
+        {
+            var gravatarUrl = await GenerateGravatarUrlAsync(emailClaim.Value);
+            if (!string.IsNullOrEmpty(gravatarUrl))
+            {
+                _logger.LogDebug("Using Gravatar profile picture");
+                return gravatarUrl;
+            }
+        }
+
+        _logger.LogDebug("No accessible profile picture found");
+        return string.Empty;
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Error retrieving user picture");
+        return string.Empty;
+    }
+}
+
+private async Task<bool> IsImageUrlAccessibleAsync(string imageUrl)
+{
+    try
+    {
+        // Skip CORS check for known trusted domains
+        var trustedDomains = new[] { "gravatar.com", "auth0.com", "githubusercontent.com" };
+        var uri = new Uri(imageUrl);
         
-                if (!user.Identity.IsAuthenticated)
-                {
-                    _logger.LogDebug("User not authenticated, returning empty picture URL");
-                    return string.Empty;
-                }
-
-                // Check for Auth0 picture claim
-                var pictureClaim = user.FindFirst("picture");
-                if (pictureClaim != null && !string.IsNullOrEmpty(pictureClaim.Value))
-                {
-                    if (await IsImageUrlAccessibleAsync(pictureClaim.Value))
-                    {
-                        _logger.LogDebug("Using Auth0 profile picture");
-                        return pictureClaim.Value;
-                    }
-                }
-
-                // Check for Gravatar using email
-                var emailClaim = user.FindFirst("email") ?? user.FindFirst(ClaimTypes.Email);
-                if (emailClaim != null && !string.IsNullOrEmpty(emailClaim.Value))
-                {
-                    var gravatarUrl = GenerateGravatarUrl(emailClaim.Value);
-                    if (await IsImageUrlAccessibleAsync(gravatarUrl))
-                    {
-                        _logger.LogDebug("Using Gravatar profile picture");
-                        return gravatarUrl;
-                    }
-                }
-
-                _logger.LogDebug("No accessible profile picture found");
-                return string.Empty;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving user picture");
-                return string.Empty;
-            }
+        if (trustedDomains.Any(domain => uri.Host.Contains(domain)))
+        {
+            _logger.LogDebug("Skipping CORS check for trusted domain: {Domain}", uri.Host);
+            return true;
         }
 
-        private async Task<bool> IsImageUrlAccessibleAsync(string imageUrl)
-        {
-            try
-            {
-                using var httpClient = new HttpClient();
-                httpClient.Timeout = TimeSpan.FromSeconds(3);
+        // For other domains, attempt a simplified check
+        using var httpClient = new HttpClient();
+        httpClient.Timeout = TimeSpan.FromSeconds(2);
+        httpClient.DefaultRequestHeaders.Add("User-Agent", "AirCode/1.0");
+
+        // Use GET with minimal range to avoid full download
+        var request = new HttpRequestMessage(HttpMethod.Get, imageUrl);
+        request.Headers.Range = new System.Net.Http.Headers.RangeHeaderValue(0, 1);
+
+        var response = await httpClient.SendAsync(request);
+        var isAccessible = response.IsSuccessStatusCode || response.StatusCode == System.Net.HttpStatusCode.PartialContent;
         
-                var response = await httpClient.SendAsync(new HttpRequestMessage(HttpMethod.Head, imageUrl));
-                var isAccessible = response.IsSuccessStatusCode && 
-                                 response.Content.Headers.ContentType?.MediaType?.StartsWith("image/") == true;
-                
-                _logger.LogDebug("Image URL {ImageUrl} accessibility: {IsAccessible}", imageUrl, isAccessible);
-                return isAccessible;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogDebug(ex, "Image URL {ImageUrl} not accessible", imageUrl);
-                return false;
-            }
-        }
+        _logger.LogDebug("Image URL {ImageUrl} accessibility: {IsAccessible}", imageUrl, isAccessible);
+        return isAccessible;
+    }
+    catch (Exception ex)
+    {
+        _logger.LogDebug(ex, "Image URL {ImageUrl} accessibility check failed - assuming accessible", imageUrl);
+        // For CORS failures, assume the image is accessible since we can't verify
+        return true;
+    }
+}
 
-        private string GenerateGravatarUrl(string email, int size = 80)
+private async Task<string> GenerateGravatarUrlAsync(string email, int size = 80)
+{
+    try
+    {
+        // Use JavaScript crypto API for MD5 hashing to avoid WebAssembly limitations
+        var emailNormalized = email.Trim().ToLower();
+        var hashInput = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(emailNormalized));
+        
+        // Call JavaScript MD5 function
+        var md5Hash = await _jsRuntime.InvokeAsync<string>("cryptographyHandler.hashMD5", emailNormalized);
+        
+        if (!string.IsNullOrEmpty(md5Hash))
         {
-            using var md5 = System.Security.Cryptography.MD5.Create();
-            var hash = md5.ComputeHash(System.Text.Encoding.UTF8.GetBytes(email.Trim().ToLower()));
-            var hashString = Convert.ToHexString(hash).ToLower();
-            return $"https://www.gravatar.com/avatar/{hashString}?s={size}&d=404";
+            return $"https://www.gravatar.com/avatar/{md5Hash}?s={size}&d=404";
         }
+        
+        _logger.LogWarning("Failed to generate MD5 hash for Gravatar URL");
+        return string.Empty;
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Error generating Gravatar URL");
+        return string.Empty;
+    }
+}
 
         public async Task<string> GetUserRoleAsync()
         {
