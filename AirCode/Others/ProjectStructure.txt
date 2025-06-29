@@ -1,7 +1,7 @@
 Project Structure Documentation
-Generated: Sun Jun 29 10:48:54 UTC 2025
+Generated: Sun Jun 29 12:30:02 UTC 2025
 Repository: Mid-D-Man/AirCode
-Commit: a8448eef5e62ad1e2f79b5cf68471e6bf325d84b
+Commit: 5fdbb18ee127d26e54c340d444807231293924ce
 ==================================
 
 Source Files:
@@ -283,13 +283,10 @@ wwwroot/css/responsive.css
 wwwroot/index.html
 wwwroot/js/authHelper.js
 wwwroot/js/cameraUtil.js
-wwwroot/js/charts.js
 wwwroot/js/connectivityServices.js
 wwwroot/js/cryptographyHandler.js
 wwwroot/js/debug.js
-wwwroot/js/enrollmentChart.js
 wwwroot/js/firestoreModule.js
-wwwroot/js/floatingQrDrag.js
 wwwroot/js/gpuPerformance.js
 wwwroot/js/offlineCredentialsHandler.js
 wwwroot/js/pageNavigator.js
@@ -406,5 +403,5 @@ File Count Summary:
 .csproj   : 1 files
 .json     : 12 files
 .css      : 79 files
-.js       : 44 files
+.js       : 41 files
 .html     : 3 files
