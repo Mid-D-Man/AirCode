@@ -20,6 +20,11 @@ using AirCode.Components.SharedPrefabs.Others;
 
     public partial class CreateAttendanceEvent : ComponentBase, IDisposable
     {
+        /// <summary>
+        /// so apparently we need to add better comments for project, so yeah lest run that hell even use
+        /// ai to add comments instead
+        /// </summary>
+        
         [Inject] private IJSRuntime JS { get; set; }
         [Inject] private QRCodeDecoder QRCodeDecoder { get; set; }
         [Inject] private SessionStateService SessionStateService { get; set; }

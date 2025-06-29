@@ -502,7 +502,7 @@ namespace AirCode.Services.Auth
                     }
 
                     // Extract matric number if user is student or course admin
-                    if (new[] { "student", "courseadmin" }.Contains(userRole?.ToLower()))
+                    if (new[] { "student", "courserepadmin" }.Contains(userRole?.ToLower()))
                     {
                         var matricClaims = new[] {
                             "https://air-code/matricNumber",
