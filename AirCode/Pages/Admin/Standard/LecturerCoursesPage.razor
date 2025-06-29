@@ -1,11 +1,13 @@
 @* Pages/Admin/Standard/LecturerCoursesPage.razor *@
 @page "/Admin/Lecturer/Courses"
+@attribute [Authorize(Policy = "LecturerAdmin")]
 @using AirCode.Domain.Entities
 @using AirCode.Services.Courses
 @using AirCode.Services.Auth
 @using AirCode.Components.SharedPrefabs.Others
 
 @using AirCode.Layout.AdminLayout.Superior
+@using Microsoft.AspNetCore.Authorization
 @layout SuperiorAdminLayout
 @inject ICourseService CourseService
 @inject IAuthService AuthService

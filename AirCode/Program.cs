@@ -96,6 +96,9 @@ builder.Services.AddAuthorizationCore(options =>
     // Composite policy for any administrative role
     options.AddPolicy("AnyAdmin", policy => 
         policy.RequireRole("superioradmin", "lectureradmin", "courserepadmin"));
+    
+    options.AddPolicy("StandardAdmin", policy => 
+        policy.RequireRole("lectureradmin", "courserepadmin"));
 });
 
 // Custom account factory for enhanced user claims processing

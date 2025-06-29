@@ -7,7 +7,7 @@
 @using AirCode.Services.Courses
 @using AirCode.Components.Admin.Shared
 @layout SuperiorAdminLayout
-@attribute [Authorize(Roles = "LecturerAdmin")]
+@attribute [Authorize(Policy = "StandardAdmin")]
 @inject ICourseService CourseService
 @inject IJSRuntime JSRuntime
 
