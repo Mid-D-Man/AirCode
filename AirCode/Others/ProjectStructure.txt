@@ -1,7 +1,7 @@
 Project Structure Documentation
-Generated: Sun Jun 29 18:44:03 UTC 2025
+Generated: Sun Jun 29 22:59:30 UTC 2025
 Repository: Mid-D-Man/AirCode
-Commit: 4775d10aa1fc7d4e93f4f6964da278a001924400
+Commit: c826626e95e0e655803348e61be57307e7381f7a
 ==================================
 
 Source Files:
@@ -293,6 +293,7 @@ wwwroot/js/firestoreModule.js
 wwwroot/js/gpuPerformance.js
 wwwroot/js/offlineCredentialsHandler.js
 wwwroot/js/pageNavigator.js
+wwwroot/js/pwaManager.js
 wwwroot/js/qrCodeModule.js
 wwwroot/js/search-helpers.js
 wwwroot/js/shaderRenderer1.js
@@ -407,5 +408,5 @@ File Count Summary:
 .csproj   : 1 files
 .json     : 12 files
 .css      : 79 files
-.js       : 41 files
+.js       : 42 files
 .html     : 3 files
