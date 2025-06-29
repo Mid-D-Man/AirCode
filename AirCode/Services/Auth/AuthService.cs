@@ -456,14 +456,14 @@ namespace AirCode.Services.Auth
                         matricNumber = matricNumber,
                         loginTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
                     };
-                    
+                        // Create offline credentials using the service might need to manually handle
+                        var credentialsResult = await _offlineCredentialsService.CreateOfflineCredentialsFromCurrentUserAsync();
+                                        
                     await _jsRuntime.InvokeVoidAsync("localStorage.setItem", 
                         "AirCode_user_session", 
                         JsonSerializer.Serialize(userData));
                     
-                    // Create offline credentials using the service
-                    var credentialsResult = await _offlineCredentialsService.CreateOfflineCredentialsFromCurrentUserAsync();
-                    
+                
                     if (credentialsResult)
                     {
                         _logger.LogInformation("Offline credentials created successfully for user {UserId}", userId);
