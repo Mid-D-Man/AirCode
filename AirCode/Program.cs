@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
 using Supabase;
+using Blazored.LocalStorage;
+using Blazored.Toast;
 
 // AirCode Application Services
 using AirCode;
@@ -20,7 +22,6 @@ using AirCode.Services.Academic;
 using AirCode.Services.VisualElements;
 using AirCode.Utilities.DataStructures;
 using AirCode.Utilities.HelperScripts;
-using Blazored.Toast;
 using Microsoft.JSInterop;
 
 // ============================================================================
@@ -61,12 +62,9 @@ builder.Services.AddOidcAuthentication(options =>
     
     // GitHub Pages deployment URIs
     options.ProviderOptions.RedirectUri = "https://mid-d-man.github.io/AirCode/authentication/login-callback";
-    options.ProviderOptions.PostLogoutRedirectUri = "https://mid-d-man.github.io/AirCode/";
-    
-    // Add after existing OIDC configuration
     options.ProviderOptions.PostLogoutRedirectUri = "https://mid-d-man.github.io/AirCode/authentication/logout-callback";
 
-// Add logout callback URI
+    // Add logout callback URI
     options.ProviderOptions.AdditionalProviderParameters.Add("post_logout_redirect_uri", 
         "https://mid-d-man.github.io/AirCode/authentication/logout-callback");
 });
@@ -79,16 +77,16 @@ builder.Services.AddAuthorizationCore(options =>
 {
     // Match Auth0 role casing exactly
     options.AddPolicy("SuperiorAdmin", policy => 
-        policy.RequireRole("SuperiorAdmin"));  // Changed from "superioradmin"
+        policy.RequireRole("SuperiorAdmin"));
         
     options.AddPolicy("LecturerAdmin", policy => 
-        policy.RequireRole("LecturerAdmin"));  // Changed from "lectureradmin"
+        policy.RequireRole("LecturerAdmin"));
         
     options.AddPolicy("CourseRepAdmin", policy => 
-        policy.RequireRole("CourseRepAdmin")); // Changed from "courserepadmin"
+        policy.RequireRole("CourseRepAdmin"));
         
     options.AddPolicy("Student", policy => 
-        policy.RequireRole("Student"));        // Changed from "student"
+        policy.RequireRole("Student"));
         
     // Update composite policies accordingly
     options.AddPolicy("AnyAdmin", policy => 
@@ -118,20 +116,16 @@ builder.Services.AddHttpClient("AirCodeAPI",
 builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>()
     .CreateClient("AirCodeAPI"));
 
-
-
 // ============================================================================
 // Core Logging 
 // ============================================================================
-// Add logging
 builder.Services.AddLogging();
 
-var app = builder.Build();
-
-// Initialize MID_HelperFunctions after building the app
-var logger = app.Services.GetRequiredService<ILogger<Program>>();
-var jsRuntime = app.Services.GetRequiredService<IJSRuntime>();
-MID_HelperFunctions.Initialize(logger, jsRuntime);
+// ============================================================================
+// CRITICAL: Add Blazored Services BEFORE other service registrations
+// ============================================================================
+builder.Services.AddBlazoredLocalStorage();
+builder.Services.AddBlazoredToast();
 
 // ============================================================================
 // Core Authentication & Security Services
@@ -154,6 +148,7 @@ builder.Services.AddScoped<IPermissionService, PermissionService>();
 builder.Services.AddScoped<IDepartmentService, DepartmentService>();
 builder.Services.AddScoped<ICourseService, CourseService>();
 builder.Services.AddScoped<IAcademicSessionService, AcademicSessionService>();
+
 // Application state and utility services
 builder.Services.AddScoped<ISearchContextService, SearchContextService>();
 builder.Services.AddScoped<SessionStateService>();
@@ -161,7 +156,7 @@ builder.Services.AddScoped<QRCodeDecoder>();
 
 // UI and visual component services
 builder.Services.AddScoped<ISvgIconService, SvgIconService>();
-builder.Services.AddBlazoredToast();
+
 // ============================================================================
 // External Service Integrations
 // ============================================================================
@@ -173,7 +168,7 @@ builder.Services.AddScoped<AirCode.Services.Firebase.IFirestoreService, AirCode.
 builder.Services.AddSupabaseServices();
 builder.Services.AddBusinessHoursGuard();
 builder.Services.AddScoped<IAttendanceSessionService, AttendanceSessionService>();
-// Supabase client configuration optimized for  WebAssembly
+// Supabase client configuration optimized for WebAssembly
 builder.Services.AddScoped<Supabase.Client>(provider =>
 {
     var configuration = provider.GetRequiredService<IConfiguration>();
@@ -191,6 +186,13 @@ builder.Services.AddScoped<Supabase.Client>(provider =>
 });
 
 // ============================================================================
-// Application Startup
+// Application Startup - Build AFTER all service registrations
 // ============================================================================
-await builder.Build().RunAsync();
+var app = builder.Build();
+
+// Initialize MID_HelperFunctions after building the app
+var logger = app.Services.GetRequiredService<ILogger<Program>>();
+var jsRuntime = app.Services.GetRequiredService<IJSRuntime>();
+MID_HelperFunctions.Initialize(logger, jsRuntime);
+
+await app.RunAsync();
