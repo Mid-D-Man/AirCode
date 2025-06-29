@@ -222,18 +222,79 @@ window.offlineCredentialsHandler = {
     },
 
     // Enhanced credential storage with lecturer ID and matric number support
+    // Enhanced credential storage with comprehensive error handling and validation
+// Addresses silent failure issues and provides detailed debugging capabilities
     storeCredentials: async function(userId, role, key, iv, expirationHours = 12, additionalData = {}) {
+        console.log('[OfflineCredentials] Starting credential storage process...');
+        console.log(`[DEBUG] Parameters: userId=${userId}, role=${role}, expirationHours=${expirationHours}`);
+
         try {
-            console.log('[OfflineCredentials] Storing credentials for user:', userId, 'role:', role);
+            // Phase 1: Dependency Validation
+            if (!window.cryptographyHandler) {
+                throw new Error('Cryptography handler not available - ensure cryptographyHandler.js is loaded');
+            }
 
-            // Generate stable device fingerprint
-            const deviceFingerprint = await this.createDeviceFingerprint();
+            const requiredMethods = ['encryptData', 'signData'];
+            for (const method of requiredMethods) {
+                if (typeof window.cryptographyHandler[method] !== 'function') {
+                    throw new Error(`Missing cryptography method: ${method}`);
+                }
+            }
+            console.log('[DEBUG] Cryptography handler validation passed');
 
-            // Calculate expiration date
+            // Phase 2: Input Validation
+            if (!userId || !role || !key || !iv) {
+                throw new Error('Missing required parameters: userId, role, key, or iv');
+            }
+
+            // Phase 3: Key/IV Format Validation and Conversion
+            let cryptoKey, cryptoIV;
+            try {
+                // Validate base64 format
+                const base64Pattern = /^[A-Za-z0-9+/]*={0,2}$/;
+                if (!base64Pattern.test(key)) {
+                    throw new Error('Invalid base64 key format');
+                }
+                if (!base64Pattern.test(iv)) {
+                    throw new Error('Invalid base64 IV format');
+                }
+
+                // Decode and validate lengths
+                const keyBytes = new Uint8Array(atob(key).split('').map(c => c.charCodeAt(0)));
+                const ivBytes = new Uint8Array(atob(iv).split('').map(c => c.charCodeAt(0)));
+
+                console.log(`[DEBUG] Decoded lengths - Key: ${keyBytes.length} bytes, IV: ${ivBytes.length} bytes`);
+
+                if (keyBytes.length !== 32) {
+                    throw new Error(`Invalid key length: ${keyBytes.length} bytes, expected 32 bytes for AES-256`);
+                }
+                if (ivBytes.length !== 16) {
+                    throw new Error(`Invalid IV length: ${ivBytes.length} bytes, expected 16 bytes for AES`);
+                }
+
+                cryptoKey = keyBytes;
+                cryptoIV = ivBytes;
+                console.log('[DEBUG] Key/IV validation and conversion completed');
+
+            } catch (decodeError) {
+                console.error('[ERROR] Key/IV processing failed:', decodeError);
+                throw new Error(`Key/IV validation failed: ${decodeError.message}`);
+            }
+
+            // Phase 4: Device Fingerprint Generation
+            let deviceFingerprint;
+            try {
+                deviceFingerprint = await this.createDeviceFingerprint();
+                console.log(`[DEBUG] Device fingerprint created: ${deviceFingerprint}`);
+            } catch (fingerprintError) {
+                console.error('[ERROR] Device fingerprint generation failed:', fingerprintError);
+                throw new Error(`Device fingerprint generation failed: ${fingerprintError.message}`);
+            }
+
+            // Phase 5: Credential Object Construction
             const expirationDate = new Date();
             expirationDate.setHours(expirationDate.getHours() + expirationHours);
 
-            // Create base credentials object
             const credentials = {
                 userId: userId,
                 role: role.toLowerCase(),
@@ -243,100 +304,161 @@ window.offlineCredentialsHandler = {
                 loginTimestamp: Math.floor(Date.now() / 1000)
             };
 
-            // Add role-specific data
+            // Phase 6: Role-Specific Data Integration
             switch (role.toLowerCase()) {
                 case 'lectureradmin':
                     if (additionalData.lecturerId) {
                         credentials.lecturerId = additionalData.lecturerId;
-                        console.log('[OfflineCredentials] Added lecturer ID:', additionalData.lecturerId);
+                        console.log(`[DEBUG] Added lecturer ID: ${additionalData.lecturerId}`);
                     }
                     break;
 
                 case 'student':
-                case 'courseadmin':
+                case 'courserepadmin':
                     if (additionalData.matricNumber) {
                         credentials.matricNumber = additionalData.matricNumber;
-                        console.log('[OfflineCredentials] Added matric number:', additionalData.matricNumber);
+                        console.log(`[DEBUG] Added matric number: ${additionalData.matricNumber}`);
                     }
                     break;
 
                 default:
-                    console.log('[OfflineCredentials] No additional data needed for role:', role);
+                    console.log(`[DEBUG] No additional data required for role: ${role}`);
             }
 
-            // Validate and convert key/IV format for Web Crypto API
-            let cryptoKey, cryptoIV;
+            // Phase 7: Digital Signature Generation
+            let signature;
             try {
-                // If key/IV are base64 encoded, decode them first
-                const keyBytes = typeof key === 'string' ?
-                    new Uint8Array(atob(key).split('').map(c => c.charCodeAt(0))) : key;
-                const ivBytes = typeof iv === 'string' ?
-                    new Uint8Array(atob(iv).split('').map(c => c.charCodeAt(0))) : iv;
-
-                // Validate key length (should be 32 bytes for AES-256)
-                if (keyBytes.length !== 32) {
-                    throw new Error(`Invalid key length: ${keyBytes.length}, expected 32 bytes`);
-                }
-
-                // Validate IV length (should be 16 bytes for AES)
-                if (ivBytes.length !== 16) {
-                    throw new Error(`Invalid IV length: ${ivBytes.length}, expected 16 bytes`);
-                }
-
-                cryptoKey = keyBytes;
-                cryptoIV = ivBytes;
-
-            } catch (decodeError) {
-                console.error('[OfflineCredentials] Key/IV format error:', decodeError);
-                throw new Error('Invalid key or IV format: ' + decodeError.message);
+                const credentialsStr = JSON.stringify(credentials);
+                signature = await window.cryptographyHandler.signData(credentialsStr, deviceFingerprint);
+                console.log('[DEBUG] Digital signature generated successfully');
+            } catch (signError) {
+                console.error('[ERROR] Signature generation failed:', signError);
+                throw new Error(`Signature generation failed: ${signError.message}`);
             }
 
-            // Store the key and IV for later decryption (keep as base64 strings)
-            localStorage.setItem(this.STORAGE_KEYS.AUTH_KEY, key);
-            localStorage.setItem(this.STORAGE_KEYS.AUTH_IV, iv);
-
-            // Create user session data
-            const userData = {
-                userId: userId,
-                role: role.toLowerCase(),
-                deviceId: deviceFingerprint,
-                lecturerId: additionalData.lecturerId || '',
-                matricNumber: additionalData.matricNumber || '',
-                loginTimestamp: credentials.loginTimestamp
-            };
-
-            localStorage.setItem(this.STORAGE_KEYS.USER_SESSION, JSON.stringify(userData));
-
-            // Create signature for credentials integrity
-            const credentialsStr = JSON.stringify(credentials);
-            const signature = await window.cryptographyHandler.signData(
-                credentialsStr,
-                deviceFingerprint
-            );
-
-            // Add signature to credentials
+            // Phase 8: Signed Credential Assembly
             const signedCredentials = {
                 ...credentials,
                 signature: signature
             };
 
-            // Encrypt the signed credentials using the validated key and IV
-            const encryptedCredentials = await window.cryptographyHandler.encryptData(
-                JSON.stringify(signedCredentials),
-                cryptoKey,  // Pass the raw bytes
-                cryptoIV    // Pass the raw bytes
-            );
+            // Phase 9: Encryption Process
+            let encryptedCredentials;
+            try {
+                const credentialsPayload = JSON.stringify(signedCredentials);
+                console.log(`[DEBUG] Payload size: ${credentialsPayload.length} characters`);
 
-            // Store encrypted credentials
-            localStorage.setItem(this.STORAGE_KEYS.CREDENTIALS, encryptedCredentials);
+                encryptedCredentials = await window.cryptographyHandler.encryptData(
+                    credentialsPayload,
+                    cryptoKey,
+                    cryptoIV
+                );
+                console.log('[DEBUG] Credential encryption completed');
+            } catch (encryptError) {
+                console.error('[ERROR] Encryption failed:', encryptError);
+                throw new Error(`Encryption failed: ${encryptError.message}`);
+            }
 
-            console.log('[OfflineCredentials] Credentials stored successfully');
+            // Phase 10: Storage Operations
+            try {
+                // Store encryption keys for decryption
+                localStorage.setItem(this.STORAGE_KEYS.AUTH_KEY, key);
+                localStorage.setItem(this.STORAGE_KEYS.AUTH_IV, iv);
+                console.log('[DEBUG] Encryption keys stored');
+
+                // Store encrypted credentials
+                localStorage.setItem(this.STORAGE_KEYS.CREDENTIALS, encryptedCredentials);
+                console.log('[DEBUG] Encrypted credentials stored');
+
+                // Create and store user session data
+                const userData = {
+                    userId: userId,
+                    role: role.toLowerCase(),
+                    deviceId: deviceFingerprint,
+                    lecturerId: additionalData.lecturerId || '',
+                    matricNumber: additionalData.matricNumber || '',
+                    loginTimestamp: credentials.loginTimestamp
+                };
+
+                localStorage.setItem(this.STORAGE_KEYS.USER_SESSION, JSON.stringify(userData));
+                console.log('[DEBUG] User session data stored');
+
+            } catch (storageError) {
+                console.error('[ERROR] localStorage operations failed:', storageError);
+                throw new Error(`Storage operation failed: ${storageError.message}`);
+            }
+
+            // Phase 11: Verification
+            try {
+                const storedCredentials = localStorage.getItem(this.STORAGE_KEYS.CREDENTIALS);
+                const storedKey = localStorage.getItem(this.STORAGE_KEYS.AUTH_KEY);
+                const storedIV = localStorage.getItem(this.STORAGE_KEYS.AUTH_IV);
+
+                if (!storedCredentials || !storedKey || !storedIV) {
+                    throw new Error('Storage verification failed - items not found in localStorage');
+                }
+
+                console.log('[DEBUG] Storage verification successful');
+                console.log(`[DEBUG] Stored credential length: ${storedCredentials.length} characters`);
+
+            } catch (verificationError) {
+                console.error('[ERROR] Storage verification failed:', verificationError);
+                // Cleanup partial storage
+                this.clearCredentials();
+                throw new Error(`Storage verification failed: ${verificationError.message}`);
+            }
+
+            console.log('[SUCCESS] Credentials stored successfully for user:', userId);
             return true;
 
         } catch (error) {
-            console.error('[OfflineCredentials] Failed to store credentials:', error);
+            console.error('[CRITICAL ERROR] Credential storage process failed:', error);
+
+            // Store detailed error information for debugging
+            const errorDetails = {
+                error: error.message,
+                stack: error.stack,
+                timestamp: new Date().toISOString(),
+                userId: userId,
+                role: role,
+                phase: this.getErrorPhase(error.message),
+                browserInfo: {
+                    userAgent: navigator.userAgent,
+                    localStorage: typeof Storage !== 'undefined'
+                }
+            };
+
+            try {
+                localStorage.setItem('AirCode_last_storage_error', JSON.stringify(errorDetails));
+            } catch (debugStorageError) {
+                console.error('[ERROR] Could not store debug information:', debugStorageError);
+            }
+
             return false;
         }
+    },
+
+// Helper method to identify error phase for debugging
+    getErrorPhase: function(errorMessage) {
+        const phaseKeywords = [
+            { phase: 'dependency_validation', keywords: ['cryptography handler', 'not available', 'missing'] },
+            { phase: 'input_validation', keywords: ['missing required parameters'] },
+            { phase: 'key_iv_processing', keywords: ['base64', 'invalid key', 'invalid iv', 'validation failed'] },
+            { phase: 'device_fingerprint', keywords: ['device fingerprint', 'fingerprint generation'] },
+            { phase: 'signature_generation', keywords: ['signature generation', 'signData'] },
+            { phase: 'encryption', keywords: ['encryption failed', 'encryptData'] },
+            { phase: 'storage_operations', keywords: ['localStorage', 'storage operation'] },
+            { phase: 'verification', keywords: ['storage verification', 'verification failed'] }
+        ];
+
+        const lowerMessage = errorMessage.toLowerCase();
+        for (const phaseInfo of phaseKeywords) {
+            if (phaseInfo.keywords.some(keyword => lowerMessage.includes(keyword))) {
+                return phaseInfo.phase;
+            }
+        }
+
+        return 'unknown';
     },
 
     // Enhanced credential retrieval with validation

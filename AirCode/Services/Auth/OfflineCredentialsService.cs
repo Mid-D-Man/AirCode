@@ -58,13 +58,19 @@ public class OfflineCredentialsService : IOfflineCredentialsService
     {
         try
         {
-            Console.WriteLine($"Storing test credentials for user {userId} with role {role}");
-            return await StoreCredentialsAsync(userId, role, TEST_KEY, TEST_IV, expirationDays);
+            Console.WriteLine($"[DEBUG] Storing test credentials for user {userId} with role {role}");
+            Console.WriteLine($"[DEBUG] Using TEST_KEY length: {Convert.FromBase64String(TEST_KEY).Length}");
+            Console.WriteLine($"[DEBUG] Using TEST_IV length: {Convert.FromBase64String(TEST_IV).Length}");
+        
+            var result = await StoreCredentialsAsync(userId, role, TEST_KEY, TEST_IV, expirationDays);
+        
+            Console.WriteLine($"[DEBUG] Storage result: {result}");
+            return result;
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"Failed to store test credentials: {ex.Message}");
-            return false;
+            Console.Error.WriteLine($"[ERROR] Failed to store test credentials: {ex}");
+            throw; // Don't suppress the exception during debugging
         }
     }
     
