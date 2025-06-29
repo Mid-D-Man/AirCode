@@ -25,10 +25,10 @@
         <CircularNavigationButton 
             IconSvgContent="@settingsIconSvg"
             IconPath="@(string.IsNullOrEmpty(settingsIconSvg) ? "svgs/settings.svg" : "")"
-            Text="Settings"
-            ButtonClass="@GetButtonClass("settings")"
-            IsActive="@(currentPage == "settings")"
-            OnClick="@(() => NavigateTo("settings"))" />
+            Text="MyCourses"
+            ButtonClass="@GetButtonClass("courses")"
+            IsActive="@(currentPage == "courses")"
+            OnClick="@(() => NavigateTo("courses"))" />
     </div>
 </div>
 

@@ -65,7 +65,7 @@
             if (string.IsNullOrEmpty(userPictureUrl))
             {
                 // Fall back to SVG icon service
-                userIconSvg = await SvgIconService.GetSvgContentAsync("CrowGuy_Icon");
+                userIconSvg = await SvgIconService.GetCrowGuyIconAsync();
             }
         }
         catch (Exception ex)
@@ -87,7 +87,7 @@
             // Try to load SVG fallback
             try
             {
-                userIconSvg = await SvgIconService.GetSvgContentAsync("CrowGuy_Icon");
+                userIconSvg = await SvgIconService.GetCrowGuyIconAsync();
             }
             catch
             {
@@ -100,6 +100,6 @@
     
     private void NavigateToProfile()
     {
-        NavigationManager.NavigateTo("client/profile");
+        NavigationManager.NavigateTo("Client/Profile");
     }
 }
