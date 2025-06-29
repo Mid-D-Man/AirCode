@@ -393,7 +393,6 @@ public partial class ManageUsers : ComponentBase
         using var sbWrapper = StringBuilderPool.GetPooled();
         var sb = sbWrapper.Object;
 
-        // Generate 4-character random salt (2 bytes = 4 hex characters)
         var saltBytes = new byte[2];
         using (var rng = RandomNumberGenerator.Create())
         {
@@ -401,15 +400,19 @@ public partial class ManageUsers : ComponentBase
         }
         var saltString = Convert.ToHexString(saltBytes).ToUpper();
 
-        // Generate random bytes for base64 encoding
-        var randomBytes = new byte[12]; // 12 bytes will give us 16 base64 characters
+        var randomBytes = new byte[12];
         using (var rng = RandomNumberGenerator.Create())
         {
             rng.GetBytes(randomBytes);
         }
-        var base64String = Convert.ToBase64String(randomBytes).Replace("+", "").Replace("/", "").Replace("=", "");
+    
+        // Ensure consistent 16-character length
+        var base64String = Convert.ToBase64String(randomBytes)
+            .Replace("+", "")
+            .Replace("/", "")
+            .Replace("=", "")
+            .PadRight(16, '0'); // Guarantee 16 characters
 
-        // Follow pattern: AIRCODE_(4 salt)_(base64)
         sb.Append("AIRCODE_")
             .Append(saltString)
             .Append("_")
