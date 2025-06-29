@@ -1,11 +1,11 @@
-
-@* Enhanced ClientLayout.razor with user picture support *@
+@* Enhanced ClientLayout.razor with profile navigation *@
 @namespace AirCode.Layout.ClientLayout
 @using Blazored.Toast
 @using Blazored.Toast.Configuration
 @inherits LayoutComponentBase
 @inject AirCode.Services.VisualElements.ISvgIconService SvgIconService
 @inject AirCode.Services.Auth.IAuthService AuthService
+@inject NavigationManager NavigationManager
 
 <div class="client-layout">
     <div class="main-content">
@@ -22,16 +22,7 @@
                 <h2>AirCode</h2>
             </div>
             <div class="header-right">
-                <div class="notifications" @onclick="OpenNotifications">
-                    <span class="notification-icon">
-                        <i class="oi oi-bell"></i>
-                        @if (NotificationCount > 0)
-                        {
-                            <span class="notification-badge">@(NotificationCount > 9 ? "9+" : NotificationCount.ToString())</span>
-                        }
-                    </span>
-                </div>
-                <div class="profile-button" @onclick="OpenProfile">
+                <div class="profile-button" @onclick="NavigateToProfile">
                     @if (!string.IsNullOrEmpty(userPictureUrl))
                     {
                         <img src="@userPictureUrl" alt="Profile" class="profile-image" @onerror="HandleImageError"/>
@@ -55,7 +46,6 @@
 </div>
 
 @code {
-    private int NotificationCount = 3;
     private string userIconSvg = string.Empty;
     private string userPictureUrl = string.Empty;
     private bool imageLoadFailed = false;
@@ -108,13 +98,8 @@
         }
     }
     
-    private void OpenNotifications()
+    private void NavigateToProfile()
     {
-        // Logic to open notifications
-    }
-    
-    private void OpenProfile()
-    {
-        // Logic to open profile
+        NavigationManager.NavigateTo("client/profile");
     }
 }

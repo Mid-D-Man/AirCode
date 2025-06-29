@@ -1,9 +1,10 @@
-// Services/SvgIcon/SvgIconService.cs
+// Services/VisualElements/SvgIconService.cs
 using Microsoft.AspNetCore.Components;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace AirCode.Services.VisualElements
@@ -65,50 +66,41 @@ namespace AirCode.Services.VisualElements
 
         public string GetIconClass(string iconName)
         {
-            return DefaultIcon; // Default icon as a fallback
+            return DefaultIcon;
         }
 
         public async Task<string> GetSvgContentAsync(string iconName)
         {
-            // First, check if we have the icon in our cache
+            // Check cache first
             if (_iconCache.TryGetValue(iconName, out string cachedSvg))
             {
                 return cachedSvg;
             }
 
-            // Normalize the icon name (remove spaces, convert to lowercase)
+            // Normalize the icon name
             string normalizedName = iconName.ToLower().Replace(" ", "_");
 
-            // Check if we have a mapping for this icon name
+            // Check for mapping
             string fileName = normalizedName;
             if (_iconNameMap.TryGetValue(normalizedName, out string mappedName))
             {
                 fileName = mappedName;
             }
 
-            // Ensure the file extension is correct
+            // Ensure correct file extension
             if (!fileName.EndsWith(SvgExtension))
             {
                 fileName += SvgExtension;
             }
 
-            // DEBUG: Log the base address
-            Console.WriteLine($"HttpClient BaseAddress: {_httpClient.BaseAddress}");
-            Console.WriteLine($"NavigationManager BaseUri: {_navigationManager.BaseUri}");
-
-            // Use NavigationManager.BaseUri instead of HttpClient.BaseAddress
+            // Construct URL
             string baseUrl = _navigationManager.BaseUri.TrimEnd('/');
             string url = $"{baseUrl}/{SvgFolder}{fileName}";
-    
-            Console.WriteLine($"Constructed URL: {url}");
 
             try
             {
                 string svgContent = await _httpClient.GetStringAsync(url);
-        
-                // Cache the result
                 _iconCache[iconName] = svgContent;
-        
                 return svgContent;
             }
             catch (Exception ex)
@@ -116,6 +108,63 @@ namespace AirCode.Services.VisualElements
                 Console.WriteLine($"Failed to load SVG icon '{iconName}' from '{url}': {ex.Message}");
                 return null;
             }
+        }
+
+        public async Task<string> CreateDynamicSvgAsync(string iconName, SvgOptions options = null)
+        {
+            var opt = options ?? new SvgOptions();
+            
+            // Try to get existing SVG first
+            var existingSvg = await GetSvgContentAsync(iconName);
+            if (!string.IsNullOrEmpty(existingSvg))
+            {
+                return ApplySvgOptions(existingSvg, opt);
+            }
+
+            // Generate basic SVG if not found
+            return GenerateBasicSvg(iconName, opt);
+        }
+
+        private string ApplySvgOptions(string svgContent, SvgOptions options)
+        {
+            // Parse and modify existing SVG with new options
+            var modifiedSvg = svgContent;
+            
+            // Replace width and height
+            modifiedSvg = System.Text.RegularExpressions.Regex.Replace(
+                modifiedSvg, 
+                @"width=""\d+""", 
+                $"width=\"{options.Width}\"");
+            
+            modifiedSvg = System.Text.RegularExpressions.Regex.Replace(
+                modifiedSvg, 
+                @"height=""\d+""", 
+                $"height=\"{options.Height}\"");
+
+            // Replace fill color
+            modifiedSvg = System.Text.RegularExpressions.Regex.Replace(
+                modifiedSvg, 
+                @"fill=""[^""]*""", 
+                $"fill=\"{options.Fill}\"");
+
+            // Add custom attributes if any
+            foreach (var attr in options.CustomAttributes)
+            {
+                modifiedSvg = modifiedSvg.Replace("<svg", $"<svg {attr.Key}=\"{attr.Value}\"");
+            }
+
+            return modifiedSvg;
+        }
+
+        private string GenerateBasicSvg(string iconName, SvgOptions options)
+        {
+            var svg = new StringBuilder();
+            svg.AppendLine($"<svg width=\"{options.Width}\" height=\"{options.Height}\" viewBox=\"0 0 {options.Width} {options.Height}\" xmlns=\"http://www.w3.org/2000/svg\">");
+            svg.AppendLine($"  <circle cx=\"{options.Width/2}\" cy=\"{options.Height/2}\" r=\"{Math.Min(options.Width, options.Height)/4}\" fill=\"{options.Fill}\" stroke=\"{options.Color}\" stroke-width=\"{options.StrokeWidth}\"/>");
+            svg.AppendLine($"  <text x=\"{options.Width/2}\" y=\"{options.Height/2 + 3}\" text-anchor=\"middle\" font-size=\"8\" fill=\"{options.Color}\">?</text>");
+            svg.AppendLine("</svg>");
+            
+            return svg.ToString();
         }
 
         public async Task<IEnumerable<string>> GetAvailableIconNamesAsync()
@@ -135,21 +184,37 @@ namespace AirCode.Services.VisualElements
             return _iconNameMap.ContainsKey(normalizedName);
         }
 
-        // Helper methods for specific icons
+        // Specific icon helper methods - all mapped from existing implementation
         public async Task<string> GetAddUserIconAsync() => await GetSvgContentAsync("add_user");
         public async Task<string> GetAdminIconAsync() => await GetSvgContentAsync("admin");
         public async Task<string> GetAirplaneIconAsync() => await GetSvgContentAsync("airplane");
         public async Task<string> GetBookIconAsync() => await GetSvgContentAsync("book");
+        public async Task<string> GetBook2IconAsync() => await GetSvgContentAsync("book2");
+        public async Task<string> GetBook3IconAsync() => await GetSvgContentAsync("book3");
         public async Task<string> GetCloseIconAsync() => await GetSvgContentAsync("close");
+        public async Task<string> GetClose2IconAsync() => await GetSvgContentAsync("close2");
         public async Task<string> GetContactIconAsync() => await GetSvgContentAsync("contact");
         public async Task<string> GetCoursesIconAsync() => await GetSvgContentAsync("courses");
+        public async Task<string> GetCourses2IconAsync() => await GetSvgContentAsync("courses2");
+        public async Task<string> GetCrowGuyIconAsync() => await GetSvgContentAsync("crow_guy");
+        public async Task<string> GetHistoryIconAsync() => await GetSvgContentAsync("history");
         public async Task<string> GetHomeIconAsync() => await GetSvgContentAsync("home");
         public async Task<string> GetLogoIconAsync() => await GetSvgContentAsync("logo");
         public async Task<string> GetLogoutIconAsync() => await GetSvgContentAsync("logout");
+        public async Task<string> GetNoConnectionIconAsync() => await GetSvgContentAsync("no_connection");
+        public async Task<string> GetNotificationIconAsync() => await GetSvgContentAsync("notification");
+        public async Task<string> GetNotification2IconAsync() => await GetSvgContentAsync("notification2");
         public async Task<string> GetQrCodeIconAsync() => await GetSvgContentAsync("qrcode");
+        public async Task<string> GetQrScanIconAsync() => await GetSvgContentAsync("qr_scan");
+        public async Task<string> GetRecord2IconAsync() => await GetSvgContentAsync("record2");
+        public async Task<string> GetRecordsIconAsync() => await GetSvgContentAsync("records");
+        public async Task<string> GetRemoveUserIconAsync() => await GetSvgContentAsync("remove_user");
+        public async Task<string> GetReportIconAsync() => await GetSvgContentAsync("report");
+        public async Task<string> GetScanQrCodeIconAsync() => await GetSvgContentAsync("scan_qrcode");
         public async Task<string> GetSearchIconAsync() => await GetSvgContentAsync("search");
         public async Task<string> GetSettingsIconAsync() => await GetSvgContentAsync("settings");
         public async Task<string> GetStatsIconAsync() => await GetSvgContentAsync("stats");
+        public async Task<string> GetStats2IconAsync() => await GetSvgContentAsync("stats2");
         public async Task<string> GetUsersIconAsync() => await GetSvgContentAsync("users");
         public async Task<string> GetWarningIconAsync() => await GetSvgContentAsync("warning");
     }
