@@ -1,5 +1,4 @@
 @page "/Admin/Dashboard"
-@using AirCode.Layout.AdminLayout
 @using AirCode.Layout.AdminLayout.Superior
 @using Microsoft.AspNetCore.Authorization
 @using AirCode.Domain.Entities
@@ -7,7 +6,7 @@
 @using AirCode.Services.Courses
 @using AirCode.Components.Admin.Shared
 @layout SuperiorAdminLayout
-@attribute [Authorize(Roles = "LecturerAdmin,CourseRepAdmin")]
+@attribute [Authorize(Policy = "StandardAdmin")]
 @inject ICourseService CourseService
 @inject IJSRuntime JSRuntime
 

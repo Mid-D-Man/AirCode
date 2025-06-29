@@ -77,28 +77,25 @@ JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
 // Define role-based authorization policies for AirCode's multi-tier access system
 builder.Services.AddAuthorizationCore(options => 
 {
-    // Highest privilege level - full system administration
+    // Match Auth0 role casing exactly
     options.AddPolicy("SuperiorAdmin", policy => 
-        policy.RequireRole("superioradmin"));
+        policy.RequireRole("SuperiorAdmin"));  // Changed from "superioradmin"
         
-    // Academic staff management capabilities
     options.AddPolicy("LecturerAdmin", policy => 
-        policy.RequireRole("lectureradmin"));
+        policy.RequireRole("LecturerAdmin"));  // Changed from "lectureradmin"
         
-    // Course content and enrollment management
     options.AddPolicy("CourseRepAdmin", policy => 
-        policy.RequireRole("courserepadmin"));
+        policy.RequireRole("CourseRepAdmin")); // Changed from "courserepadmin"
         
-    // Standard student access level
     options.AddPolicy("Student", policy => 
-        policy.RequireRole("student"));
+        policy.RequireRole("Student"));        // Changed from "student"
         
-    // Composite policy for any administrative role
+    // Update composite policies accordingly
     options.AddPolicy("AnyAdmin", policy => 
-        policy.RequireRole("superioradmin", "lectureradmin", "courserepadmin"));
+        policy.RequireRole("SuperiorAdmin", "LecturerAdmin", "CourseRepAdmin"));
     
     options.AddPolicy("StandardAdmin", policy => 
-        policy.RequireRole("lectureradmin", "courserepadmin"));
+        policy.RequireRole("LecturerAdmin", "CourseRepAdmin"));
 });
 
 // Custom account factory for enhanced user claims processing

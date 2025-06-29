@@ -400,7 +400,6 @@ namespace AirCode.Services.Academic
                 // 3. Send notifications
                 // 4. Clean up temporary data
                 // 5. Update student records
-                // 6. Process grades finalization
 
                 // Example session end tasks:
                 await ArchiveSessionDataAsync(endedSession);

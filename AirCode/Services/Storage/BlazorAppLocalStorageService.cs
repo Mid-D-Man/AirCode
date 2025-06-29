@@ -1,183 +1,309 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.JSInterop;
-using Newtonsoft.Json;
+using Blazored.LocalStorage;
 using AirCode.Utilities.HelperScripts;
 
 namespace AirCode.Services.Storage
 {
+    
     /// <summary>
-    /// Service for handling local storage operations in Blazor applications
-    ///Notice this uses prefix aircode_ for all data stored unlike the regular
-    /// js runtime storage
+    /// Enhanced local storage service leveraging Blazored.LocalStorage with persistent device management
+    /// Optimized for AirCode application with prefix-based key management and batch operations
     /// </summary>
     public class BlazorAppLocalStorageService : IBlazorAppLocalStorageService
     {
+        private readonly ILocalStorageService _blazoredStorage;
         private readonly IJSRuntime _jsRuntime;
         private const string LocalStorageKey = "AirCode_";
-
-        public BlazorAppLocalStorageService(IJSRuntime jsRuntime)
+        
+        // Persistent keys that should survive clearAll operations
+        private static readonly HashSet<string> PersistentKeys = new()
         {
+            "device_guid",
+            "device_installation_id"
+        };
+
+        public BlazorAppLocalStorageService(ILocalStorageService blazoredStorage, IJSRuntime jsRuntime)
+        {
+            _blazoredStorage = blazoredStorage;
             _jsRuntime = jsRuntime;
         }
 
         /// <summary>
-        /// Get an item from local storage
+        /// Retrieve typed item from local storage with AirCode prefix
         /// </summary>
-        /// <typeparam name="T">The type to deserialize to</typeparam>
-        /// <param name="key">The key of the item</param>
-        /// <returns>The deserialized item or default if not found</returns>
+        /// <typeparam name="T">Target deserialization type</typeparam>
+        /// <param name="key">Storage key without prefix</param>
+        /// <returns>Deserialized item or default value</returns>
         public async Task<T> GetItemAsync<T>(string key)
         {
             try
             {
                 string fullKey = LocalStorageKey + key;
-                string json = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", fullKey);
-
-                if (!MID_HelperFunctions.IsValidString(json))
+                
+                if (!await _blazoredStorage.ContainKeyAsync(fullKey))
                     return default;
 
-                return JsonConvert.DeserializeObject<T>(json);
+                return await _blazoredStorage.GetItemAsync<T>(fullKey);
             }
             catch (Exception ex)
             {
-                MID_HelperFunctions.DebugMessage($"Error getting item from local storage: {ex.Message}", DebugClass.Exception);
+                MID_HelperFunctions.DebugMessage($"Error retrieving item '{key}': {ex.Message}", DebugClass.Exception);
                 return default;
             }
         }
 
         /// <summary>
-        /// Set an item in local storage
+        /// Store typed item with automatic serialization and AirCode prefix
         /// </summary>
-        /// <typeparam name="T">The type to serialize</typeparam>
-        /// <param name="key">The key of the item</param>
-        /// <param name="value">The value to store</param>
-        /// <returns>True if successful, false otherwise</returns>
+        /// <typeparam name="T">Source serialization type</typeparam>
+        /// <param name="key">Storage key without prefix</param>
+        /// <param name="value">Value to serialize and store</param>
+        /// <returns>Operation success status</returns>
         public async Task<bool> SetItemAsync<T>(string key, T value)
         {
             try
             {
                 string fullKey = LocalStorageKey + key;
-                string json = JsonConvert.SerializeObject(value);
-                await _jsRuntime.InvokeVoidAsync("localStorage.setItem", fullKey, json);
+                await _blazoredStorage.SetItemAsync(fullKey, value);
                 return true;
             }
             catch (Exception ex)
             {
-                MID_HelperFunctions.DebugMessage($"Error setting item in local storage: {ex.Message}", DebugClass.Exception);
+                MID_HelperFunctions.DebugMessage($"Error storing item '{key}': {ex.Message}", DebugClass.Exception);
                 return false;
             }
         }
 
         /// <summary>
-        /// Remove an item from local storage
+        /// Remove individual item from storage
         /// </summary>
-        /// <param name="key">The key of the item to remove</param>
-        /// <returns>True if successful, false otherwise</returns>
+        /// <param name="key">Storage key without prefix</param>
+        /// <returns>Operation success status</returns>
         public async Task<bool> RemoveItemAsync(string key)
         {
             try
             {
                 string fullKey = LocalStorageKey + key;
-                await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", fullKey);
+                await _blazoredStorage.RemoveItemAsync(fullKey);
                 return true;
             }
             catch (Exception ex)
             {
-                MID_HelperFunctions.DebugMessage($"Error removing item from local storage: {ex.Message}", DebugClass.Exception);
+                MID_HelperFunctions.DebugMessage($"Error removing item '{key}': {ex.Message}", DebugClass.Exception);
                 return false;
             }
         }
 
         /// <summary>
-        /// Clear all items from local storage with the application prefix
+        /// Clear all AirCode storage items while preserving persistent device identifiers
+        /// Maintains device continuity across session resets
         /// </summary>
-        /// <returns>True if successful, false otherwise</returns>
-        public async Task<bool> ClearAsync()
+        /// <returns>Operation success status</returns>
+        public async Task<bool> ClearAllAsync()
         {
             try
             {
-                // This will clear only items with our prefix
-                await _jsRuntime.InvokeVoidAsync("eval", GetClearScriptWithPrefix());
+                await _jsRuntime.InvokeVoidAsync("eval", GenerateClearAllScript());
                 return true;
             }
             catch (Exception ex)
             {
-                MID_HelperFunctions.DebugMessage($"Error clearing local storage: {ex.Message}", DebugClass.Exception);
+                MID_HelperFunctions.DebugMessage($"Error clearing storage: {ex.Message}", DebugClass.Exception);
                 return false;
             }
         }
 
         /// <summary>
-        /// Check if an item exists in local storage
+        /// Verify item existence in storage
         /// </summary>
-        /// <param name="key">The key to check</param>
-        /// <returns>True if the item exists, false otherwise</returns>
+        /// <param name="key">Storage key without prefix</param>
+        /// <returns>Existence confirmation</returns>
         public async Task<bool> ContainsKeyAsync(string key)
         {
             try
             {
                 string fullKey = LocalStorageKey + key;
-                string json = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", fullKey);
-                return MID_HelperFunctions.IsValidString(json);
+                return await _blazoredStorage.ContainKeyAsync(fullKey);
             }
             catch (Exception ex)
             {
-                MID_HelperFunctions.DebugMessage($"Error checking key in local storage: {ex.Message}", DebugClass.Exception);
+                MID_HelperFunctions.DebugMessage($"Error checking key existence '{key}': {ex.Message}", DebugClass.Exception);
                 return false;
             }
         }
 
         /// <summary>
-        /// Get the size of local storage in bytes
+        /// Calculate total storage footprint for AirCode data
         /// </summary>
-        /// <returns>The size in bytes</returns>
+        /// <returns>Storage size in bytes</returns>
         public async Task<long> GetSizeAsync()
         {
             try
             {
-                return await _jsRuntime.InvokeAsync<long>("eval", GetSizeScript());
+                return await _jsRuntime.InvokeAsync<long>("eval", GenerateSizeCalculationScript());
             }
             catch (Exception ex)
             {
-                MID_HelperFunctions.DebugMessage($"Error getting local storage size: {ex.Message}", DebugClass.Exception);
+                MID_HelperFunctions.DebugMessage($"Error calculating storage size: {ex.Message}", DebugClass.Exception);
                 return 0;
             }
         }
 
-        // Helper script to get local storage size
-        private string GetSizeScript()
+        /// <summary>
+        /// Batch removal of multiple storage keys with existence validation
+        /// </summary>
+        /// <param name="keys">Collection of keys to remove (without prefix)</param>
+        /// <returns>Operation success status</returns>
+        public async Task<bool> RemoveKeysAsync(IEnumerable<string> keys)
         {
-            return @"
-                (function() {
-                    var size = 0;
-                    for (var i = 0; i < localStorage.length; i++) {
-                        var key = localStorage.key(i);
-                        if (key.startsWith('" + LocalStorageKey + @"')) {
-                            size += localStorage.getItem(key).length * 2; // UTF-16 uses 2 bytes per character
-                        }
+            try
+            {
+                var removalTasks = new List<Task>();
+                
+                foreach (string key in keys)
+                {
+                    string fullKey = LocalStorageKey + key;
+                    if (await _blazoredStorage.ContainKeyAsync(fullKey))
+                    {
+                        removalTasks.Add(_blazoredStorage.RemoveItemAsync(fullKey).AsTask());
                     }
-                    return size;
-                })();
+                }
+
+                await Task.WhenAll(removalTasks);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                MID_HelperFunctions.DebugMessage($"Error in batch key removal: {ex.Message}", DebugClass.Exception);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Batch storage operation for multiple key-value pairs
+        /// Optimized for bulk data initialization scenarios
+        /// </summary>
+        /// <typeparam name="T">Value type for serialization</typeparam>
+        /// <param name="items">Dictionary of key-value pairs to store</param>
+        /// <returns>Operation success status</returns>
+        public async Task<bool> SetMultipleAsync<T>(Dictionary<string, T> items)
+        {
+            try
+            {
+                var storageTasks = new List<Task>();
+                
+                foreach (var kvp in items)
+                {
+                    string fullKey = LocalStorageKey + kvp.Key;
+                    storageTasks.Add(_blazoredStorage.SetItemAsync(fullKey, kvp.Value).AsTask());
+                }
+
+                await Task.WhenAll(storageTasks);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                MID_HelperFunctions.DebugMessage($"Error in batch storage operation: {ex.Message}", DebugClass.Exception);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Batch retrieval of multiple storage items with type safety
+        /// </summary>
+        /// <typeparam name="T">Target deserialization type</typeparam>
+        /// <param name="keys">Collection of keys to retrieve</param>
+        /// <returns>Dictionary mapping keys to retrieved values</returns>
+        public async Task<Dictionary<string, T>> GetMultipleAsync<T>(IEnumerable<string> keys)
+        {
+            var results = new Dictionary<string, T>();
+            
+            try
+            {
+                var retrievalTasks = new List<Task<(string key, T value)>>();
+                
+                foreach (string key in keys)
+                {
+                    retrievalTasks.Add(GetItemWithKeyAsync<T>(key));
+                }
+
+                var completedTasks = await Task.WhenAll(retrievalTasks);
+                
+                foreach (var (key, value) in completedTasks)
+                {
+                    if (!EqualityComparer<T>.Default.Equals(value, default))
+                    {
+                        results[key] = value;
+                    }
+                }
+
+                return results;
+            }
+            catch (Exception ex)
+            {
+                MID_HelperFunctions.DebugMessage($"Error in batch retrieval: {ex.Message}", DebugClass.Exception);
+                return results;
+            }
+        }
+
+        /// <summary>
+        /// Internal helper for batch retrieval operations
+        /// </summary>
+        private async Task<(string key, T value)> GetItemWithKeyAsync<T>(string key)
+        {
+            var value = await GetItemAsync<T>(key);
+            return (key, value);
+        }
+
+        /// <summary>
+        /// Generate JavaScript for selective storage clearing with persistent key preservation
+        /// </summary>
+        private string GenerateClearAllScript()
+        {
+            var persistentKeysList = string.Join("', '", PersistentKeys.Select(k => LocalStorageKey + k));
+            
+            return $@"
+                (function() {{
+                    var keysToRemove = [];
+                    var persistentKeys = ['{persistentKeysList}'];
+                    
+                    for (var i = 0; i < localStorage.length; i++) {{
+                        var key = localStorage.key(i);
+                        if (key && key.startsWith('{LocalStorageKey}') && 
+                            !persistentKeys.includes(key)) {{
+                            keysToRemove.push(key);
+                        }}
+                    }}
+                    
+                    keysToRemove.forEach(function(key) {{
+                        localStorage.removeItem(key);
+                    }});
+                    
+                    return keysToRemove.length;
+                }})();
             ";
         }
 
-        // Helper script to clear local storage with prefix
-        private string GetClearScriptWithPrefix()
+        /// <summary>
+        /// Generate JavaScript for storage size calculation
+        /// </summary>
+        private string GenerateSizeCalculationScript()
         {
-            return @"
-                (function() {
-                    var keysToRemove = [];
-                    for (var i = 0; i < localStorage.length; i++) {
+            return $@"
+                (function() {{
+                    var totalSize = 0;
+                    for (var i = 0; i < localStorage.length; i++) {{
                         var key = localStorage.key(i);
-                        if (key.startsWith('" + LocalStorageKey + @"')) {
-                            keysToRemove.push(key);
-                        }
-                    }
-                    for (var j = 0; j < keysToRemove.length; j++) {
-                        localStorage.removeItem(keysToRemove[j]);
-                    }
-                })();
+                        if (key && key.startsWith('{LocalStorageKey}')) {{
+                            var value = localStorage.getItem(key);
+                            totalSize += (key.length + (value ? value.length : 0)) * 2;
+                        }}
+                    }}
+                    return totalSize;
+                }})();
             ";
         }
     }

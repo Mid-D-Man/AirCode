@@ -63,7 +63,7 @@ else if (isLoggingOut)
                 await OfflineCredentialsService.ClearCredentialsAsync();
 
                 // Clear local storage
-                await LocalStorageService.ClearAsync();
+                await LocalStorageService.ClearAllAsync();
 
                 // Clear session storage
                 await JSRuntime.InvokeVoidAsync("sessionStorage.clear");
