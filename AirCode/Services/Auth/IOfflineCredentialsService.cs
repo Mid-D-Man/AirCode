@@ -31,7 +31,12 @@ public interface IOfflineCredentialsService
     /// Creates offline credentials from the current authenticated user using test keys
     /// </summary>
     Task<bool> CreateOfflineCredentialsFromCurrentUserAsync();
-
+ Task<bool> StoreCredentialsWithDetailedLoggingAsync(
+                string userId, 
+                string role, 
+                int expirationDays = 14,
+                string lecturerId = null,
+                string matricNumber = null);
     /// <summary>
     /// Generates and stores offline credentials with proper encryption
     /// </summary>

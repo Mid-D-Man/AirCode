@@ -17,9 +17,8 @@ public class OfflineCredentialsService : IOfflineCredentialsService
     private readonly ILogger<OfflineCredentialsService> _logger;
 
     // Test constants - DO NOT use in production!
-    internal static string TEST_KEY = "VGhpcyBpcyBhIHRlc3Qga2V5IGZvciBBaXJDb2RlIHRlc3Rpbmc="; // 32 bytes when decoded
-    internal static string TEST_IV = "UmFuZG9tSVZmb3JUZXN0"; // 16 bytes when decoded
-
+    internal static string TEST_KEY = "dGVzdGtleTE2Yml0ZXNhZXMydGVzdGtleTE2Yml0ZXNhZXMy"; // 32 bytes
+    internal static string TEST_IV = "aXYxNmJ5dGVzdGVzdGl2"; // 16 bytes
     public OfflineCredentialsService(
         IJSRuntime jsRuntime, 
         ICryptographyService cryptoService,
@@ -540,4 +539,214 @@ public class OfflineCredentialsService : IOfflineCredentialsService
         
         return matricNumberClaim?.Value;
     }
+    
+    // Enhanced debugging methods for OfflineCredentialsService
+// Add these methods to your service for comprehensive validation
+
+/// <summary>
+/// Validates test constants and logs detailed information
+/// </summary>
+public async Task<bool> ValidateTestConstantsAsync()
+{
+    try
+    {
+        _logger.LogInformation("=== Validating Test Constants ===");
+        
+        // Validate TEST_KEY
+        var keyBytes = Convert.FromBase64String(TEST_KEY);
+        _logger.LogInformation("TEST_KEY - Length: {Length} bytes ({Bits} bits)", 
+            keyBytes.Length, keyBytes.Length * 8);
+        
+        if (keyBytes.Length != 32)
+        {
+            _logger.LogError("TEST_KEY invalid - Expected 32 bytes, got {Length}", keyBytes.Length);
+            return false;
+        }
+        
+        // Validate TEST_IV
+        var ivBytes = Convert.FromBase64String(TEST_IV);
+        _logger.LogInformation("TEST_IV - Length: {Length} bytes", ivBytes.Length);
+        
+        if (ivBytes.Length != 16)
+        {
+            _logger.LogError("TEST_IV invalid - Expected 16 bytes, got {Length}", ivBytes.Length);
+            return false;
+        }
+        
+        // Test encryption/decryption flow
+        var testData = "AirCode_validation_test";
+        _logger.LogInformation("Testing encryption flow with test data");
+        
+        var encryptResult = await _jsRuntime.InvokeAsync<string>(
+            "cryptographyHandler.encryptData", testData, TEST_KEY, TEST_IV);
+            
+        if (string.IsNullOrEmpty(encryptResult))
+        {
+            _logger.LogError("Encryption test failed - no result returned");
+            return false;
+        }
+        
+        var decryptResult = await _jsRuntime.InvokeAsync<string>(
+            "cryptographyHandler.decryptData", encryptResult, TEST_KEY, TEST_IV);
+            
+        if (decryptResult != testData)
+        {
+            _logger.LogError("Decryption test failed - data mismatch");
+            return false;
+        }
+        
+        _logger.LogInformation("✓ Test constants validation successful");
+        return true;
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Test constants validation failed");
+        return false;
+    }
+}
+
+/// <summary>
+/// Comprehensive diagnostic for credential storage failures
+/// </summary>
+public async Task<Dictionary<string, object>> DiagnoseCredentialStorageAsync(
+    string userId, string role)
+{
+    var diagnostics = new Dictionary<string, object>();
+    
+    try
+    {
+        _logger.LogInformation("=== Diagnosing Credential Storage for {UserId} ===", userId);
+        
+        // Step 1: Validate constants
+        var constantsValid = await ValidateTestConstantsAsync();
+        diagnostics["constants_valid"] = constantsValid;
+        
+        if (!constantsValid)
+        {
+            diagnostics["error"] = "Invalid test constants";
+            return diagnostics;
+        }
+        
+        // Step 2: Test JavaScript handler availability
+        var jsHandlerAvailable = await _jsRuntime.InvokeAsync<bool>(
+            "eval", "typeof window.offlineCredentialsHandler !== 'undefined'");
+        diagnostics["js_handler_available"] = jsHandlerAvailable;
+        
+        // Step 3: Test cryptography handler
+        var cryptoHandlerAvailable = await _jsRuntime.InvokeAsync<bool>(
+            "eval", "typeof window.cryptographyHandler !== 'undefined'");
+        diagnostics["crypto_handler_available"] = cryptoHandlerAvailable;
+        
+        // Step 4: Test storage operation
+        if (jsHandlerAvailable && cryptoHandlerAvailable)
+        {
+            var storageResult = await _jsRuntime.InvokeAsync<bool>(
+                "offlineCredentialsHandler.storeCredentials",
+                $"test_{userId}", role, TEST_KEY, TEST_IV, 1); // 1 hour expiry for test
+                
+            diagnostics["storage_test_result"] = storageResult;
+            
+            if (storageResult)
+            {
+                // Test retrieval
+                var retrievalResult = await _jsRuntime.InvokeAsync<string>(
+                    "offlineCredentialsHandler.getCredentials");
+                diagnostics["retrieval_test_result"] = !string.IsNullOrEmpty(retrievalResult);
+                
+                // Cleanup test data
+                await _jsRuntime.InvokeVoidAsync("offlineCredentialsHandler.clearCredentials");
+            }
+        }
+        
+        // Step 5: Browser storage availability
+        var localStorageAvailable = await _jsRuntime.InvokeAsync<bool>(
+            "eval", "typeof Storage !== 'undefined'");
+        diagnostics["local_storage_available"] = localStorageAvailable;
+        
+        _logger.LogInformation("Credential storage diagnosis completed: {@Diagnostics}", diagnostics);
+        
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Credential storage diagnosis failed");
+        diagnostics["exception"] = ex.Message;
+    }
+    
+    return diagnostics;
+}
+
+/// <summary>
+/// Enhanced credential storage with detailed logging
+/// </summary>
+public async Task<bool> StoreCredentialsWithDetailedLoggingAsync(
+    string userId, 
+    string role, 
+    int expirationDays = 14,
+    string lecturerId = null,
+    string matricNumber = null)
+{
+    try
+    {
+        _logger.LogInformation("=== Enhanced Credential Storage ===");
+        _logger.LogInformation("User: {UserId}, Role: {Role}, Expiry: {Days} days", 
+            userId, role, expirationDays);
+        
+        // Pre-flight validation
+        var diagnostics = await DiagnoseCredentialStorageAsync(userId, role);
+        if (diagnostics.ContainsKey("error"))
+        {
+            _logger.LogError("Pre-flight validation failed: {Error}", diagnostics["error"]);
+            return false;
+        }
+        
+        // Build additional data
+        var additionalData = new Dictionary<string, object>();
+        
+        if (role.Equals("lectureradmin", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(lecturerId))
+        {
+            additionalData["lecturerId"] = lecturerId;
+            _logger.LogDebug("Added lecturer ID: {LecturerId}", lecturerId);
+        }
+        
+        if ((role.Equals("student", StringComparison.OrdinalIgnoreCase) || 
+             role.Equals("courserepadmin", StringComparison.OrdinalIgnoreCase)) && 
+            !string.IsNullOrEmpty(matricNumber))
+        {
+            additionalData["matricNumber"] = matricNumber;
+            _logger.LogDebug("Added matric number: {MatricNumber}", matricNumber);
+        }
+        
+        // Attempt storage with detailed error capture
+        int expirationHours = expirationDays * 24;
+        
+        _logger.LogDebug("Calling JS storage with hours: {Hours}, additional data: {@Data}", 
+            expirationHours, additionalData);
+        
+        var result = await _jsRuntime.InvokeAsync<bool>(
+            "offlineCredentialsHandler.storeCredentials",
+            userId, role, TEST_KEY, TEST_IV, expirationHours, additionalData);
+        
+        if (result)
+        {
+            _logger.LogInformation("✓ Enhanced credential storage successful");
+            
+            // Verify storage
+            var verificationResult = await _jsRuntime.InvokeAsync<bool>(
+                "offlineCredentialsHandler.isAuthenticated");
+            _logger.LogInformation("Storage verification: {Result}", verificationResult);
+        }
+        else
+        {
+            _logger.LogError("✗ Enhanced credential storage failed");
+        }
+        
+        return result;
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Enhanced credential storage exception");
+        return false;
+    }
+}
+
 }

@@ -507,10 +507,8 @@ private async Task<string> GenerateGravatarUrlAsync(string email, int size = 80)
                         "AirCode_user_session", 
                         JsonSerializer.Serialize(userData));
                     
-                    var credentialsResult = await _offlineCredentialsService.StoreCredentialsWithAdditionalDataAsync(
+                    var credentialsResult = await _offlineCredentialsService.StoreCredentialsWithDetailedLoggingAsync(
                         userId, userRole, 
-                        OfflineCredentialsService.TEST_KEY, 
-                        OfflineCredentialsService.TEST_IV, 
                         12, // expiration days
                         lecturerId, 
                         matricNumber);
