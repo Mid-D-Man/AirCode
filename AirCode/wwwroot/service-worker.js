@@ -5,6 +5,7 @@
 
 // Enhanced PWA Service Worker for Blazor WASM .NET 7
 // Configurable, efficient caching with selective updates
+ 
 
 // Configuration - toggle PWA functionality
 const PWA_CONFIG = {
