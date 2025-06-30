@@ -8,10 +8,12 @@ using AirCode.Services.Cryptography;
 using AirCode.Services.Firebase;
 using AirCode.Components.SharedPrefabs.QrCode;
 using AirCode.Components.SharedPrefabs.Others;
+using AirCode.Utilities.DataStructures;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using SessionData = AirCode.Services.Attendance.SessionData;
 using Course = AirCode.Domain.Entities.Course;
+
 namespace AirCode.Pages.Admin.Shared;
 
 public partial class OfflineAttendanceEvent : ComponentBase, IDisposable
@@ -34,16 +36,19 @@ public partial class OfflineAttendanceEvent : ComponentBase, IDisposable
     private bool isSyncInProgress = false;
     private bool showOfflineQR = false;
     private bool showSyncResults = false;
+    private bool showOfflineFloatingQR = false;
+    private bool showInfoPopup = false;
+    private bool showCourseSelection = false;
     private string selectedTheme = "Standard";
     
     // Course Selection
     private Course selectedCourse;
-    private bool showCourseSelection = false;
     
     // Offline Configuration
     private AdvancedSecurityFeatures securityFeatures = AdvancedSecurityFeatures.DeviceGuidCheck;
     private bool useAdvancedEncryption = true;
     private int maxOfflineStorageDays = 7;
+    private int sessionDuration = 60; // Default 60 minutes
     
     // Sync Management
     private BatchSyncResult lastSyncResult;
@@ -58,6 +63,12 @@ public partial class OfflineAttendanceEvent : ComponentBase, IDisposable
     private DateTime sessionStartTime;
     private DateTime sessionEndTime;
     private bool isOfflineSessionActive = false;
+    
+    // Info Popup Management
+    private InfoPopup.InfoType currentInfoType = InfoPopup.InfoType.OfflineSync;
+    
+    // Floating QR Code
+    private QRCodeData floatingOfflineSessionData = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -100,6 +111,7 @@ public partial class OfflineAttendanceEvent : ComponentBase, IDisposable
                 maxOfflineStorageDays = config?.MaxStorageDays ?? 7;
                 syncIntervalMinutes = config?.SyncIntervalMinutes ?? 15;
                 useAdvancedEncryption = config?.UseAdvancedEncryption ?? true;
+                sessionDuration = config?.SessionDuration ?? 60;
             }
         }
         catch (Exception ex)
@@ -145,7 +157,7 @@ public partial class OfflineAttendanceEvent : ComponentBase, IDisposable
                 CourseId = selectedCourse.CourseCode,
                 CourseName = selectedCourse.Name,
                 StartTime = DateTime.UtcNow,
-                Duration = 60, // Default 1 hour for offline sessions
+                Duration = sessionDuration,
                 Date = DateTime.UtcNow.Date
             };
 
@@ -404,6 +416,7 @@ public partial class OfflineAttendanceEvent : ComponentBase, IDisposable
         }
     }
 
+    // UI Event Handlers
     private void ShowCourseSelection()
     {
         showCourseSelection = true;
@@ -424,6 +437,100 @@ public partial class OfflineAttendanceEvent : ComponentBase, IDisposable
     private void CloseSyncResults()
     {
         showSyncResults = false;
+    }
+
+    private void ShowInfoPopup(InfoPopup.InfoType infoType)
+    {
+        currentInfoType = infoType;
+        showInfoPopup = true;
+    }
+
+    private void CloseInfoPopup()
+    {
+        showInfoPopup = false;
+    }
+
+    private void OpenFloatingQRForOfflineSession()
+    {
+        if (currentOfflineSession != null)
+        {
+            floatingOfflineSessionData = new QRCodeData
+            {
+                Id = currentOfflineSession.SessionId,
+                Content = JsonSerializer.Serialize(currentOfflineSession.SessionDetails),
+                Theme = ConvertStringToTheme(selectedTheme),
+                ValidDuration = sessionDuration
+            };
+            showOfflineFloatingQR = true;
+        }
+    }
+
+    private void CloseFloatingOfflineQR()
+    {
+        showOfflineFloatingQR = false;
+    }
+
+    private QRCodeBaseOptions GenerateOfflineQRCodeOptions()
+    {
+        var theme = ConvertStringToTheme(selectedTheme);
+        
+        return theme switch
+        {
+            QRCodeTheme.Gradient => new QRCodeGradientOptions
+            {
+                Content = floatingOfflineSessionData.Content,
+                Size = 300,
+                GradientColor1 = "#007bff",
+                GradientColor2 = "#00bfff",
+                Direction = GradientDirection.Radial
+            },
+            QRCodeTheme.Branded => new QRCodeBrandedOptions
+            {
+                Content = floatingOfflineSessionData.Content,
+                Size = 300,
+                LogoUrl = "/images/logo.png",
+                LogoSizeRatio = 0.25f
+            },
+            QRCodeTheme.GradientWithLogo => new QRCodeGradientBrandedOptions
+            {
+                Content = floatingOfflineSessionData.Content,
+                Size = 300,
+                GradientColor1 = "#007bff",
+                GradientColor2 = "#00bfff",
+                Direction = GradientDirection.Radial,
+                LogoUrl = "/images/logo.png",
+                LogoSizeRatio = 0.25f
+            },
+            _ => new QRCodeBaseOptions
+            {
+                Content = floatingOfflineSessionData.Content,
+                Size = 300
+            }
+        };
+    }
+
+    private void HandleOfflineQRCodeGenerated(QRCodeData qrData)
+    {
+        floatingOfflineSessionData = qrData;
+        StateHasChanged();
+    }
+
+    private void HandleQRCodeGenerated(QRCodeData qrData)
+    {
+        // Handle QR code generation completion
+        Console.WriteLine($"QR Code generated for session: {qrData.Id}");
+    }
+
+    // Helper Methods
+    private QRCodeTheme ConvertStringToTheme(string theme)
+    {
+        return theme switch
+        {
+            "Gradient" => QRCodeTheme.Gradient,
+            "Branded" => QRCodeTheme.Branded,
+            "GradientWithLogo" => QRCodeTheme.GradientWithLogo,
+            _ => QRCodeTheme.Standard
+        };
     }
 
     private string GetSyncStatusColor(SyncStatus status)
@@ -453,6 +560,72 @@ public partial class OfflineAttendanceEvent : ComponentBase, IDisposable
         return $"{remaining.Hours:00}:{remaining.Minutes:00}:{remaining.Seconds:00}";
     }
 
+    private string GetCountdownClass()
+    {
+        if (!isOfflineSessionActive) return "countdown-inactive";
+        
+        var remaining = sessionEndTime - DateTime.UtcNow;
+        var totalMinutes = remaining.TotalMinutes;
+        
+        return totalMinutes switch
+        {
+            <= 5 => "countdown-critical",
+            <= 15 => "countdown-warning",
+            _ => "countdown-normal"
+        };
+    }
+
+    private bool IsCountdownCritical()
+    {
+        if (!isOfflineSessionActive) return false;
+        
+        var remaining = sessionEndTime - DateTime.UtcNow;
+        return remaining.TotalMinutes <= 5;
+    }
+
+    // Configuration Properties for Razor binding
+    private bool DeviceGuidCheck
+    {
+        get => securityFeatures.HasFlag(AdvancedSecurityFeatures.DeviceGuidCheck);
+        set
+        {
+            if (value)
+                securityFeatures |= AdvancedSecurityFeatures.DeviceGuidCheck;
+            else
+                securityFeatures &= ~AdvancedSecurityFeatures.DeviceGuidCheck;
+        }
+    }
+
+    private bool AdvancedEncryption
+    {
+        get => useAdvancedEncryption;
+        set => useAdvancedEncryption = value;
+    }
+
+    private int StorageRetention
+    {
+        get => maxOfflineStorageDays;
+        set => maxOfflineStorageDays = value;
+    }
+
+    private int SyncFrequency
+    {
+        get => syncIntervalMinutes;
+        set => syncIntervalMinutes = value;
+    }
+
+    private int OfflineStorage
+    {
+        get => maxOfflineStorageDays;
+        set => maxOfflineStorageDays = value;
+    }
+
+    private int SyncInterval
+    {
+        get => syncIntervalMinutes;
+        set => syncIntervalMinutes = value;
+    }
+
     public void Dispose()
     {
         periodicSyncTimer?.Dispose();
@@ -464,5 +637,6 @@ public partial class OfflineAttendanceEvent : ComponentBase, IDisposable
         public int MaxStorageDays { get; set; } = 7;
         public int SyncIntervalMinutes { get; set; } = 15;
         public bool UseAdvancedEncryption { get; set; } = true;
+        public int SessionDuration { get; set; } = 60;
     }
 }

@@ -1,4 +1,4 @@
-@page "/Admin/OfflineSession"
+@page "/Admin/OfflineAttendanceEvent"
 @using AirCode.Layout.AdminLayout.Superior
 @using Microsoft.AspNetCore.Authorization
 @layout SuperiorAdminLayout
@@ -8,131 +8,105 @@
 @using AirCode.Components.SharedPrefabs.Spinner
 @using AirCode.Models.QRCode
 
-<div class="offline-session-page">
+<div class="create-session-page offline-mode">
     <h1>Create Offline Attendance Event</h1>
 
-    <!-- Offline Session Restoration Dialog -->
-    @if (showOfflineSessionRestoreDialog && !isRestoringOfflineSession)
-    {
-        <div class="session-restore-backdrop">
-            <div class="session-restore-dialog">
-                <div class="dialog-header">
-                    <h3>Restore Previous Offline Sessions</h3>
-                    <button class="close-button" @onclick="DismissOfflineSessionRestoreDialogAsync">×</button>
-                </div>
-                <div class="dialog-content">
-                    <p class="dialog-message">Found @allOfflineSessions.Count stored offline session(s):</p>
-                    <div class="dialog-warning">
-                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
-                        </svg>
-                        Choose to restore a session or clean up all stored sessions to start fresh.
-                    </div>
-                    <div class="stored-sessions-list">
-                        @foreach (var session in allOfflineSessions)
-                        {
-                            <div class="stored-session-item @(selectedOfflineSession?.SessionId == session.SessionId ? "selected" : "")"
-                                 @onclick="() => SelectOfflineSession(session)">
-                                <div class="session-details">
-                                    <strong>@session.SessionDetails.CourseName</strong>
-                                    <span class="session-course-id">(@session.SessionDetails.CourseId)</span>
-                                    <div class="session-metadata">
-                                        <span class="session-time">Duration: @session.SessionDetails.Duration min</span>
-                                        <span class="session-started">Created: @session.CreatedAt.ToString("MMM dd, HH:mm")</span>
-                                        <span class="session-records">
-                                            @session.PendingAttendanceRecords.Count pending record(s)
-                                        </span>
-                                        <span class="session-sync-status @GetSyncStatusClass(session.SyncStatus)">
-                                            @session.SyncStatus
-                                        </span>
-                                    </div>
-                                </div>
-                                <button class="delete-session-btn" @onclick="() => DeleteOfflineSessionAsync(session)"
-                                        @onclick:stopPropagation="true" title="Delete this stored session">
-                                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
-                                        <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
-                                    </svg>
-                                </button>
-                            </div>
-                        }
-                    </div>
-                </div>
-                <div class="dialog-actions">
-                    <button class="secondary-button" @onclick="DismissOfflineSessionRestoreDialogAsync" title="Start new offline session">
-                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
-                        </svg>
-                        Start New Offline Session
-                    </button>
-                    <button class="danger-button" @onclick="ClearAllOfflineSessionsAsync" title="Delete all stored offline sessions">
-                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
-                        </svg>
-                        Clear All Sessions
-                    </button>
-                    <PrimaryButton Text="Restore Selected"
-                                   OnClick="RestoreSelectedOfflineSessionAsync"
-                                   Disabled="@(selectedOfflineSession == null)"
-                                   title="Restore the selected offline session" />
-                </div>
-            </div>
+    <!-- Offline Status Banner -->
+    <div class="offline-status-banner">
+        <div class="offline-indicator">
+            <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M1,9H23L12,20L1,9Z"/>
+            </svg>
+            <span>Offline Mode Active</span>
         </div>
-    }
+        <div class="sync-status">
+            @if (HasPendingRecords())
+            {
+                <span class="pending-sync">
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6A6,6 0 0,1 18,12A6,6 0 0,1 12,18M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"/>
+                    </svg>
+                    @pendingRecords.Count records awaiting sync
+                </span>
+            }
+            else
+            {
+                <span class="sync-complete">
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                    </svg>
+                    All data synced
+                </span>
+            }
+        </div>
+    </div>
 
     <!-- Enhanced Loading Backdrop -->
-    @if (isSearchingForOfflineSessions || isRestoringOfflineSession || isSyncInProgress)
+    @if (isCreatingOfflineSession || isSyncInProgress)
     {
         <div class="loading-backdrop">
             <div class="loading-container">
-                @if (isSearchingForOfflineSessions)
+                @if (isCreatingOfflineSession)
                 {
-                    <LoadingSpinner Title="Initializing Offline Manager"
-                                    Subtitle="Scanning for existing offline sessions and preparing sync environment..." />
-                }
-                else if (isRestoringOfflineSession)
-                {
-                    <LoadingSpinner Title="Restoring Offline Session"
-                                    Subtitle="@offlineStatusMessage" />
+                    <LoadingSpinner Title="Creating Offline Session"
+                                    Subtitle="Setting up offline attendance collection..." />
                 }
                 else if (isSyncInProgress)
                 {
-                    <LoadingSpinner Title="Synchronizing Data"
-                                    Subtitle="Uploading offline attendance records to server..." />
+                    <LoadingSpinner Title="Syncing Offline Data"
+                                    Subtitle="Uploading pending attendance records to server..." />
                 }
             </div>
         </div>
     }
 
-    <!-- Enhanced Status Message Display -->
-    @if (!string.IsNullOrEmpty(offlineStatusMessage) && !isSearchingForOfflineSessions && !isRestoringOfflineSession && !showOfflineSessionRestoreDialog)
+    <!-- Sync Results Dialog -->
+    @if (showSyncResults && lastSyncResult != null)
     {
-        <div class="status-message-container">
-            <div class="status-message @GetStatusMessageClass(offlineStatusMessage)">
-                <div class="status-icon">
-                    @if (IsErrorMessage(offlineStatusMessage))
+        <div class="sync-results-backdrop">
+            <div class="sync-results-dialog">
+                <div class="dialog-header">
+                    <h3>Sync Results</h3>
+                    <button class="close-button" @onclick="CloseSyncResults">×</button>
+                </div>
+                <div class="dialog-content">
+                    <div class="sync-summary">
+                        <div class="sync-stat success">
+                            <span class="stat-number">@lastSyncResult.ProcessedSuccessfully</span>
+                            <span class="stat-label">Synced Successfully</span>
+                        </div>
+                        <div class="sync-stat failed">
+                            <span class="stat-number">@lastSyncResult.Failed</span>
+                            <span class="stat-label">Failed to Sync</span>
+                        </div>
+                        <div class="sync-stat total">
+                            <span class="stat-number">@lastSyncResult.TotalRecords</span>
+                            <span class="stat-label">Total Records</span>
+                        </div>
+                    </div>
+                    
+                    @if (lastSyncResult.Failed > 0)
                     {
-                        <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
-                        </svg>
-                    }
-                    else
-                    {
-                        <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                        </svg>
+                        <div class="failed-records">
+                            <h4>Failed Records Details</h4>
+                            @foreach (var failedResult in lastSyncResult.IndividualResults.Where(r => !r.Success))
+                            {
+                                <div class="failed-record-item">
+                                    <span class="record-id">@failedResult.ErrorCode</span>
+                                    <span class="error-message">@failedResult.ErrorMessage</span>
+                                </div>
+                            }
+                        </div>
                     }
                 </div>
-                <span class="status-text">@offlineStatusMessage</span>
-                <button class="status-dismiss" @onclick="() => offlineStatusMessage = string.Empty" title="Dismiss">
-                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-                    </svg>
-                </button>
+                <div class="dialog-actions">
+                    <PrimaryButton Text="Close" OnClick="CloseSyncResults" />
+                </div>
             </div>
         </div>
     }
     
-    <div class="content-container @(isOfflineSessionActive ? "offline-session-active" : "")">
+    <div class="content-container @(isOfflineSessionActive ? "session-active" : "")">
         @if (!isOfflineSessionActive)
         {
             <div class="form-container">
@@ -172,7 +146,6 @@
                             <option value="240">4 hours</option>
                             <option value="300">5 hours</option>
                             <option value="360">6 hours</option>
-                            <option value="480">8 hours</option>
                         </InputSelect>
                     </div>
                     
@@ -186,25 +159,36 @@
                         </InputSelect>
                     </div>
 
-                    <!-- Offline-Specific Configuration Section -->
-                    <div class="form-section">
+                    <!-- Offline Configuration Section -->
+                    <div class="form-section offline-config">
                         <h3 class="section-title">Offline Configuration</h3>
                         
-                        <!-- Offline Mode Notice -->
-                        <div class="offline-notice">
-                            <div class="notice-header">
-                                <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
-                                    <path d="M1,9H23L12,20L1,9Z"/>
-                                </svg>
-                                <span>Offline Mode Enabled</span>
+                        <!-- Offline Sync Status (Always Enabled) -->
+                        <div class="form-group toggle-group disabled">
+                            <div class="toggle-header">
+                                <label>Offline Sync</label>
+                                <span class="feature-badge enabled">Always Enabled</span>
                             </div>
-                            <p class="notice-text">This session will store attendance records locally and sync when connection is available.</p>
+                            <div class="feature-description">
+                                Attendance data is automatically stored locally and synced when connection is available.
+                            </div>
                         </div>
 
-                        <!-- Device Security Toggle -->
+                        <!-- Temporal Key Refresh (Always Disabled for Offline) -->
+                        <div class="form-group toggle-group disabled">
+                            <div class="toggle-header">
+                                <label>Temporal Key Refresh</label>
+                                <span class="feature-badge disabled">Disabled for Offline</span>
+                            </div>
+                            <div class="feature-description">
+                                Temporal key refresh is not available in offline mode to ensure QR code remains valid without network connectivity.
+                            </div>
+                        </div>
+
+                        <!-- Device GUID Check Toggle -->
                         <div class="form-group toggle-group">
                             <div class="toggle-header">
-                                <label for="useDeviceGuidCheck">Enhanced Device Security</label>
+                                <label for="useDeviceGuidCheck">Device GUID Security</label>
                                 <button type="button" class="info-btn" @onclick="() => ShowInfoPopup(InfoPopup.InfoType.DeviceGuidCheck)">
                                     <span class="info-icon">ⓘ</span>
                                 </button>
@@ -213,75 +197,49 @@
                                 <input type="checkbox" id="useDeviceGuidCheck" @bind="useDeviceGuidCheck" />
                                 <label for="useDeviceGuidCheck" class="toggle-label"></label>
                             </div>
-                            <small class="toggle-description">
+                            <div class="feature-description">
                                 @if (useDeviceGuidCheck)
                                 {
-                                    <span class="security-enabled">Device validation enabled - Each device will have unique attendance validation</span>
+                                    <span class="security-enhanced">Enhanced security: QR codes are validated against device identifiers</span>
                                 }
                                 else
                                 {
-                                    <span class="security-basic">Standard security - Device validation disabled</span>
+                                    <span class="security-standard">Standard security: QR codes can be scanned from any device</span>
                                 }
-                            </small>
+                            </div>
                         </div>
 
-                        <!-- Advanced Encryption Toggle -->
-                        <div class="form-group toggle-group">
-                            <div class="toggle-header">
-                                <label for="useAdvancedEncryption">Advanced Data Encryption</label>
-                                <button type="button" class="info-btn" @onclick="() => ShowInfoPopup(InfoPopup.InfoType.AdvancedEncryption)">
-                                    <span class="info-icon">ⓘ</span>
-                                </button>
-                            </div>
-                            <div class="toggle-switch">
-                                <input type="checkbox" id="useAdvancedEncryption" @bind="useAdvancedEncryption" />
-                                <label for="useAdvancedEncryption" class="toggle-label"></label>
-                            </div>
-                            <small class="toggle-description">
-                                @if (useAdvancedEncryption)
-                                {
-                                    <span class="encryption-enabled">AES-256 encryption for local storage and transmission</span>
-                                }
-                                else
-                                {
-                                    <span class="encryption-basic">Basic Base64 encoding for local storage</span>
-                                }
-                            </small>
-                        </div>
-
-                        <!-- Storage Duration Configuration -->
+                        <!-- Offline Storage Duration -->
                         <div class="form-group">
                             <div class="field-header">
-                                <label for="storageRetention">Local Storage Retention</label>
-                                <button type="button" class="info-btn" @onclick="() => ShowInfoPopup(InfoPopup.InfoType.StorageRetention)">
+                                <label for="offlineStorageDays">Local Storage Duration</label>
+                                <button type="button" class="info-btn" @onclick="() => ShowInfoPopup(InfoPopup.InfoType.OfflineStorage)">
                                     <span class="info-icon">ⓘ</span>
                                 </button>
                             </div>
-                            <InputSelect id="storageRetention" @bind-Value="maxOfflineStorageDays" class="form-control">
+                            <InputSelect id="offlineStorageDays" @bind-Value="maxOfflineStorageDays" class="form-control">
                                 <option value="3">3 days</option>
-                                <option value="7">7 days (Recommended)</option>
-                                <option value="14">14 days</option>
-                                <option value="30">30 days</option>
+                                <option value="7">1 week</option>
+                                <option value="14">2 weeks</option>
+                                <option value="30">1 month</option>
                             </InputSelect>
-                            <small class="field-description">Offline data will be automatically cleaned up after this period</small>
                         </div>
 
-                        <!-- Sync Frequency Configuration -->
+                        <!-- Sync Interval -->
                         <div class="form-group">
                             <div class="field-header">
-                                <label for="syncInterval">Auto-Sync Frequency</label>
-                                <button type="button" class="info-btn" @onclick="() => ShowInfoPopup(InfoPopup.InfoType.SyncFrequency)">
+                                <label for="syncInterval">Auto-Sync Interval</label>
+                                <button type="button" class="info-btn" @onclick="() => ShowInfoPopup(InfoPopup.InfoType.SyncInterval)">
                                     <span class="info-icon">ⓘ</span>
                                 </button>
                             </div>
                             <InputSelect id="syncInterval" @bind-Value="syncIntervalMinutes" class="form-control">
-                                <option value="5">Every 5 minutes</option>
-                                <option value="10">Every 10 minutes</option>
-                                <option value="15">Every 15 minutes (Recommended)</option>
-                                <option value="30">Every 30 minutes</option>
-                                <option value="60">Every hour</option>
+                                <option value="5">5 minutes</option>
+                                <option value="10">10 minutes</option>
+                                <option value="15">15 minutes</option>
+                                <option value="30">30 minutes</option>
+                                <option value="60">1 hour</option>
                             </InputSelect>
-                            <small class="field-description">System will attempt to sync pending records at this interval</small>
                         </div>
                     </div>
                     
@@ -292,7 +250,7 @@
                         @if (isCreatingOfflineSession)
                         {
                             <LoadingSpinner Title="Creating Offline Session" 
-                                          Subtitle="Setting up local storage and encryption keys..." />
+                                          Subtitle="Please wait while we set up your offline attendance session..." />
                         }
                     </div>
                 </EditForm>
@@ -300,202 +258,126 @@
         }
         else
         {
-            <div class="active-offline-session-container">
+            <div class="active-session-container offline-active">
                 <div class="session-header">
                     <h3>@selectedCourse?.Name</h3>
-                    <span class="course-code-badge offline">@selectedCourse?.CourseCode</span>
+                    <span class="course-code-badge">@selectedCourse?.CourseCode</span>
+                    <span class="offline-mode-badge">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M1,9H23L12,20L1,9Z"/>
+                        </svg>
+                        Offline Mode
+                    </span>
                 </div>
 
-                <div class="offline-session-status-indicators">
+                <div class="session-status-indicators">
                     <div class="countdown-timer @GetCountdownClass()">
                         <span class="timer-label">Session ends in:</span>
-                        <span class="timer-value @(IsCountdownCritical() ? "critical-flash" : "")">@FormatTimeRemaining()</span>
+                        <span class="timer-value">@FormatTimeRemaining()</span>
                     </div>
                     
-                    <div class="offline-mode-indicator">
-                        <span class="security-badge offline-mode-active">
-                            <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M1,9H23L12,20L1,9Z"/>
-                            </svg>
-                            Offline Mode Active
-                        </span>
-                        <span class="offline-description">Data stored locally with automatic sync</span>
-                    </div>
-                    
-                    @if (useDeviceGuidCheck)
-                    {
-                        <div class="device-security-indicator">
-                            <span class="security-badge device-security-enabled">
+                    <!-- Offline-Specific Status Indicators -->
+                    <div class="offline-status-indicators">
+                        <div class="offline-sync-indicator">
+                            <span class="security-badge offline-sync-enabled">
                                 <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
-                                    <path d="M12,1L3,5V11C3,16.55 6.84,21.74 12,23C17.16,21.74 21,16.55 21,11V5L12,1M10,17L6,13L7.41,11.59L10,14.17L16.59,7.58L18,9L10,17Z"/>
+                                    <path d="M1,9H23L12,20L1,9Z"/>
                                 </svg>
-                                Device Security Enabled
+                                Offline Sync Active
                             </span>
-                            <span class="security-description">Each device has unique validation keys</span>
+                            <span class="sync-details">Auto-sync every @syncIntervalMinutes min</span>
                         </div>
-                    }
 
-                    @if (useAdvancedEncryption)
-                    {
-                        <div class="encryption-indicator">
-                            <span class="security-badge encryption-active">
-                                <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
-                                    <path d="M12,17A2,2 0 0,0 14,15C14,13.89 13.1,13 12,13A2,2 0 0,0 10,15A2,2 0 0,0 12,17M18,8A2,2 0 0,1 20,10V20A2,2 0 0,1 18,22H6A2,2 0 0,1 4,20V10C4,8.89 4.9,8 6,8H7V6A5,5 0 0,1 12,1A5,5 0 0,1 17,6V8H18M12,3A3,3 0 0,0 9,6V8H15V6A3,3 0 0,0 12,3Z"/>
-                                </svg>
-                                Advanced Encryption
-                            </span>
-                            <span class="encryption-description">AES-256 encryption for local data</span>
-                        </div>
-                    }
-
-                    <!-- Pending Records Counter -->
-                    @if (currentOfflineSession?.PendingAttendanceRecords.Any() == true)
-                    {
-                        <div class="pending-records-indicator">
-                            <span class="records-badge">
-                                <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
-                                    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
-                                </svg>
-                                @currentOfflineSession.PendingAttendanceRecords.Count Pending Records
-                            </span>
-                            <button class="sync-now-btn" @onclick="SyncOfflineDataAsync" 
-                                    disabled="@isSyncInProgress" title="Sync now">
-                                @if (isSyncInProgress)
-                                {
-                                    <span class="sync-spinner">⟳</span>
-                                }
-                                else
-                                {
-                                    <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24">
-                                        <path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/>
+                        @if (useDeviceGuidCheck)
+                        {
+                            <div class="security-level-indicator">
+                                <span class="security-badge enhanced-security">
+                                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M12,1L3,5V11C3,16.55 6.84,21.74 12,23C17.16,21.74 21,16.55 21,11V5L12,1M10,17L6,13L7.41,11.59L10,14.17L16.59,7.58L18,9L10,17Z"/>
                                     </svg>
-                                }
-                                Sync
-                            </button>
+                                    Device GUID Security
+                                </span>
+                                <span class="security-description">Enhanced device validation active</span>
+                            </div>
+                        }
+
+                        <div class="storage-status-indicator">
+                            <span class="storage-badge">
+                                <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M6,2C4.89,2 4,2.89 4,4V20C4,21.11 4.89,22 6,22H18C19.11,22 20,21.11 20,20V8L14,2H6Z"/>
+                                </svg>
+                                @pendingRecords.Count records stored locally
+                            </span>
                         </div>
-                    }
+                    </div>
                 </div>
 
-                <div class="qr-code-wrapper">
-                    <QRCodeCompo SessionId="@currentOfflineSession.SessionId"
-                                 CourseCode="@currentOfflineSession.SessionDetails.CourseId"
-                                 StartTime="@currentOfflineSession.SessionDetails.StartTime"
-                                 Duration="@currentOfflineSession.SessionDetails.Duration"
-                                 Theme="@ConvertStringToTheme(selectedTheme)"
-                                 Options="@GenerateOfflineQRCodeOptions()"
-                                 UseTemporalKeyRefresh="false"
-                                 AllowOfflineSync="true"
-                                 SecurityFeatures="@(useDeviceGuidCheck ? AdvancedSecurityFeatures.DeviceGuidCheck : AdvancedSecurityFeatures.Default)"
-                                 TemporalKey="@(sessionEncryptionKey ?? string.Empty)"
-                                 OnGenerated="@HandleOfflineQRCodeGenerated" />
+                <div class="qr-code-wrapper offline-qr">
+                    @if (showOfflineQR && currentOfflineSession != null)
+                    {
+                        <QRCodeCompo SessionId="@currentOfflineSession.SessionId"
+                                     CourseCode="@currentOfflineSession.SessionDetails.CourseId"
+                                     StartTime="@currentOfflineSession.SessionDetails.StartTime"
+                                     Duration="@sessionDuration"
+                                     Theme="@ConvertStringToTheme(selectedTheme)"
+                                     Options="@GenerateOfflineQRCodeOptions()"
+                                     UseTemporalKeyRefresh="false"
+                                     AllowOfflineSync="true"
+                                     SecurityFeatures="@(useDeviceGuidCheck ? AdvancedSecurityFeatures.DeviceGuidCheck : AdvancedSecurityFeatures.Default)"
+                                     TemporalKey="@string.Empty"
+                                     OnGenerated="@HandleQRCodeGenerated" />
+                    }
                 </div>
                 
-                <div class="session-actions">
-                    <button class="floating-qr-icon" @onclick="OpenFloatingOfflineQR" title="Open Floating QR Code">
-                        <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M3 11h8V3H3v8zm2-6h4v4H5V5zM3 21h8v-8H3v8zm2-6h4v4H5v-4zM13 3v8h8V3h-8zm6 6h-4V5h4v4zM19 13h2v2h-2zM13 13h2v2h-2zM15 15h2v2h-2zM13 17h2v2h-2zM15 19h2v2h-2zM17 17h2v2h-2zM19 19h2v2h-2zM17 15h2v2h-2z"/>
-                        </svg>
-                    </button>
+                <div class="session-actions offline-actions">
+                    <div class="sync-controls">
+                        <PrimaryButton Text="Sync Now" 
+                                     OnClick="SyncOfflineDataAsync" 
+                                     Disabled="@(isSyncInProgress || !HasPendingRecords())" />
+                        @if (HasPendingRecords())
+                        {
+                            <span class="sync-info">@pendingRecords.Count records pending</span>
+                        }
+                    </div>
                     
                     <div class="end-session-container">
-                        <PrimaryButton Text="End Offline Session" 
-                                     OnClick="EndOfflineSessionAsync" 
-                                     Disabled="@isEndingSession" />
-                        @if (isEndingSession)
-                        {
-                            <LoadingSpinner Title="Ending Offline Session" 
-                                          Subtitle="Finalizing local data and performing final sync..." />
-                        }
+                        <SecondaryButton Text="End Offline Session" 
+                                       OnClick="EndOfflineSessionAsync" 
+                                       Disabled="false" />
                     </div>
                 </div>
             </div>
         }
     </div>
     
-    <!-- Sync Results Display -->
-    @if (showSyncResults && lastSyncResult != null)
+    <!-- Offline Sessions History -->
+    @if (allOfflineSessions.Any())
     {
-        <div class="sync-results-backdrop">
-            <div class="sync-results-dialog">
-                <div class="dialog-header">
-                    <h3>Sync Results</h3>
-                    <button class="close-button" @onclick="CloseSyncResults">×</button>
-                </div>
-                <div class="sync-summary">
-                    <div class="summary-stats">
-                        <div class="stat-item success">
-                            <span class="stat-number">@lastSyncResult.ProcessedSuccessfully</span>
-                            <span class="stat-label">Successful</span>
+        <div class="offline-sessions-history">
+            <h3>Offline Sessions History</h3>
+            <div class="sessions-grid">
+                @foreach (var session in allOfflineSessions.OrderByDescending(s => s.CreatedAt))
+                {
+                    <div class="session-history-card @session.SyncStatus.ToString().ToLower()">
+                        <div class="session-info">
+                            <div class="session-main-info">
+                                <strong>@session.SessionDetails.CourseName</strong>
+                                <span class="course-code">(@session.SessionDetails.CourseId)</span>
+                            </div>
+                            <div class="session-metadata">
+                                <span class="session-date">@session.CreatedAt.ToString("MMM dd, yyyy HH:mm")</span>
+                                <span class="records-count">@session.PendingAttendanceRecords.Count records</span>
+                            </div>
                         </div>
-                        <div class="stat-item failed">
-                            <span class="stat-number">@lastSyncResult.Failed</span>
-                            <span class="stat-label">Failed</span>
-                        </div>
-                        <div class="stat-item total">
-                            <span class="stat-number">@lastSyncResult.TotalRecords</span>
-                            <span class="stat-label">Total</span>
-                        </div>
-                    </div>
-                    <div class="success-rate">
-                        Success Rate: @((lastSyncResult.SuccessRate * 100).ToString("F1"))%
-                    </div>
-                </div>
-                <div class="dialog-actions">
-                    <PrimaryButton Text="Close" OnClick="CloseSyncResults" />
-                </div>
-            </div>
-        </div>
-    }
-    
-    <!-- Other Offline Sessions List -->
-    @if (allOfflineSessions.Any(s => s.SessionId != currentOfflineSession?.SessionId))
-    {
-        <div class="offline-sessions-list">
-            <h3>Other Offline Sessions</h3>
-            @foreach (var session in allOfflineSessions.Where(s => s.SessionId != currentOfflineSession?.SessionId))
-            {
-                <div class="session-card offline">
-                    <div class="session-info">
-                        <div class="session-main-info">
-                            <strong>@session.SessionDetails.CourseName (@session.SessionDetails.CourseId)</strong>
-                            <span class="session-time">Created: @session.CreatedAt.ToString("MMM dd, HH:mm")</span>
-                        </div>
-                        <div class="session-badges">
-                            <span class="session-feature-badge offline-mode">
-                                <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24">
-                                    <path d="M1,9H23L12,20L1,9Z"/>
-                                </svg>
-                                Offline
-                            </span>
-                            <span class="session-feature-badge sync-status @GetSyncStatusClass(session.SyncStatus)">
+                        <div class="session-status">
+                            <span class="status-badge @session.SyncStatus.ToString().ToLower()" 
+                                  style="color: @GetSyncStatusColor(session.SyncStatus)">
                                 @session.SyncStatus
                             </span>
-                            @if (session.PendingAttendanceRecords.Any())
-                            {
-                                <span class="session-feature-badge pending-records">
-                                    @session.PendingAttendanceRecords.Count Records
-                                </span>
-                            }
                         </div>
                     </div>
-                    <div class="session-actions">
-                        @if (session.PendingAttendanceRecords.Any())
-                        {
-                            <button class="sync-button" @onclick="() => SyncSpecificSessionAsync(session)" 
-                                    disabled="@isSyncInProgress" title="Sync this session">
-                                <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
-                                    <path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8z"/>
-                                </svg>
-                            </button>
-                        }
-                        <button class="qr-icon-button" @onclick="() => OpenFloatingQRForOfflineSession(session)" title="Show QR Code">
-                            <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M3 11h8V3H3v8zm2-6h4v4H5V5zM3 21h8v-8H3v8zm2-6h4v4H5v-4zM13 3v8h8V3h-8zm6 6h-4V5h4v4z"/>
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-            }
+                }
+            </div>
         </div>
     }
 </div>
@@ -505,12 +387,6 @@
     IsVisible="showCourseSelection" 
     OnCourseSelected="HandleCourseSelected"
     OnClosed="HideCourseSelection" />
-
-<!-- Floating QR Code Component -->
-<FloatingQrCodeWindow 
-    IsVisible="showOfflineFloatingQR" 
-    SessionData="floatingOfflineSessionData" 
-    OnClose="CloseFloatingOfflineQR" />
 
 <!-- Info Popup Component -->
 <InfoPopup 
