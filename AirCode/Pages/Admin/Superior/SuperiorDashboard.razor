@@ -242,7 +242,7 @@
     protected override async Task OnInitializedAsync()
     {
         await LoadDashboardData();
-        await InitializeCharts();
+        //await InitializeCharts();
     }
 
     private async Task LoadDashboardData()
@@ -279,7 +279,8 @@
 
     private async Task InitializeCharts()
     {
-        await JSRuntime.InvokeVoidAsync("initializeEnrollmentChart");
+        await Task.CompletedTask;
+        //await JSRuntime.InvokeVoidAsync("initializeEnrollmentChart");
     }
 
     private async Task OnLevelFilterChange(ChangeEventArgs e)
