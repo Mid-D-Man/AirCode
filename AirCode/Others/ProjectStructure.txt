@@ -1,7 +1,7 @@
 Project Structure Documentation
-Generated: Mon Jun 30 13:41:33 UTC 2025
+Generated: Mon Jun 30 16:39:09 UTC 2025
 Repository: Mid-D-Man/AirCode
-Commit: a23f973f6d49d16f84fb6616ed5d4024898b7707
+Commit: 61e9cfa2008bf0ff6092b5d4cc0ed39ae0fe970c
 ==================================
 
 Source Files:
@@ -11,22 +11,12 @@ App.razor
 App.razor.css
 Components/Admin/Dashboard/QuickStats.razor
 Components/Admin/Dashboard/QuickStats.razor.css
-Components/Admin/Dashboard/StandardAdminContent.razor
-Components/Admin/Dashboard/StandardAdminContent.razor.css
-Components/Admin/Dashboard/SuperiorAdminContent.razor
-Components/Admin/Dashboard/SuperiorAdminContent.razor.css
-Components/Admin/Shared/AdminCard.razor
-Components/Admin/Shared/AdminCard.razor.css
 Components/Admin/Shared/Burger.razor
 Components/Admin/Shared/Burger.razor.css
 Components/Admin/Shared/DashboardButtonIcon.razor
 Components/Admin/Shared/DashboardButtonIcon.razor.css
 Components/Admin/Shared/NavMenuButton.razor
 Components/Admin/Shared/NavMenuButton.razor.css
-Components/Admin/Shared/StatCard.razor
-Components/Admin/Shared/StatCard.razor.css
-Components/Admin/Shared/UserCard.razor
-Components/Admin/Shared/UserCard.razor.css
 Components/Auth/AccessControl.razor
 Components/Auth/AccessControl.razor.css
 Components/Auth/TokenDebugger.razor
@@ -36,8 +26,6 @@ Components/Guards/BusinessHoursComponentBase.razor
 Components/Guards/BusinessHoursComponentBase.razor.css
 Components/Guards/ProtectedComponent.razor
 Components/Guards/ProtectedComponent.razor.css
-Components/Loading/LoadingScreen.razor
-Components/Loading/LoadingScreen.razor.css
 Components/SharedPrefabs/Buttons/CircularNavigationButton.razor
 Components/SharedPrefabs/Buttons/CircularNavigationButton.razor.css
 Components/SharedPrefabs/Buttons/PrimaryButton.razor
@@ -62,7 +50,6 @@ Components/SharedPrefabs/Others/CourseManagementComponent.razor
 Components/SharedPrefabs/Others/CourseManagementComponent.razor.css
 Components/SharedPrefabs/Others/CourseSelectionComponent.razor
 Components/SharedPrefabs/Others/CourseSelectionComponent.razor.css
-Components/SharedPrefabs/Others/DynamicBlob.razor
 Components/SharedPrefabs/Others/DynamicSearch.razor
 Components/SharedPrefabs/Others/DynamicSearch.razor.css
 Components/SharedPrefabs/Others/InfoPopup.razor
@@ -81,18 +68,14 @@ Components/SharedPrefabs/Spinner/LoadingSpinner.razor.css
 CustomAccountFactory.cs
 Domain/Entities/CourseEntity.cs
 Domain/Entities/DepartmentEntity.cs
-Domain/Entities/LecturerEntity.cs
 Domain/Entities/OfflineAttendanceRecord.cs
 Domain/Entities/ReportEntity.cs
 Domain/Entities/SessionEntity.cs
-Domain/Entities/StudentEntity.cs
 Domain/Entities/UserEntity.cs
 Domain/Enums/AttendanceEnums.cs
 Domain/Enums/CourseEnums.cs
 Domain/Enums/UserEnums.cs
 Domain/Interfaces/ISecurityEntity.cs
-Domain/ValueObjects/AttendanceEventDetails.cs
-Domain/ValueObjects/AttendanceRecord.cs
 Domain/ValueObjects/CourseSchedule.cs
 Domain/ValueObjects/PaginationData.cs
 Extensions/AuthExtensions.cs
@@ -132,8 +115,6 @@ Pages/Admin/Standard/LecturerCoursesPage.razor.css
 Pages/Admin/Superior/ManageAcademicSession.razor
 Pages/Admin/Superior/ManageAcademicSession.razor.cs
 Pages/Admin/Superior/ManageAcademicSession.razor.css
-Pages/Admin/Superior/ManageAdmins.razor
-Pages/Admin/Superior/ManageAdmins.razor.css
 Pages/Admin/Superior/ManageCourses.razor
 Pages/Admin/Superior/ManageCourses.razor.cs
 Pages/Admin/Superior/ManageCourses.razor.css
@@ -319,7 +300,6 @@ Directory Structure:
 ./    Shared
 ./  Auth
 ./  Guards
-./  Loading
 ./  SharedPrefabs
 ./    Buttons
 ./    Cards
@@ -404,10 +384,10 @@ Directory Structure:
 
 File Count Summary:
 ==================
-.cs       : 88 files
-.razor    : 71 files
+.cs       : 84 files
+.razor    : 63 files
 .csproj   : 1 files
 .json     : 12 files
-.css      : 79 files
+.css      : 72 files
 .js       : 43 files
 .html     : 3 files
