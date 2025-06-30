@@ -21,6 +21,7 @@
 </div>
 
 @code {
+    //ok we not using this enough, use it were we have input fields as it has adv feautures like text limit and what not
     [Parameter] public string Label { get; set; } = "";
     [Parameter] public string Placeholder { get; set; } = "";
     [Parameter] public string Type { get; set; } = "text";
@@ -36,7 +37,7 @@
     [Parameter] public int MaxLength { get; set; } = 200; // Default max length
     [Parameter] public EventCallback<ValidationEventArgs> OnValidate { get; set; }
 
-    // Use a stable field for the ID so it remains consistent across renders.
+    //  a stable field for the ID as it remains consistent across renders.
     private string _fieldId;
 
     private string FieldId => _fieldId;

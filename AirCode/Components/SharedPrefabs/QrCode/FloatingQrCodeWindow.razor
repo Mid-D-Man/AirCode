@@ -1,6 +1,7 @@
 @using AirCode.Components.SharedPrefabs.QrCode
 @using AirCode.Models.QRCode 
 @using AirCode.Utilities.DataStructures
+@using AirCode.Utilities.HelperScripts
 @inject IJSRuntime JS
 
 @if (IsVisible && SessionData != null)
@@ -46,6 +47,7 @@
 }
 
 @code {
+    //im having second thoughts about this
     [Parameter] public bool IsVisible { get; set; }
     [Parameter] public FloatingSessionData SessionData { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
@@ -80,7 +82,7 @@
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error initializing FloatingQR: {ex.Message}");
+                await MID_HelperFunctions.DebugMessageAsync($"Error initializing FloatingQR: {ex.Message}",DebugClass.Exception);
                 // Fallback: component will work without drag functionality
             }
         }
@@ -112,11 +114,11 @@
                 componentId = await jsModule.InvokeAsync<string>("registerComponent", 
                     dotNetRef, windowElement);
                 
-                Console.WriteLine($"FloatingQR drag initialized with ID: {componentId}");
+                await MID_HelperFunctions.DebugMessageAsync($"FloatingQR drag initialized with ID: {componentId}");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error registering drag functionality: {ex.Message}");
+                await MID_HelperFunctions.DebugMessageAsync($"Error registering drag functionality: {ex.Message}",DebugClass.Exception);
             }
         }
     }
@@ -183,7 +185,7 @@
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error updating fullscreen state: {ex.Message}");
+                await MID_HelperFunctions.DebugMessageAsync($"Error updating fullscreen state: {ex.Message}",DebugClass.Exception);
             }
         }
         
@@ -304,7 +306,7 @@
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error during cleanup: {ex.Message}");
+                await MID_HelperFunctions.DebugMessageAsync($"Error during cleanup: {ex.Message}",DebugClass.Exception);
             }
         }
 

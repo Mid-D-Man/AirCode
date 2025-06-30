@@ -84,7 +84,7 @@
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Failed to load JS module: {ex.Message}");
+                await MID_HelperFunctions.DebugMessageAsync($"Failed to load JS module: {ex.Message}",DebugClass.Exception);
             }
         }
     }
@@ -233,7 +233,7 @@
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error generating secure QR code: {ex.Message}");
+            await MID_HelperFunctions.DebugMessageAsync($"Error generating secure QR code: {ex.Message}",DebugClass.Exception);
             LoadingMessage = "Error generating QR code";
         } 
         finally
@@ -379,7 +379,7 @@
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error disposing JS module: {ex.Message}");
+            await MID_HelperFunctions.DebugMessageAsync($"Error disposing JS module: {ex.Message}",DebugClass.Exception);
             }
         }
     }

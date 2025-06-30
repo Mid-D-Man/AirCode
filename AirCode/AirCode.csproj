@@ -35,6 +35,7 @@
       <_ContentIncludedByDefault Remove="Shared\NavMenu.razor" />
       <_ContentIncludedByDefault Remove="Shared\SurveyPrompt.razor" />
       <_ContentIncludedByDefault Remove="Layout\AdminLayout\Standard\StandardAdminLayout.razor" />
+      <_ContentIncludedByDefault Remove="Components\Loading\LoadingScreen.razor" />
     </ItemGroup>
     
 </Project>

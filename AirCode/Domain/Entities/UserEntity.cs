@@ -26,10 +26,6 @@ namespace AirCode.Domain.Entities
         // Role information
         public UserRole Role { get; init; }
         
-        // Role-specific details
-        public string? AssociatedAdminId { get; init; } // For assistant roles
-        public LevelType? Level { get; init; } // For students
-        public ClassRepStatus? RepStatus { get; init; } // For course reps
       
         public List<string> AssignedCourseIds { get; init; } = new List<string>();
         

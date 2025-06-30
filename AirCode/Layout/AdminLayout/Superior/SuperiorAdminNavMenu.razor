@@ -94,23 +94,30 @@
     private void HandleSettings() => NavigationManager.NavigateTo("/admin/settings");
     private void HandleContact() => NavigationManager.NavigateTo("/admin/contact");
     private void HandleLogout() => NavigationManager.NavigateTo("logout");
-
+//arrange this stuff propperly  do keep in mind if clasrep start attendance he auto scan for himself first 
     private List<NavItemExtended> NavigationItems => new()
     {
-        new("home", "Dashboard", "Admin/Dashboard", true, new[] { "superioradmin", "lectureradmin", "courserepadmin", "assistantcourserep" }),
+        new("home", "Dashboard", "Admin/SuperiorDashboard", true, new[] { "superioradmin"}),
+        new("home", "Dashboard", "Admin/Dashboard", true, new[] {"lectureradmin", "courserepadmin" }),
+        
         new("qrcode", "Attendance Event", "Admin/CreateSession", true, new[] { "superioradmin", "lectureradmin", "courserepadmin" }),
-        new("users", "Session Management", "Admin/ManageAcademicSession", true, new[] { "superioradmin", "lectureradmin" }),
+        
+        new("users", "Session Management", "Admin/ManageAcademicSession", true, new[] { "superioradmin"}),
         new("admin", "Manage Departments", "Admin/ManageDepartments", true, new[] { "superioradmin" }),
-        new("courses", "Manage Users", "Admin/ManageUsers", true, new[] { "superioradmin" }),
-        new("courses", "Manage Courses", "Admin/ManageCourses", true, new[] { "superioradmin", "lectureradmin" }),
-        new("report", "Student Test", "student/courses", false, new[] { "superioradmin" }),
-        new("stats", "Lecturer Test", "Admin/lecturer/courses", false, new[] { "superioradmin" })
+        new("courses", "Manage Courses", "Admin/ManageCourses", true, new[] { "superioradmin" }),
+        new("adduser", "Manage Users", "Admin/ManageUsers", true, new[] { "superioradmin" }),
+        
+        new("courses", "Manage My Courses", "Admin/Lecturer/Courses", true, new[] { "lectureradmin" }),
+        new("courses2", "My Courses", "Client/Courses", true, new[] { "courserepadmin" }),
+        new("stats", "My Stats", "Client/Stats", true, new[] { "courserepadmin" }),
+
+        new("records", "Reports", "Admin/Reports", true, new[] { "courserepadmin","lectureradmin","superioradmin" }),
     };
 
     private List<NavItemExtended> BottomItems => new()
     {
-        new("settings", "Settings", "/Admin/Settings", false, new[] { "superioradmin", "lectureradmin", "courserepadmin", "assistantcourserep" }),
-        new("contact", "Contact", "/Admin/Contact", false, new[] { "superioradmin", "lectureradmin", "courserepadmin", "assistantcourserep" }),
+        new("settings", "Settings", "Admin/Settings", false, new[] { "superioradmin", "lectureradmin", "courserepadmin", "assistantcourserep" }),
+        new("contact", "Contact", "ContactUs", false, new[] { "superioradmin", "lectureradmin", "courserepadmin", "assistantcourserep" }),
         new("logout", "logout", "logout", false, new[] { "superioradmin", "lectureradmin", "courserepadmin", "assistantcourserep" }, HandleLogout)
     };
 

@@ -1,7 +1,7 @@
 @using AirCode.Services.Guards
 
 @code{
-    
+    //protects against app usage out of working hours, cause just cause
 public abstract class BusinessHoursComponent : ComponentBase
 {
 [Inject] protected IBusinessHoursGuard BusinessHoursGuard { get; set; } = default!;

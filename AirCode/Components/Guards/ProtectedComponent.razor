@@ -25,6 +25,7 @@
 </AuthorizeView>
 
 @code {
+    //used to add rbac to inidi components 
     [Parameter] public RenderFragment ChildContent { get; set; } = default!;
     [Parameter] public string? RequiredRoles { get; set; }
     [Parameter] public string? RequiredPolicy { get; set; }

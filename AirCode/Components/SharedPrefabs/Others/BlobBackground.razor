@@ -9,7 +9,9 @@
 </div>
 
 @code {
-    private Random random = new Random();
+    //first thing we made, it's cool
+    //just generates random colored blobs 
+    private Random _random = new Random();
 
     private string GetRandomColor()
     {
@@ -21,6 +23,6 @@
             "rgba(76, 175, 80, 0.4)",   // Green (success)
             "rgba(255, 152, 0, 0.4)"    // Orange (warning)
         };
-        return colors[random.Next(colors.Length)];
+        return colors[_random.Next(colors.Length)];
     }
 }

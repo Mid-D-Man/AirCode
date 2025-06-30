@@ -187,6 +187,7 @@
 <NotificationComponent @ref="NotificationRef" Position="NotificationComponent.NotificationPosition.TopRight" AutoDismissTime="4000" />
 
 @code {
+    //course managment for lecturers
     [Parameter] public List<Course> AssignedCourses { get; set; } = new();
     [Parameter] public string UserId { get; set; } = "";
     [Parameter] public string SectionTitle { get; set; } = "Assigned Courses";
