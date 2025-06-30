@@ -45,6 +45,7 @@ public partial class OfflineAttendanceEvent : ComponentBase, IDisposable
     private Course selectedCourse;
     
     // Offline Configuration
+    private bool useDeviceGuidCheck = false;
     private AdvancedSecurityFeatures securityFeatures = AdvancedSecurityFeatures.DeviceGuidCheck;
     private bool useAdvancedEncryption = true;
     private int maxOfflineStorageDays = 7;

@@ -34,6 +34,9 @@
             InfoType.TemporalKeyRefresh => "Temporal Key Refresh",
             InfoType.RefreshInterval => "Refresh Interval",
             InfoType.SecurityFeatures => "Security Features",
+            InfoType.DeviceGuidCheck => "Device GUID Security",
+            InfoType.OfflineStorage => "Offline Storage Duration",
+            InfoType.SyncInterval => "Auto-Sync Interval",
             _ => "Information"
         };
     }
@@ -50,6 +53,12 @@
             
             InfoType.SecurityFeatures => "Security features provide additional validation methods:\n\n• Default: Basic security with standard QR code validation\n• Device GUID Check: Validates that the same device isn't used to scan multiple times, helping prevent attendance fraud through device sharing",
             
+            InfoType.DeviceGuidCheck => "Device GUID security validates each scanning device to prevent multiple scans from the same device. This helps prevent attendance fraud by ensuring students cannot share devices to mark attendance for others.",
+            
+            InfoType.OfflineStorage => "Determines how long attendance records are stored locally on the device before being automatically purged. Records are kept until successfully synced to the server, but expired records may be removed to prevent excessive storage usage.",
+            
+            InfoType.SyncInterval => "Sets how frequently the system attempts to sync offline attendance records to the server when a network connection is available. More frequent syncing reduces data loss risk but may impact battery life and network usage.",
+            
             _ => "No information available."
         };
     }
@@ -59,6 +68,9 @@
         OfflineSync,
         TemporalKeyRefresh,
         RefreshInterval,
-        SecurityFeatures
+        SecurityFeatures,
+        DeviceGuidCheck,
+        OfflineStorage,
+        SyncInterval
     }
 }
