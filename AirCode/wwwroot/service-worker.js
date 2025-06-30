@@ -3,8 +3,6 @@
 // be reflected on the first load after each change).
 self.addEventListener('fetch', () => { });
 
-/*
-
 // Enhanced PWA Service Worker for Blazor WASM .NET 7
 // Configurable, efficient caching with selective updates
 
@@ -349,4 +347,4 @@ log(`Service Worker initialized - PWA: ${PWA_CONFIG.enabled ? 'Enabled' : 'Disab
 
 
 
- */
+ 

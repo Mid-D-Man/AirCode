@@ -162,55 +162,86 @@ jobs:
 
       - name: Prepare Pages
         run: |
-          mkdir -p ./pages
-          cp -r ./dist/wwwroot/* ./pages/
-          touch ./pages/.nojekyll
-          
-          # Copy additional assets if they exist
-          if [ -d "./AirCode/svgs" ]; then
-            mkdir -p ./pages/svgs
-            cp -r ./AirCode/svgs/* ./pages/svgs/
-          fi
-          
-          # Create 404.html for SPA routing support
-          cat > ./pages/404.html << 'EOF'
-          <!DOCTYPE html>
-          <html lang="en">
-            <head>
-              <meta charset="utf-8">
-              <title>Single Page Apps for GitHub Pages</title>
-              <script type="text/javascript">
-                // Single Page Apps for GitHub Pages
-                // https://github.com/rafgraph/spa-github-pages
-                var pathSegmentsToKeep = 1;
-                var l = window.location;
-                l.replace(
-                  l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
-                  l.pathname.split('/').slice(0, 1 + pathSegmentsToKeep).join('/') + '/?/' +
-                  l.pathname.slice(1).split('/').slice(pathSegmentsToKeep).join('/').replace(/&/g, '~and~') +
-                  (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
-                  l.hash
-                );
-              </script>
-            </head>
-            <body>
-            </body>
-          </html>
-          EOF
-          
-          # Configure base href for GitHub Pages deployment
-          sed -i 's|<base href="/" />|<base href="/${{ github.event.repository.name }}/" />|g' ./pages/index.html
-          
-          # Inject SPA routing script into index.html
-          sed -i '/<base href="[^"]*" \/>/a\    \n    <!-- SPA routing support for GitHub Pages -->\n    <script type="text/javascript">\n        (function(l) {\n            if (l.search[1] === "/" ) {\n                var decoded = l.search.slice(1).split("&").map(function(s) { \n                return s.replace(/~and~/g, "&")\n                }).join("?");\n                window.history.replaceState(null, null,\n                    l.pathname.slice(0, -1) + decoded + l.hash\n                );\n            }\n        }(window.location))\n    </script>' ./pages/index.html
-          
-          # Configure service worker for GitHub Pages
-          if [ -f "./pages/service-worker.published.js" ]; then
-            cp ./pages/service-worker.published.js ./pages/service-worker.js
-            sed -i 's|"/|"/${{ github.event.repository.name }}/|g' ./pages/service-worker.js
-          fi
-          
-          echo "GitHub Pages deployment preparation completed"
+            mkdir -p ./pages
+            cp -r ./dist/wwwroot/* ./pages/
+            touch ./pages/.nojekyll
+            
+            # Set build variables to avoid YAML parsing issues
+            SHORT_SHA="${{ github.sha }}"
+            SHORT_SHA="${SHORT_SHA:0:8}"
+            REPO_NAME="${{ github.event.repository.name }}"
+            
+            # Enable production PWA service worker
+            if [ -f "./pages/service-worker.js" ]; then
+              # Uncomment production code block (remove /* and */ wrapper)
+              sed -i '/^\/\*/,/\*\/$/{/^\/\*/d; /\*\/$/d;}' ./pages/service-worker.js
+            
+              # Update cache version with commit hash
+              sed -i "s|v\${PWA_CONFIG\.version}|v${SHORT_SHA}|g" ./pages/service-worker.js
+              sed -i "s|PWA_CONFIG\.version|'${SHORT_SHA}'|g" ./pages/service-worker.js
+            
+              # Update cache names for GitHub Pages
+              sed -i "s|aircode-|${REPO_NAME}-|g" ./pages/service-worker.js
+            
+              echo "✓ Production service worker configured with version ${SHORT_SHA}"
+            fi
+            
+            # Configure PWA manifest
+            if [ -f "./pages/manifest.json" ]; then
+              sed -i "s|\"start_url\": \"/\"|\"start_url\": \"/${REPO_NAME}/\"|g" ./pages/manifest.json
+              sed -i "s|\"scope\": \"/\"|\"scope\": \"/${REPO_NAME}/\"|g" ./pages/manifest.json
+              echo "✓ PWA manifest configured for GitHub Pages"
+            fi
+            
+            # Update PWA manager service worker registration path
+            if [ -f "./pages/js/pwaManager.js" ]; then
+              sed -i "s|'/service-worker\.js'|'/${REPO_NAME}/service-worker.js'|g" ./pages/js/pwaManager.js
+              echo "✓ PWA manager paths updated"
+            fi
+            
+            # Copy additional PWA assets
+            if [ -d "./AirCode/wwwroot/icons" ]; then
+              cp -r ./AirCode/wwwroot/icons ./pages/
+              echo "✓ PWA icons copied"
+            fi
+            
+            # Create 404.html for SPA routing support
+            cat > ./pages/404.html << 'EOF'
+            <!DOCTYPE html>
+            <html lang="en">
+              <head>
+                <meta charset="utf-8">
+                <title>Single Page Apps for GitHub Pages</title>
+                <script type="text/javascript">
+                  var pathSegmentsToKeep = 1;
+                  var l = window.location;
+                  l.replace(
+                    l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
+                    l.pathname.split('/').slice(0, 1 + pathSegmentsToKeep).join('/') + '/?/' +
+                    l.pathname.slice(1).split('/').slice(pathSegmentsToKeep).join('/').replace(/&/g, '~and~') +
+                    (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
+                    l.hash
+                  );
+                </script>
+              </head>
+              <body>
+              </body>
+            </html>
+            EOF
+            
+            # Configure base href for GitHub Pages deployment
+            sed -i "s|<base href=\"/\" />|<base href=\"/${REPO_NAME}/\" />|g" ./pages/index.html
+            
+            # Inject SPA routing script into index.html
+            sed -i "/<base href=\"[^\"]*\" \/>/a\\    \\n    <!-- SPA routing support for GitHub Pages -->\\n    <script type=\"text/javascript\">\\n        (function(l) {\\n            if (l.search[1] === \"/\" ) {\\n                var decoded = l.search.slice(1).split(\"&\").map(function(s) { \\n                return s.replace(/~and~/g, \"&\")\\n                }).join(\"?\");\\n                window.history.replaceState(null, null,\\n                    l.pathname.slice(0, -1) + decoded + l.hash\\n                );\\n            }\\n        }(window.location))\\n    </script>" ./pages/index.html
+            
+            # Configure service worker for GitHub Pages paths
+            if [ -f "./pages/service-worker.published.js" ]; then
+              cp ./pages/service-worker.published.js ./pages/service-worker.js
+              sed -i "s|\"/|\"/${REPO_NAME}/|g" ./pages/service-worker.js
+            fi
+            
+            echo "✓ GitHub Pages PWA deployment preparation completed"
 
       - name: Upload Pages
         uses: actions/upload-pages-artifact@v3
