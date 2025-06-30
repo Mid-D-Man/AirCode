@@ -159,7 +159,7 @@ builder.Services.AddScoped<ISvgIconService, SvgIconService>();
 builder.Services.AddPWAServices(builder.Configuration);
 
 // ============================================================================
-// External Service Integrations
+// External Service Integrations    
 // ============================================================================
 
 // Firebase Firestore for real-time data synchronization
