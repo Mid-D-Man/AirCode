@@ -1,32 +1,151 @@
-@page "/example"
-@using AirCode.Components.SharedPrefabs.Cards
-@using Blazored.Toast.Configuration
-@using Blazored.Toast
-<h3>Notification Example</h3>
+@page "/pwa-test"
+@using AirCode.Services.PWA
+@inject IPWAService PWAService
+@inject ILogger<Example> Logger
 
-<!-- Remove this line 
-CloseButtonClass="custom-close-btn"-->
+<PageTitle>PWA Test</PageTitle>
 
-<!-- Updated BlazoredToasts configuration -->
-<BlazoredToasts Position="ToastPosition.TopRight"
-                Timeout="5"
-                IconType="IconType.FontAwesome"
-                SuccessClass="success-toast"
-                InfoClass="info-toast"
-                WarningClass="warning-toast"
-                ErrorClass="error-toast"
-                ShowProgressBar="true" />
-<NotificationComponent @ref="notificationComponent" 
-                       Position="NotificationComponent.NotificationPosition.TopRight"
-                       AutoDismissTime="5000"
-                       ShowProgressBar="true"
-                       ShowCloseButton="true"
-                       PauseOnHover="true" />
+<h3>PWA Service Test</h3>
 
-<div class="button-group">
-    <button class="btn btn-success" @onclick="ShowSuccess">Show Success</button>
-    <button class="btn btn-info" @onclick="ShowInfo">Show Info</button>
-    <button class="btn btn-warning" @onclick="ShowWarning">Show Warning</button>
-    <button class="btn btn-danger" @onclick="ShowError">Show Error</button>
-    <button class="btn btn-secondary" @onclick="ClearAll">Clear All</button>
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>PWA Status</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Enabled:</strong> @(pwaInfo?.Enabled ?? false)</p>
+                <p><strong>Version:</strong> @(pwaInfo?.Version ?? "Unknown")</p>
+                <p><strong>Last Updated:</strong> @(pwaInfo?.LastUpdated.ToString("g") ?? "Never")</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>PWA Controls</h5>
+            </div>
+            <div class="card-body">
+                <button class="btn btn-primary me-2" @onclick="CheckPWAStatus">
+                    Check Status
+                </button>
+                <button class="btn btn-success me-2" @onclick="EnablePWA">
+                    Enable PWA
+                </button>
+                <button class="btn btn-warning me-2" @onclick="DisablePWA">
+                    Disable PWA
+                </button>
+                <button class="btn btn-info" @onclick="CheckForUpdates">
+                    Check Updates
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
+
+@if (!string.IsNullOrEmpty(statusMessage))
+{
+    <div class="alert alert-info mt-3">
+        @statusMessage
+    </div>
+}
+
+@code {
+    private PWAInfo? pwaInfo;
+    private string statusMessage = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Subscribe to PWA events
+        PWAService.UpdateAvailable += OnUpdateAvailable;
+        PWAService.UpdateInstalled += OnUpdateInstalled;
+        
+        // Initial status check
+        await CheckPWAStatus();
+    }
+
+    private async Task CheckPWAStatus()
+    {
+        try
+        {
+            var isEnabled = await PWAService.IsPWAEnabledAsync();
+            pwaInfo = await PWAService.GetPWAInfoAsync();
+            statusMessage = $"PWA Status checked. Enabled: {isEnabled}";
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            statusMessage = $"Error checking PWA status: {ex.Message}";
+            Logger.LogError(ex, "Error checking PWA status");
+        }
+    }
+
+    private async Task EnablePWA()
+    {
+        try
+        {
+            await PWAService.EnablePWAAsync();
+            statusMessage = "PWA enabled successfully";
+            await CheckPWAStatus();
+        }
+        catch (Exception ex)
+        {
+            statusMessage = $"Error enabling PWA: {ex.Message}";
+            Logger.LogError(ex, "Error enabling PWA");
+        }
+    }
+
+    private async Task DisablePWA()
+    {
+        try
+        {
+            await PWAService.DisablePWAAsync();
+            statusMessage = "PWA disabled successfully";
+            await CheckPWAStatus();
+        }
+        catch (Exception ex)
+        {
+            statusMessage = $"Error disabling PWA: {ex.Message}";
+            Logger.LogError(ex, "Error disabling PWA");
+        }
+    }
+
+    private async Task CheckForUpdates()
+    {
+        try
+        {
+            var result = await PWAService.CheckForUpdatesAsync();
+            statusMessage = result ? "Update check completed" : "Update check failed";
+        }
+        catch (Exception ex)
+        {
+            statusMessage = $"Error checking for updates: {ex.Message}";
+            Logger.LogError(ex, "Error checking for updates");
+        }
+    }
+
+    private void OnUpdateAvailable(object? sender, PWAUpdateEventArgs e)
+    {
+        InvokeAsync(() =>
+        {
+            statusMessage = $"Update available! Timestamp: {e.Timestamp}";
+            StateHasChanged();
+        });
+    }
+
+    private void OnUpdateInstalled(object? sender, EventArgs e)
+    {
+        InvokeAsync(() =>
+        {
+            statusMessage = "Update installed successfully!";
+            StateHasChanged();
+        });
+    }
+
+    public void Dispose()
+    {
+        PWAService.UpdateAvailable -= OnUpdateAvailable;
+        PWAService.UpdateInstalled -= OnUpdateInstalled;
+    }
+}
