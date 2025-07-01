@@ -1,7 +1,7 @@
 Project Structure Documentation
-Generated: Mon Jun 30 16:39:09 UTC 2025
+Generated: Tue Jul  1 11:15:37 UTC 2025
 Repository: Mid-D-Man/AirCode
-Commit: 61e9cfa2008bf0ff6092b5d4cc0ed39ae0fe970c
+Commit: ba17f2df166ff93d4fe140a7bdfe6bae62511153
 ==================================
 
 Source Files:
@@ -170,7 +170,9 @@ Properties/launchSettings.json
 Services/Academic/AcademicSessionService.cs
 Services/Academic/IAcademicSessionService.cs
 Services/Attendance/AttendanceSessionService.cs
+Services/Attendance/FirestoreAttendanceService.cs
 Services/Attendance/IAttendanceSessionService.cs
+Services/Attendance/IFirestoreAttendanceService.cs
 Services/Attendance/IOfflineSyncService.cs
 Services/Attendance/OfflineSyncService.cs
 Services/Attendance/SessionStateService.cs
@@ -384,7 +386,7 @@ Directory Structure:
 
 File Count Summary:
 ==================
-.cs       : 84 files
+.cs       : 86 files
 .razor    : 63 files
 .csproj   : 1 files
 .json     : 12 files
