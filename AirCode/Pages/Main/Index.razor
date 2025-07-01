@@ -28,6 +28,13 @@
             <LoadingSpinner Title="Welcome back!" Subtitle="Redirecting you to your dashboard..." />
         </Authorized>
         <NotAuthorized>
+            <div class="logo-section">
+                <img src="AirCode_LogoAndText.png" 
+                     alt="AirCode Logo" 
+                     class="brand-logo" 
+                     loading="eager" />
+            </div>
+            
             <div class="welcome-section">
                 <h1 class="welcome-title">Welcome to AirCode</h1>
                 <p class="welcome-subtitle">Secure attendance tracking for higher institutions</p>
@@ -44,31 +51,7 @@
 </div>
 
 @code {
-    //damn forgot we missing logo im thinking cube with black,white box for qr code feel.......
-    //ok from here here is what we gonna do from this page which is our starting page
-    //remember u have to do the actual project words stuff too its annoying but such is life
-    /// <summary>
-    /// we cheack if player is connected to za internet or not 
-    /// case HasInternet -> run auth0 login and we have set up how thats handled so no issue there
-    /// except of cource we have to be able to retrive users metadata or u know what lets do this when we do all the maginc
-    /// in auth0 update our firebase data base with the users id and role, and admin id if applicable , make sure to compress though maybe
-    /// then over here if we test and cant get metadata from the auth0 itself then we just simply use firebase and create offline credentials from there in our call back page which
-    /// should lead to superior or standard or cleinet pages based of our claims and there we handle the rest of the magic note dont forget to store our offline credentials key,iv in firebase too
-    /// case NoInternet -> check for valid offline credentials
-    /// case Has -> then authenticate locally get role and send to page offline mode or even create a seprate offline page for regular admins and clients
-    /// note superior admin does not have offline mode nor do we store his offline credentials
-    /// case DoesNotHave -> show message and quit app or something
-    /// hmm we also need to run one more cheack withn the offline mode and prompt user if they want to reconnect (their network is working) to net,
-    /// if they agree we just send them back to / to start again else we leave them alone
-    /// ok this is a preety solid foundation for the auth now the whole attendance business make this in another script init
-    /// and for godssake stop it with the shit spellingz
-    /// and yeah yeah yeah only store credentials after auuth callback when all is good,we probably dont need the button above but
-    /// hmmm unless we actually make it like continue offline, continue online sorta business hmm auto or manual
-    /// manual give option to go offline even with internet connection mauto does not
-    /// this is a conondrum not how itssspelt
-    /// the council has decided we will go manual but but but for online make sure to cheack if player is online first init so spifi up the index page make it look good also use our blobs 
-    /// </summary>
-    
+    // Authentication and connectivity logic remains unchanged
     private bool isOnlineLoading = false;
     private bool isOfflineLoading = false;
     private bool isOnline = true;
@@ -104,7 +87,6 @@
 
     private async Task RedirectAuthenticatedUser()
     {
-       //yap this is indeed the way
         try
         {
             // Check online status for authenticated users
@@ -141,7 +123,6 @@
         }
         catch (Exception ex)
         {
-       
             await JSRuntime.InvokeVoidAsync("console.error", $"Error redirecting authenticated user: {ex.Message}");
             notificationComponent?.ShowError("Error redirecting to dashboard. Please try again.");
         }

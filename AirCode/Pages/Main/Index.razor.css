@@ -1,4 +1,4 @@
-/* Index.razor.css - Enhanced with Animations and Proper Color Mapping */
+/* Index.razor.css - Enhanced with Logo Integration and Refined Animations */
 
 .main-container {
     display: flex;
@@ -15,19 +15,68 @@
     animation: fadeInUp 0.8s ease-out;
 }
 
+/* Logo Section - Premium Presentation */
+.logo-section {
+    margin-bottom: 2rem;
+    text-align: center;
+
+    /* Staggered animation timing */
+    animation: logoEntry 1s ease-out;
+}
+
+.brand-logo {
+    height: clamp(4rem, 8vw, 6rem);
+    width: auto;
+    max-width: 100%;
+    object-fit: contain;
+
+    /* High-quality rendering */
+    image-rendering: optimizeSpeed;
+    image-rendering: crisp-edges;
+
+    /* Enhanced shadow and glow effects */
+    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15));
+
+    /* Smooth interaction transitions */
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+
+    /* Subtle hover enhancement */
+    cursor: default;
+}
+
+.brand-logo:hover {
+    transform: scale(1.02) translateY(-2px);
+    filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.2));
+}
+
+/* Dark mode logo optimizations */
+body.dark-mode .brand-logo {
+    filter:
+            drop-shadow(0 4px 12px rgba(0, 0, 0, 0.3))
+            brightness(1.05)
+            contrast(1.1);
+}
+
+body.dark-mode .brand-logo:hover {
+    filter:
+            drop-shadow(0 8px 20px rgba(0, 0, 0, 0.4))
+            brightness(1.1)
+            contrast(1.15);
+}
+
 .welcome-section {
     text-align: center;
     margin-bottom: 2.5rem;
 
-    /* Staggered animation for child elements */
-    animation: slideInFromTop 0.6s ease-out 0.2s both;
+    /* Adjusted animation delay to sequence after logo */
+    animation: slideInFromTop 0.6s ease-out 0.3s both;
 }
 
 .welcome-title {
     font-size: clamp(2rem, 5vw, 3rem);
     font-weight: 700;
 
-    /* Always use light colors - Force light text regardless of theme */
+    /* Force light colors - Enhanced visibility */
     color: var(--dark-text-primary) !important;
     text-shadow:
             0 2px 4px rgba(0, 0, 0, 0.3),
@@ -35,7 +84,7 @@
 
     margin-bottom: 0.75rem;
 
-    /* Text animation effects */
+    /* Refined text animation effects */
     background: linear-gradient(
             45deg,
             var(--dark-text-primary),
@@ -55,14 +104,14 @@
 .welcome-subtitle {
     font-size: clamp(1rem, 2.5vw, 1.2rem);
 
-    /* Force light color */
+    /* Enhanced contrast for readability */
     color: var(--dark-text-secondary) !important;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 
     max-width: 600px;
     margin: 0 auto;
     opacity: 0;
-    animation: fadeInSlide 0.8s ease-out 0.4s both;
+    animation: fadeInSlide 0.8s ease-out 0.5s both;
 }
 
 .auth-container {
@@ -79,13 +128,13 @@
     width: 100%;
     max-width: 700px;
 
-    /* Enhanced animations */
+    /* Refined container animations */
     transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     transform: translateY(0);
     opacity: 0;
-    animation: containerEntry 0.8s ease-out 0.6s both;
+    animation: containerEntry 0.8s ease-out 0.7s both;
 
-    /* Subtle pulsing glow effect */
+    /* Enhanced glow effect positioning */
     position: relative;
     overflow: hidden;
 }
@@ -123,7 +172,7 @@
     position: relative;
 }
 
-/* Enhanced Button Styling */
+/* Enhanced Button Styling with Improved Animation Timing */
 .auth-options ::deep(.primary-button) {
     min-width: 180px;
     padding: 0.875rem 2rem;
@@ -131,17 +180,17 @@
     font-weight: 600;
     border-radius: 0.75rem;
 
-    /* Enhanced transition */
+    /* Refined transition curves */
     transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 
-    /* Subtle animation on load */
+    /* Coordinated animation timing */
     opacity: 0;
     transform: translateY(20px);
-    animation: buttonFadeIn 0.6s ease-out 0.8s both;
+    animation: buttonFadeIn 0.6s ease-out 0.9s both;
 }
 
 .auth-options ::deep(.primary-button:nth-child(2)) {
-    animation-delay: 0.9s;
+    animation-delay: 1s;
 }
 
 .auth-options ::deep(.primary-button:hover) {
@@ -179,7 +228,7 @@
     left: 100%;
 }
 
-/* Dark mode adjustments */
+/* Dark Mode Container Optimizations */
 body.dark-mode .auth-container {
     background: rgba(20, 20, 20, 0.8);
     border: 1px solid rgba(100, 100, 100, 0.2);
@@ -194,7 +243,20 @@ body.dark-mode .auth-container:hover {
             inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
-/* Keyframe Animations */
+/* Refined Keyframe Animations */
+@keyframes logoEntry {
+    from {
+        opacity: 0;
+        transform: translateY(-30px) scale(0.9);
+        filter: drop-shadow(0 0 0 transparent);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15));
+    }
+}
+
 @keyframes fadeInUp {
     from {
         opacity: 0;
@@ -270,10 +332,18 @@ body.dark-mode .auth-container:hover {
     }
 }
 
-/* Responsive Design Enhancements */
+/* Enhanced Responsive Design */
 @media (max-width: 768px) {
     .main-container {
         padding: 0 1rem;
+    }
+
+    .logo-section {
+        margin-bottom: 1.5rem;
+    }
+
+    .brand-logo {
+        height: clamp(3rem, 6vw, 4.5rem);
     }
 
     .welcome-section {
@@ -292,6 +362,14 @@ body.dark-mode .auth-container:hover {
 }
 
 @media (max-width: 576px) {
+    .logo-section {
+        margin-bottom: 1.25rem;
+    }
+
+    .brand-logo {
+        height: clamp(2.5rem, 5vw, 3.5rem);
+    }
+
     .auth-container {
         padding: 2rem;
         border-radius: 1.25rem;
@@ -309,6 +387,10 @@ body.dark-mode .auth-container:hover {
 }
 
 @media (max-width: 360px) {
+    .logo-section {
+        margin-bottom: 1rem;
+    }
+
     .auth-container {
         padding: 1.5rem;
         margin: 0 0.5rem;
@@ -319,16 +401,20 @@ body.dark-mode .auth-container:hover {
     }
 }
 
-/* Accessibility and Performance */
+/* Accessibility and Performance Enhancements */
 @media (prefers-reduced-motion: reduce) {
     * {
         animation-duration: 0.01ms !important;
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
     }
+
+    .brand-logo {
+        animation: none;
+    }
 }
 
-/* High contrast mode support */
+/* High Contrast Mode Optimizations */
 @media (prefers-contrast: more) {
     .welcome-title {
         text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
@@ -341,9 +427,13 @@ body.dark-mode .auth-container:hover {
     .auth-container {
         border-width: 2px;
     }
+
+    .brand-logo {
+        filter: contrast(1.2) drop-shadow(0 4px 12px rgba(0, 0, 0, 0.25));
+    }
 }
 
-/* Print styles */
+/* Print Media Styles */
 @media print {
     .auth-container {
         background: white;
@@ -355,5 +445,9 @@ body.dark-mode .auth-container:hover {
     .welcome-subtitle {
         color: black !important;
         text-shadow: none;
+    }
+
+    .brand-logo {
+        filter: none;
     }
 }
