@@ -2,6 +2,7 @@
 
 <button class="primary-button @Class @(IsLoading ? "loading" : "")"
         type="@Type"
+        title="@Title"
         @onclick="OnClick"
         disabled="@(IsLoading || Disabled)">
     @if (IsLoading)
@@ -15,11 +16,10 @@
 
 @code {
     /// <summary>
-    /// Him the one the only PrimaryButton, use primary colors both light,dark varient for text as well
-    /// other update use were needed
-    /// needs updates regarding title or was it type 
+    /// Primary button component with loading state and tooltip support
     /// </summary>
     [Parameter] public string Text { get; set; }
+    [Parameter] public string Title { get; set; }
     [Parameter] public EventCallback OnClick { get; set; }
     [Parameter] public string Class { get; set; }
     [Parameter] public string Type { get; set; } = "button";

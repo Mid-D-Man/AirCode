@@ -6,9 +6,6 @@ using static Supabase.Postgrest.Constants;
 
 namespace AirCode.Services.Attendance
 {
-/// <summary>
-/// Attendance session service for supabase only
-/// </summary>
     public class AttendanceSessionService : IAttendanceSessionService
     {
         private readonly ISupabaseDatabase _database;
@@ -22,7 +19,7 @@ namespace AirCode.Services.Attendance
             _logger = logger;
         }
 
-        public async Task<AttendanceSession> CreateSessionAsync(AttendanceSession session)
+        public async Task<SupabaseAttendanceSession> CreateSessionAsync(SupabaseAttendanceSession session)
         {
             try
             {
@@ -31,7 +28,7 @@ namespace AirCode.Services.Attendance
                 
                 var result = await _database.InsertAsync(session);
                 _logger.LogInformation("Created attendance session: {SessionId}", session.SessionId);
-                
+              
                 return result.FirstOrDefault() ?? session;
             }
             catch (Exception ex)
@@ -41,11 +38,29 @@ namespace AirCode.Services.Attendance
             }
         }
 
-        public async Task<AttendanceSession?> GetSessionByIdAsync(string sessionId)
+        public async Task<SupabaseOfflineAttendanceSession> CreateOfflineSessionAsync(SupabaseOfflineAttendanceSession supabaseOfflineSession)
         {
             try
             {
-                var sessions = await _database.GetWithFilterAsync<AttendanceSession>(
+                supabaseOfflineSession.CreatedAt = DateTime.UtcNow;
+                
+                var result = await _database.InsertAsync(supabaseOfflineSession);
+                _logger.LogInformation("Created offline attendance session: {SessionId}", supabaseOfflineSession.SessionId);
+                
+                return result.FirstOrDefault() ?? supabaseOfflineSession;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to create offline attendance session: {SessionId}", supabaseOfflineSession.SessionId);
+                throw;
+            }
+        }
+
+        public async Task<SupabaseAttendanceSession?> GetSessionByIdAsync(string sessionId)
+        {
+            try
+            {
+                var sessions = await _database.GetWithFilterAsync<SupabaseAttendanceSession>(
                     "session_id", Operator.Equals, sessionId);
                 
                 return sessions.FirstOrDefault();
@@ -57,7 +72,23 @@ namespace AirCode.Services.Attendance
             }
         }
 
-        public async Task<AttendanceSession> UpdateSessionAsync(AttendanceSession session)
+        public async Task<SupabaseOfflineAttendanceSession?> GetOfflineSessionByIdAsync(string sessionId)
+        {
+            try
+            {
+                var sessions = await _database.GetWithFilterAsync<SupabaseOfflineAttendanceSession>(
+                    "session_id", Operator.Equals, sessionId);
+                
+                return sessions.FirstOrDefault();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to get offline attendance session: {SessionId}", sessionId);
+                return null;
+            }
+        }
+
+        public async Task<SupabaseAttendanceSession> UpdateSessionAsync(SupabaseAttendanceSession session)
         {
             try
             {
@@ -75,7 +106,23 @@ namespace AirCode.Services.Attendance
             }
         }
 
-        public async Task<AttendanceSession> UpdateTemporalKeyAsync(string sessionId, string newTemporalKey)
+        public async Task<SupabaseOfflineAttendanceSession> UpdateOfflineSessionAsync(SupabaseOfflineAttendanceSession supabaseOfflineSession)
+        {
+            try
+            {
+                var result = await _database.UpdateAsync(supabaseOfflineSession);
+                _logger.LogInformation("Updated offline attendance session: {SessionId}", supabaseOfflineSession.SessionId);
+                
+                return result.FirstOrDefault() ?? supabaseOfflineSession;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to update offline attendance session: {SessionId}", supabaseOfflineSession.SessionId);
+                throw;
+            }
+        }
+
+        public async Task<SupabaseAttendanceSession> UpdateTemporalKeyAsync(string sessionId, string newTemporalKey)
         {
             try
             {
@@ -84,7 +131,7 @@ namespace AirCode.Services.Attendance
                     throw new InvalidOperationException($"Session not found: {sessionId}");
 
                 session.TemporalKey = newTemporalKey;
-                session.UpdatedAt = DateTime.UtcNow;//yap we update so we can add slight 20sec grace to qr code scan
+                session.UpdatedAt = DateTime.UtcNow;
                 var result = await _database.UpdateAsync(session);
                 _logger.LogInformation("Updated temporal key for session: {SessionId}", sessionId);
                 
@@ -96,12 +143,12 @@ namespace AirCode.Services.Attendance
                 throw;
             }
         }
-//maybe use by id instead
-        public async Task<List<AttendanceSession>> GetActiveSessionsAsync()
+
+        public async Task<List<SupabaseAttendanceSession>> GetActiveSessionsAsync()
         {
             try
             {
-                var sessions = await _database.GetWithFilterAsync<AttendanceSession>(
+                var sessions = await _database.GetWithFilterAsync<SupabaseAttendanceSession>(
                     "expiration_time", Operator.GreaterThan, DateTime.UtcNow);
                 
                 return sessions;
@@ -109,7 +156,83 @@ namespace AirCode.Services.Attendance
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to get active sessions");
-                return new List<AttendanceSession>();
+                return new List<SupabaseAttendanceSession>();
+            }
+        }
+
+        public async Task<List<SupabaseOfflineAttendanceSession>> GetActiveOfflineSessionsAsync()
+        {
+            try
+            {
+                var sessions = await _database.GetWithFilterAsync<SupabaseOfflineAttendanceSession>(
+                    "expiration_time", Operator.GreaterThan, DateTime.UtcNow);
+                
+                return sessions;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to get active offline sessions");
+                return new List<SupabaseOfflineAttendanceSession>();
+            }
+        }
+
+        public async Task<List<SupabaseAttendanceSession>> GetAllSessionsAsync()
+        {
+            try
+            {
+                var sessions = await _database.GetAllAsync<SupabaseAttendanceSession>();
+                return sessions.ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to get all attendance sessions");
+                return new List<SupabaseAttendanceSession>();
+            }
+        }
+
+        public async Task<List<SupabaseOfflineAttendanceSession>> GetAllOfflineSessionsAsync()
+        {
+            try
+            {
+                var sessions = await _database.GetAllAsync<SupabaseOfflineAttendanceSession>();
+                return sessions.ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to get all offline attendance sessions");
+                return new List<SupabaseOfflineAttendanceSession>();
+            }
+        }
+
+        public async Task<List<SupabaseAttendanceSession>> GetSessionsByCourseCodeAsync(string courseCode)
+        {
+            try
+            {
+                var sessions = await _database.GetWithFilterAsync<SupabaseAttendanceSession>(
+                    "course_code", Operator.Equals, courseCode);
+                
+                return sessions;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to get sessions for course: {CourseCode}", courseCode);
+                return new List<SupabaseAttendanceSession>();
+            }
+        }
+
+        public async Task<List<SupabaseOfflineAttendanceSession>> GetOfflineSessionsByCourseCodeAsync(string courseCode)
+        {
+            try
+            {
+                var sessions = await _database.GetWithFilterAsync<SupabaseOfflineAttendanceSession>(
+                    "course_code", Operator.Equals, courseCode);
+                
+                return sessions;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to get offline sessions for course: {CourseCode}", courseCode);
+                return new List<SupabaseOfflineAttendanceSession>();
             }
         }
 
@@ -129,6 +252,51 @@ namespace AirCode.Services.Attendance
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to delete attendance session: {SessionId}", sessionId);
+                return false;
+            }
+        }
+
+        public async Task<bool> DeleteOfflineSessionAsync(string sessionId)
+        {
+            try
+            {
+                var session = await GetOfflineSessionByIdAsync(sessionId);
+                if (session == null)
+                    return false;
+
+                await _database.DeleteAsync(session);
+                _logger.LogInformation("Deleted offline attendance session: {SessionId}", sessionId);
+                
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to delete offline attendance session: {SessionId}", sessionId);
+                return false;
+            }
+        }
+
+        public async Task<bool> ArchiveAttendanceDataAsync(string courseCode, string archivedData, string dataType)
+        {
+            try
+            {
+                var archiveRecord = new ArchivedAttendanceData
+                {
+                    CourseCode = courseCode,
+                    ArchivedData = archivedData,
+                    ArchivedAt = DateTime.UtcNow,
+                    DataType = dataType,
+                    CompressionUsed = false // You can implement compression logic here
+                };
+
+                await _database.InsertAsync(archiveRecord);
+                _logger.LogInformation("Archived attendance data for course: {CourseCode}", courseCode);
+                
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to archive attendance data for course: {CourseCode}", courseCode);
                 return false;
             }
         }

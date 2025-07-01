@@ -2,7 +2,10 @@ using AirCode.Services.Attendance;
 
 namespace AirCode.Domain.Entities;
 // Client offline storage model
-public class OfflineAttendanceRecord
+/// <summary>
+/// main model for storing full offline attendance record with qrcode payload and nessesary data
+/// </summary>
+public class OfflineAttendanceRecordModel
 {
     public string Id { get; set; } = Guid.NewGuid().ToString();
     public string SessionId { get; set; } = string.Empty;
@@ -29,7 +32,7 @@ public class OfflineSessionData
     public string SessionId { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
     public SessionData SessionDetails { get; set; }
-    public List<OfflineAttendanceRecord> PendingAttendanceRecords { get; set; } = new();
+    public List<OfflineAttendanceRecordModel> PendingAttendanceRecords { get; set; } = new();
     public SyncStatus SyncStatus { get; set; } = SyncStatus.Pending;
 }
 

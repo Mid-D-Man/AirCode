@@ -169,6 +169,7 @@ builder.Services.AddScoped<AirCode.Services.Firebase.IFirestoreService, AirCode.
 builder.Services.AddSupabaseServices();
 builder.Services.AddBusinessHoursGuard();
 builder.Services.AddScoped<IAttendanceSessionService, AttendanceSessionService>();
+builder.Services.AddScoped<IFirestoreAttendanceService, FirestoreAttendanceService>();
 // Supabase client configuration optimized for WebAssembly
 builder.Services.AddScoped<Supabase.Client>(provider =>
 {

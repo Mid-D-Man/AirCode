@@ -4,12 +4,14 @@ using AirCode.Services.SupaBase;
 using AirCode.Services.Attendance;
 using AirCode.Utilities.HelperScripts;
 using AirCode.Domain.Entities;
+using AirCode.Services.Auth;
 using ReactorBlazorQRCodeScanner;
 
 namespace AirCode.Pages.Client
 {
     public partial class OfflineScanPage : ComponentBase, IAsyncDisposable
     {
+        [Inject] private IOfflineCredentialsService OfllineCredentialsService { get; set; }
         private QRCodeScannerJsInterop? _qrCodeScannerJsInterop;
         private Action<string>? _onQrCodeScanAction;
         private bool isScanning = true;
@@ -35,7 +37,7 @@ namespace AirCode.Pages.Client
             {
                 await _qrCodeScannerJsInterop.Init(_onQrCodeScanAction);
                 MID_HelperFunctions.DebugMessage("Offline QR Scanner initialized successfully", DebugClass.Info);
-                
+                currentUserMatricNumber = await OfllineCredentialsService.GetMatricNumberAsync();
                 // Load offline status
                 await LoadOfflineStatus();
             }
@@ -101,7 +103,7 @@ namespace AirCode.Pages.Client
                 MID_HelperFunctions.DebugMessage($"Processing offline attendance for session: {decodedData.SessionId}", DebugClass.Info);
 
                 // Create offline attendance record
-                var offlineRecord = new OfflineAttendanceRecord
+                var offlineRecord = new OfflineAttendanceRecordModel
                 {
                     Id = Guid.NewGuid().ToString(),
                     SessionId = decodedData.SessionId,

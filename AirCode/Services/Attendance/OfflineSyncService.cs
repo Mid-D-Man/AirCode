@@ -82,7 +82,7 @@ namespace AirCode.Services.Attendance
             }
         }
 
-        public async Task<SyncResult> ProcessOfflineAttendanceAsync(OfflineAttendanceRecord record)
+        public async Task<SyncResult> ProcessOfflineAttendanceAsync(OfflineAttendanceRecordModel record)
         {
             try
             {
@@ -146,7 +146,7 @@ namespace AirCode.Services.Attendance
                 _logger.LogDebug("Syncing offline session: {SessionId}", session.SessionId);
                 
                 // Create offline attendance session record in Supabase
-                var offlineSession = new OfflineAttendanceSession
+                var offlineSession = new SupabaseOfflineAttendanceSession
                 {
                     SessionId = session.SessionId,
                     CourseCode = session.SessionDetails.CourseId,
@@ -214,10 +214,10 @@ namespace AirCode.Services.Attendance
                     return false;
                 }
 
-                var offlineSession = new OfflineAttendanceSession
+                var offlineSession = new SupabaseOfflineAttendanceSession
                 {
                     SessionId = sessionData.SessionId,
-                    CourseCode = sessionData.CourseId,
+                    CourseCode = sessionData.CourseCode,
                     StartTime = sessionData.StartTime,
                     Duration = sessionData.Duration,
                     ExpirationTime = sessionData.EndTime,
@@ -264,7 +264,7 @@ namespace AirCode.Services.Attendance
                 }
 
                 // Get main attendance session
-                var mainSession = await _database.GetWithFilterAsync<AttendanceSession>(
+                var mainSession = await _database.GetWithFilterAsync<SupabaseAttendanceSession>(
                     "session_id", Supabase.Postgrest.Constants.Operator.Equals, sessionId);
                 
                 if (!mainSession.Any())
@@ -342,7 +342,7 @@ namespace AirCode.Services.Attendance
         {
             try
             {
-                var offlineRecord = new OfflineAttendanceRecord
+                var offlineRecord = new OfflineAttendanceRecordModel
                 {
                     Id = Guid.NewGuid().ToString(),
                     EncryptedQrPayload = encryptedQRPayload,
@@ -388,21 +388,21 @@ namespace AirCode.Services.Attendance
 
         #region Private Helper Methods
 
-        private async Task<List<OfflineAttendanceRecord>> GetPendingOfflineRecordsAsync()
+        private async Task<List<OfflineAttendanceRecordModel>> GetPendingOfflineRecordsAsync()
         {
             try
             {
-                return await _localStorage.GetItemAsync<List<OfflineAttendanceRecord>>(OFFLINE_RECORDS_KEY) 
-                       ?? new List<OfflineAttendanceRecord>();
+                return await _localStorage.GetItemAsync<List<OfflineAttendanceRecordModel>>(OFFLINE_RECORDS_KEY) 
+                       ?? new List<OfflineAttendanceRecordModel>();
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to get pending offline records");
-                return new List<OfflineAttendanceRecord>();
+                return new List<OfflineAttendanceRecordModel>();
             }
         }
 
-        private async Task<OfflineAttendanceSession?> GetOfflineSessionFromSupabaseAsync(string encryptedQRPayload)
+        private async Task<SupabaseOfflineAttendanceSession?> GetOfflineSessionFromSupabaseAsync(string encryptedQRPayload)
         {
             try
             {
@@ -411,7 +411,7 @@ namespace AirCode.Services.Attendance
                 if (string.IsNullOrEmpty(sessionId))
                     return null;
 
-                var sessions = await _database.GetWithFilterAsync<OfflineAttendanceSession>(
+                var sessions = await _database.GetWithFilterAsync<SupabaseOfflineAttendanceSession>(
                     "session_id", Supabase.Postgrest.Constants.Operator.Equals, sessionId);
                 
                 return sessions.FirstOrDefault();
@@ -423,17 +423,17 @@ namespace AirCode.Services.Attendance
             }
         }
 
-        private async Task<List<OfflineAttendanceSession>> GetOfflineRecordsByCourseCodeAsync(string courseCode)
+        private async Task<List<SupabaseOfflineAttendanceSession>> GetOfflineRecordsByCourseCodeAsync(string courseCode)
         {
             try
             {
-                return await _database.GetWithFilterAsync<OfflineAttendanceSession>(
+                return await _database.GetWithFilterAsync<SupabaseOfflineAttendanceSession>(
                     "course_code", Supabase.Postgrest.Constants.Operator.Equals, courseCode);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to get offline records by course code");
-                return new List<OfflineAttendanceSession>();
+                return new List<SupabaseOfflineAttendanceSession>();
             }
         }
 
@@ -458,7 +458,7 @@ namespace AirCode.Services.Attendance
             return await _localStorage.GetItemAsync<string>($"matric_number_{deviceId}") ?? string.Empty;
         }
 
-        private async Task UpdateOfflineRecordStatusAsync(OfflineAttendanceRecord record, SyncResult result)
+        private async Task UpdateOfflineRecordStatusAsync(OfflineAttendanceRecordModel record, SyncResult result)
         {
             try
             {
@@ -532,41 +532,4 @@ namespace AirCode.Services.Attendance
         #endregion
     }
 
-    // Additional model for offline attendance sessions table
-    [Supabase.Postgrest.Attributes.Table("offline_attendance_sessions")]
-    public class OfflineAttendanceSession : Supabase.Postgrest.Models.BaseModel
-    {
-        [Supabase.Postgrest.Attributes.PrimaryKey("id")]
-        public long Id { get; set; }
-        
-        [Supabase.Postgrest.Attributes.Column("session_id")]
-        public string SessionId { get; set; } = string.Empty;
-        
-        [Supabase.Postgrest.Attributes.Column("course_code")]
-        public string CourseCode { get; set; } = string.Empty;
-        
-        [Supabase.Postgrest.Attributes.Column("start_time")]
-        public DateTime StartTime { get; set; }
-        
-        [Supabase.Postgrest.Attributes.Column("duration")]
-        public int Duration { get; set; }
-        
-        [Supabase.Postgrest.Attributes.Column("expiration_time")]
-        public DateTime ExpirationTime { get; set; }
-        
-        [Supabase.Postgrest.Attributes.Column("created_at")]
-        public DateTime CreatedAt { get; set; }
-        
-        [Supabase.Postgrest.Attributes.Column("offline_records")]
-        public string OfflineRecords { get; set; } = "[]";
-        
-        [Supabase.Postgrest.Attributes.Column("sync_status")]
-        public int SyncStatus { get; set; } = 0;
-        
-        [Supabase.Postgrest.Attributes.Column("allow_offline_sync")]
-        public bool AllowOfflineSync { get; set; } = true;
-        
-        [Supabase.Postgrest.Attributes.Column("security_features")]
-        public int SecurityFeatures { get; set; } = 0;
-    }
 }

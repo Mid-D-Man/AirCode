@@ -1,221 +1,349 @@
-using System;
-using System.Security.Claims;
-using System.Threading.Tasks;
-using AirCode.Domain.Entities;
+
 using AirCode.Domain.Enums;
-using AirCode.Pages.Admin.Shared;
 using AirCode.Services.Auth;
 using AirCode.Services.Courses;
-using AirCode.Services.Storage;
-using Microsoft.AspNetCore.Components.Authorization;
-
 namespace AirCode.Services.Permissions
 {
     public class PermissionService : IPermissionService
     {
-        private readonly IBlazorAppLocalStorageService _storageService;
-        private readonly AuthenticationStateProvider _authStateProvider;
         private readonly IAuthService _authService;
         private readonly ICourseService _courseService;
+        private readonly ILogger<PermissionService> _logger;
+
         public PermissionService(
-            IBlazorAppLocalStorageService storageService,
-            AuthenticationStateProvider authStateProvider,
             IAuthService authService,
-            ICourseService courseService)
+            ICourseService courseService,
+            ILogger<PermissionService> logger)
         {
-            _storageService = storageService;
-            _authStateProvider = authStateProvider;
-            _authService = authService;
-            _courseService = courseService ?? throw new NullReferenceException("Missing course service");
-        }
-        
-        public async Task<bool> CanEditAttendanceAsync(string userId, string courseId)
-        {
-            var user = await GetCurrentUserAsync();
-            if (user == null || !user.Identity.IsAuthenticated) return false;
-            
-            // Superior admin can edit any attendance
-            if (await _authService.GetUserRoleAsync() == "superioradmin") return true;
-                
-            // Course rep admin can edit attendance for their assigned courses
-            if (user.IsInRole("courseadmin") && await IsUserAssignedToCourseAsync(userId, courseId))
-                return true;
-                
-            // Lecturers can edit attendance for their courses
-            if (user.IsInRole("lectureradmin") && await IsUserAssignedToCourseAsync(userId, courseId))
-                return true;
-                
-            return false;
-        }
-        
-        public async Task<bool> CanStartAttendanceEventAsync(string userId, string courseId)
-        {
-            var user = await GetCurrentUserAsync();
-            if (user == null || !user.Identity.IsAuthenticated) return false;
-            
-            // Students cannot start attendance events
-            if (user.IsInRole("student")) return false;
-                
-            // Superior admin can start any attendance event
-            if (user.IsInRole("superioradmin")) return true;
-            if (user.IsInRole("lectureradmin")) return true;
-            if (user.IsInRole("courserepadmin")) return true;
-            // Check if admin is assigned to the course
-            return await IsUserAssignedToCourseAsync(userId, courseId);
-        }
-        
-        public async Task<bool> CanViewCourseAttendanceAsync(string userId, string courseId)
-        {
-            var user = await GetCurrentUserAsync();
-            if (user == null || !user.Identity.IsAuthenticated) return false;
-            
-            // Superior admin can view any course attendance
-            if (user.IsInRole("superioradmin")) return true;
-                
-            // Admins can view attendance for their assigned courses
-            if ((user.IsInRole("lectureradmin") || user.IsInRole("courseadmin")) && 
-                await IsUserAssignedToCourseAsync(userId, courseId))
-                return true;
-                
-            // Students can view their own attendance for enrolled courses
-            if (user.IsInRole("student"))
-                return await IsStudentEnrolledInCourseAsync(userId, courseId);
-            
-            return false;
-        }
-        
-        public async Task<bool> CanEditCourseInfoAsync(string userId, string courseId)
-        {
-            var user = await GetCurrentUserAsync();
-            if (user == null || !user.Identity.IsAuthenticated) return false;
-            
-            // Superior admin can edit any course info
-            if (user.IsInRole("superioradmin")) return true;
-                
-            // Lecturer admin can edit their own course info
-            if (user.IsInRole("lectureradmin") && await IsUserAssignedToCourseAsync(userId, courseId))
-                return true;
-                
-            return false;
-        }
-        
-        public async Task<bool> CanGenerateAdminIdAsync(string userId)
-        {
-            var user = await GetCurrentUserAsync();
-            return user?.IsInRole("superioradmin") ?? false;
+            _authService = authService ?? throw new ArgumentNullException(nameof(authService));
+            _courseService = courseService ?? throw new ArgumentNullException(nameof(courseService));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        // Additional permission methods for enhanced security
+        public async Task<bool> CanEditAttendanceAsync(string userId, string courseId)
+        {
+            try
+            {
+                if (!await _authService.IsAuthenticatedAsync()) 
+                    return false;
+
+                var userRole = await _authService.GetUserRoleAsync();
+                
+                return userRole switch
+                {
+                    "superioradmin" => true,
+                    "lectureradmin" => await IsLecturerAssignedToCourseAsync(courseId),
+                    "courserepadmin" => await IsCourseRepAuthorizedForCourseAsync(courseId),
+                    _ => false
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking edit attendance permission for user {UserId}, course {CourseId}", userId, courseId);
+                return false;
+            }
+        }
+
+        public async Task<bool> CanStartAttendanceEventAsync(string userId, string courseId)
+        {
+            try
+            {
+                if (!await _authService.IsAuthenticatedAsync()) 
+                    return false;
+
+                var userRole = await _authService.GetUserRoleAsync();
+                
+                // Students cannot start attendance events
+                if (userRole == "student") 
+                    return false;
+
+                return userRole switch
+                {
+                    "superioradmin" => true,
+                    "lectureradmin" => await IsLecturerAssignedToCourseAsync(courseId),
+                    "courserepadmin" => await IsCourseRepAuthorizedForCourseAsync(courseId),
+                    _ => false
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking start attendance permission for user {UserId}, course {CourseId}", userId, courseId);
+                return false;
+            }
+        }
+
+        public async Task<bool> CanViewCourseAttendanceAsync(string userId, string courseId)
+        {
+            try
+            {
+                if (!await _authService.IsAuthenticatedAsync()) 
+                    return false;
+
+                var userRole = await _authService.GetUserRoleAsync();
+                
+                return userRole switch
+                {
+                    "superioradmin" => true,
+                    "lectureradmin" => await IsLecturerAssignedToCourseAsync(courseId),
+                    "courserepadmin" => await IsCourseRepAuthorizedForCourseAsync(courseId),
+                    "student" => await IsStudentEnrolledInCourseAsync(courseId),
+                    _ => false
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking view attendance permission for user {UserId}, course {CourseId}", userId, courseId);
+                return false;
+            }
+        }
+
+        public async Task<bool> CanEditCourseInfoAsync(string userId, string courseId)
+        {
+            try
+            {
+                if (!await _authService.IsAuthenticatedAsync()) 
+                    return false;
+
+                var userRole = await _authService.GetUserRoleAsync();
+                
+                return userRole switch
+                {
+                    "superioradmin" => true,
+                    "lectureradmin" => await IsLecturerAssignedToCourseAsync(courseId),
+                    _ => false
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking edit course info permission for user {UserId}, course {CourseId}", userId, courseId);
+                return false;
+            }
+        }
+
+        public async Task<bool> CanGenerateAdminIdAsync(string userId)
+        {
+            try
+            {
+                if (!await _authService.IsAuthenticatedAsync()) 
+                    return false;
+
+                var userRole = await _authService.GetUserRoleAsync();
+                return userRole == "superioradmin";
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking admin ID generation permission for user {UserId}", userId);
+                return false;
+            }
+        }
+
+        // Enhanced permission methods
         public async Task<bool> CanAccessOfflineModeAsync(string userId)
         {
-            var user = await GetCurrentUserAsync();
-            if (user == null || !user.Identity.IsAuthenticated) return false;
-            
-            // Superior admins don't have offline mode access
-            if (user.IsInRole("superioradmin")) return false;
-            
-            // Other roles can access offline mode
-            return user.IsInRole("lectureradmin") || user.IsInRole("courseadmin") || user.IsInRole("student");
+            try
+            {
+                if (!await _authService.IsAuthenticatedAsync()) 
+                    return false;
+
+                var userRole = await _authService.GetUserRoleAsync();
+                
+                // Superior admins don't have offline mode access for security
+                return userRole != "superioradmin";
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking offline mode permission for user {UserId}", userId);
+                return false;
+            }
         }
 
         public async Task<bool> CanManageUsersAsync(string userId)
         {
-            var user = await GetCurrentUserAsync();
-            return user?.IsInRole("superioradmin") ?? false;
+            try
+            {
+                if (!await _authService.IsAuthenticatedAsync()) 
+                    return false;
+
+                var userRole = await _authService.GetUserRoleAsync();
+                return userRole == "superioradmin";
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking user management permission for user {UserId}", userId);
+                return false;
+            }
         }
 
         public async Task<bool> CanViewReportsAsync(string userId, string courseId = null)
         {
-            var user = await GetCurrentUserAsync();
-            if (user == null || !user.Identity.IsAuthenticated) return false;
-            
-            // Superior admin can view all reports
-            if (user.IsInRole("superioradmin")) return true;
-            
-            // Lecturers can view reports for their courses
-            if (user.IsInRole("lectureradmin"))
-            {
-                return string.IsNullOrEmpty(courseId) || await IsUserAssignedToCourseAsync(userId, courseId);
-            }
-            
-            return false;
-        }
-        //i think auth service is handling his already
-        private async Task<ClaimsPrincipal> GetCurrentUserAsync()
-        {
-            var authState = await _authStateProvider.GetAuthenticationStateAsync();
-            return authState.User;
-        }
-        
-        private async Task<UserEntity> GetCurrentUserEntityAsync()
-        {
             try
             {
-                return await _storageService.GetItemAsync<UserEntity>("CurrentUser");
+                if (!await _authService.IsAuthenticatedAsync()) 
+                    return false;
+
+                var userRole = await _authService.GetUserRoleAsync();
+                
+                return userRole switch
+                {
+                    "superioradmin" => true,
+                    "lectureradmin" when string.IsNullOrEmpty(courseId) => true,
+                    "lectureradmin" => await IsLecturerAssignedToCourseAsync(courseId),
+                    "courserepadmin" when string.IsNullOrEmpty(courseId) => false, // Course reps can only view specific course reports
+                    "courserepadmin" => await IsCourseRepAuthorizedForCourseAsync(courseId),
+                    _ => false
+                };
             }
-            catch
+            catch (Exception ex)
             {
-                return null;
-            }
-        }
-        
-        private async Task<IReadOnlyList<CourseRefrence>> GetStudentCourseRefsAsync()
-        {
-            try
-            {
-                if (await _authService.GetUserRoleAsync() != "courserepadmin" ||
-                    await _authService.GetUserRoleAsync() != "student") return null;
-                string studentMatricNum = await _authService.GetMatricNumberAsync();
-               var studentCourses = await _courseService.GetStudentCoursesByMatricAsync(studentMatricNum);
-               var courseRefs = studentCourses.StudentCoursesRefs;
-               return courseRefs;
-            }
-            catch
-            {
-                return null;
+                _logger.LogError(ex, "Error checking view reports permission for user {UserId}, course {CourseId}", userId, courseId);
+                return false;
             }
         }
 
-        private async Task<bool> IsStudentTakingCourse(string courseCode)
+        // Private helper methods for authorization logic
+        private async Task<bool> IsLecturerAssignedToCourseAsync(string courseCode)
         {
             try
             {
-                var courseRefs = await GetStudentCourseRefsAsync();
-                if (courseRefs == null) return false;
-                var isTakingCourse = courseRefs.FirstOrDefault(course => course.CourseCode == courseCode) != null;
-                return isTakingCourse;
+                var lecturerId = await _authService.GetLecturerIdAsync();
+                if (string.IsNullOrEmpty(lecturerId)) 
+                    return false;
+
+                var course = await _courseService.GetCourseByIdAsync(courseCode);
+                if (course == null) 
+                    return false;
+
+                return course.LecturerIds.Contains(lecturerId);
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error checking lecturer assignment for course {CourseCode}", courseCode);
                 return false;
             }
         }
-        //next make for lecturer, then for course rep cehack if is in level befo can start attendance event
-        //ok yeah user entity i dont use so use course service sto attain course info
-        private async Task<bool> IsUserAssignedToCourseAsync(string userId, string courseId)
+
+        private async Task<bool> IsCourseRepAuthorizedForCourseAsync(string courseCode)
         {
             try
             {
-                var userEntity = await GetCurrentUserEntityAsync();
-                return userEntity?.AssignedCourseIds?.Contains(courseId) ?? false;
+                var matricNumber = await _authService.GetMatricNumberAsync();
+                if (string.IsNullOrEmpty(matricNumber)) 
+                    return false;
+
+                // Get course details to check level
+                var course = await _courseService.GetCourseByIdAsync(courseCode);
+                if (course == null) 
+                    return false;
+
+                // Get student's current level from their enrollment data
+                var studentCourse = await _courseService.GetStudentCoursesByMatricAsync(matricNumber);
+                if (studentCourse == null) 
+                    return false;
+
+                // Course rep can only manage courses for their current level
+                return studentCourse.StudentLevel == course.Level;
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error checking course rep authorization for course {CourseCode}", courseCode);
                 return false;
             }
         }
-        
-        private async Task<bool> IsStudentEnrolledInCourseAsync(string userId, string courseId)
+
+        private async Task<bool> IsStudentEnrolledInCourseAsync(string courseCode)
         {
             try
             {
-                var userEntity = await GetCurrentUserEntityAsync();
-                return userEntity?.AssignedCourseIds?.Contains(courseId) ?? false;
+                var matricNumber = await _authService.GetMatricNumberAsync();
+                if (string.IsNullOrEmpty(matricNumber)) 
+                    return false;
+
+                var studentCourse = await _courseService.GetStudentCoursesByMatricAsync(matricNumber);
+                if (studentCourse == null) 
+                    return false;
+
+                // Check if student is enrolled in the specific course
+                var courseRef = studentCourse.StudentCoursesRefs
+                    .FirstOrDefault(c => c.CourseCode == courseCode);
+
+                return courseRef != null && 
+                       courseRef.CourseEnrollmentStatus == CourseEnrollmentStatus.Enrolled;
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error checking student enrollment for course {CourseCode}", courseCode);
                 return false;
             }
+        }
+
+        // Additional helper for level-based course access validation
+        private async Task<bool> IsStudentLevelCompatibleWithCourseAsync(string courseCode)
+        {
+            try
+            {
+                var matricNumber = await _authService.GetMatricNumberAsync();
+                if (string.IsNullOrEmpty(matricNumber)) 
+                    return false;
+
+                var course = await _courseService.GetCourseByIdAsync(courseCode);
+                var studentCourse = await _courseService.GetStudentCoursesByMatricAsync(matricNumber);
+
+                if (course == null || studentCourse == null) 
+                    return false;
+
+                // Student's level should match or be higher than course level
+                return studentCourse.StudentLevel >= course.Level;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking student level compatibility for course {CourseCode}", courseCode);
+                return false;
+            }
+        }
+
+        // Batch permission checking for performance optimization
+        public async Task<Dictionary<string, bool>> CheckMultiplePermissionsAsync(string userId, 
+            List<(string permission, string courseId)> permissionChecks)
+        {
+            var results = new Dictionary<string, bool>();
+            
+            try
+            {
+                if (!await _authService.IsAuthenticatedAsync())
+                {
+                    foreach (var (permission, _) in permissionChecks)
+                    {
+                        results[permission] = false;
+                    }
+                    return results;
+                }
+
+                // Batch process permissions to reduce repeated auth service calls
+                var userRole = await _authService.GetUserRoleAsync();
+                
+                foreach (var (permission, courseId) in permissionChecks)
+                {
+                    results[permission] = permission switch
+                    {
+                        "CanEditAttendance" => await CanEditAttendanceAsync(userId, courseId),
+                        "CanStartAttendanceEvent" => await CanStartAttendanceEventAsync(userId, courseId),
+                        "CanViewCourseAttendance" => await CanViewCourseAttendanceAsync(userId, courseId),
+                        "CanEditCourseInfo" => await CanEditCourseInfoAsync(userId, courseId),
+                        _ => false
+                    };
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in batch permission checking for user {UserId}", userId);
+                // Return false for all permissions on error
+                foreach (var (permission, _) in permissionChecks)
+                {
+                    results[permission] = false;
+                }
+            }
+
+            return results;
         }
     }
 }

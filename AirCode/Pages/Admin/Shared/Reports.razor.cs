@@ -147,7 +147,7 @@ namespace AirCode.Pages.Admin.Shared
             }
         }
 
-        private AttendanceReport GenerateAttendanceReport(List<StudentCourse> studentsInCourse, List<AttendanceSession> courseSessions)
+        private AttendanceReport GenerateAttendanceReport(List<StudentCourse> studentsInCourse, List<SupabaseAttendanceSession> courseSessions)
         {
             var report = new AttendanceReport
             {

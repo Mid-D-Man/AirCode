@@ -8,7 +8,7 @@ public interface IOfflineSyncService
 {
     //wai
     Task<bool> SyncPendingRecordsAsync();
-    Task<SyncResult> ProcessOfflineAttendanceAsync(OfflineAttendanceRecord record);
+    Task<SyncResult> ProcessOfflineAttendanceAsync(OfflineAttendanceRecordModel recordModel);
     Task<SyncResult> SyncOfflineSessionAsync(OfflineSessionData session);
     Task SchedulePeriodicSync();
 }

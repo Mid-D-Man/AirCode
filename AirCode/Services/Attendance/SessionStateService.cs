@@ -128,7 +128,7 @@ public async Task RemoveStoredSessionAsync(string sessionId)
 
         public bool HasActiveSession(string courseId)
         {
-            return _activeSessions.Any(s => s.CourseId == courseId && DateTime.UtcNow < s.EndTime);
+            return _activeSessions.Any(s => s.CourseCode == courseId && DateTime.UtcNow < s.EndTime);
         }
 
         /// <summary>
@@ -141,7 +141,7 @@ public async Task RemoveStoredSessionAsync(string sessionId)
                 var persistentData = new PersistentSessionData
                 {
                     SessionId = session.SessionId,
-                    CourseId = session.CourseId,
+                    CourseId = session.CourseCode,
                     CourseName = session.CourseName,
                     StartTime = session.StartTime,
                     EndTime = session.EndTime,
@@ -231,7 +231,7 @@ public async Task RemoveStoredSessionAsync(string sessionId)
                     var activeSession = new ActiveSessionData
                     {
                         SessionId = persistentData.SessionId,
-                        CourseId = persistentData.CourseId,
+                        CourseCode = persistentData.CourseId,
                         CourseName = persistentData.CourseName,
                         StartTime = persistentData.StartTime,
                         EndTime = persistentData.EndTime,
@@ -317,7 +317,7 @@ public async Task RemoveStoredSessionAsync(string sessionId)
         {
             try
             {
-                var documentId = $"AttendanceEvent_{session.CourseId}";
+                var documentId = $"AttendanceEvent_{session.CourseCode}";
                 var eventFieldName = $"Event_{session.SessionId}_{session.StartTime:yyyyMMdd}";
                 
                 await _firestoreService.AddOrUpdateFieldAsync(
@@ -430,7 +430,7 @@ public async Task RemoveStoredSessionAsync(string sessionId)
     {
         public string SessionId { get; set; }
         public string CourseName { get; set; }
-        public string CourseId { get; set; }
+        public string CourseCode { get; set; }
         public DateTime StartTime { get; set; }
         public DateTime EndTime { get; set; }
         public int Duration { get; set; }

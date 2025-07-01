@@ -28,7 +28,7 @@ public partial class OfflineAttendanceEvent : ComponentBase, IDisposable
 
     // Core session management
     private OfflineSessionData currentOfflineSession = new();
-    private List<OfflineAttendanceRecord> pendingRecords = new();
+    private List<OfflineAttendanceRecordModel> pendingRecords = new();
     private List<OfflineSessionData> allOfflineSessions = new();
     
     // UI State Management
@@ -176,7 +176,7 @@ public partial class OfflineAttendanceEvent : ComponentBase, IDisposable
                 SessionId = sessionData.SessionId,
                 CreatedAt = DateTime.UtcNow,
                 SessionDetails = sessionData,
-                PendingAttendanceRecords = new List<OfflineAttendanceRecord>(),
+                PendingAttendanceRecords = new List<OfflineAttendanceRecordModel>(),
                 SyncStatus = SyncStatus.Pending
             };
 
@@ -239,7 +239,7 @@ public partial class OfflineAttendanceEvent : ComponentBase, IDisposable
 
         try
         {
-            var attendanceRecord = new OfflineAttendanceRecord
+            var attendanceRecord = new OfflineAttendanceRecordModel
             {
                 Id = Guid.NewGuid().ToString(),
                 SessionId = currentOfflineSession.SessionId,

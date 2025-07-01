@@ -32,7 +32,9 @@ using AirCode.Components.SharedPrefabs.Others;
         [Inject] private IFirestoreService FirestoreService { get; set; }
         [Inject] private ISupabaseEdgeFunctionService EdgeService { get; set; }
         [Inject] private IAttendanceSessionService AttendanceSessionService { get; set; }
-
+        
+        [Inject] private IFirestoreAttendanceService FirebaseAttendanceService { get; set; }
+        
         private SessionData sessionModel = new();
         private bool isSessionStarted = false;
         private bool isCreatingSession = false;
@@ -428,7 +430,7 @@ private async Task CheckForExistingSessionAsync()
             StateHasChanged();
 
             var activeSession = allActiveSessions.FirstOrDefault(s =>
-                s.CourseId == existingSession.CourseId &&
+                s.CourseCode == existingSession.CourseId &&
                 DateTime.UtcNow < s.EndTime);
 
             if (activeSession != null)
@@ -492,7 +494,7 @@ private async Task StartSessionAsync()
     }
 
     // Check if there's already an active session for this course
-    if (allActiveSessions.Any(s => s.CourseId == selectedCourse.CourseCode))
+    if (allActiveSessions.Any(s => s.CourseCode == selectedCourse.CourseCode))
     {
         restorationMessage = "Session already exists for this course";
         return;
@@ -515,7 +517,7 @@ private async Task StartSessionAsync()
             string.Empty;
 
         // Create Supabase attendance session
-        var attendanceSession = new AttendanceSession
+        var attendanceSession = new SupabaseAttendanceSession
         {
             SessionId = sessionModel.SessionId,
             CourseCode = sessionModel.CourseId,
@@ -552,7 +554,7 @@ private async Task StartSessionAsync()
         {
             SessionId = sessionModel.SessionId,
             CourseName = sessionModel.CourseName,
-            CourseId = sessionModel.CourseId,
+            CourseCode = sessionModel.CourseId,
             StartTime = sessionModel.StartTime,
             EndTime = sessionEndTime,
             Duration = sessionModel.Duration,
@@ -657,67 +659,9 @@ public async ValueTask DisposeAsync()
         {
             try
             {
-                // Get all students taking this course
-                var allStudentCourses = await CourseService.GetAllStudentCoursesAsync();
-                var studentsInCourse = allStudentCourses
-                    .Where(sc => sc.GetEnrolledCourses().Any(cr => cr.CourseCode == sessionModel.CourseId))
-                    .ToList();
-
-                // Build AttendanceRecords for each student
-                var attendanceRecords = new Dictionary<string, object>();
-                foreach (var studentCourse in studentsInCourse)
-                {
-                    //dont care abt temporal key in firebase database
-                    attendanceRecords[studentCourse.StudentMatricNumber] = new
-                    {
-                        MatricNumber = studentCourse.StudentMatricNumber,
-                        HasScannedAttendance = false,
-                        ScanTime = (DateTime?)null,
-                        IsOnlineScan = false
-                    };
-                }
-
-                var attendanceEventData = new
-                {
-                    SessionId = sessionModel.SessionId,
-                    CourseCode = sessionModel.CourseId,
-                    CourseName = sessionModel.CourseName,
-                    StartTime = sessionModel.StartTime,
-                    Duration = sessionModel.Duration,
-                    EndTime = sessionEndTime,
-                    Theme = selectedTheme,
-                    CreatedAt = DateTime.UtcNow,
-                    Status = "Active",
-                    TemporalKey = "Sukablak",
-                    AttendanceRecords = attendanceRecords
-                };
-
-                // Create document with course-based naming: AttendanceEvent_{CourseCode}
-                var documentId = $"AttendanceEvent_{sessionModel.CourseId}";
-
-                // Check if document exists, if so, add this as a field
-                var existingDoc = await FirestoreService.GetDocumentAsync<Dictionary<string, object>>("ATTENDANCE_EVENTS", documentId);
-
-                if (existingDoc != null)
-                {
-                    // Add new event as a field within existing document
-                    var eventFieldName = $"Event_{sessionModel.SessionId}_{sessionModel.StartTime:yyyyMMdd}";
-                    await FirestoreService.AddOrUpdateFieldAsync("ATTENDANCE_EVENTS", documentId, eventFieldName, attendanceEventData);
-                }
-                else
-                {
-                    // Create new document with first event
-                    var courseEventDocument = new Dictionary<string, object>
-                    {
-                        ["CourseCode"] = sessionModel.CourseId,
-                        ["CourseName"] = sessionModel.CourseName,
-                        ["CreatedAt"] = DateTime.UtcNow,
-                        ["LastEventAt"] = DateTime.UtcNow,
-                        [$"Event_{sessionModel.SessionId}_{sessionModel.StartTime:yyyyMMdd}"] = attendanceEventData
-                    };
-
-                    await FirestoreService.AddDocumentAsync("ATTENDANCE_EVENTS", courseEventDocument, documentId);
-                }
+               
+               await FirebaseAttendanceService.CreateAttendanceEventAsync(sessionModel.SessionId,sessionModel.CourseId,sessionModel.CourseName,DateTime.UtcNow,sessionModel.Duration,selectedTheme);
+               
             }
             catch (Exception ex)
             {
@@ -725,43 +669,7 @@ public async ValueTask DisposeAsync()
                 throw;
             }
         }
-private async Task EndSessionAsync()
-{
-    try
-    {
-        isEndingSession = true;
-       
-        if (currentActiveSession != null)
-        {
-            // Stop temporal key timer
-            temporalKeyUpdateTimer?.Dispose();
-    
-            // Update Firebase document to mark session as ended
-            await UpdateFirebaseAttendanceEventStatus("Ended");
 
-            // Remove from active sessions with persistence cleanup
-            await SessionStateService.RemoveActiveSessionAsync(currentActiveSession.SessionId);
-        }
-
-        await SessionStateService.RemoveCurrentSessionAsync("default");
-        await MigrateAttendanceDataToFirebase();
-
-        isSessionStarted = false;
-        currentActiveSession = null;
-        selectedCourse = null;
-        RefreshSessionLists();
-        StateHasChanged();
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"Error ending session: {ex.Message}");
-        isEndingSession = false;
-    }
-    finally
-    {
-        isEndingSession = false;
-    }
-}
 private async Task EndSession()
 {
     try
@@ -775,7 +683,10 @@ private async Task EndSession()
             temporalKeyUpdateTimer?.Dispose();
 
             // Update Firebase document to mark session as ended
-            await UpdateFirebaseAttendanceEventStatus("Ended");
+           bool completedSucess =  await FirebaseAttendanceService.CompleteAttendanceSessionAsync(currentActiveSession.SessionId,currentActiveSession.CourseCode);
+
+           if (!completedSucess) return;
+           await MigrateAttendanceDataToFirebase(currentActiveSession.SessionId,currentActiveSession.CourseCode);
 
             // Remove from active sessions
             SessionStateService.RemoveActiveSession(currentActiveSession.SessionId);
@@ -786,8 +697,7 @@ private async Task EndSession()
 
         // Clean up current session
         SessionStateService.RemoveCurrentSession("default");
-        await MigrateAttendanceDataToFirebase();
-
+     
         // Reset component state
         isSessionStarted = false;
         currentActiveSession = null;
@@ -855,41 +765,6 @@ private bool IsWarningMessage(string message)
     
             StateHasChanged();
         }
-        private async Task UpdateFirebaseAttendanceEventStatus(string status)
-        {
-            try
-            {
-                var documentId = $"AttendanceEvent_{sessionModel.CourseId}";
-                var eventFieldName = $"Event_{sessionModel.SessionId}_{sessionModel.StartTime:yyyyMMdd}";
-                var statusFieldName = $"{eventFieldName}.Status";
-                var endTimeFieldName = $"{eventFieldName}.ActualEndTime";
-
-                await FirestoreService.AddOrUpdateFieldAsync("ATTENDANCE_EVENTS", documentId, statusFieldName, status);
-                await FirestoreService.AddOrUpdateFieldAsync("ATTENDANCE_EVENTS", documentId, endTimeFieldName, DateTime.UtcNow);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error updating Firebase event status: {ex.Message}");
-            }
-        }
-
-        private async Task<string> GenerateQrCodePayloadWithTemporalKey()
-        {
-            string temporalKey = useTemporalKeyRefresh ? 
-                GenerateTemporalKey(sessionModel.SessionId, sessionModel.StartTime) : 
-                string.Empty;
-                
-            return await QRCodeDecoder.EncodeSessionDataAsync(
-                sessionModel.SessionId,
-                sessionModel.CourseId,
-                sessionModel.StartTime,
-                sessionModel.Duration,
-                useTemporalKeyRefresh,
-                allowOfflineSync,
-                securityFeatures,
-                temporalKey
-            );
-        }
 
         private void OpenFloatingQR()
         {
@@ -905,7 +780,7 @@ private bool IsWarningMessage(string message)
     {
         SessionId = session.SessionId,
         CourseName = session.CourseName,
-        CourseId = session.CourseId,
+        CourseId = session.CourseCode,
         StartTime = session.StartTime,
         EndTime = session.EndTime,
         Duration = session.Duration,
@@ -1018,92 +893,21 @@ private bool IsWarningMessage(string message)
             return Task.CompletedTask;
         }
 
-        private async Task ProcessAttendanceCode(string qrCode)
+        private async Task MigrateAttendanceDataToFirebase(string sessionId,string courseCode)
         {
             try
             {
-                // Create the main attendance session data for Supabase
-                var attendanceSessionData = new
-                {
-                    session_id = sessionModel.SessionId,
-                    course_code = sessionModel.CourseId,
-                    start_time = sessionModel.StartTime,
-                    duration = sessionModel.Duration,
-                    expiration_time = sessionEndTime,
-                    attendance_records = new List<object>(),
-                    created_at = DateTime.UtcNow,
-                    updated_at = DateTime.UtcNow
-                };
-
-                Console.WriteLine($"Attendance session data to be saved: {JsonSerializer.Serialize(attendanceSessionData, new JsonSerializerOptions { WriteIndented = true })}");
-
-                // For testing - create a sample attendance record
-                var testAttendanceRecord = new AttendanceRecord
-                {
-                    MatricNumber = "TEST001",
-                    HasScannedAttendance = true,
-                    IsOnlineScan = true
-                };
-
-                var result = await EdgeService.ProcessAttendanceAsync(qrCode, testAttendanceRecord);
-        
-                Console.WriteLine($"Processing attendance code: {qrCode}, result: {result.ToString()}");
+                // Get final attendance records from Supabase
+                var finalAttendanceData = await AttendanceSessionService.GetSessionByIdAsync(sessionId);
+            var records =    finalAttendanceData.GetAttendanceRecords();
+             
+                await FirebaseAttendanceService.UpdateAttendanceRecordsAsync(sessionId,courseCode,records);
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                Console.WriteLine($"Error processing attendance: {ex.Message}");
+                Console.WriteLine(e);
+                throw;
             }
-        }
-        private async Task EndSessionWithDataMigration()
-        {
-            try
-            {
-                isEndingSession = true;
-        
-                // Sync any remaining offline records first
-               // await OfflineSyncService.SyncPendingRecordsAsync();
-        
-                // Migrate attendance data from Supabase to Firebase
-                await MigrateAttendanceDataToFirebase();
-        
-                // Clean up Supabase working data (keep backup)
-               // await ArchiveSupabaseSessionData();
-        
-                // End session normally
-                 EndSession();
-            }
-            catch (Exception ex)
-            {
-                MID_HelperFunctions.DebugMessage($"Error ending session with migration: {ex.Message}", DebugClass.Exception);
-            }
-            finally
-            {
-                isEndingSession = false;
-            }
-        }
-//needs work
-        private async Task MigrateAttendanceDataToFirebase()
-        {
-            // Get final attendance records from Supabase
-            var finalAttendanceData = await AttendanceSessionService.GetActiveSessionsAsync();
-    
-            // Update Firebase with complete attendance records
-            var documentId = $"AttendanceEvent_{sessionModel.CourseId}";
-            var eventFieldName = $"Event_{sessionModel.SessionId}_{sessionModel.StartTime:yyyyMMdd}";
-    
-            await FirestoreService.AddOrUpdateFieldAsync(
-                "ATTENDANCE_EVENTS", 
-                documentId, 
-                $"{eventFieldName}.FinalAttendanceRecords", 
-                finalAttendanceData
-            );
-    
-            await FirestoreService.AddOrUpdateFieldAsync(
-                "ATTENDANCE_EVENTS", 
-                documentId, 
-                $"{eventFieldName}.Status", 
-                "Completed"
-            );
         }
         public void Dispose()
         {
