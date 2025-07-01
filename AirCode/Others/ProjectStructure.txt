@@ -1,7 +1,7 @@
 Project Structure Documentation
-Generated: Tue Jul  1 11:15:37 UTC 2025
+Generated: Tue Jul  1 14:50:20 UTC 2025
 Repository: Mid-D-Man/AirCode
-Commit: ba17f2df166ff93d4fe140a7bdfe6bae62511153
+Commit: e6d5cffd61ddbd95548e2cc801f28ce8b7bc413b
 ==================================
 
 Source Files:
@@ -68,7 +68,7 @@ Components/SharedPrefabs/Spinner/LoadingSpinner.razor.css
 CustomAccountFactory.cs
 Domain/Entities/CourseEntity.cs
 Domain/Entities/DepartmentEntity.cs
-Domain/Entities/OfflineAttendanceRecord.cs
+Domain/Entities/OfflineAttendanceRecordModel.cs
 Domain/Entities/ReportEntity.cs
 Domain/Entities/SessionEntity.cs
 Domain/Entities/UserEntity.cs
@@ -94,7 +94,7 @@ Layout/ClientLayout/ClientNavMenu.razor.css
 Layout/Main/MainLayout.razor
 Layout/Main/MainLayout.razor.css
 Models/QRCode/QRCodePayloadData.cs
-Models/Supabase/AttendanceSession.cs
+Models/Supabase/SupabaseAttendanceSession.cs
 Models/Supabase/TestData.cs
 Pages/Admin/Shared/CreateAttendanceEvent.razor
 Pages/Admin/Shared/CreateAttendanceEvent.razor.cs
