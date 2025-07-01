@@ -1,6 +1,7 @@
 
 using AirCode.Services.Storage;
 using Microsoft.AspNetCore.Components.Authorization;
+using Newtonsoft.Json;
 using Supabase.Postgrest.Models;
 using Supabase.Postgrest;
 using static Supabase.Postgrest.Constants;
@@ -167,22 +168,32 @@ namespace AirCode.Services.SupaBase
             }
         }
 
-        public async Task<List<TModel>> GetWithFilterAsync<TModel>(string columnName, Operator filterOperator, object value) where TModel : BaseModel, new()
+        public async Task<List<TModel>> GetWithFilterAsync<TModel>(string columnName, Operator filterOperator, object value) 
+            where TModel : BaseModel, new()
         {
             await EnsureInitializedAsync();
-            
+    
             try
             {
                 var result = await _client
                     .From<TModel>()
                     .Filter(columnName, filterOperator, value)
                     .Get();
-                
+        
                 return result?.Models ?? new List<TModel>();
+            }
+            catch (JsonException jsonEx)
+            {
+                _logger.LogError(jsonEx, "JSON deserialization error for {ModelType}. Column: {Column}, Value: {Value}", 
+                    typeof(TModel).Name, columnName, value);
+        
+                // Return empty list to prevent cascade failures
+                return new List<TModel>();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error filtering {ModelType} items", typeof(TModel).Name);
+                _logger.LogError(ex, "Database query error for {ModelType}. Column: {Column}, Value: {Value}", 
+                    typeof(TModel).Name, columnName, value);
                 return new List<TModel>();
             }
         }

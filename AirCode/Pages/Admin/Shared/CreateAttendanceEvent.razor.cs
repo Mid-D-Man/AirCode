@@ -893,20 +893,37 @@ private bool IsWarningMessage(string message)
             return Task.CompletedTask;
         }
 
-        private async Task MigrateAttendanceDataToFirebase(string sessionId,string courseCode)
+        private async Task MigrateAttendanceDataToFirebase(string sessionId, string courseCode)
         {
             try
             {
-                // Get final attendance records from Supabase
-                var finalAttendanceData = await AttendanceSessionService.GetSessionByIdAsync(sessionId);
-            var records =    finalAttendanceData.GetAttendanceRecords();
-             
-                await FirebaseAttendanceService.UpdateAttendanceRecordsAsync(sessionId,courseCode,records);
+                // Add null validation before database operations
+                if (string.IsNullOrEmpty(sessionId) || string.IsNullOrEmpty(courseCode))
+                {
+                    MID_HelperFunctions.DebugMessage("Invalid parameters for migration: SessionId={SessionId}, CourseCode={CourseCode}", DebugClass.Warning);
+                    MID_HelperFunctions.DebugMessage($"Invalid parameters for migration: SessionId={sessionId}, CourseCode={courseCode}",DebugClass.Warning);
+                    return;
+                }
+
+                // Use direct database query with error handling
+                var session = await AttendanceSessionService.GetSessionByIdAsync(sessionId);
+                if (session == null)
+                {
+                   MID_HelperFunctions.DebugMessage($"Session not found for migration for session: {sessionId}",DebugClass.Warning);
+                    return;
+                }
+
+                var attendanceRecords = session.GetAttendanceRecords();
+                if (attendanceRecords?.Any() == true)
+                {
+                    await FirebaseAttendanceService.UpdateAttendanceRecordsAsync(
+                        sessionId, courseCode, attendanceRecords);
+                }
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
-                Console.WriteLine(e);
-                throw;
+                MID_HelperFunctions.DebugMessage( "Migration failed for session {SessionId}", DebugClass.Exception);
+                throw; // Re-throw to maintain error handling flow
             }
         }
         public void Dispose()

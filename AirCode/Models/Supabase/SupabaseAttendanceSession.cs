@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
+using System.Text.Json.Serialization;
+using AirCode.Utilities.HelperScripts;
 using Supabase.Postgrest.Attributes;
 using Supabase.Postgrest.Models;
 
@@ -9,6 +11,7 @@ namespace AirCode.Models.Supabase
     [Table("attendance_sessions")]
     public class SupabaseAttendanceSession : BaseModel
     {
+        
         [PrimaryKey("id")]
         public long Id { get; set; }
         
@@ -48,14 +51,31 @@ namespace AirCode.Models.Supabase
         [Column("security_features")]
         public int SecurityFeatures { get; set; } = 0;
 
+    
         public List<AttendanceRecord> GetAttendanceRecords()
         {
             try
             {
-                return JsonSerializer.Deserialize<List<AttendanceRecord>>(AttendanceRecords) ?? new List<AttendanceRecord>();
+                if (string.IsNullOrEmpty(AttendanceRecords) || AttendanceRecords == "[]")
+                    return new List<AttendanceRecord>();
+
+                // Handle both array and malformed JSON structures
+                var options = new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true,
+                    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+                };
+
+                return JsonSerializer.Deserialize<List<AttendanceRecord>>(AttendanceRecords, options) 
+                       ?? new List<AttendanceRecord>();
             }
-            catch
+            catch (JsonException ex)
             {
+                //replace logger
+                MID_HelperFunctions.DebugMessage(
+                    $"Failed to deserialize attendance records for session. Raw data: {AttendanceRecords?.Length }",
+                    DebugClass.Exception); 
+                   
                 return new List<AttendanceRecord>();
             }
         }
