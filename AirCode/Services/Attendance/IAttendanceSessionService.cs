@@ -6,6 +6,9 @@ using static Supabase.Postgrest.Constants;
 
 namespace AirCode.Services.Attendance
 {
+    /// <summary>
+    /// attendance session service for supabase only
+    /// </summary>
     public interface IAttendanceSessionService
     {
         Task<AttendanceSession> CreateSessionAsync(AttendanceSession session);

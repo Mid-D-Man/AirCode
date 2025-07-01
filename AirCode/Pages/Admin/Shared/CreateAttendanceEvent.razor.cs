@@ -667,6 +667,7 @@ public async ValueTask DisposeAsync()
                 var attendanceRecords = new Dictionary<string, object>();
                 foreach (var studentCourse in studentsInCourse)
                 {
+                    //dont care abt temporal key in firebase database
                     attendanceRecords[studentCourse.StudentMatricNumber] = new
                     {
                         MatricNumber = studentCourse.StudentMatricNumber,
@@ -1080,7 +1081,7 @@ private bool IsWarningMessage(string message)
                 isEndingSession = false;
             }
         }
-
+//needs work
         private async Task MigrateAttendanceDataToFirebase()
         {
             // Get final attendance records from Supabase

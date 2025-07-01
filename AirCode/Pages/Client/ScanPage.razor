@@ -2,11 +2,15 @@
 @layout AirCode.Layout.ClientLayout.ClientLayout
 @inject IJSRuntime JSRuntime
 @using AirCode.Models.Supabase
+@using AirCode.Services.Auth
+@using AirCode.Services.Courses
 @using AirCode.Services.SupaBase
 @using ReactorBlazorQRCodeScanner
 @using AirCode.Utilities.HelperScripts
 @inject ISupabaseEdgeFunctionService EdgeService
 @inject QRCodeDecoder QRDecoder
+@inject IAuthService AuthService
+@inject ICourseService CourseService
 
 <div class="scan-attendance-page">
     <div class="scan-header">
@@ -87,7 +91,7 @@
 
     // TODO: Get actual user data from authentication service
     private string currentUserMatricNumber = "SukaBlak"; // temporary matric number 😂😂😂
-
+    private string deviceGUID = "N";
     protected override async Task OnInitializedAsync()
     {
         _onQrCodeScanAction = (code) => OnQrCodeScan(code);
@@ -97,6 +101,9 @@
         {
             await _qrCodeScannerJsInterop.Init(_onQrCodeScanAction);
             MID_HelperFunctions.DebugMessage("QR Scanner initialized successfully", DebugClass.Info);
+
+            currentUserMatricNumber = await AuthService.GetMatricNumberAsync();
+            deviceGUID = await AuthService.GetDeviceIdAsync();
         }
         catch (Exception ex)
         {
@@ -121,13 +128,26 @@
             {
                 // Decode the session data
                 var decodedSessionData = await QRDecoder.DecodeSessionDataAsync(code);
-            
+
                 if (decodedSessionData != null)
                 {
                     MID_HelperFunctions.DebugMessage($"Valid AirCode QR detected for course: {decodedSessionData.CourseCode}", DebugClass.Info);
-                
+                    var myCourses = await CourseService.GetStudentCoursesByMatricAsync(currentUserMatricNumber);
+                    var courseRefs = myCourses.GetEnrolledCourses();
+
+                    bool isTakingCourse = courseRefs.FirstOrDefault(course => course.CourseCode == decodedSessionData.CourseCode) != null;
+
+                    if (isTakingCourse)
+                    {
+                    
+
                     // Process attendance
                     await ProcessAttendanceWithNewPayload(code);
+                    }
+                    else
+                    {
+                        ShowResult("You are not taking this course", false);
+                    }
                 }
                 else
                 {
@@ -156,7 +176,9 @@
         {
             MatricNumber = currentUserMatricNumber,
             HasScannedAttendance = true,
-            IsOnlineScan = true
+            IsOnlineScan = true,
+            DeviceGUID = deviceGUID
+           
         };
     
         MID_HelperFunctions.DebugMessage($"Attendance record: {MID_HelperFunctions.ToJson(attendanceRecord)}", DebugClass.Log);

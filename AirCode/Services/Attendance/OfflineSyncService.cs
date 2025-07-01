@@ -6,8 +6,16 @@ using AirCode.Services.SupaBase;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using AttendanceRecord = AirCode.Models.Supabase.AttendanceRecord;
+
+
+
 namespace AirCode.Services.Attendance
 {
+    /// <summary>
+    /// offline sync service for offline handling, needs a bit of work regarding movement to firebase though
+    /// so make the firestore attendance service first then use it here and handle after propper sync, when session about to start
+    /// cheack for offline_attendance_records if they exist and for a the course code we attendancing move it there then delete the row
+    /// </summary>
     public class OfflineSyncService : IOfflineSyncService
     {
         private readonly ISupabaseDatabase _database;

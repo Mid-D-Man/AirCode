@@ -5,6 +5,7 @@ using AirCode.Domain.Enums;
 using AirCode.Models.Supabase;
 using AirCode.Services.Courses;
 using AirCode.Services.Attendance;
+using AirCode.Services.Firebase;
 using Course = AirCode.Domain.Entities.Course;
 namespace AirCode.Pages.Admin.Shared
 {
@@ -107,6 +108,9 @@ namespace AirCode.Pages.Admin.Shared
                 }
 
                 // Get all attendance sessions for the selected course
+                //ok this is the issue ya dumbass is trying to get active session instead of all sessions
+                //and its trying to get from supabase not firebase dam
+                //ok add a specific attendance event service for firebase
                 var allSessions = await AttendanceSessionService.GetActiveSessionsAsync();
                 var courseSessions = allSessions
                     .Where(s => s.CourseCode == selectedCourseCode)

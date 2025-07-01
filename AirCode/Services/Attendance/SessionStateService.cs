@@ -41,7 +41,7 @@ namespace AirCode.Services.Attendance
             await RestorePersistedSessions();
             await RecoverOrphanedSessions();
         }
-// Add to SessionStateService class
+//Retrives current stored sesssion
 public async Task<List<PersistentSessionData>> GetStoredSessionsAsync()
 {
     var persistedSessions = await GetPersistedSessionsAsync();

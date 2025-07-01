@@ -3,7 +3,9 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using AirCode.Domain.Entities;
 using AirCode.Domain.Enums;
+using AirCode.Pages.Admin.Shared;
 using AirCode.Services.Auth;
+using AirCode.Services.Courses;
 using AirCode.Services.Storage;
 using Microsoft.AspNetCore.Components.Authorization;
 
@@ -14,15 +16,17 @@ namespace AirCode.Services.Permissions
         private readonly IBlazorAppLocalStorageService _storageService;
         private readonly AuthenticationStateProvider _authStateProvider;
         private readonly IAuthService _authService;
-        
+        private readonly ICourseService _courseService;
         public PermissionService(
             IBlazorAppLocalStorageService storageService,
             AuthenticationStateProvider authStateProvider,
-            IAuthService authService)
+            IAuthService authService,
+            ICourseService courseService)
         {
             _storageService = storageService;
             _authStateProvider = authStateProvider;
             _authService = authService;
+            _courseService = courseService ?? throw new NullReferenceException("Missing course service");
         }
         
         public async Task<bool> CanEditAttendanceAsync(string userId, string courseId)
@@ -31,7 +35,7 @@ namespace AirCode.Services.Permissions
             if (user == null || !user.Identity.IsAuthenticated) return false;
             
             // Superior admin can edit any attendance
-            if (user.IsInRole("superioradmin")) return true;
+            if (await _authService.GetUserRoleAsync() == "superioradmin") return true;
                 
             // Course rep admin can edit attendance for their assigned courses
             if (user.IsInRole("courseadmin") && await IsUserAssignedToCourseAsync(userId, courseId))
@@ -54,7 +58,8 @@ namespace AirCode.Services.Permissions
                 
             // Superior admin can start any attendance event
             if (user.IsInRole("superioradmin")) return true;
-                
+            if (user.IsInRole("lectureradmin")) return true;
+            if (user.IsInRole("courserepadmin")) return true;
             // Check if admin is assigned to the course
             return await IsUserAssignedToCourseAsync(userId, courseId);
         }
@@ -135,7 +140,7 @@ namespace AirCode.Services.Permissions
             
             return false;
         }
-        
+        //i think auth service is handling his already
         private async Task<ClaimsPrincipal> GetCurrentUserAsync()
         {
             var authState = await _authStateProvider.GetAuthenticationStateAsync();
@@ -154,6 +159,39 @@ namespace AirCode.Services.Permissions
             }
         }
         
+        private async Task<IReadOnlyList<CourseRefrence>> GetStudentCourseRefsAsync()
+        {
+            try
+            {
+                if (await _authService.GetUserRoleAsync() != "courserepadmin" ||
+                    await _authService.GetUserRoleAsync() != "student") return null;
+                string studentMatricNum = await _authService.GetMatricNumberAsync();
+               var studentCourses = await _courseService.GetStudentCoursesByMatricAsync(studentMatricNum);
+               var courseRefs = studentCourses.StudentCoursesRefs;
+               return courseRefs;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private async Task<bool> IsStudentTakingCourse(string courseCode)
+        {
+            try
+            {
+                var courseRefs = await GetStudentCourseRefsAsync();
+                if (courseRefs == null) return false;
+                var isTakingCourse = courseRefs.FirstOrDefault(course => course.CourseCode == courseCode) != null;
+                return isTakingCourse;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+        //next make for lecturer, then for course rep cehack if is in level befo can start attendance event
+        //ok yeah user entity i dont use so use course service sto attain course info
         private async Task<bool> IsUserAssignedToCourseAsync(string userId, string courseId)
         {
             try

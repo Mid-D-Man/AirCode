@@ -6,7 +6,9 @@ using static Supabase.Postgrest.Constants;
 
 namespace AirCode.Services.Attendance
 {
-
+/// <summary>
+/// Attendance session service for supabase only
+/// </summary>
     public class AttendanceSessionService : IAttendanceSessionService
     {
         private readonly ISupabaseDatabase _database;
@@ -94,7 +96,7 @@ namespace AirCode.Services.Attendance
                 throw;
             }
         }
-
+//maybe use by id instead
         public async Task<List<AttendanceSession>> GetActiveSessionsAsync()
         {
             try
