@@ -1,9 +1,100 @@
-duplicate Course definitions - one in Domain/Entities and another in Models/Core. This is a common pattern in Clean Architecture but needs proper implementation:
+AirCode - Project Information & Architecture Notes
+====================================================
 
-Domain Entities: Should represent your business entities and rules - the core domain objects of your system.
-Models: Should be DTOs (Data Transfer Objects) used for specific contexts like API responses or UI.
+ARCHITECTURE PATTERN:
+- Clean Architecture implementation with Domain/Entities and Models separation
+- Domain Entities: Core business entities and rules
+- Models: DTOs for API responses, UI contexts, and data transfer
+- This separation enables maintainable, testable, and scalable codebase
 
-This is blazor wasm app with pwa for secure attendnance tracking using qr codes for higher institutions with emphesis on
-preserving data integrity functions both offline and online has lecturers and course reps as admins with diffrent roles
-and superior admin that manages all and add stuff like courses and generates admin ids for other admins e.t.c
+PROJECT TYPE & PURPOSE:
+- Blazor WebAssembly PWA for secure attendance tracking
+- Designed for higher education institutions
+- Emphasis on data integrity and security
+- Functions both offline and online with synchronization
+- Multi-role admin system with hierarchical permissions
 
+TECHNOLOGY STACK CORRECTIONS:
+- QR Scanner: Blazored QR Scanner (JavaScript wrapper), NOT Rust WASM
+- Local Storage: Blazored LocalStorage with encryption, NOT IndexedDB
+- Performance metrics: Awaiting comprehensive Lighthouse validation
+- Bundle optimization: Currently in progress for production deployment
+
+USER ROLES & HIERARCHY:
+1. Superior Admin - System-wide management, manually created in Auth0
+2. Lecturer Admin - Course management, requires Admin ID
+3. Course Rep Admin - Session management, requires Admin ID + Matriculation
+4. Student - Attendance scanning, requires Matriculation Number
+
+SECURITY ARCHITECTURE:
+- Auth0 OIDC + PKCE authentication flow
+- AES-256 encryption for sensitive data
+- HMAC signing for data integrity
+- Temporal key management for session security
+- Pre-registration validation against Firebase skeleton users
+- Role-based JWT token management
+
+DATABASE ARCHITECTURE:
+- Primary: Firebase Firestore (real-time synchronization)
+- Secondary: Supabase (session management, temporary storage)
+- Local: Blazored LocalStorage (encrypted offline storage)
+- Collections structure defined in Domain/Entities and Models/Supabase
+
+SETUP REQUIREMENTS:
+Required Free-Tier Accounts:
+1. Auth0 Tenant
+   - Application: Single Page Application type
+   - Roles: SuperiorAdmin, LecturerAdmin, CourseRepAdmin, Student
+   - Universal Login customization for metadata collection
+   - Pre-registration and post-login actions required
+
+2. Firebase Project
+   - Firestore enabled with default rules
+   - Configuration in wwwroot/index.html
+   - Collections: VALID_ADMIN_DOCS + entities from Domain layer
+
+3. Supabase Project
+   - Tables defined in Models/Supabase directory
+   - Blazor WASM package integration
+   - URL and AnonKey configuration
+
+DEVELOPMENT STATUS:
+- Core functionality: Complete
+- Security framework: Complete
+- Offline/online sync: Complete
+- Performance optimization: In progress
+- Some page logic: Implementation pending
+- UI/UX refinements: Ongoing
+
+SECURITY CONSIDERATIONS:
+- Demo credentials restricted to authorized sources
+- Production deployment requires complete credential replacement
+- Auth0 action implementation details omitted for security
+- Skeleton user validation prevents unauthorized account creation
+
+PERFORMANCE NOTES:
+- Bundle size optimization needed for production
+- Load time metrics pending comprehensive testing
+- JavaScript-based QR scanning performance varies by device
+- Lighthouse validation and performance benchmarks awaiting results
+
+FUTURE DEVELOPMENT:
+- Full-scale, easily adaptable institutional system
+- Enhanced performance optimization
+- Additional administrative features
+- Improved scalability
+- See FutureImprovements.cs for detailed roadmap
+
+DEVELOPER RESOURCES:
+- ProjectStructure.txt: Complete file overview
+- Service comments: Implementation details and integration notes
+- Domain/Entities: Business logic and data structures
+- Models/Supabase: Database table structures
+- Services layer: Integration patterns and security implementations
+
+PROJECT GOALS:
+- Build comprehensive attendance management system
+- Ensure easy replication across institutions
+- Maintain security-first development approach
+- Enable seamless offline/online functionality
+- Provide scalable, clean architecture foundation
