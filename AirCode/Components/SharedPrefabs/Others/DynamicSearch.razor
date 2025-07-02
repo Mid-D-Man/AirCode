@@ -148,19 +148,20 @@
     private Timer? _debounceTimer;
     private DotNetObjectReference<DynamicSearch>? _dotNetRef;
 
-    private string SearchTerm
+   [Parameter]
+public string SearchTerm
+{
+    get => _searchTerm;
+    set
     {
-        get => _searchTerm;
-        set
+        if (_searchTerm != value)
         {
-            if (_searchTerm != value)
-            {
-                _searchTerm = value;
-                OnSearchTermChanged();
-            }
+            _searchTerm = value?.Trim() ?? string.Empty; // Null safety and trimming
+            OnSearchTermChanged();
         }
     }
-
+}
+[Parameter] public EventCallback<string> SearchTermChanged { get; set; }
     private enum SearchMode
     {
         Suggestions,
@@ -181,19 +182,31 @@
         }
     }
 
-    private async void OnSearchTermChanged()
+   private async void OnSearchTermChanged()
+{
+    SelectedIndex = -1;
+    
+    await InvokeCallbacks();
+    
+    _debounceTimer?.Dispose();
+    _debounceTimer = new Timer(async _ => 
     {
-        SelectedIndex = -1;
-        
-        // Invoke the OnSearchChanged callback if it's set
-        if (OnSearchChanged.HasDelegate)
-        {
-            await OnSearchChanged.InvokeAsync(SearchTerm);
-        }
-        
-        _debounceTimer?.Dispose();
-        _debounceTimer = new Timer(async _ => await PerformSearch(), null, 300, Timeout.Infinite);
-    }
+        await InvokeAsync(async () => await PerformSearch());
+    }, null, 300, Timeout.Infinite);
+}
+
+private async Task InvokeCallbacks()
+{
+    var tasks = new List<Task>();
+    
+    if (SearchTermChanged.HasDelegate)
+        tasks.Add(SearchTermChanged.InvokeAsync(SearchTerm));
+    
+    if (OnSearchChanged.HasDelegate)
+        tasks.Add(OnSearchChanged.InvokeAsync(SearchTerm));
+    
+    await Task.WhenAll(tasks);
+}
 
     private async Task PerformSearch()
     {
