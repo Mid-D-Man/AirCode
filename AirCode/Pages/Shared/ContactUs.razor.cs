@@ -8,6 +8,12 @@ namespace AirCode.Pages.Shared
  /// </summary>
     public partial class ContactUs : ComponentBase
     {
+
+       [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
+    
+    private IJSObjectReference? jsModule;
+    private bool moduleLoaded = false;
+
         #region Constants
         private const string FAQ_SECTION = "faq";
         private const string GUIDES_SECTION = "guides";
@@ -54,10 +60,25 @@ namespace AirCode.Pages.Shared
         protected override async Task OnAfterRenderAsync(bool firstRender)
         {
             if (firstRender)
+        {
+            await LoadJavaScriptModule();
+        }
+        }
+        public async ValueTask DisposeAsync()
+    {
+        if (jsModule != null)
+        {
+            try
             {
-                await JSRuntime.InvokeVoidAsync("initializeContactAnimations");
+                await jsModule.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+                // Expected during circuit termination
             }
         }
+    }
+
         #endregion
 
         #region Data Models
@@ -124,6 +145,34 @@ namespace AirCode.Pages.Shared
             InitializeServiceStatuses();
             InitializeContactCategories();
         }
+private async Task LoadJavaScriptModule()
+    {
+        try
+        {
+            // Load the JavaScript module
+            jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
+                "import", "./Pages/Shared/ContactUs.razor.js");
+            
+            // Initialize contact animations using module reference
+            await jsModule.InvokeVoidAsync("initializeContactAnimations");
+            moduleLoaded = true;
+        }
+        catch (JSException ex)
+        {
+            // Fallback: Try global function
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("initializeContactAnimations");
+                moduleLoaded = true;
+            }
+            catch (JSException fallbackEx)
+            {
+                // Log error but don't crash the component
+                Console.WriteLine($"JavaScript initialization failed: {ex.Message}");
+                // Component continues to function without animations
+            }
+        }
+    }
 
         private void InitializeFaqs()
         {
@@ -324,30 +373,83 @@ namespace AirCode.Pages.Shared
             StateHasChanged();
         }
 
-        private async Task HandleFaqAction(string actionType)
+      private async Task HandleFaqAction(string actionType)
+    {
+        if (!moduleLoaded || jsModule == null)
+        {
+            // Graceful degradation - use NavigationManager instead
+            HandleActionWithoutJS(actionType);
+            return;
+        }
+
+        try
         {
             switch (actionType)
             {
                 case "navigate_login":
-                    await JSRuntime.InvokeVoidAsync("navigateToPage", "Authentication");
+                    await jsModule.InvokeVoidAsync("navigateToPage", "Authentication");
                     break;
                 case "navigate_scan":
-                    await JSRuntime.InvokeVoidAsync("navigateToPage", "Client/ScanPage");
+                    await jsModule.InvokeVoidAsync("navigateToPage", "Client/ScanPage");
                     break;
                 case "navigate_stats":
-                    await JSRuntime.InvokeVoidAsync("navigateToPage", "Client/ClientStats");
+                    await jsModule.InvokeVoidAsync("navigateToPage", "Client/ClientStats");
                     break;
                 case "navigate_courses":
-                    await JSRuntime.InvokeVoidAsync("navigateToPage", "Admin/LecturerCoursesPage");
+                    await jsModule.InvokeVoidAsync("navigateToPage", "Admin/LecturerCoursesPage");
                     break;
                 case "check_connection":
-                    await JSRuntime.InvokeVoidAsync("checkInternetConnection");
+                    await jsModule.InvokeVoidAsync("checkInternetConnection");
                     break;
                 case "clear_cache":
-                    await JSRuntime.InvokeVoidAsync("clearBrowserCache");
+                    await jsModule.InvokeVoidAsync("clearBrowserCache");
                     break;
             }
         }
+        catch (JSException ex)
+        {
+            // Fallback to C# navigation
+            HandleActionWithoutJS(actionType);
+        }
+    }
+
+    private void HandleActionWithoutJS(string actionType)
+    {
+        // Fallback navigation using Blazor NavigationManager
+        var navigationMap = new Dictionary<string, string>
+        {
+            { "navigate_login", "Authentication" },
+            { "navigate_scan", "Client/ScanPage" },
+            { "navigate_stats", "Client/ClientStats" },
+            { "navigate_courses", "Admin/LecturerCoursesPage" }
+        };
+
+        if (navigationMap.TryGetValue(actionType, out var route))
+        {
+            NavigationManager.NavigateTo(route);
+        }
+    }
+
+    private async Task ProcessContactSubmission()
+    {
+        if (jsModule != null)
+        {
+            await jsModule.InvokeVoidAsync("submitContactForm", new
+            {
+                subject = contactForm.Subject,
+                category = contactForm.Category,
+                message = contactForm.Message,
+                email = contactForm.Email,
+                timestamp = DateTime.UtcNow
+            });
+        }
+        else
+        {
+            // Implement server-side submission as fallback
+            await SubmitContactFormServerSide();
+        }
+    }
+
 
         private async Task NavigateToGuide(int guideId)
         {
