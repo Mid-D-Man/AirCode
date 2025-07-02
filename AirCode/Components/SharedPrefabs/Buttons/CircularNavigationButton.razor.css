@@ -9,12 +9,12 @@
 }
 
 .circular-button {
-    width: 66px; /* 10% increase from 60px */
+    width: 66px;
     height: 66px;
     border-radius: 50%;
     border: none;
-    background-color: var(--secondary);
-    color: var(--text-color);
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -23,6 +23,7 @@
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     position: relative;
     overflow: hidden;
+    border: 2px solid var(--border);
 }
 
 .circular-button::before {
@@ -48,14 +49,16 @@
 }
 
 .circular-button.primary {
-    background-color: var(--primary-color);
-    width: 83px; /* 10% increase from 75px */
+    background-color: var(--button-primary);
+    color: var(--button-text);
+    width: 83px;
     height: 83px;
     z-index: 2;
+    border-color: transparent;
 }
 
 .circular-button.primary:hover {
-    background-color: var(--primary-rgb);
+    background-color: var(--button-primary-hover);
     transform: translateY(-5px) scale(1.1);
 }
 
@@ -81,13 +84,13 @@
 }
 
 .button-icon {
-    width: 26px; /* 10% increase from 24px */
+    width: 26px;
     height: 26px;
     transition: transform 0.3s ease;
 }
 
 .circular-button.primary .button-icon {
-    width: 35px; /* 10% increase from 32px */
+    width: 35px;
     height: 35px;
 }
 
@@ -109,17 +112,19 @@
     margin-top: 0.75rem;
     transition: all 0.3s ease;
     font-weight: 500;
+    color: var(--text-secondary);
 }
 
 .circular-button.primary ~ .button-text {
     font-weight: 600;
     font-size: 0.8rem;
+    color: var(--text-primary);
 }
 
 .active-indicator {
     width: 6px;
     height: 6px;
-    background-color: var(--primary-color);
+    background-color: var(--button-primary);
     border-radius: 50%;
     margin-top: 6px;
     box-shadow: 0 2px 8px rgba(244, 67, 54, 0.4);
@@ -127,13 +132,19 @@
 }
 
 @keyframes glow {
-    from { box-shadow: 0 2px 8px rgba(244, 67, 54, 0.4); }
-    to { box-shadow: 0 2px 16px rgba(244, 67, 54, 0.6); }
+    from { 
+        box-shadow: 0 2px 8px rgba(244, 67, 54, 0.4); 
+    }
+    to { 
+        box-shadow: 0 2px 16px rgba(244, 67, 54, 0.6); 
+    }
 }
 
 .circular-button-container.active .circular-button {
-    background-color: var(--primary-color);
+    background-color: var(--button-primary);
+    color: var(--button-text);
     transform: scale(1.05);
+    border-color: transparent;
 }
 
 .circular-button-container.active .button-icon,
@@ -143,6 +154,7 @@
 
 .circular-button-container.active .button-text {
     font-weight: 600;
+    color: var(--text-primary);
 }
 
 @keyframes pulse {
@@ -161,31 +173,161 @@
     animation: pop 0.3s ease-out;
 }
 
+/* Light Mode Theme-specific styling */
+body:not(.dark-mode) .circular-button {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    border-color: var(--border);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.08);
+}
+
+body:not(.dark-mode) .circular-button:hover {
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.12);
+}
+
+body:not(.dark-mode) .circular-button.primary {
+    background-color: var(--primary-500);
+    color: #ffffff;
+}
+
+body:not(.dark-mode) .circular-button.primary:hover {
+    background-color: var(--primary-600);
+}
+
+body:not(.dark-mode) .active-indicator {
+    background-color: var(--primary-500);
+    box-shadow: 0 2px 8px rgba(15, 76, 117, 0.4);
+}
+
+body:not(.dark-mode) .active-indicator {
+    animation: glow-light 2s infinite alternate;
+}
+
+@keyframes glow-light {
+    from { 
+        box-shadow: 0 2px 8px rgba(15, 76, 117, 0.4); 
+    }
+    to { 
+        box-shadow: 0 2px 16px rgba(15, 76, 117, 0.6); 
+    }
+}
+
+/* Dark Mode Theme-specific styling */
+body.dark-mode .circular-button {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    border-color: var(--border);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-mode .circular-button:hover {
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.4);
+}
+
+body.dark-mode .circular-button.primary {
+    background-color: var(--gold-500);
+    color: var(--dark-bg-primary);
+}
+
+body.dark-mode .circular-button.primary:hover {
+    background-color: var(--gold-400);
+    box-shadow: 0 8px 15px rgba(245, 158, 11, 0.3);
+}
+
+body.dark-mode .circular-button.primary::after {
+    background: radial-gradient(circle, rgba(15, 15, 15, 0.3) 0%, transparent 70%);
+}
+
+body.dark-mode .active-indicator {
+    background-color: var(--gold-500);
+    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.5);
+}
+
+body.dark-mode .active-indicator {
+    animation: glow-dark 2s infinite alternate;
+}
+
+@keyframes glow-dark {
+    from { 
+        box-shadow: 0 2px 8px rgba(245, 158, 11, 0.5); 
+    }
+    to { 
+        box-shadow: 0 2px 16px rgba(245, 158, 11, 0.7); 
+    }
+}
+
+body.dark-mode .circular-button-container.active .circular-button {
+    background-color: var(--gold-500);
+    color: var(--dark-bg-primary);
+}
+
 /* Mobile responsive adjustments */
+@media (max-width: 768px) {
+    .circular-button {
+        width: 60px;
+        height: 60px;
+    }
+
+    .circular-button.primary {
+        width: 75px;
+        height: 75px;
+    }
+
+    .button-icon,
+    .button-content svg {
+        width: 24px;
+        height: 24px;
+    }
+
+    .circular-button.primary .button-icon,
+    .circular-button.primary .button-content svg {
+        width: 32px;
+        height: 32px;
+    }
+
+    .button-text {
+        font-size: 0.7rem;
+        margin-top: 0.5rem;
+    }
+
+    .circular-button-container {
+        margin: 0 0.25rem;
+    }
+}
+
 @media (max-width: 480px) {
     .circular-button {
-        width: 55px; /* 10% increase from 50px */
+        width: 55px;
         height: 55px;
     }
 
     .circular-button.primary {
-        width: 72px; /* 10% increase from 65px */
+        width: 72px;
         height: 72px;
     }
 
     .button-icon,
     .button-content svg {
-        width: 22px; /* 10% increase from 20px */
+        width: 22px;
         height: 22px;
     }
 
     .circular-button.primary .button-icon,
     .circular-button.primary .button-content svg {
-        width: 29px; /* 10% increase from 26px */
+        width: 29px;
         height: 29px;
     }
 
     .button-text {
-        font-size: 0.7rem;
+        font-size: 0.65rem;
+        margin-top: 0.4rem;
+    }
+
+    .circular-button:hover {
+        transform: translateY(-3px) scale(1.03);
+    }
+
+    .circular-button.primary:hover {
+        transform: translateY(-3px) scale(1.08);
     }
 }
