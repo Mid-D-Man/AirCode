@@ -1,19 +1,24 @@
 # AirCode - Secure Attendance Tracking System
 
+![AirCode Logo](wwwroot/svgs/AirCodeLogo_withBG.png)
+
 ![Security](https://img.shields.io/badge/Security-Enterprise%20Grade-crimson?style=for-the-badge)
 ![PWA](https://img.shields.io/badge/PWA-Enabled-87ceeb?style=for-the-badge)
 ![Offline](https://img.shields.io/badge/Offline-Capable-1e3a8a?style=for-the-badge)
 ![License](https://img.shields.io/badge/License-MIT-white?style=for-the-badge)
+![Status](https://img.shields.io/badge/Status-In%20Development-orange?style=for-the-badge)
 
 **Enterprise-grade secure attendance tracking for higher education institutions**
 
-[Live Demo](https://mid-d-man.github.io/AirCode/) • [Documentation](#documentation) • [Security](#security-features) • [Contributing](#contributing)
+[Live Demo](https://mid-d-man.github.io/AirCode/) • [Documentation](#documentation) • [Security](#security-features) • [Future Improvements](FutureImprovements.cs)
 
 ---
 
 ## 🎯 **Project Overview**
 
 AirCode is a **cybersecurity-focused** Progressive Web Application (PWA) designed for secure attendance tracking in higher education institutions. Built with **Blazor WebAssembly**, it combines cutting-edge security protocols with seamless offline/online functionality to ensure data integrity and prevent attendance fraud.
+
+> **⚠️ Development Status**: This application is actively under development. While most core features are complete, some pages may have incomplete logic implementation. Please check [FutureImprovements.cs](FutureImprovements.cs) for planned enhancements and current limitations.
 
 ### 🌟 **Key Highlights**
 
@@ -34,8 +39,8 @@ AirCode is a **cybersecurity-focused** Progressive Web Application (PWA) designe
 graph TB
     subgraph "Frontend Layer"
         A[Blazor WebAssembly PWA]
-        B[Rust QR Scanner - WASM]
-        C[JavaScript Interop]
+        B[Blazored QR Scanner]
+        C[JavaScript Interop Modules]
     end
     
     subgraph "Authentication Layer"
@@ -54,7 +59,7 @@ graph TB
     subgraph "Data Layer"
         K[Firebase Firestore - Primary]
         L[Supabase - Temporary/Sessions]
-        M[Local Storage - Offline]
+        M[Blazored LocalStorage - Offline]
     end
     
     A --> D
@@ -74,12 +79,12 @@ graph TB
 | Layer | Technology | Purpose |
 |-------|------------|---------|
 | **Frontend** | Blazor WebAssembly | Cross-platform UI framework |
-| **Scanner** | Rust + WebAssembly | High-performance QR code scanning |
+| **Scanner** | Blazored QR Scanner | JavaScript-wrapped QR code scanning |
 | **Authentication** | Auth0 OIDC + PKCE | Enterprise identity management |
 | **Primary Database** | Firebase Firestore | Real-time data synchronization |
 | **Secondary Database** | Supabase | Session management & edge functions |
 | **Cryptography** | AES-256 + HMAC | Data encryption & integrity |
-| **Offline Storage** | IndexedDB | Local data persistence |
+| **Offline Storage** | Blazored LocalStorage | Encrypted local data persistence |
 
 ---
 
@@ -170,84 +175,97 @@ graph TD
 
 ---
 
-## 🚀 **How It Works**
-
-### 📋 **Attendance Process Flow**
-
-<div align="center">
-
-```mermaid
-sequenceDiagram
-    participant L as Lecturer/Course Rep
-    participant S as System
-    participant DB as Database
-    participant ST as Student
-    
-    L->>S: Create Attendance Session
-    S->>S: Generate Temporal Keys
-    S->>S: Create Unique Session ID
-    S->>S: Generate Secure QR Code
-    S->>DB: Store Session (Supabase)
-    L->>ST: Display QR Code
-    ST->>S: Scan QR Code
-    S->>S: Validate Signature & Timing
-    S->>DB: Record Attendance
-    S->>DB: Sync to Firebase (Validation)
-    S->>L: Real-time Update
-```
-
-</div>
-
-### 🔄 **Offline/Online Synchronization**
-
-1. **Offline Mode**: Data stored locally with encryption
-2. **Background Sync**: Automatic upload when connection restored
-3. **Conflict Resolution**: Intelligent merging of offline/online data
-4. **Data Integrity**: Cryptographic validation during sync
-
----
-
-## 🏁 **Getting Started**
+## 🚀 **Getting Started**
 
 ### 📋 **Prerequisites**
 
 - .NET 7.0 SDK or later
-- Node.js 16+ (for WebAssembly tools)
-- Rust toolchain (for QR scanner compilation)
-- Firebase project with Firestore
-- Supabase project
-- Auth0 tenant configuration
+- Auth0 account (free tier)
+- Firebase account (free tier)
+- Supabase account (free tier)
 
-### ⚡ **Quick Start**
+### ⚡ **Quick Setup**
 
+1. **Clone the Repository**
 ```bash
-# Clone the repository
 git clone https://github.com/mid-d-man/AirCode.git
 cd AirCode
-
-# Install dependencies
-dotnet restore
-
-# Configure environment variables
-cp appsettings.json.example appsettings.json
-# Edit appsettings.json with your configuration
-
-# Build and run
-dotnet run
 ```
 
-### 🔧 **Configuration**
+2. **Install Dependencies**
+```bash
+dotnet restore
+```
+
+### 🔧 **Configuration Setup**
+
+#### 1. **Auth0 Setup**
+
+**Create Application:**
+- Create a new Single Page Application in Auth0
+- Configure callback URLs and CORS settings
+
+**Create Roles:**
+Create the following roles in Auth0:
+- `SuperiorAdmin`
+- `LecturerAdmin`
+- `CourseRepAdmin`
+- `Student`
+
+**Configure Actions:**
+You'll need to create Auth0 Actions for:
+- **Pre-Registration**: Validates admin IDs and matriculation numbers against Firebase
+- **Post-Login**: Assigns roles and adds role claims to JWT tokens
+
+**Universal Login Customization:**
+1. Go to Branding → Universal Login
+2. Click on the warning (⚠️) icon
+3. Edit the login HTML to collect:
+   - **Students**: Matriculation number
+   - **Course Reps**: Admin ID + matriculation number
+   - **Lecturers**: Admin ID only
+   - **Superior Admin**: Manually created in Auth0 with special admin ID
+
+#### 2. **Firebase Setup**
+
+**Firestore Configuration:**
+- Create a new Firebase project
+- Enable Firestore
+- Update the Firebase configuration in `wwwroot/index.html`
+- Review `wwwroot/js/firestoreModule.js` for implementation details
+
+**Required Collections:**
+Check the following locations for collection structures:
+- `Services/Firebase/FirestoreService.cs`
+- `Domain/Entities/` directory
+- `Domain/ValueObjects/` directory
+
+Key collections include:
+- `VALID_ADMIN_DOCS`
+- User management collections
+- Course and session data
+
+#### 3. **Supabase Setup**
+
+**Database Tables:**
+Create tables based on models in `Models/Supabase/` directory:
+- `SupabaseAttendanceSession.cs`
+- Additional models as referenced in the codebase
+
+**Supabase Package:**
+The project uses the Blazored Supabase package for WebAssembly.
+
+#### 4. **Update Configuration**
+
+Update `appsettings.json` with your service credentials:
 
 ```json
 {
   "Auth0": {
     "Domain": "your-domain.auth0.com",
     "ClientId": "your-client-id",
+    "Authority": "https://your-domain.auth0.com",
     "Audience": "your-api-audience"
-  },
-  "Firebase": {
-    "ApiKey": "your-firebase-api-key",
-    "ProjectId": "your-project-id"
   },
   "Supabase": {
     "Url": "your-supabase-url",
@@ -256,94 +274,66 @@ dotnet run
 }
 ```
 
+> **⚠️ Security Note**: The current configuration contains production keys that are restricted to authorized domains. Replace all credentials with your own service accounts.
+
+### 🏃 **Run the Application**
+
+```bash
+dotnet run
+```
+
 ---
 
-## 📱 **Features**
+## 📊 **Performance & Status**
 
-### ✨ **Core Functionality**
+> **🔧 Performance Optimization**: The application is currently undergoing performance optimization. Lighthouse scores and detailed metrics will be provided after completion of the performance enhancement phase.
 
-- 🎯 **QR Code Generation**: Secure, time-bound attendance codes
-- 📱 **Mobile Scanner**: High-performance Rust-based QR scanner
-- 📊 **Real-time Dashboard**: Live attendance monitoring
-- 📈 **Analytics & Reports**: Comprehensive attendance analytics
-- 🔔 **Notifications**: Real-time alerts and updates
-- 🌐 **PWA Support**: Install as native mobile app
-
-### 🎨 **User Experience**
-
-- 🌙 **Dark/Light Theme**: Adaptive UI with user preferences
-- 📱 **Responsive Design**: Optimized for all screen sizes
-- ⚡ **Lightning Fast**: WebAssembly performance
-- 🔄 **Offline First**: Works without internet connection
-- 🎭 **Role-Based UI**: Dynamic interface based on user permissions
-
-### 🔧 **Administrative Tools**
-
-- 👥 **User Management**: Bulk user operations
-- 📚 **Course Management**: Comprehensive course administration
-- 📅 **Session Scheduling**: Advanced scheduling system
-- 📊 **Reporting Suite**: Detailed attendance analytics
-- ⚙️ **System Configuration**: Flexible system settings
+**Current Status:**
+- ✅ Core functionality implemented
+- ✅ Security features operational
+- ⚠️ Some page logic incomplete
+- 🔧 Performance optimization in progress
+- 🔧 UI/UX refinements ongoing
 
 ---
 
 ## 🗂️ **Project Structure**
 
+For a complete overview of the project structure, see [ProjectStructure.txt](Others/ProjectStructure.txt).
+
 ```
 AirCode/
 ├── 📁 Components/          # Reusable UI components
-│   ├── Admin/              # Administrative components
-│   ├── Auth/               # Authentication components
-│   └── SharedPrefabs/      # Common UI elements
 ├── 📁 Domain/              # Business logic layer
-│   ├── Entities/           # Domain entities
-│   ├── Enums/              # System enumerations
-│   └── ValueObjects/       # Value objects
 ├── 📁 Services/            # Application services
-│   ├── Auth/               # Authentication services
-│   ├── Firebase/           # Firebase integration
-│   ├── Scanner/            # QR scanning services
-│   └── Security/           # Cryptographic services
 ├── 📁 Pages/               # Application pages
-├── 📁 Layout/              # Layout components
-└── 📁 wwwroot/             # Static assets
-    ├── js/                 # JavaScript modules
-    ├── css/                # Stylesheets
-    └── wasm/               # WebAssembly modules
+├── 📁 Models/              # Data models and DTOs
+├── 📁 wwwroot/             # Static assets
+│   ├── js/                 # JavaScript modules
+│   ├── css/                # Stylesheets
+│   └── svgs/               # Application logos and icons
+└── 📄 FutureImprovements.cs # Planned enhancements
 ```
 
 ---
 
-## 📊 **Performance Metrics**
+## 🔮 **Future Development**
 
-| Metric | Value | Description |
-|--------|-------|-------------|
-| **Bundle Size** | ~2.5MB | Optimized WebAssembly bundle |
-| **Cold Start** | ~1.2s | Initial application load time |
-| **QR Scan Speed** | ~100ms | Average scan-to-validation time |
-| **Offline Sync** | ~500ms | Average sync time per record |
-| **PWA Score** | 95/100 | Lighthouse PWA audit score |
+This project is actively evolving to become a comprehensive, easily adaptable attendance management system for higher education institutions. 
+
+**📋 Planned Improvements:**
+Please check the [FutureImprovements.cs](FutureImprovements.cs) file for detailed information about:
+- Upcoming features
+- Performance optimizations
+- Security enhancements
+- UI/UX improvements
+- Scalability improvements
 
 ---
 
 ## 🤝 **Contributing**
 
-We welcome contributions to AirCode! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
-
-### 🐛 **Bug Reports**
-
-Found a bug? Please create an issue with:
-- Detailed description
-- Steps to reproduce
-- Expected vs actual behavior
-- Environment details
-
-### 💡 **Feature Requests**
-
-Have an idea? We'd love to hear it! Please open an issue describing:
-- The problem you're trying to solve
-- Your proposed solution
-- Any alternative solutions considered
+We welcome contributions to improve AirCode's security, performance, and functionality. Please ensure you understand the current development status and check the Future Improvements file before contributing.
 
 ---
 
@@ -357,24 +347,23 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - **Auth0** for enterprise authentication solutions
 - **Firebase** for real-time database capabilities
-- **Supabase** for edge computing and temporary storage
-- **Rust Community** for WebAssembly toolchain
-- **Blazor Team** for the amazing framework
+- **Supabase** for edge computing and session management
+- **Blazored Community** for LocalStorage and QR scanning components
+- **Blazor Team** for the WebAssembly framework
 
 ---
 
 ## 📞 **Support**
 
-- 📧 **Email**: support@aircode.edu
-- 💬 **Discord**: [Join our community](https://discord.gg/aircode)
-- 📖 **Documentation**: [docs.aircode.edu](https://docs.aircode.edu)
 - 🐛 **Issues**: [GitHub Issues](https://github.com/mid-d-man/AirCode/issues)
+- 📖 **Documentation**: Check individual service files for implementation details
+- 🔧 **Setup Help**: Review the configuration sections above
 
 ---
 
 <div align="center">
 
-**Made with ❤️ for secure education**
+**Built for secure, scalable education technology**
 
 [![GitHub stars](https://img.shields.io/github/stars/mid-d-man/AirCode?style=social)](https://github.com/mid-d-man/AirCode/stargazers)
 [![GitHub forks](https://img.shields.io/github/forks/mid-d-man/AirCode?style=social)](https://github.com/mid-d-man/AirCode/network)
