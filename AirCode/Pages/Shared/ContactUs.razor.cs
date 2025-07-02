@@ -12,7 +12,8 @@ namespace AirCode.Pages.Shared
    
     private IJSObjectReference? jsModule;
     private bool moduleLoaded = false;
-
+[Inject]
+private NavigationManager NavigationManager { get; set; }
         #region Constants
         private const string FAQ_SECTION = "faq";
         private const string GUIDES_SECTION = "guides";
@@ -604,7 +605,11 @@ private async Task LoadJavaScriptModule()
 
             return isValid;
         }
-
+private async Task SubmitContactFormServerSide()
+{
+    // TODO: Implement your server-side form submission logic here.
+    await Task.CompletedTask;
+}
         private bool ValidateErrorReport()
         {
             var isValid = !string.IsNullOrWhiteSpace(errorReport.Description);
