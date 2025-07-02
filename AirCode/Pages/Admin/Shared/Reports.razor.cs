@@ -13,7 +13,7 @@ namespace AirCode.Pages.Admin.Shared
     {
         [Inject] private ICourseService CourseService { get; set; } = default!;
         [Inject] private IAttendanceSessionService AttendanceSessionService { get; set; } = default!;
-
+[Inject] private IFirestoreAttendanceService FirestoreAttendanceService { get; set; } = default!;
         // UI State
         private bool isLoading = false;
         private string errorMessage = string.Empty;
@@ -93,39 +93,21 @@ namespace AirCode.Pages.Admin.Shared
                 errorMessage = string.Empty;
                 showReport = false;
 
-                // Get all students taking the selected course (regardless of level - handles carryovers)
-                var allStudentCourses = await CourseService.GetAllStudentCoursesAsync();
-                var studentsInCourse = allStudentCourses
-                    .Where(sc => sc.StudentCoursesRefs.Any(cr => 
-                        cr.CourseCode == selectedCourseCode && 
-                        cr.CourseEnrollmentStatus == CourseEnrollmentStatus.Enrolled))
-                    .ToList();
+             var courseAttendanceData = await FirestoreAttendanceService
+            .GetCourseAttendanceEventsAsync(selectedCourseCode);
+        
+        if (!courseAttendanceData.Any())
+        {
+            errorMessage = "No attendance sessions found for this course";
+            return;
+        }
 
-                if (!studentsInCourse.Any())
-                {
-                    errorMessage = "No students found enrolled in this course";
-                    return;
-                }
-
-                // Get all attendance sessions for the selected course
-                //ok this is the issue ya dumbass is trying to get active session instead of all sessions
-                //and its trying to get from supabase not firebase dam
-                //ok add a specific attendance event service for firebase
-                var allSessions = await AttendanceSessionService.GetActiveSessionsAsync();
-                var courseSessions = allSessions
-                    .Where(s => s.CourseCode == selectedCourseCode)
-                    .OrderBy(s => s.StartTime)
-                    .ToList();
-
-                if (!courseSessions.Any())
-                {
-                    errorMessage = "No attendance sessions found for this course";
-                    return;
-                }
-
-                // Generate comprehensive report
-                currentReport = GenerateAttendanceReport(studentsInCourse, courseSessions);
-                
+        // Extract and transform Firestore events to session format
+        var courseSessions = ExtractSessionsFromFirestoreData(courseAttendanceData);
+        
+        // Generate comprehensive report
+        currentReport = GenerateAttendanceReport(studentsInCourse, courseSessions);
+        
                 // Convert to JSON for display
                 var options = new JsonSerializerOptions 
                 { 
@@ -146,7 +128,57 @@ namespace AirCode.Pages.Admin.Shared
                 StateHasChanged();
             }
         }
+private List<FirestoreAttendanceSession> ExtractSessionsFromFirestoreData(
+    Dictionary<string, object> firestoreData)
+{
+    var sessions = new List<FirestoreAttendanceSession>();
+    
+    foreach (var kvp in firestoreData)
+    {
+        if (kvp.Key.StartsWith("Event_") && kvp.Value is JsonElement eventElement)
+        {
+            var session = new FirestoreAttendanceSession
+            {
+                SessionId = eventElement.GetProperty("SessionId").GetString(),
+                CourseCode = eventElement.GetProperty("CourseCode").GetString(),
+                StartTime = eventElement.GetProperty("StartTime").GetDateTime(),
+                Duration = eventElement.GetProperty("Duration").GetInt32(),
+                AttendanceRecords = ExtractAttendanceRecords(eventElement)
+            };
+            sessions.Add(session);
+        }
+    }
+    
+    return sessions.OrderBy(s => s.StartTime).ToList();
+}
 
+private List<AttendanceRecord> ExtractAttendanceRecords(JsonElement eventElement)
+{
+    var records = new List<AttendanceRecord>();
+    
+    if (eventElement.TryGetProperty("AttendanceRecords", out var recordsElement))
+    {
+        foreach (var record in recordsElement.EnumerateObject())
+        {
+            var attendanceRecord = new AttendanceRecord
+            {
+                MatricNumber = record.Value.GetProperty("MatricNumber").GetString(),
+                HasScannedAttendance = record.Value.GetProperty("HasScannedAttendance").GetBoolean(),
+                ScanTime = record.Value.TryGetProperty("ScanTime", out var scanTime) && 
+                          scanTime.ValueKind != JsonValueKind.Null 
+                    ? scanTime.GetDateTime() 
+                    : (DateTime?)null,
+                IsOnlineScan = record.Value.GetProperty("IsOnlineScan").GetBoolean(),
+                DeviceGUID = record.Value.TryGetProperty("DeviceGUID", out var deviceGuid) 
+                    ? deviceGuid.GetString() 
+                    : null
+            };
+            records.Add(attendanceRecord);
+        }
+    }
+    
+    return records;
+}
         private AttendanceReport GenerateAttendanceReport(List<StudentCourse> studentsInCourse, List<SupabaseAttendanceSession> courseSessions)
         {
             var report = new AttendanceReport
@@ -245,6 +277,14 @@ namespace AirCode.Pages.Admin.Shared
                 errorMessage = $"Export failed: {ex.Message}";
             }
         }
+    }
+    public class FirestoreAttendanceSession
+{
+    public string SessionId { get; set; } = string.Empty;
+    public string CourseCode { get; set; } = string.Empty;
+    public DateTime StartTime { get; set; }
+    public int Duration { get; set; }
+    public List<AttendanceRecord> AttendanceRecords { get; set; } = new();
     }
 
     // Report Data Models
