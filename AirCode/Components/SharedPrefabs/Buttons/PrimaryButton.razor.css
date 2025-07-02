@@ -1,9 +1,9 @@
 .primary-button {
-    background-color: var(--facebook-blue);
+    background-color: var(--button-primary);
     color: var(--button-text-color);
     padding: 0.5rem 1rem;
     border-radius: 0.25rem;
-    transition: all 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     border: none;
     cursor: pointer;
     position: relative;
@@ -17,9 +17,9 @@
 }
 
 .primary-button:hover {
-    background-color: var(--hover-facebook-blue);
+    background-color: var(--button-primary-hover);
     transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
 .primary-button:active {
@@ -54,11 +54,12 @@
     height: 3px;
     width: 100%;
     background: linear-gradient(90deg,
-    transparent,
-    rgba(255, 255, 255, 0.8),
-    transparent);
+        transparent,
+        rgba(255, 255, 255, 0.8),
+        transparent);
     animation: loading-line-animation 1.5s infinite;
 }
+
 .primary-button:disabled {
     opacity: 0.6;
     cursor: not-allowed;
@@ -70,6 +71,7 @@
     box-shadow: none;
     background-color: var(--bs-gray, #cccccc);
 }
+
 @keyframes loading-line-animation {
     0% {
         left: -100%;
@@ -87,18 +89,57 @@
     z-index: 1;
 }
 
-/* Dark mode adjustments */
+/* Light mode - Cobalt blue theme */
+body:not(.dark-mode) .primary-button {
+    background-color: var(--primary-500);
+    color: #ffffff;
+}
+
+body:not(.dark-mode) .primary-button:hover {
+    background-color: var(--primary-600);
+}
+
+body:not(.dark-mode) .primary-button:focus {
+    box-shadow: 0 0 0 0.2rem rgba(15, 76, 117, 0.25);
+}
+
+/* Dark mode - Gold/Orange theme */
 body.dark-mode .primary-button {
-    background-color: var(--primary-700);
+    background-color: var(--gold-500);
+    color: var(--dark-bg-primary);
+    font-weight: 600;
 }
 
 body.dark-mode .primary-button:hover {
-    background-color: var(--primary-800);
+    background-color: var(--gold-400);
+    box-shadow: 0 4px 8px rgba(245, 158, 11, 0.3);
+}
+
+body.dark-mode .primary-button:focus {
+    box-shadow: 0 0 0 0.2rem rgba(245, 158, 11, 0.4);
 }
 
 body.dark-mode .loading-line {
     background: linear-gradient(90deg,
-    transparent,
-    rgba(255, 255, 255, 0.6),
-    transparent);
+        transparent,
+        rgba(15, 15, 15, 0.8),
+        transparent);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .primary-button {
+        padding: 0.625rem 1.25rem;
+        font-size: 0.9rem;
+        min-height: 42px;
+    }
+}
+
+@media (max-width: 480px) {
+    .primary-button {
+        padding: 0.75rem 1.5rem;
+        font-size: 0.95rem;
+        min-height: 44px;
+        width: 100%;
+    }
 }
