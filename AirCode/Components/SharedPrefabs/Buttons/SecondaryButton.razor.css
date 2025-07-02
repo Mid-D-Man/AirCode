@@ -1,19 +1,40 @@
 .secondary-button {
     background-color: transparent;
-    color: var(--primary-600);
+    color: var(--button-secondary);
     padding: 0.5rem 1rem;
     border-radius: 0.25rem;
-    transition: all 0.3s ease;
-    border: 1px solid var(--primary-600);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid var(--button-secondary);
     cursor: pointer;
     font-size: 0.875rem;
     font-weight: 500;
+    min-height: 38px;
+    position: relative;
+    overflow: hidden;
+}
+
+.secondary-button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--button-secondary);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: 0;
+}
+
+.secondary-button:hover::before {
+    opacity: 0.1;
 }
 
 .secondary-button:hover {
-    background-color: var(--primary-50);
-    border-color: var(--primary-700);
-    color: var(--primary-700);
+    border-color: var(--button-secondary-hover);
+    color: var(--button-secondary-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .secondary-button:focus {
@@ -21,13 +42,68 @@
     box-shadow: 0 0 0 0.2rem rgba(66, 103, 178, 0.25);
 }
 
+.secondary-button:active {
+    transform: translateY(0);
+}
+
+.secondary-button > * {
+    position: relative;
+    z-index: 1;
+}
+
+/* Light mode - Light blue secondary */
+body:not(.dark-mode) .secondary-button {
+    color: var(--secondary-600);
+    border-color: var(--secondary-600);
+}
+
+body:not(.dark-mode) .secondary-button:hover {
+    color: var(--secondary-700);
+    border-color: var(--secondary-700);
+}
+
+body:not(.dark-mode) .secondary-button::before {
+    background-color: var(--secondary-600);
+}
+
+body:not(.dark-mode) .secondary-button:focus {
+    box-shadow: 0 0 0 0.2rem rgba(14, 165, 233, 0.25);
+}
+
+/* Dark mode - Green secondary with gold accents */
 body.dark-mode .secondary-button {
-    color: var(--primary-300);
-    border-color: var(--primary-300);
+    color: var(--green-400);
+    border-color: var(--green-400);
 }
 
 body.dark-mode .secondary-button:hover {
-    background-color: rgba(33, 150, 243, 0.1);
-    border-color: var(--primary-400);
-    color: var(--primary-400);
+    color: var(--green-300);
+    border-color: var(--green-300);
+    box-shadow: 0 2px 4px rgba(34, 197, 94, 0.2);
+}
+
+body.dark-mode .secondary-button::before {
+    background-color: var(--green-400);
+}
+
+body.dark-mode .secondary-button:focus {
+    box-shadow: 0 0 0 0.2rem rgba(34, 197, 94, 0.3);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .secondary-button {
+        padding: 0.625rem 1.25rem;
+        font-size: 0.9rem;
+        min-height: 42px;
+    }
+}
+
+@media (max-width: 480px) {
+    .secondary-button {
+        padding: 0.75rem 1.5rem;
+        font-size: 0.95rem;
+        min-height: 44px;
+        width: 100%;
+    }
 }
