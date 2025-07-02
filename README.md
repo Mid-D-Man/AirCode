@@ -1,6 +1,6 @@
 # AirCode - Secure Attendance Tracking System
 
-![AirCode Logo](wwwroot/svgs/AirCodeLogo_withBG.png)
+![AirCode Logo](wwwroot/AirCode_LogoAndText_WithBG.png)
 
 ![Security](https://img.shields.io/badge/Security-Enterprise%20Grade-crimson?style=for-the-badge)
 ![PWA](https://img.shields.io/badge/PWA-Enabled-87ceeb?style=for-the-badge)
@@ -85,7 +85,7 @@ graph TB
 | **Secondary Database** | Supabase | Session management & edge functions |
 | **Cryptography** | AES-256 + HMAC | Data encryption & integrity |
 | **Offline Storage** | Blazored LocalStorage | Encrypted local data persistence |
-
+| **QR Code Generator** | Rust Class Library Packed using wasm | Fast and customizableqr  code generation|
 ---
 
 ## 🛡️ **Security Features**
