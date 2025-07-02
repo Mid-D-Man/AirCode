@@ -7,13 +7,14 @@ using AirCode.Services.Courses;
 using AirCode.Services.Attendance;
 using AirCode.Services.Firebase;
 using Course = AirCode.Domain.Entities.Course;
+
 namespace AirCode.Pages.Admin.Shared
 {
     public partial class Reports : ComponentBase
     {
         [Inject] private ICourseService CourseService { get; set; } = default!;
-        [Inject] private IAttendanceSessionService AttendanceSessionService { get; set; } = default!;
-[Inject] private IFirestoreAttendanceService FirestoreAttendanceService { get; set; } = default!;
+        [Inject] private IFirestoreAttendanceService FirestoreAttendanceService { get; set; } = default!;
+
         // UI State
         private bool isLoading = false;
         private string errorMessage = string.Empty;
@@ -93,21 +94,41 @@ namespace AirCode.Pages.Admin.Shared
                 errorMessage = string.Empty;
                 showReport = false;
 
-             var courseAttendanceData = await FirestoreAttendanceService
-            .GetCourseAttendanceEventsAsync(selectedCourseCode);
-        
-        if (!courseAttendanceData.Any())
-        {
-            errorMessage = "No attendance sessions found for this course";
-            return;
-        }
+                // Get students enrolled in the selected course
+                var allStudentCourses = await CourseService.GetAllStudentCoursesAsync();
+                var studentsInCourse = allStudentCourses
+                    .Where(sc => sc.StudentCoursesRefs.Any(cr => 
+                        cr.CourseCode == selectedCourseCode && 
+                        cr.CourseEnrollmentStatus == CourseEnrollmentStatus.Enrolled))
+                    .ToList();
 
-        // Extract and transform Firestore events to session format
-        var courseSessions = ExtractSessionsFromFirestoreData(courseAttendanceData);
-        
-        // Generate comprehensive report
-        currentReport = GenerateAttendanceReport(studentsInCourse, courseSessions);
-        
+                if (!studentsInCourse.Any())
+                {
+                    errorMessage = "No students found enrolled in this course";
+                    return;
+                }
+
+                // Get attendance events from Firebase for the selected course
+                var courseAttendanceData = await FirestoreAttendanceService.GetCourseAttendanceEventsAsync(selectedCourseCode);
+                
+                if (!courseAttendanceData.Any())
+                {
+                    errorMessage = "No attendance sessions found for this course";
+                    return;
+                }
+
+                // Extract and parse attendance events
+                var attendanceEvents = ExtractAttendanceEvents(courseAttendanceData);
+                
+                if (!attendanceEvents.Any())
+                {
+                    errorMessage = "No valid attendance events found for this course";
+                    return;
+                }
+
+                // Generate comprehensive report
+                currentReport = GenerateAttendanceReport(studentsInCourse, attendanceEvents);
+                
                 // Convert to JSON for display
                 var options = new JsonSerializerOptions 
                 { 
@@ -128,65 +149,117 @@ namespace AirCode.Pages.Admin.Shared
                 StateHasChanged();
             }
         }
-private List<FirestoreAttendanceSession> ExtractSessionsFromFirestoreData(
-    Dictionary<string, object> firestoreData)
-{
-    var sessions = new List<FirestoreAttendanceSession>();
-    
-    foreach (var kvp in firestoreData)
-    {
-        if (kvp.Key.StartsWith("Event_") && kvp.Value is JsonElement eventElement)
-        {
-            var session = new FirestoreAttendanceSession
-            {
-                SessionId = eventElement.GetProperty("SessionId").GetString(),
-                CourseCode = eventElement.GetProperty("CourseCode").GetString(),
-                StartTime = eventElement.GetProperty("StartTime").GetDateTime(),
-                Duration = eventElement.GetProperty("Duration").GetInt32(),
-                AttendanceRecords = ExtractAttendanceRecords(eventElement)
-            };
-            sessions.Add(session);
-        }
-    }
-    
-    return sessions.OrderBy(s => s.StartTime).ToList();
-}
 
-private List<AttendanceRecord> ExtractAttendanceRecords(JsonElement eventElement)
-{
-    var records = new List<AttendanceRecord>();
-    
-    if (eventElement.TryGetProperty("AttendanceRecords", out var recordsElement))
-    {
-        foreach (var record in recordsElement.EnumerateObject())
+        private List<FirebaseAttendanceEvent> ExtractAttendanceEvents(Dictionary<string, object> courseAttendanceData)
         {
-            var attendanceRecord = new AttendanceRecord
+            var events = new List<FirebaseAttendanceEvent>();
+
+            foreach (var kvp in courseAttendanceData)
             {
-                MatricNumber = record.Value.GetProperty("MatricNumber").GetString(),
-                HasScannedAttendance = record.Value.GetProperty("HasScannedAttendance").GetBoolean(),
-                ScanTime = record.Value.TryGetProperty("ScanTime", out var scanTime) && 
-                          scanTime.ValueKind != JsonValueKind.Null 
-                    ? scanTime.GetDateTime() 
-                    : (DateTime?)null,
-                IsOnlineScan = record.Value.GetProperty("IsOnlineScan").GetBoolean(),
-                DeviceGUID = record.Value.TryGetProperty("DeviceGUID", out var deviceGuid) 
-                    ? deviceGuid.GetString() 
-                    : null
-            };
-            records.Add(attendanceRecord);
+                // Skip metadata fields, only process event fields
+                if (!kvp.Key.StartsWith("Event_")) continue;
+
+                try
+                {
+                    // Parse the event data from JsonElement
+                    if (kvp.Value is JsonElement eventElement)
+                    {
+                        var eventData = ParseFirebaseAttendanceEvent(eventElement);
+                        if (eventData != null)
+                        {
+                            events.Add(eventData);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Log but continue processing other events
+                    Console.WriteLine($"Error parsing event {kvp.Key}: {ex.Message}");
+                }
+            }
+
+            return events.OrderBy(e => e.StartTime).ToList();
         }
-    }
-    
-    return records;
-}
-        private AttendanceReport GenerateAttendanceReport(List<StudentCourse> studentsInCourse, List<SupabaseAttendanceSession> courseSessions)
+
+        private FirebaseAttendanceEvent? ParseFirebaseAttendanceEvent(JsonElement eventElement)
+        {
+            try
+            {
+                var attendanceEvent = new FirebaseAttendanceEvent();
+
+                if (eventElement.TryGetProperty("SessionId", out var sessionId))
+                    attendanceEvent.SessionId = sessionId.GetString() ?? string.Empty;
+
+                if (eventElement.TryGetProperty("StartTime", out var startTime))
+                    attendanceEvent.StartTime = startTime.GetDateTime();
+
+                if (eventElement.TryGetProperty("Duration", out var duration))
+                    attendanceEvent.Duration = duration.GetInt32();
+
+                if (eventElement.TryGetProperty("Theme", out var theme))
+                    attendanceEvent.Theme = theme.GetString() ?? string.Empty;
+
+                // Parse attendance records
+                if (eventElement.TryGetProperty("AttendanceRecords", out var recordsElement))
+                {
+                    attendanceEvent.AttendanceRecords = new Dictionary<string, FirebaseAttendanceRecord>();
+
+                    foreach (var recordProperty in recordsElement.EnumerateObject())
+                    {
+                        var record = ParseFirebaseAttendanceRecord(recordProperty.Value);
+                        if (record != null)
+                        {
+                            attendanceEvent.AttendanceRecords[recordProperty.Name] = record;
+                        }
+                    }
+                }
+
+                return attendanceEvent;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private FirebaseAttendanceRecord? ParseFirebaseAttendanceRecord(JsonElement recordElement)
+        {
+            try
+            {
+                var record = new FirebaseAttendanceRecord();
+
+                if (recordElement.TryGetProperty("MatricNumber", out var matricNumber))
+                    record.MatricNumber = matricNumber.GetString() ?? string.Empty;
+
+                if (recordElement.TryGetProperty("HasScannedAttendance", out var hasScanned))
+                    record.HasScannedAttendance = hasScanned.GetBoolean();
+
+                if (recordElement.TryGetProperty("ScanTime", out var scanTime) && 
+                    scanTime.ValueKind != JsonValueKind.Null)
+                    record.ScanTime = scanTime.GetDateTime();
+
+                if (recordElement.TryGetProperty("IsOnlineScan", out var isOnline))
+                    record.IsOnlineScan = isOnline.GetBoolean();
+
+                if (recordElement.TryGetProperty("DeviceGUID", out var deviceGuid))
+                    record.DeviceGUID = deviceGuid.GetString();
+
+                return record;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private AttendanceReport GenerateAttendanceReport(List<StudentCourse> studentsInCourse, List<FirebaseAttendanceEvent> attendanceEvents)
         {
             var report = new AttendanceReport
             {
                 CourseCode = selectedCourseCode,
                 CourseLevel = selectedLevel,
                 GeneratedAt = DateTime.UtcNow,
-                TotalSessions = courseSessions.Count,
+                TotalSessions = attendanceEvents.Count,
                 StudentReports = new List<StudentAttendanceReport>()
             };
 
@@ -202,18 +275,17 @@ private List<AttendanceRecord> ExtractAttendanceRecords(JsonElement eventElement
                     AttendancePercentage = 0.0
                 };
 
-                // Check each session for this student's attendance
-                foreach (var session in courseSessions)
+                // Check each attendance event for this student's attendance
+                foreach (var attendanceEvent in attendanceEvents)
                 {
-                    var attendanceRecords = session.GetAttendanceRecords();
-                    var studentRecord = attendanceRecords
-                        .FirstOrDefault(ar => ar.MatricNumber == studentCourse.StudentMatricNumber);
+                    var studentRecord = attendanceEvent.AttendanceRecords
+                        .GetValueOrDefault(studentCourse.StudentMatricNumber);
 
                     var sessionRecord = new SessionAttendanceRecord
                     {
-                        SessionId = session.SessionId,
-                        SessionDate = session.StartTime,
-                        Duration = session.Duration,
+                        SessionId = attendanceEvent.SessionId,
+                        SessionDate = attendanceEvent.StartTime,
+                        Duration = attendanceEvent.Duration,
                         IsPresent = studentRecord?.HasScannedAttendance ?? false,
                         ScanTime = studentRecord?.ScanTime,
                         IsOnlineScan = studentRecord?.IsOnlineScan ?? false,
@@ -229,10 +301,10 @@ private List<AttendanceRecord> ExtractAttendanceRecords(JsonElement eventElement
                 }
 
                 // Calculate attendance percentage
-                if (courseSessions.Count > 0)
+                if (attendanceEvents.Count > 0)
                 {
                     studentReport.AttendancePercentage = 
-                        Math.Round((double)studentReport.TotalPresent / courseSessions.Count * 100, 2);
+                        Math.Round((double)studentReport.TotalPresent / attendanceEvents.Count * 100, 2);
                 }
 
                 report.StudentReports.Add(studentReport);
@@ -278,16 +350,27 @@ private List<AttendanceRecord> ExtractAttendanceRecords(JsonElement eventElement
             }
         }
     }
-    public class FirestoreAttendanceSession
-{
-    public string SessionId { get; set; } = string.Empty;
-    public string CourseCode { get; set; } = string.Empty;
-    public DateTime StartTime { get; set; }
-    public int Duration { get; set; }
-    public List<AttendanceRecord> AttendanceRecords { get; set; } = new();
+
+    // Firebase Data Models for Report Generation
+    public class FirebaseAttendanceEvent
+    {
+        public string SessionId { get; set; } = string.Empty;
+        public DateTime StartTime { get; set; }
+        public int Duration { get; set; }
+        public string Theme { get; set; } = string.Empty;
+        public Dictionary<string, FirebaseAttendanceRecord> AttendanceRecords { get; set; } = new();
     }
 
-    // Report Data Models
+    public class FirebaseAttendanceRecord
+    {
+        public string MatricNumber { get; set; } = string.Empty;
+        public bool HasScannedAttendance { get; set; }
+        public DateTime? ScanTime { get; set; }
+        public bool IsOnlineScan { get; set; }
+        public string? DeviceGUID { get; set; }
+    }
+
+    // Existing Report Data Models
     public class AttendanceReport
     {
         public string CourseCode { get; set; } = string.Empty;
