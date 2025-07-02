@@ -4,58 +4,79 @@
 @layout AirCode.Layout.ClientLayout.ClientLayout
 @inject NavigationManager NavigationManager
 @inject ILocalStorageService BlazorAppLocalStorage
+@inject IAuthService AuthService
+@inject IJSRuntime JSRuntime
 
 <div class="client-profile-page">
     <div class="profile-header">
         <div class="profile-avatar-container">
             <img src="@ProfileImagePath" alt="Profile" class="profile-avatar" />
-            <button class="change-avatar-btn" @onclick="TriggerFileInput">
-                <i class="oi oi-camera"></i>
-            </button>
         </div>
         <div class="profile-user-info">
             <h3>@UserName</h3>
             <p>@UserEmail</p>
+            <span class="role-badge">@UserRole</span>
         </div>
     </div>
 
     <div class="profile-sections">
         <div class="profile-section">
-            <h4>Personal Information</h4>
-            <div class="form-group">
-                <label>Full Name</label>
-                <input type="text" @bind="FullName" disabled="@(!IsEditing)" />
-            </div>
-            <div class="form-group">
-                <label>Phone Number</label>
-                <input type="tel" @bind="PhoneNumber" disabled="@(!IsEditing)" />
-            </div>
-        </div>
+            <h4>User Information</h4>
+            <div class="info-group">
+                <div class="info-item">
+                    <label>User ID</label>
+                    <div class="copyable-field">
+                        <input type="text" value="@UserId" readonly />
+                        <button class="copy-btn" @onclick="() => CopyToClipboard(UserId)">
+                            <i class="oi oi-clipboard"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                @if (!string.IsNullOrEmpty(MatricNumber))
+                {
+                    <div class="info-item">
+                        <label>Matric Number</label>
+                        <div class="copyable-field">
+                            <input type="text" value="@MatricNumber" readonly />
+                            <button class="copy-btn" @onclick="() => CopyToClipboard(MatricNumber)">
+                                <i class="oi oi-clipboard"></i>
+                            </button>
+                        </div>
+                    </div>
+                }
 
-        <div class="profile-section">
-            <h4>Change Password</h4>
-            @if (IsChangingPassword)
-            {
-                <div class="form-group">
-                    <label>Current Password</label>
-                    <input type="password" @bind="CurrentPassword" />
+                @if (!string.IsNullOrEmpty(LecturerId))
+                {
+                    <div class="info-item">
+                        <label>Lecturer ID</label>
+                        <div class="copyable-field">
+                            <input type="text" value="@LecturerId" readonly />
+                            <button class="copy-btn" @onclick="() => CopyToClipboard(LecturerId)">
+                                <i class="oi oi-clipboard"></i>
+                            </button>
+                        </div>
+                    </div>
+                }
+
+                <div class="info-item">
+                    <label>Device ID</label>
+                    <div class="copyable-field">
+                        <input type="text" value="@DeviceId" readonly />
+                        <button class="copy-btn" @onclick="() => CopyToClipboard(DeviceId)">
+                            <i class="oi oi-clipboard"></i>
+                        </button>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label>New Password</label>
-                    <input type="password" @bind="NewPassword" />
-                </div>
-                <div class="form-group">
-                    <label>Confirm New Password</label>
-                    <input type="password" @bind="ConfirmNewPassword" />
-                </div>
-            }
-            <button class="toggle-password-change" @onclick="TogglePasswordChange">
-                @(IsChangingPassword ? "Cancel" : "Change Password")
-            </button>
+            </div>
         </div>
 
         <div class="profile-section">
             <h4>App Settings</h4>
+            <div class="settings-notice">
+                <p><i class="oi oi-info"></i> Minimal settings available for now. More customization options will be added in future updates for a smoother experience.</p>
+            </div>
+            
             <div class="setting-item">
                 <div class="setting-info">
                     <span class="setting-title">Dark Mode</span>
@@ -70,240 +91,130 @@
                     </label>
                 </div>
             </div>
-
-            <div class="setting-item">
-                <div class="setting-info">
-                    <span class="setting-title">Two-Factor Authentication</span>
-                    <span class="setting-description">Add an extra layer of security to your account</span>
-                </div>
-                <div class="setting-control">
-                    <label class="toggle-switch">
-                        <input type="checkbox" 
-                               checked="@isTwoFactorEnabled" 
-                               @onchange="ToggleTwoFactor" />
-                        <span class="slider round"></span>
-                    </label>
-                </div>
-            </div>
-
-            <div class="setting-item">
-                <div class="setting-info">
-                    <span class="setting-title">Notification Preferences</span>
-                    <span class="setting-description">Manage how you receive notifications</span>
-                </div>
-                <div class="setting-control">
-                    <select class="notification-select" @bind="selectedNotificationPreference">
-                        <option value="all">All Notifications</option>
-                        <option value="important">Important Only</option>
-                        <option value="none">No Notifications</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="setting-item">
-                <div class="setting-info">
-                    <span class="setting-title">Data Collection</span>
-                    <span class="setting-description">Allow anonymous usage data collection</span>
-                </div>
-                <div class="setting-control">
-                    <label class="toggle-switch">
-                        <input type="checkbox" 
-                               checked="@isDataCollectionEnabled" 
-                               @onchange="ToggleDataCollection" />
-                        <span class="slider round"></span>
-                    </label>
-                </div>
-            </div>
-        </div>
-
-        <div class="profile-section">
-            <h4>Advanced Settings</h4>
-            <button class="reset-settings-btn" @onclick="ResetToDefaultSettings">
-                Reset to Default Settings
-            </button>
         </div>
     </div>
 
     <div class="profile-actions">
-        @if (IsEditing)
-        {
-            <button class="btn btn-save" @onclick="SaveChanges">Save Changes</button>
-            <button class="btn btn-cancel" @onclick="CancelEditing">Cancel</button>
-        }
-        else
-        {
-            <button class="btn btn-edit" @onclick="StartEditing">Edit Profile</button>
-        }
         <button class="btn btn-logout" @onclick="Logout">
             <i class="oi oi-account-logout"></i> Logout
         </button>
     </div>
 
-    @if (!string.IsNullOrEmpty(ErrorMessage))
+    @if (!string.IsNullOrEmpty(StatusMessage))
     {
-        <div class="error-message">@ErrorMessage</div>
+        <div class="status-message @(IsErrorMessage ? "error" : "success")">
+            @StatusMessage
+        </div>
     }
 </div>
 
 @code {
-    private ElementReference fileInput;
     private string ProfileImagePath = "/icons/user-profile.png";
-    private string UserName = "John Doe";
-    private string UserEmail = "john.doe@example.com";
-    private string FullName = "John Doe";
-    private string PhoneNumber = "+1 (123) 456-7890";
-    private bool IsEditing = false;
-    private bool IsChangingPassword = false;
-    private string CurrentPassword = "";
-    private string NewPassword = "";
-    private string ConfirmNewPassword = "";
-    private string ErrorMessage = "";
-
-    // Settings properties
+    private string UserName = "Loading...";
+    private string UserEmail = "Loading...";
+    private string UserRole = "Loading...";
+    private string UserId = "Loading...";
+    private string MatricNumber = "";
+    private string LecturerId = "";
+    private string DeviceId = "Loading...";
     private bool isDarkModeEnabled = false;
-    private bool isTwoFactorEnabled = false;
-    private bool isDataCollectionEnabled = false;
-    private string selectedNotificationPreference = "all";
+    private string StatusMessage = "";
+    private bool IsErrorMessage = false;
 
     protected override async Task OnInitializedAsync()
     {
-        // Load user profile data
-        // TODO: Load user data from user storage service
-        // var userData = await UserStorageService.GetCurrentUserAsync();
-
-        // Load settings from local storage
-        isDarkModeEnabled = await BlazorAppLocalStorage.GetItemAsync<bool>("darkMode");
-        isTwoFactorEnabled = await BlazorAppLocalStorage.GetItemAsync<bool>("twoFactor");
-        isDataCollectionEnabled = await BlazorAppLocalStorage.GetItemAsync<bool>("dataCollection");
-        selectedNotificationPreference = await BlazorAppLocalStorage.GetItemAsync<string>("notificationPreference") ?? "all";
-    }
-
-    private void TriggerFileInput()
-    {
-       // JSRuntime.InvokeVoidAsync("eval", "document.querySelector('input[type=file]').click()");
-    }
-
-    private async Task OnFileSelected(InputFileChangeEventArgs e)
-    {
-        var file = e.File;
-        if (file != null)
+        try
         {
-            // TODO: Implement file upload logic
-            // 1. Validate file type and size
-            // 2. Upload to server or convert to base64
-            // 3. Update ProfileImagePath
-        }
-    }
-
-    private void StartEditing()
-    {
-        IsEditing = true;
-    }
-
-    private void CancelEditing()
-    {
-        IsEditing = false;
-        IsChangingPassword = false;
-        ResetPasswordFields();
-    }
-
-    private async Task SaveChanges()
-    {
-        // Validate input
-        if (IsChangingPassword)
-        {
-            if (!ValidatePasswordChange())
+            // Load user data from AuthService
+            UserId = await AuthService.GetUserIdAsync() ?? "Not Available";
+            UserRole = await AuthService.GetUserRoleAsync() ?? "Not Available";
+            DeviceId = await AuthService.GetDeviceIdAsync() ?? "Not Available";
+            
+            // Load role-specific data
+            if (UserRole?.Contains("Student") == true || UserRole?.Contains("CourseRep") == true)
             {
-                return;
+                MatricNumber = await AuthService.GetMatricNumberAsync() ?? "";
             }
-            // TODO: Implement password change logic
+            
+            if (UserRole?.Contains("Lecturer") == true)
+            {
+                LecturerId = await AuthService.GetLecturerIdAsync() ?? "";
+            }
+
+            // Set display values (you can enhance this with actual user service later)
+            UserName = !string.IsNullOrEmpty(MatricNumber) ? $"Student {MatricNumber}" : 
+                      !string.IsNullOrEmpty(LecturerId) ? $"Lecturer {LecturerId}" : 
+                      $"User {UserId}";
+            UserEmail = "user@aircode.edu"; // Placeholder - replace with actual email service
+
+            // Load theme setting
+            isDarkModeEnabled = await BlazorAppLocalStorage.GetItemAsync<bool>("darkMode");
+            
+            StateHasChanged();
         }
-
-        // TODO: Save profile changes
-        IsEditing = false;
-        IsChangingPassword = false;
-    }
-
-    private bool ValidatePasswordChange()
-    {
-        if (string.IsNullOrWhiteSpace(CurrentPassword))
+        catch (Exception ex)
         {
-            ErrorMessage = "Current password is required.";
-            return false;
+            StatusMessage = "Error loading profile data";
+            IsErrorMessage = true;
+            StateHasChanged();
         }
-
-        if (string.IsNullOrWhiteSpace(NewPassword))
-        {
-            ErrorMessage = "New password is required.";
-            return false;
-        }
-
-        if (NewPassword != ConfirmNewPassword)
-        {
-            ErrorMessage = "New passwords do not match.";
-            return false;
-        }
-
-        ErrorMessage = "";
-        return true;
     }
 
-    private void TogglePasswordChange()
+    private async Task CopyToClipboard(string text)
     {
-        IsChangingPassword = !IsChangingPassword;
-        ResetPasswordFields();
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", text);
+            StatusMessage = "Copied to clipboard!";
+            IsErrorMessage = false;
+            StateHasChanged();
+            
+            // Clear message after 3 seconds
+            await Task.Delay(3000);
+            StatusMessage = "";
+            StateHasChanged();
+        }
+        catch
+        {
+            StatusMessage = "Failed to copy to clipboard";
+            IsErrorMessage = true;
+            StateHasChanged();
+        }
     }
 
-    private void ResetPasswordFields()
-    {
-        CurrentPassword = "";
-        NewPassword = "";
-        ConfirmNewPassword = "";
-    }
-
-    // Settings methods
     private async Task ToggleDarkMode(ChangeEventArgs e)
     {
-        isDarkModeEnabled = (bool)e.Value;
-        await BlazorAppLocalStorage.SetItemAsync("darkMode", isDarkModeEnabled);
-        // TODO: Actually implement dark mode theme switching
-    }
-
-    private async Task ToggleTwoFactor(ChangeEventArgs e)
-    {
-        isTwoFactorEnabled = (bool)e.Value;
-        await BlazorAppLocalStorage.SetItemAsync("twoFactor", isTwoFactorEnabled);
-        // TODO: Implement 2FA setup/disable logic
-    }
-
-    private async Task ToggleDataCollection(ChangeEventArgs e)
-    {
-        isDataCollectionEnabled = (bool)e.Value;
-        await BlazorAppLocalStorage.SetItemAsync("dataCollection", isDataCollectionEnabled);
-        // TODO: Handle data collection opt-in/out
-    }
-
-    private async Task ResetToDefaultSettings()
-    {
-        isDarkModeEnabled = false;
-        isTwoFactorEnabled = false;
-        isDataCollectionEnabled = false;
-        selectedNotificationPreference = "all";
-
-        await BlazorAppLocalStorage.SetItemAsync("darkMode", isDarkModeEnabled);
-        await BlazorAppLocalStorage.SetItemAsync("twoFactor", isTwoFactorEnabled);
-        await BlazorAppLocalStorage.SetItemAsync("dataCollection", isDataCollectionEnabled);
-        await BlazorAppLocalStorage.SetItemAsync("notificationPreference", selectedNotificationPreference);
-
-        StateHasChanged();
+        try
+        {
+            isDarkModeEnabled = (bool)e.Value;
+            await BlazorAppLocalStorage.SetItemAsync("darkMode", isDarkModeEnabled);
+            await JSRuntime.InvokeVoidAsync("window.themeSwitcher.toggleTheme");
+            
+            StatusMessage = isDarkModeEnabled ? "Dark mode enabled" : "Light mode enabled";
+            IsErrorMessage = false;
+            StateHasChanged();
+        }
+        catch
+        {
+            StatusMessage = "Failed to change theme";
+            IsErrorMessage = true;
+            StateHasChanged();
+        }
     }
 
     private async Task Logout()
     {
-        // TODO: Implement logout logic
-        // 1. Clear user session
-        // 2. Clear local storage if needed
-        // 3. Navigate to login page
-        NavigationManager.NavigateTo("logout");
+        try
+        {
+            // Clear any stored data if needed
+            await BlazorAppLocalStorage.RemoveItemAsync("darkMode");
+            NavigationManager.NavigateTo("/logout", true);
+        }
+        catch
+        {
+            StatusMessage = "Logout failed";
+            IsErrorMessage = true;
+            StateHasChanged();
+        }
     }
 }
