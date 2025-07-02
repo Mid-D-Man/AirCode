@@ -90,7 +90,7 @@ body {
     --bg-secondary: var(--light-bg-secondary);
     --bg-tertiary: var(--light-bg-tertiary);
 
-    /* Text Colors */
+    /* Text Colors - Dark text for light backgrounds */
     --text-primary: var(--light-text-primary);
     --text-secondary: var(--light-text-secondary);
     --text-tertiary: var(--light-text-tertiary);
@@ -142,7 +142,7 @@ body.dark-mode {
     --bg-secondary: var(--dark-bg-secondary) !important;
     --bg-tertiary: var(--dark-bg-tertiary);
 
-    /* Text Colors */
+    /* Text Colors - Light text for dark backgrounds */
     --text-primary: var(--dark-text-primary);
     --text-secondary: var(--dark-text-secondary);
     --text-tertiary: var(--dark-text-tertiary);
@@ -156,16 +156,16 @@ body.dark-mode {
     --nav-active: var(--gold-900);
     --nav-text: var(--dark-text-primary);
 
-    /* Button Colors - Light Green Primary */
-    --button-primary: var(--green-500);
-    --button-primary-hover: var(--green-600);
-    --button-secondary: var(--gold-600);
-    --button-secondary-hover: var(--gold-700);
+    /* Button Colors - Gold/Orange Primary for dark mode */
+    --button-primary: var(--gold-500);
+    --button-primary-hover: var(--gold-400);
+    --button-secondary: var(--green-600);
+    --button-secondary-hover: var(--green-500);
     --button-text: var(--dark-bg-primary);
 
     /* Icon Colors */
-    --icon-primary: var(--green-400);
-    --icon-secondary: var(--gold-400);
+    --icon-primary: var(--gold-400);
+    --icon-secondary: var(--green-400);
 
     /* Update backwards compatibility variables for dark mode */
     --bg-light: var(--dark-bg-secondary);
@@ -173,9 +173,11 @@ body.dark-mode {
     --text: var(--dark-text-primary);
     --bg: var(--dark-bg-primary);
     --border-color: var(--dark-border);
-    --primary: var(--green-500);
-    --primary-color: var(--green-500);
-    --primary-rgb: var(--green-200);
+    --primary: var(--gold-500);
+    --primary-color: var(--gold-500);
+    --primary-rgb: var(--gold-200);
+    --facebook-blue: var(--gold-500);
+    --hover-facebook-blue: var(--gold-400);
 }
 
 /* Helper classes to directly apply theme variables */
@@ -217,4 +219,4 @@ body.dark-mode {
 /* Ensure proper theme inheritance */
 * {
     transition: background-color 0.3s, color 0.3s, border-color 0.3s;
-}
+    }
