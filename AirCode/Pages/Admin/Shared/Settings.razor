@@ -1,6 +1,393 @@
 @page "/Admin/Settings"
-<h3>Settings</h3>
+@using AirCode.Services.Auth
+@using AirCode.Services.Permissions
+@inject IAuthService AuthService
+@inject IPermissionService PermissionService
+@inject IJSRuntime JSRuntime
+
+<div class="settings-container">
+    <div class="settings-header">
+        <h3>Settings</h3>
+        <div class="settings-badge">
+            <span class="badge-limited">Limited Preview</span>
+            <p class="settings-subtitle">Essential settings are available. More features will be added in future updates for a smoother experience.</p>
+        </div>
+    </div>
+
+    @if (!isLoading)
+    {
+        <div class="settings-sections">
+            <!-- User Information Section -->
+            <div class="settings-section">
+                <div class="section-header">
+                    <h4>User Information</h4>
+                    <div class="section-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                    </div>
+                </div>
+                <div class="settings-content">
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <label>User ID</label>
+                            <div class="copyable-field">
+                                <input type="text" value="@userId" readonly />
+                                <button class="copy-btn" @onclick="() => CopyToClipboard(userId)" title="Copy User ID">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="info-item">
+                            <label>Role</label>
+                            <div class="role-display">
+                                <span class="role-badge role-@userRole?.ToLower()">@userRole</span>
+                            </div>
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(lecturerId))
+                        {
+                            <div class="info-item">
+                                <label>Lecturer ID</label>
+                                <div class="copyable-field">
+                                    <input type="text" value="@lecturerId" readonly />
+                                    <button class="copy-btn" @onclick="() => CopyToClipboard(lecturerId)" title="Copy Lecturer ID">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        }
+
+                        @if (!string.IsNullOrEmpty(matricNumber))
+                        {
+                            <div class="info-item">
+                                <label>Matric Number</label>
+                                <div class="copyable-field">
+                                    <input type="text" value="@matricNumber" readonly />
+                                    <button class="copy-btn" @onclick="() => CopyToClipboard(matricNumber)" title="Copy Matric Number">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        }
+
+                        <div class="info-item">
+                            <label>Device ID</label>
+                            <div class="copyable-field">
+                                <input type="text" value="@deviceId" readonly />
+                                <button class="copy-btn" @onclick="() => CopyToClipboard(deviceId)" title="Copy Device ID">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Appearance Section -->
+            <div class="settings-section">
+                <div class="section-header">
+                    <h4>Appearance</h4>
+                    <div class="section-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="5"></circle>
+                            <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1"></path>
+                        </svg>
+                    </div>
+                </div>
+                <div class="settings-content">
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <label>Theme</label>
+                            <span class="setting-description">Switch between light and dark mode</span>
+                        </div>
+                        <button class="theme-toggle-btn" @onclick="ToggleTheme">
+                            <div class="theme-toggle-slider">
+                                <div class="theme-toggle-thumb"></div>
+                            </div>
+                            <span class="theme-label">@(isDarkMode ? "Dark" : "Light")</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- System Information Section -->
+            <div class="settings-section">
+                <div class="section-header">
+                    <h4>System Information</h4>
+                    <div class="section-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                            <line x1="8" y1="21" x2="16" y2="21"></line>
+                            <line x1="12" y1="17" x2="12" y2="21"></line>
+                        </svg>
+                    </div>
+                </div>
+                <div class="settings-content">
+                    <div class="system-info">
+                        <div class="info-row">
+                            <span class="info-label">Authentication Status:</span>
+                            <span class="status-badge @(isAuthenticated ? "status-active" : "status-inactive")">
+                                @(isAuthenticated ? "Authenticated" : "Not Authenticated")
+                            </span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Session Active:</span>
+                            <span class="status-badge status-active">Yes</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Permissions Overview -->
+            <div class="settings-section">
+                <div class="section-header">
+                    <h4>Permissions Overview</h4>
+                    <div class="section-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                        </svg>
+                    </div>
+                </div>
+                <div class="settings-content">
+                    <div class="permissions-grid">
+                        <div class="permission-item">
+                            <span class="permission-name">Generate Admin ID</span>
+                            <span class="permission-status @(canGenerateAdminId ? "status-granted" : "status-denied")">
+                                @(canGenerateAdminId ? "Granted" : "Denied")
+                            </span>
+                        </div>
+                    </div>
+                    <div class="permissions-note">
+                        <p><strong>Note:</strong> Course-specific permissions are available in individual course settings.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Debug Information (Development Only) -->
+            @if (showDebugInfo)
+            {
+                <div class="settings-section debug-section">
+                    <div class="section-header">
+                        <h4>Debug Information</h4>
+                        <button class="toggle-debug-btn" @onclick="ToggleDebugInfo">
+                            @(showDebugInfo ? "Hide" : "Show") Debug
+                        </button>
+                    </div>
+                    <div class="settings-content">
+                        <div class="debug-info">
+                            <div class="debug-item">
+                                <strong>JWT Token Preview:</strong>
+                                <div class="token-preview">
+                                    @(string.IsNullOrEmpty(jwtToken) ? "No token available" : 
+                                      jwtToken.Length > 50 ? $"{jwtToken.Substring(0, 50)}..." : jwtToken)
+                                </div>
+                            </div>
+                            <div class="debug-item">
+                                <strong>User Picture URL:</strong>
+                                <div class="picture-preview">
+                                    @(string.IsNullOrEmpty(userPicture) ? "No picture available" : userPicture)
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- Future Features Section -->
+        <div class="future-features">
+            <h4>Coming Soon</h4>
+            <div class="feature-list">
+                <div class="feature-item disabled">
+                    <span class="feature-icon">🔔</span>
+                    <span>Push Notifications Settings</span>
+                </div>
+                <div class="feature-item disabled">
+                    <span class="feature-icon">🌐</span>
+                    <span>Language Preferences</span>
+                </div>
+                <div class="feature-item disabled">
+                    <span class="feature-icon">📊</span>
+                    <span>Analytics Dashboard Settings</span>
+                </div>
+                <div class="feature-item disabled">
+                    <span class="feature-icon">🔐</span>
+                    <span>Advanced Security Options</span>
+                </div>
+                <div class="feature-item disabled">
+                    <span class="feature-icon">📱</span>
+                    <span>Mobile App Integration</span>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="loading-container">
+            <div class="loading-spinner"></div>
+            <p>Loading settings...</p>
+        </div>
+    }
+
+    <!-- Copy Notification -->
+    @if (showCopyNotification)
+    {
+        <div class="copy-notification">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 6L9 17l-5-5"></path>
+            </svg>
+            <span>Copied to clipboard!</span>
+        </div>
+    }
+</div>
 
 @code {
-    
+    private bool isLoading = true;
+    private bool isAuthenticated = false;
+    private bool isDarkMode = false;
+    private bool showDebugInfo = false;
+    private bool showCopyNotification = false;
+    private bool canGenerateAdminId = false;
+
+    private string userId = "";
+    private string userRole = "";
+    private string lecturerId = "";
+    private string matricNumber = "";
+    private string deviceId = "";
+    private string jwtToken = "";
+    private string userPicture = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUserSettings();
+    }
+
+    private async Task LoadUserSettings()
+    {
+        try
+        {
+            isAuthenticated = await AuthService.IsAuthenticatedAsync();
+            
+            if (isAuthenticated)
+            {
+                userId = await AuthService.GetUserIdAsync() ?? "Not available";
+                userRole = await AuthService.GetUserRoleAsync() ?? "Unknown";
+                deviceId = await AuthService.GetDeviceIdAsync() ?? "Not available";
+                
+                // Load role-specific information
+                try
+                {
+                    lecturerId = await AuthService.GetLecturerIdAsync() ?? "";
+                }
+                catch
+                {
+                    lecturerId = "";
+                }
+
+                try
+                {
+                    matricNumber = await AuthService.GetMatricNumberAsync() ?? "";
+                }
+                catch
+                {
+                    matricNumber = "";
+                }
+
+                try
+                {
+                    jwtToken = await AuthService.GetJwtTokenAsync() ?? "";
+                }
+                catch
+                {
+                    jwtToken = "";
+                }
+
+                try
+                {
+                    userPicture = await AuthService.GetUserPictureAsync() ?? "";
+                }
+                catch
+                {
+                    userPicture = "";
+                }
+
+                // Check permissions
+                try
+                {
+                    canGenerateAdminId = await PermissionService.CanGenerateAdminIdAsync(userId);
+                }
+                catch
+                {
+                    canGenerateAdminId = false;
+                }
+            }
+
+            // Check current theme
+            isDarkMode = await JSRuntime.InvokeAsync<bool>("eval", "document.body.classList.contains('dark-mode')");
+        }
+        catch (Exception ex)
+        {
+            await AuthService.LogAuthenticationMessageAsync($"Settings load error: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ToggleTheme()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("themeSwitcher.toggleTheme");
+            isDarkMode = !isDarkMode;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            await AuthService.LogAuthenticationMessageAsync($"Theme toggle error: {ex.Message}");
+        }
+    }
+
+    private async Task CopyToClipboard(string text)
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", text);
+            showCopyNotification = true;
+            StateHasChanged();
+
+            // Hide notification after 2 seconds
+            await Task.Delay(2000);
+            showCopyNotification = false;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            await AuthService.LogAuthenticationMessageAsync($"Copy to clipboard error: {ex.Message}");
+        }
+    }
+
+    private void ToggleDebugInfo()
+    {
+        showDebugInfo = !showDebugInfo;
+        StateHasChanged();
+    }
 }
