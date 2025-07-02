@@ -574,7 +574,10 @@ private async Task StartSessionAsync()
         {
             StartTemporalKeyUpdateTimer();
         }
-
+if (isCurrentUserCourseRep && !string.IsNullOrEmpty(currentUserMatricNumber))
+        {
+            await AutoSignCourseRepAsync();
+        }
         isSessionStarted = true;
         RefreshSessionLists();
         
@@ -872,7 +875,30 @@ private bool IsWarningMessage(string message)
                 _ => options
             };
         }
-
+private async Task AutoSignCourseRepAsync()
+{
+    try
+    {
+        bool success = await FirebaseAttendanceService.AutoSignCourseRepAsync(
+            sessionModel.SessionId, 
+            sessionModel.CourseId, 
+            currentUserMatricNumber);
+            
+        if (success)
+        {
+            Console.WriteLine($"Course rep auto-signed successfully: {currentUserMatricNumber}");
+        }
+        else
+        {
+            Console.WriteLine($"Failed to auto-sign course rep: {currentUserMatricNumber}");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error auto-signing course rep: {ex.Message}");
+        // Don't throw - session should still start even if auto-sign fails
+    }
+}
         private string FormatTimeRemaining()
         {
             if (!isSessionStarted || currentActiveSession == null) return "--:--:--";
