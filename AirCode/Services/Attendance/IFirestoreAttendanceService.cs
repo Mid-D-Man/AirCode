@@ -52,5 +52,9 @@ namespace AirCode.Services.Attendance
         /// Get attendance statistics for a course
         /// </summary>
         Task<Dictionary<string, object>> GetCourseAttendanceStatsAsync(string courseCode);
+        /// <summary>
+/// Auto-sign course rep when session is created
+/// </summary>
+Task<bool> AutoSignCourseRepAsync(string sessionId, string courseCode, string courseRepMatricNumber);
     }
 }
