@@ -416,25 +416,150 @@ namespace AirCode.Services.Attendance
                 return false;
             }
         }
-private async Task AutoSignCourseRepAsync()
+/// <summary>
+/// Get course representative for a specific course level
+/// </summary>
+public async Task<CourseRepSkeletonUser> GetCourseRepByCourseAsync(string courseCode)
 {
     try
     {
-        bool success = true;
-            
-        if (success)
+        // Get course details to determine level
+        var allStudentCourses = await _courseService.GetAllStudentCoursesAsync();
+        var courseLevel = allStudentCourses
+            .SelectMany(sc => sc.GetEnrolledCourses())
+            .FirstOrDefault(c => c.CourseCode == courseCode)?.Level;
+
+        if (courseLevel == null)
         {
-            Console.WriteLine($"Course rep auto-signed successfully: {currentUserMatricNumber}");
+            _logger.LogWarning($"Course {courseCode} not found or level not determined");
+            return null;
         }
-        else
+
+        // Get course rep admin document
+        var courseRepDoc = await _firestoreService.GetDocumentAsync<CourseRepAdminDocument>(
+            "VALID_ADMIN_IDS", "CourseRepAdminIdsDoc");
+
+        if (courseRepDoc?.Ids == null || !courseRepDoc.Ids.Any())
         {
-            Console.WriteLine($"Failed to auto-sign course rep: {currentUserMatricNumber}");
+            _logger.LogWarning("No course representatives found in admin document");
+            return null;
+        }
+
+        // Find course rep matching the course level
+        foreach (var adminData in courseRepDoc.Ids)
+        {
+            // Get student info to check level
+            var studentInfo = await GetStudentByMatricNumberAsync(adminData.MatricNumber);
+            if (studentInfo != null && studentInfo.Level == courseLevel.ToString())
+            {
+                return new CourseRepSkeletonUser
+                {
+                    AdminInfo = new CourseRepAdminInfo
+                    {
+                        AdminId = adminData.AdminId,
+                        MatricNumber = adminData.MatricNumber,
+                        CurrentUsage = adminData.CurrentUsage,
+                        MaxUsage = adminData.MaxUsage,
+                        UserIds = adminData.UserIds
+                    },
+                    StudentInfo = studentInfo
+                };
+            }
+        }
+
+        _logger.LogWarning($"No course representative found for level {courseLevel}");
+        return null;
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, $"Error getting course representative for course {courseCode}");
+        return null;
+    }
+}
+
+/// <summary>
+/// Helper method to get student information by matric number
+/// </summary>
+private async Task<StudentSkeletonUser> GetStudentByMatricNumberAsync(string matricNumber)
+{
+    try
+    {
+        // Get student document from Firebase
+        var studentDoc = await _firestoreService.GetDocumentAsync<StudentLevelDocument>(
+            "STUDENTS_MATRICULATION_NUMBERS", "students");
+
+        if (studentDoc?.ValidStudentMatricNumbers?.Contains(matricNumber) == true)
+        {
+            // Get additional student details if needed
+            // This assumes you have a way to determine student level and usage status
+            return new StudentSkeletonUser
+            {
+                MatricNumber = matricNumber,
+                Level = await GetStudentLevelAsync(matricNumber),
+                IsCurrentlyInUse = false, // You may need to implement this logic
+                CurrentUserId = ""
+            };
+        }
+
+        return null;
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, $"Error getting student info for matric {matricNumber}");
+        return null;
+    }
+}
+
+/// <summary>
+/// Helper method to determine student level based on matric number pattern or other logic
+/// </summary>
+private async Task<string> GetStudentLevelAsync(string matricNumber)
+{
+    // Implement your logic to determine student level
+    // This could be based on matric number pattern, database lookup, etc.
+    // For now, returning a placeholder - you'll need to implement this based on your business logic
+    
+    // Example implementation assuming matric number contains year info
+    if (matricNumber.Length >= 4)
+    {
+        var yearPrefix = matricNumber.Substring(0, 4);
+        var currentYear = DateTime.Now.Year;
+        
+        if (int.TryParse(yearPrefix, out var admissionYear))
+        {
+            var academicLevel = currentYear - admissionYear + 1;
+            return academicLevel.ToString();
+        }
+    }
+    
+    return "1"; // Default level
+}
+private async Task AutoSignCourseRepAsync(string sessionId, string courseCode)
+{
+    try
+    {
+        var courseRep = await GetCourseRepByCourseAsync(courseCode);
+        if (courseRep != null)
+        {
+            // Auto-sign the course rep
+            var success = await UpdateAttendanceRecordsAsync(sessionId, courseCode, 
+                new List<AttendanceRecord> 
+                {
+                    new AttendanceRecord
+                    {
+                        MatricNumber = courseRep.AdminInfo.MatricNumber,
+                        HasScannedAttendance = true,
+                        ScanTime = DateTime.UtcNow,
+                        IsOnlineScan = true
+                    }
+                });
+
+            _logger.LogInformation($"Course rep auto-signed: {courseRep.AdminInfo.MatricNumber}, Success: {success}");
         }
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Error auto-signing course rep: {ex.Message}");
-        // Don't throw - session should still start even if auto-sign fails
+        _logger.LogError(ex, $"Error auto-signing course rep for course {courseCode}");
     }
 }
         /// <summary>
