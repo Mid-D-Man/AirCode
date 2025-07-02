@@ -9,8 +9,7 @@ namespace AirCode.Pages.Shared
     public partial class ContactUs : ComponentBase
     {
 
-       [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
-    
+   
     private IJSObjectReference? jsModule;
     private bool moduleLoaded = false;
 
@@ -631,18 +630,7 @@ private async Task LoadJavaScriptModule()
             }
         }
 
-        private async Task ProcessContactSubmission()
-        {
-            // Implement actual contact form submission logic
-            await JSRuntime.InvokeVoidAsync("submitContactForm", new
-            {
-                subject = contactForm.Subject,
-                category = contactForm.Category,
-                message = contactForm.Message,
-                email = contactForm.Email,
-                timestamp = DateTime.UtcNow
-            });
-        }
+        
 
         private async Task ProcessErrorReport()
         {
