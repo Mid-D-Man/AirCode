@@ -1,6 +1,6 @@
 # AirCode - Secure Attendance Tracking System
 
-![AirCode Logo](wwwroot/AirCode_LogoAndText_WithBG.png)
+![AirCode Logo](https://mid-d-man.github.io/AirCode/wwwroot/AirCode_LogoAndText_WithBG.png)
 
 ![Security](https://img.shields.io/badge/Security-Enterprise%20Grade-crimson?style=for-the-badge)
 ![PWA](https://img.shields.io/badge/PWA-Enabled-87ceeb?style=for-the-badge)
