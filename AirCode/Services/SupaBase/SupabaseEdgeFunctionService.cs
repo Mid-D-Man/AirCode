@@ -15,7 +15,7 @@ namespace AirCode.Services.SupaBase
         private readonly string _supabaseKey;
         private readonly JsonSerializerOptions _jsonOptions;
         private readonly QRCodeDecoder _qrCodeDecoder;
-
+private const string K_OfflineAttendanceEdgeCaseName = "process-offline-attendance";
         public SupabaseEdgeFunctionService(
             HttpClient httpClient, 
             IConfiguration configuration,
