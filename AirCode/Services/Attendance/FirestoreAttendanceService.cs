@@ -2,7 +2,8 @@
 using System.Text.Json;
 using AirCode.Models.Supabase;
 using AirCode.Services.Courses;
-using AirCode.Services.Firebase;
+using AirCode.Services.Firebase;using AirCode.Pages.Admin.Superior.ManageUsers; 
+
 namespace AirCode.Services.Attendance
 {
     public class FirestoreAttendanceService : IFirestoreAttendanceService
@@ -534,32 +535,31 @@ private async Task<string> GetStudentLevelAsync(string matricNumber)
     
     return "1"; // Default level
 }
-private async Task AutoSignCourseRepAsync(string sessionId, string courseCode)
+
+// Add public method with correct signature
+public async Task<bool> AutoSignCourseRepAsync(string sessionId, string courseCode, string courseRepMatricNumber)
 {
     try
     {
-        var courseRep = await GetCourseRepByCourseAsync(courseCode);
-        if (courseRep != null)
-        {
-            // Auto-sign the course rep
-            var success = await UpdateAttendanceRecordsAsync(sessionId, courseCode, 
-                new List<AttendanceRecord> 
+        var success = await UpdateAttendanceRecordsAsync(sessionId, courseCode, 
+            new List<AttendanceRecord> 
+            {
+                new AttendanceRecord
                 {
-                    new AttendanceRecord
-                    {
-                        MatricNumber = courseRep.AdminInfo.MatricNumber,
-                        HasScannedAttendance = true,
-                        ScanTime = DateTime.UtcNow,
-                        IsOnlineScan = true
-                    }
-                });
+                    MatricNumber = courseRepMatricNumber,
+                    HasScannedAttendance = true,
+                    ScanTime = DateTime.UtcNow,
+                    IsOnlineScan = true
+                }
+            });
 
-            _logger.LogInformation($"Course rep auto-signed: {courseRep.AdminInfo.MatricNumber}, Success: {success}");
-        }
+        _logger.LogInformation($"Course rep auto-signed: {courseRepMatricNumber}, Success: {success}");
+        return success;
     }
     catch (Exception ex)
     {
         _logger.LogError(ex, $"Error auto-signing course rep for course {courseCode}");
+        return false;
     }
 }
         /// <summary>
