@@ -201,7 +201,7 @@ namespace AirCode.Domain.Entities
         [Required]
         [StringLength(10, ErrorMessage = "Course code cannot exceed 10 characters")]
         public string CourseCode { get; init; } // Primary identifier: CYB415, CSC484, AED994, etc.
-        
+        public LevelType Level {get;set;} 
         public CourseEnrollmentStatus CourseEnrollmentStatus { get; init; }
         
         // Additional tracking fields
