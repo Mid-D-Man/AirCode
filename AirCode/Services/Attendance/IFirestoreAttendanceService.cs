@@ -55,6 +55,10 @@ namespace AirCode.Services.Attendance
         /// <summary>
 /// Auto-sign course rep when session is created
 /// </summary>
-Task<bool> AutoSignCourseRepAsync(string sessionId, string courseCode, string courseRepMatricNumber);
-    }
+Task<bool> AutoSignCourseRepAsync(string sessionId, string courseCode);
+    
+    // Optional: Integrated event creation with auto-sign
+    Task<bool> CreateAttendanceEventWithCourseRepAsync(string sessionId, string courseCode, 
+        string courseName, DateTime startTime, int duration, string theme);
+}
 }
