@@ -467,7 +467,7 @@ private async Task<string> GetCourseLevelAsync(string courseCode)
     var allStudentCourses = await _courseService.GetAllStudentCoursesAsync();
     return allStudentCourses
         .SelectMany(sc => sc.GetEnrolledCourses())
-        .FirstOrDefault(c => c.CourseCode == courseCode)?.Level;
+        .FirstOrDefault(c => c.CourseCode == courseCode)?.Level.ToString();
 }
 
 /// <summary>
