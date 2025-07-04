@@ -216,11 +216,13 @@ namespace AirCode.Domain.Entities
             CourseEnrollmentStatus = enrollmentStatus;
             EnrollmentDate = enrollmentDate ?? DateTime.UtcNow;
             LastStatusChange = lastStatusChange ?? DateTime.UtcNow;
+            Level = CourseHelper.GetLevelType(CourseCode);
         }
         public CourseRefrence(string courseCode, CourseEnrollmentStatus courseEnrollmentStatus)
         {
             CourseCode = courseCode;
             CourseEnrollmentStatus = courseEnrollmentStatus;
+            Level = CourseHelper.GetLevelType(CourseCode);
         }
         // Factory method for creating new course reference
         public static CourseRefrence Create(string courseCode, CourseEnrollmentStatus enrollmentStatus = CourseEnrollmentStatus.Enrolled)
@@ -250,3 +252,34 @@ namespace AirCode.Domain.Entities
         }
     }
 }
+
+
+public static class CourseHelper
+{
+    public static LevelType GetLevelType(string courseCode)
+    {
+        if (string.IsNullOrWhiteSpace(courseCode) || courseCode.Length < 4)
+            throw new ArgumentException("Invalid course code format.");
+
+        // Extract the numeric part of the course code
+        string numericPart = new string(courseCode.Where(char.IsDigit).ToArray());
+
+        if (string.IsNullOrEmpty(numericPart))
+            throw new ArgumentException("Course code does not contain a numeric part.");
+
+        // Get the first digit of the numeric part
+        char firstDigit = numericPart[0];
+
+        return firstDigit switch
+        {
+            '1' => LevelType.Level100,
+            '2' => LevelType.Level200,
+            '3' => LevelType.Level300,
+            '4' => LevelType.Level400,
+            '5' => LevelType.Level500,
+            _ => LevelType.LevelExtra
+        };
+    }
+}
+
+
