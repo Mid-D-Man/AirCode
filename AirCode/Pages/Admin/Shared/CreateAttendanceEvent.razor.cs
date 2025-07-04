@@ -885,10 +885,10 @@ private async Task AutoSignCourseRepAsync()
 {
     try
     {
+    
         bool success = await FirebaseAttendanceService.AutoSignCourseRepAsync(
             sessionModel.SessionId, 
-            sessionModel.CourseId, 
-            currentUserMatricNumber);
+            sessionModel.CourseId);
             
         if (success)
         {
