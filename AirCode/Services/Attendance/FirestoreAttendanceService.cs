@@ -2,7 +2,8 @@
 using System.Text.Json;
 using AirCode.Models.Supabase;
 using AirCode.Services.Courses;
-using AirCode.Services.Firebase;using AirCode.Pages.Admin.Superior.ManageUsers; 
+using AirCode.Services.Firebase;
+using AirCode.Domain.ValueObjects; 
 
 namespace AirCode.Services.Attendance
 {
