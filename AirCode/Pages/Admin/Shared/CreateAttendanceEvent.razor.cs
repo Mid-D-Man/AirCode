@@ -17,7 +17,7 @@ using AirCode.Services.Firebase;
 using AirCode.Domain.Entities;
 using SessionData = AirCode.Services.Attendance.SessionData;
 using AirCode.Components.SharedPrefabs.Others;
-
+using AirCode.Services.Auth;
     public partial class CreateAttendanceEvent : ComponentBase, IDisposable
     {
         /// <summary>
@@ -32,7 +32,7 @@ using AirCode.Components.SharedPrefabs.Others;
         [Inject] private IFirestoreService FirestoreService { get; set; }
         [Inject] private ISupabaseEdgeFunctionService EdgeService { get; set; }
         [Inject] private IAttendanceSessionService AttendanceSessionService { get; set; }
-        
+        [Inject] private IAuthService AuthService {get;set;} 
         [Inject] private IFirestoreAttendanceService FirebaseAttendanceService { get; set; }
         
         private SessionData sessionModel = new();
@@ -73,6 +73,9 @@ private string restorationMessage = string.Empty;
 private List<SessionData> storedSessions = new();
 private bool showSessionRestoreDialog = false;
 private SessionData selectedStoredSession;
+public bool isCurrentUserCourseRep = false;
+public string currentUserMatricNumber = String.Empty;
+
 
 protected override async Task OnInitializedAsync()
 {
@@ -81,6 +84,7 @@ protected override async Task OnInitializedAsync()
     try
     {
         isSearchingForSessions = true;
+        
         restorationMessage = "Searching for existing sessions...";
         StateHasChanged();
 
@@ -107,6 +111,7 @@ protected override async Task OnInitializedAsync()
             TimeSpan.Zero,
             TimeSpan.FromSeconds(1)
         );
+        isCurrentUserCourseRep = await AuthService.GetUserRoleAsync() = "courserepadmin";
     }
     catch (Exception ex)
     {
