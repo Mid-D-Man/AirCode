@@ -112,7 +112,7 @@ protected override async Task OnInitializedAsync()
             TimeSpan.FromSeconds(1)
         );
         string currentRole = await AuthService.GetUserRoleAsync();
-       isCurrentUserCourseRep  = "courserepadmin";
+        if(currentRole == "courserepadmin")isCurrentUserCourseRep = true;
     }
     catch (Exception ex)
     {
