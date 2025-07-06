@@ -80,6 +80,107 @@
                     console.log('SW registration failed: ', registrationError);
                 });
         }
+        async function initializePWAWithAssetDiscovery() {
+    // Discover and cache actual Blazor assets
+    const criticalAssets = await discoverBlazorAssets();
+    
+    // Update service worker with discovered assets
+    if ('serviceWorker' in navigator) {
+        try {
+            const registration = await navigator.serviceWorker.register('/AirCode/service-worker.js', {
+                scope: '/AirCode/'
+            });
+            
+            // Send asset list to service worker
+            if (registration.active) {
+                registration.active.postMessage({
+                    type: 'UPDATE_ASSETS',
+                    assets: criticalAssets
+                });
+            }
+            
+            console.log('PWA initialized with asset discovery');
+        } catch (error) {
+            console.error('Service worker registration failed:', error);
+        }
+    }
+}
+
+// Enhanced asset discovery with Blazor-specific detection
+async function discoverBlazorAssets() {
+    const assets = new Set();
+    const basePath = '/AirCode/';
+    
+    // Wait for Blazor to fully load
+    await new Promise(resolve => {
+        if (window.Blazor) {
+            resolve();
+        } else {
+            window.addEventListener('blazor:started', resolve);
+        }
+    });
+    
+    // Collect all loaded resources
+    performance.getEntriesByType('resource').forEach(entry => {
+        const url = entry.name;
+        if (url.includes(basePath)) {
+            const relativePath = url.substring(url.indexOf(basePath));
+            
+            // Include critical Blazor assets
+            if (relativePath.includes('_framework/') || 
+                relativePath.endsWith('.css') ||
+                relativePath.endsWith('.js') ||
+                relativePath.endsWith('.json') ||
+                relativePath.includes('blazor.webassembly.js') ||
+                relativePath.includes('dotnet.') ||
+                relativePath.includes('.dll') ||
+                relativePath.includes('.wasm') ||
+                relativePath.includes('.dat') ||
+                relativePath.includes('.pdb')) {
+                assets.add(relativePath);
+            }
+        }
+    });
+    
+    // Add essential static assets
+    const staticAssets = [
+        basePath,
+        basePath + 'index.html',
+        basePath + 'manifest.json',
+        basePath + 'css/app.css',
+        basePath + 'css/bootstrap/bootstrap.min.css',
+        basePath + 'js/app.js'
+    ];
+    
+    staticAssets.forEach(asset => assets.add(asset));
+    
+    return Array.from(assets).sort();
+}
+
+// Network-aware initialization
+function initializeWithNetworkDetection() {
+    if (navigator.onLine) {
+        // Online: Full initialization with asset discovery
+        initializePWAWithAssetDiscovery();
+    } else {
+        // Offline: Basic initialization
+        console.log('Starting in offline mode');
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/AirCode/service-worker.js', {
+                scope: '/AirCode/'
+            }).catch(error => {
+                console.error('Offline service worker registration failed:', error);
+            });
+        }
+    }
+}
+
+// Initialize when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeWithNetworkDetection);
+} else {
+    initializeWithNetworkDetection();
+}
     </script>
 <!--<script>navigator.serviceWorker.register('service-worker.js');</script>-->
 <script src="_content/Microsoft.AspNetCore.Components.WebAssembly.Authentication/AuthenticationService.js"></script>
