@@ -1,7 +1,7 @@
 Project Structure Documentation
-Generated: Fri Jul  4 11:43:42 UTC 2025
+Generated: Sun Jul  6 13:51:58 UTC 2025
 Repository: Mid-D-Man/AirCode
-Commit: e1b732e9affcd0ccdc41b3507ec7df169c54c93e
+Commit: 4a934e78894ef1726ad7fab469a36c24ea0bc82d
 ==================================
 
 Source Files:
@@ -296,94 +296,6 @@ wwwroot/wasm/qr_code_generator_bg.wasm.d.ts
 
 Directory Structure:
 ==================
-./
-./Components
-./  Admin
-./    Dashboard
-./    Shared
-./  Auth
-./  Guards
-./  SharedPrefabs
-./    Buttons
-./    Cards
-./    Fields
-./    Others
-./    QrCode
-./    Scanner
-./    Spinner
-./Domain
-./  Entities
-./  Enums
-./  Interfaces
-./  ValueObjects
-./Extensions
-./Layout
-./  AdminLayout
-./    Superior
-./  ClientLayout
-./  Main
-./Models
-./  QRCode
-./  Supabase
-./Others
-./Pages
-./  Admin
-./    Shared
-./    Standard
-./    Superior
-./  Auth
-./  Client
-./  Main
-./  Shared
-./  TestPages
-./Properties
-./Services
-./  Academic
-./  Attendance
-./  Auth
-./  Courses
-./  Cryptography
-./  Department
-./  Firebase
-./  Guards
-./  PWA
-./  Permissions
-./  Search
-./  Storage
-./  SupaBase
-./  Time
-./  VisualElements
-./Utilities
-./  DataStructures
-./  HelperScripts
-./  ObjectPooling
-./dist
-./  wwwroot
-./    _content
-./      Microsoft.AspNetCore.Components.WebAssembly.Authentication
-./      ReactorBlazorQRCodeScanner
-./    _framework
-./    css
-./      bootstrap
-./      open-iconic
-./        font
-./          css
-./          fonts
-./    js
-./    sample-data
-./    svgs
-./    wasm
-./wwwroot
-./  css
-./    bootstrap
-./    open-iconic
-./      font
-./        css
-./        fonts
-./  js
-./  sample-data
-./  svgs
-./  wasm
 
 File Count Summary:
 ==================
