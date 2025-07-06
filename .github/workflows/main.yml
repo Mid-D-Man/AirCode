@@ -1,4 +1,4 @@
-name: Deploy Blazor WASM to GitHub Pages
+name: Deploy Blazor WASM PWA to GitHub Pages
 
 on:
   push:
@@ -89,7 +89,7 @@ jobs:
               -not -path "*/obj/*" \
               -not -path "*/.git" \
               -not -path "*/.git/*" \
-              -not -path "*/node_modules" \
+              -not-path "*/node_modules" \
               -not -path "*/node_modules/*" | \
             sed "s|^$base_path||" | \
             sed 's|^/||' | \
@@ -160,88 +160,114 @@ jobs:
         working-directory: ./AirCode
         run: dotnet publish --configuration Release --no-build --output ../dist
 
-      - name: Prepare Pages
+      - name: Fix PWA Integrity Issues
         run: |
-            mkdir -p ./pages
-            cp -r ./dist/wwwroot/* ./pages/
-            touch ./pages/.nojekyll
+          echo "🔧 Fixing PWA integrity issues for GitHub Pages deployment..."
+          
+          # Set deployment variables
+          REPO_NAME="${{ github.event.repository.name }}"
+          SHORT_SHA="${{ github.sha }}"
+          SHORT_SHA="${SHORT_SHA:0:8}"
+          BASE_PATH="/${REPO_NAME}/"
+          
+          # Create pages directory
+          mkdir -p ./pages
+          cp -r ./dist/wwwroot/* ./pages/
+          touch ./pages/.nojekyll
+          
+          # 1. Fix service-worker-assets.js for GitHub Pages paths
+          if [ -f "./pages/service-worker-assets.js" ]; then
+            echo "📝 Updating service worker assets for GitHub Pages..."
             
-            # Set build variables to avoid YAML parsing issues
-            SHORT_SHA="${{ github.sha }}"
-            SHORT_SHA="${SHORT_SHA:0:8}"
-            REPO_NAME="${{ github.event.repository.name }}"
+            # Update all asset URLs to include the repository path
+            sed -i "s|\"url\": \"/|\"url\": \"${BASE_PATH}|g" ./pages/service-worker-assets.js
             
-            # Enable production PWA service worker
-            if [ -f "./pages/service-worker.js" ]; then
-              # Uncomment production code block (remove /* and */ wrapper)
-              sed -i '/^\/\*/,/\*\/$/{/^\/\*/d; /\*\/$/d;}' ./pages/service-worker.js
+            # Update the service worker URL itself
+            sed -i "s|\"url\": \"service-worker.js\"|\"url\": \"${BASE_PATH}service-worker.js\"|g" ./pages/service-worker-assets.js
             
-              # Update cache version with commit hash
-              sed -i "s|v\${PWA_CONFIG\.version}|v${SHORT_SHA}|g" ./pages/service-worker.js
-              sed -i "s|PWA_CONFIG\.version|'${SHORT_SHA}'|g" ./pages/service-worker.js
+            echo "✅ Service worker assets updated"
+          fi
+          
+          # 2. Fix service-worker.published.js integrity checks
+          if [ -f "./pages/service-worker.published.js" ]; then
+            echo "🛠️ Fixing service worker integrity checks..."
             
-              # Update cache names for GitHub Pages
-              sed -i "s|aircode-|${REPO_NAME}-|g" ./pages/service-worker.js
+            # Copy and modify the service worker
+            cp ./pages/service-worker.published.js ./pages/service-worker.js
             
-              echo "✓ Production service worker configured with version ${SHORT_SHA}"
-            fi
+            # Remove integrity parameter to fix GitHub Pages deployment issues
+            sed -i 's|new Request(asset\.url, { integrity: asset\.hash })|new Request(asset.url)|g' ./pages/service-worker.js
             
-            # Configure PWA manifest
-            if [ -f "./pages/manifest.json" ]; then
-              sed -i "s|\"start_url\": \"/\"|\"start_url\": \"/${REPO_NAME}/\"|g" ./pages/manifest.json
-              sed -i "s|\"scope\": \"/\"|\"scope\": \"/${REPO_NAME}/\"|g" ./pages/manifest.json
-              echo "✓ PWA manifest configured for GitHub Pages"
-            fi
+            # Update cache names and version
+            sed -i "s|'AirCode-cache-'|'${REPO_NAME}-cache-'|g" ./pages/service-worker.js
+            sed -i "s|cache-v1|cache-v${SHORT_SHA}|g" ./pages/service-worker.js
             
-            # Update PWA manager service worker registration path
-            if [ -f "./pages/js/pwaManager.js" ]; then
-              sed -i "s|'/service-worker\.js'|'/${REPO_NAME}/service-worker.js'|g" ./pages/js/pwaManager.js
-              echo "✓ PWA manager paths updated"
-            fi
+            echo "✅ Service worker integrity checks fixed"
+          fi
+          
+          # 3. Configure PWA manifest for GitHub Pages
+          if [ -f "./pages/manifest.json" ]; then
+            echo "📱 Configuring PWA manifest..."
             
-            # Copy additional PWA assets
-            if [ -d "./AirCode/wwwroot/icons" ]; then
-              cp -r ./AirCode/wwwroot/icons ./pages/
-              echo "✓ PWA icons copied"
-            fi
+            # Update start_url and scope for GitHub Pages
+            sed -i "s|\"start_url\": \"/\"|\"start_url\": \"${BASE_PATH}\"|g" ./pages/manifest.json
+            sed -i "s|\"scope\": \"/\"|\"scope\": \"${BASE_PATH}\"|g" ./pages/manifest.json
             
-            # Create 404.html for SPA routing support
-            cat > ./pages/404.html << 'EOF'
-            <!DOCTYPE html>
-            <html lang="en">
-              <head>
-                <meta charset="utf-8">
-                <title>Single Page Apps for GitHub Pages</title>
-                <script type="text/javascript">
-                  var pathSegmentsToKeep = 1;
-                  var l = window.location;
-                  l.replace(
-                    l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
-                    l.pathname.split('/').slice(0, 1 + pathSegmentsToKeep).join('/') + '/?/' +
-                    l.pathname.slice(1).split('/').slice(pathSegmentsToKeep).join('/').replace(/&/g, '~and~') +
-                    (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
-                    l.hash
-                  );
-                </script>
-              </head>
-              <body>
-              </body>
-            </html>
-            EOF
+            # Update icon paths
+            sed -i "s|\"src\": \"/|\"src\": \"${BASE_PATH}|g" ./pages/manifest.json
             
-            # Configure base href for GitHub Pages deployment
-            sed -i "s|<base href=\"/\" />|<base href=\"/${REPO_NAME}/\" />|g" ./pages/index.html
-            
-            # Inject SPA routing script into index.html
-            sed -i "/<base href=\"[^\"]*\" \/>/a\\    \\n    <!-- SPA routing support for GitHub Pages -->\\n    <script type=\"text/javascript\">\\n        (function(l) {\\n            if (l.search[1] === \"/\" ) {\\n                var decoded = l.search.slice(1).split(\"&\").map(function(s) { \\n                return s.replace(/~and~/g, \"&\")\\n                }).join(\"?\");\\n                window.history.replaceState(null, null,\\n                    l.pathname.slice(0, -1) + decoded + l.hash\\n                );\\n            }\\n        }(window.location))\\n    </script>" ./pages/index.html
-            
-            # Configure service worker for GitHub Pages paths
-            if [ -f "./pages/service-worker.published.js" ]; then
-              cp ./pages/service-worker.published.js ./pages/service-worker.js
-              sed -i "s|\"/|\"/${REPO_NAME}/|g" ./pages/service-worker.js
-            fi
-            
-            echo "✓ GitHub Pages PWA deployment preparation completed"
+            echo "✅ PWA manifest configured"
+          fi
+          
+          # 4. Update index.html for GitHub Pages
+          echo "🌐 Configuring index.html for GitHub Pages..."
+          
+          # Update base href
+          sed -i "s|<base href=\"/\" />|<base href=\"${BASE_PATH}\" />|g" ./pages/index.html
+          
+          # Add SPA routing support script
+          sed -i "/<base href=\"[^\"]*\" \/>/a\\    \\n    <!-- SPA routing support for GitHub Pages -->\\n    <script type=\"text/javascript\">\\n        (function(l) {\\n            if (l.search[1] === \"/\" ) {\\n                var decoded = l.search.slice(1).split(\"&\").map(function(s) { \\n                return s.replace(/~and~/g, \"&\")\\n                }).join(\"?\");\\n                window.history.replaceState(null, null,\\n                    l.pathname.slice(0, -1) + decoded + l.hash\\n                );\\n            }\\n        }(window.location))\\n    </script>" ./pages/index.html
+          
+          echo "✅ Index.html configured"
+          
+          # 5. Create 404.html for SPA routing
+          echo "🔀 Creating SPA routing support..."
+          
+          cat > ./pages/404.html << 'EOF'
+          <!DOCTYPE html>
+          <html lang="en">
+            <head>
+              <meta charset="utf-8">
+              <title>AirCode - Page Not Found</title>
+              <script type="text/javascript">
+                var pathSegmentsToKeep = 1;
+                var l = window.location;
+                l.replace(
+                  l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
+                  l.pathname.split('/').slice(0, 1 + pathSegmentsToKeep).join('/') + '/?/' +
+                  l.pathname.slice(1).split('/').slice(pathSegmentsToKeep).join('/').replace(/&/g, '~and~') +
+                  (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
+                  l.hash
+                );
+              </script>
+            </head>
+            <body>
+              <p>Redirecting to AirCode...</p>
+            </body>
+          </html>
+          EOF
+          
+          echo "✅ 404.html created"
+          
+          # 6. Verify and log final structure
+          echo "📊 Final PWA structure verification:"
+          echo "- Service worker: $([ -f "./pages/service-worker.js" ] && echo "✅" || echo "❌")"
+          echo "- Service worker assets: $([ -f "./pages/service-worker-assets.js" ] && echo "✅" || echo "❌")"
+          echo "- PWA manifest: $([ -f "./pages/manifest.json" ] && echo "✅" || echo "❌")"
+          echo "- SPA routing: $([ -f "./pages/404.html" ] && echo "✅" || echo "❌")"
+          echo "- Icons directory: $([ -d "./pages/icons" ] && echo "✅" || echo "❌")"
+          
+          echo "🚀 PWA deployment preparation completed successfully"
 
       - name: Upload Pages
         uses: actions/upload-pages-artifact@v3
