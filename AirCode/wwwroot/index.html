@@ -65,7 +65,23 @@
 
 <!-- Framework and Core Services -->
 <script src="_framework/blazor.webassembly.js"></script>
-<script>navigator.serviceWorker.register('service-worker.js');</script>
+        <!-- PWA Scripts -->
+    <script src="js/pwaManager.js"></script>
+    <script src="js/pwaInterop.js"></script>
+    
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('service-worker.js')
+                .then(registration => {
+                    console.log('SW registered: ', registration);
+                })
+                .catch(registrationError => {
+                    console.log('SW registration failed: ', registrationError);
+                });
+        }
+    </script>
+<!--<script>navigator.serviceWorker.register('service-worker.js');</script>-->
 <script src="_content/Microsoft.AspNetCore.Components.WebAssembly.Authentication/AuthenticationService.js"></script>
 
 <!-- Firebase SDK -->
