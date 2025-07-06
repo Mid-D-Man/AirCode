@@ -1,9 +1,19 @@
 @* PWAComponent.razor - Place in Components folder *@
+@* Enhanced PWAComponent.razor with offline route management *@
 @using Microsoft.JSInterop
 @implements IAsyncDisposable
 @inject IJSRuntime JSRuntime
+@inject NavigationManager Navigation
 
-<div class="pwa-status-bar">
+<div class="pwa-status-container">
+    @if (!IsOnline)
+    {
+        <div class="offline-banner">
+            <span class="offline-icon">🔌</span>
+            <span>Offline Mode - Limited functionality available</span>
+        </div>
+    }
+    
     @if (IsInstalled)
     {
         <div class="pwa-status installed">
@@ -26,20 +36,35 @@
             <button class="btn btn-sm btn-primary" @onclick="ApplyUpdate">Update Now</button>
         </div>
     }
-</div>
-
-<div class="pwa-controls">
-    <button class="btn btn-outline-primary btn-sm" @onclick="CheckForUpdates">
-        Check for Updates
-    </button>
     
-    @if (IsInstalled)
+    @if (!IsOnline && !IsCurrentRouteOfflineAccessible)
     {
-        <button class="btn btn-outline-secondary btn-sm" @onclick="GetAppInfo">
-            App Info
-        </button>
+        <div class="offline-restriction-banner">
+            <span>⚠️ This page requires internet connection</span>
+            <button class="btn btn-sm btn-secondary" @onclick="NavigateToOfflineHome">Go to Offline Home</button>
+        </div>
     }
 </div>
+
+@if (ShowControls)
+{
+    <div class="pwa-controls">
+        <button class="btn btn-outline-primary btn-sm" @onclick="CheckForUpdates">
+            Check for Updates
+        </button>
+        
+        <button class="btn btn-outline-secondary btn-sm" @onclick="CheckOfflineStatus">
+            Check Offline Status
+        </button>
+        
+        @if (IsInstalled)
+        {
+            <button class="btn btn-outline-secondary btn-sm" @onclick="GetAppInfo">
+                App Info
+            </button>
+        }
+    </div>
+}
 
 @if (!string.IsNullOrEmpty(StatusMessage))
 {
@@ -49,23 +74,40 @@
     </div>
 }
 
+
+
 @code {
     [Parameter] public bool ShowControls { get; set; } = true;
     [Parameter] public EventCallback<PWAStatus> OnStatusChanged { get; set; }
+    [Parameter] public EventCallback<bool> OnOfflineStatusChanged { get; set; }
     
     private IJSObjectReference? pwaManager;
     private DotNetObjectReference<PWAComponent>? dotNetRef;
+    private IJSObjectReference? networkMonitor;
     
     private bool IsInstalled { get; set; }
     private bool IsInstallable { get; set; }
     private bool UpdateAvailable { get; set; }
+    private bool IsOnline { get; set; } = true;
+    private bool IsCurrentRouteOfflineAccessible { get; set; } = true;
     private string StatusMessage { get; set; } = string.Empty;
+    
+    // Define offline-accessible routes
+    private readonly string[] OfflineRoutes = {
+        "/",
+        "/OfflineAttendanceEvent",
+        "/Admin/OfflineAttendanceEvent",
+        "/Client/OfflineScan",
+        "/OfflineScanPage"
+    };
     
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
             await InitializePWA();
+            await InitializeNetworkMonitoring();
+            CheckCurrentRouteOfflineAccessibility();
         }
     }
     
@@ -73,16 +115,10 @@
     {
         try
         {
-            // Create reference to this component for JS callbacks
             dotNetRef = DotNetObjectReference.Create(this);
-            
-            // Get PWA manager from JavaScript
             pwaManager = await JSRuntime.InvokeAsync<IJSObjectReference>("getPWAManager");
             
-            // Initialize PWA status
             await UpdatePWAStatus();
-            
-            // Set up status monitoring
             await JSRuntime.InvokeVoidAsync("setupPWAStatusMonitoring", dotNetRef);
             
             StatusMessage = "PWA initialized successfully";
@@ -93,6 +129,38 @@
             StatusMessage = $"PWA initialization failed: {ex.Message}";
             StateHasChanged();
         }
+    }
+    
+    private async Task InitializeNetworkMonitoring()
+    {
+        try
+        {
+            networkMonitor = await JSRuntime.InvokeAsync<IJSObjectReference>("setupNetworkMonitoring", dotNetRef);
+            
+            // Get initial network status
+            var networkStatus = await JSRuntime.InvokeAsync<NetworkStatus>("pwaUtils.getNetworkStatus");
+            IsOnline = networkStatus.Online;
+            
+            await OnOfflineStatusChanged.InvokeAsync(IsOnline);
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Network monitoring failed: {ex.Message}";
+            StateHasChanged();
+        }
+    }
+    
+    private void CheckCurrentRouteOfflineAccessibility()
+    {
+        var currentPath = Navigation.ToBaseRelativePath(Navigation.Uri);
+        var normalizedPath = "/" + currentPath.TrimStart('/');
+        
+        IsCurrentRouteOfflineAccessible = OfflineRoutes.Any(route => 
+            route == "/" ? normalizedPath == "/" || normalizedPath == "" : 
+            normalizedPath.StartsWith(route, StringComparison.OrdinalIgnoreCase));
+        
+        StateHasChanged();
     }
     
     private async Task UpdatePWAStatus()
@@ -115,6 +183,28 @@
         }
     }
     
+    private async Task CheckOfflineStatus()
+    {
+        try
+        {
+            var networkStatus = await JSRuntime.InvokeAsync<NetworkStatus>("pwaUtils.getNetworkStatus");
+            IsOnline = networkStatus.Online;
+            
+            CheckCurrentRouteOfflineAccessibility();
+            
+            StatusMessage = $"Network: {(IsOnline ? "Online" : "Offline")}, " +
+                           $"Current route offline accessible: {IsCurrentRouteOfflineAccessible}";
+            
+            await OnOfflineStatusChanged.InvokeAsync(IsOnline);
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Failed to check offline status: {ex.Message}";
+            StateHasChanged();
+        }
+    }
+    
     private async Task CheckForUpdates()
     {
         if (pwaManager != null)
@@ -125,9 +215,7 @@
                 StateHasChanged();
                 
                 await pwaManager.InvokeVoidAsync("checkForUpdates");
-                
-                // Update status after check
-                await Task.Delay(2000); // Give time for update check
+                await Task.Delay(2000);
                 await UpdatePWAStatus();
                 
                 StatusMessage = UpdateAvailable ? "Update available!" : "No updates available";
@@ -151,7 +239,6 @@
                 StateHasChanged();
                 
                 await pwaManager.InvokeVoidAsync("applyUpdate");
-                
                 StatusMessage = "Update applied. Page will reload shortly.";
                 StateHasChanged();
             }
@@ -181,6 +268,11 @@
         }
     }
     
+    private void NavigateToOfflineHome()
+    {
+        Navigation.NavigateTo("/");
+    }
+    
     [JSInvokable]
     public async Task OnPWAStatusChanged(PWAStatus status)
     {
@@ -208,6 +300,16 @@
         StateHasChanged();
     }
     
+    [JSInvokable]
+    public async Task OnNetworkStatusChanged(NetworkStatus status)
+    {
+        IsOnline = status.Online;
+        CheckCurrentRouteOfflineAccessibility();
+        
+        await OnOfflineStatusChanged.InvokeAsync(IsOnline);
+        StateHasChanged();
+    }
+    
     private void ClearStatus()
     {
         StatusMessage = string.Empty;
@@ -219,6 +321,11 @@
         if (pwaManager != null)
         {
             await pwaManager.DisposeAsync();
+        }
+        
+        if (networkMonitor != null)
+        {
+            await networkMonitor.DisposeAsync();
         }
         
         if (dotNetRef != null)
@@ -233,5 +340,18 @@
         public bool IsInstalled { get; set; }
         public bool HasServiceWorker { get; set; }
         public bool UpdateAvailable { get; set; }
+    }
+    
+    public class NetworkStatus
+    {
+        public bool Online { get; set; }
+        public ConnectionInfo? Connection { get; set; }
+    }
+    
+    public class ConnectionInfo
+    {
+        public string? EffectiveType { get; set; }
+        public double Downlink { get; set; }
+        public int Rtt { get; set; }
     }
 }
