@@ -1,0 +1,302 @@
+@* PWAComponent.razor - Place in Components folder *@
+@using Microsoft.JSInterop
+@implements IAsyncDisposable
+@inject IJSRuntime JSRuntime
+
+<div class="pwa-status-bar">
+    @if (IsInstalled)
+    {
+        <div class="pwa-status installed">
+            <span class="pwa-icon">📱</span>
+            <span>App Mode Active</span>
+        </div>
+    }
+    else if (IsInstallable)
+    {
+        <div class="pwa-status installable">
+            <span class="pwa-icon">⬇️</span>
+            <span>App can be installed</span>
+        </div>
+    }
+    
+    @if (UpdateAvailable)
+    {
+        <div class="pwa-update-banner">
+            <span>🔄 Update available</span>
+            <button class="btn btn-sm btn-primary" @onclick="ApplyUpdate">Update Now</button>
+        </div>
+    }
+</div>
+
+<div class="pwa-controls">
+    <button class="btn btn-outline-primary btn-sm" @onclick="CheckForUpdates">
+        Check for Updates
+    </button>
+    
+    @if (IsInstalled)
+    {
+        <button class="btn btn-outline-secondary btn-sm" @onclick="GetAppInfo">
+            App Info
+        </button>
+    }
+</div>
+
+@if (!string.IsNullOrEmpty(StatusMessage))
+{
+    <div class="alert alert-info alert-dismissible fade show mt-2" role="alert">
+        @StatusMessage
+        <button type="button" class="btn-close" @onclick="ClearStatus"></button>
+    </div>
+}
+
+@code {
+    [Parameter] public bool ShowControls { get; set; } = true;
+    [Parameter] public EventCallback<PWAStatus> OnStatusChanged { get; set; }
+    
+    private IJSObjectReference? pwaManager;
+    private DotNetObjectReference<PWAComponent>? dotNetRef;
+    
+    private bool IsInstalled { get; set; }
+    private bool IsInstallable { get; set; }
+    private bool UpdateAvailable { get; set; }
+    private string StatusMessage { get; set; } = string.Empty;
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await InitializePWA();
+        }
+    }
+    
+    private async Task InitializePWA()
+    {
+        try
+        {
+            // Create reference to this component for JS callbacks
+            dotNetRef = DotNetObjectReference.Create(this);
+            
+            // Get PWA manager from JavaScript
+            pwaManager = await JSRuntime.InvokeAsync<IJSObjectReference>("getPWAManager");
+            
+            // Initialize PWA status
+            await UpdatePWAStatus();
+            
+            // Set up status monitoring
+            await JSRuntime.InvokeVoidAsync("setupPWAStatusMonitoring", dotNetRef);
+            
+            StatusMessage = "PWA initialized successfully";
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"PWA initialization failed: {ex.Message}";
+            StateHasChanged();
+        }
+    }
+    
+    private async Task UpdatePWAStatus()
+    {
+        if (pwaManager != null)
+        {
+            try
+            {
+                var status = await pwaManager.InvokeAsync<PWAStatus>("getInstallationStatus");
+                IsInstalled = status.IsInstalled;
+                IsInstallable = status.IsInstallable;
+                UpdateAvailable = status.UpdateAvailable;
+                
+                await OnStatusChanged.InvokeAsync(status);
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Failed to get PWA status: {ex.Message}";
+            }
+        }
+    }
+    
+    private async Task CheckForUpdates()
+    {
+        if (pwaManager != null)
+        {
+            try
+            {
+                StatusMessage = "Checking for updates...";
+                StateHasChanged();
+                
+                await pwaManager.InvokeVoidAsync("checkForUpdates");
+                
+                // Update status after check
+                await Task.Delay(2000); // Give time for update check
+                await UpdatePWAStatus();
+                
+                StatusMessage = UpdateAvailable ? "Update available!" : "No updates available";
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Update check failed: {ex.Message}";
+                StateHasChanged();
+            }
+        }
+    }
+    
+    private async Task ApplyUpdate()
+    {
+        if (pwaManager != null)
+        {
+            try
+            {
+                StatusMessage = "Applying update...";
+                StateHasChanged();
+                
+                await pwaManager.InvokeVoidAsync("applyUpdate");
+                
+                StatusMessage = "Update applied. Page will reload shortly.";
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Update failed: {ex.Message}";
+                StateHasChanged();
+            }
+        }
+    }
+    
+    private async Task GetAppInfo()
+    {
+        if (pwaManager != null)
+        {
+            try
+            {
+                var status = await pwaManager.InvokeAsync<PWAStatus>("getInstallationStatus");
+                StatusMessage = $"App Status - Installed: {status.IsInstalled}, SW Active: {status.HasServiceWorker}";
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Failed to get app info: {ex.Message}";
+                StateHasChanged();
+            }
+        }
+    }
+    
+    [JSInvokable]
+    public async Task OnPWAStatusChanged(PWAStatus status)
+    {
+        IsInstalled = status.IsInstalled;
+        IsInstallable = status.IsInstallable;
+        UpdateAvailable = status.UpdateAvailable;
+        
+        await OnStatusChanged.InvokeAsync(status);
+        StateHasChanged();
+    }
+    
+    [JSInvokable]
+    public async Task OnUpdateAvailable()
+    {
+        UpdateAvailable = true;
+        StatusMessage = "New version available!";
+        StateHasChanged();
+    }
+    
+    [JSInvokable]
+    public async Task OnAppInstalled()
+    {
+        IsInstalled = true;
+        StatusMessage = "App installed successfully!";
+        StateHasChanged();
+    }
+    
+    private void ClearStatus()
+    {
+        StatusMessage = string.Empty;
+        StateHasChanged();
+    }
+    
+    public async ValueTask DisposeAsync()
+    {
+        if (pwaManager != null)
+        {
+            await pwaManager.DisposeAsync();
+        }
+        
+        if (dotNetRef != null)
+        {
+            dotNetRef.Dispose();
+        }
+    }
+    
+    public class PWAStatus
+    {
+        public bool IsInstallable { get; set; }
+        public bool IsInstalled { get; set; }
+        public bool HasServiceWorker { get; set; }
+        public bool UpdateAvailable { get; set; }
+    }
+}
+
+<style>
+    .pwa-status-bar {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1rem;
+        padding: 0.5rem;
+        background-color: #f8f9fa;
+        border-radius: 0.375rem;
+        border: 1px solid #dee2e6;
+    }
+
+    .pwa-status {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.875rem;
+    }
+
+    .pwa-status.installed {
+        color: #198754;
+    }
+
+    .pwa-status.installable {
+        color: #0d6efd;
+    }
+
+    .pwa-update-banner {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem;
+        background-color: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 0.375rem;
+        color: #856404;
+        font-size: 0.875rem;
+    }
+
+    .pwa-controls {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .pwa-icon {
+        font-size: 1.25rem;
+    }
+
+    @media (max-width: 576px) {
+        .pwa-status-bar {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        
+        .pwa-controls {
+            width: 100%;
+        }
+        
+        .pwa-controls .btn {
+            flex: 1;
+        }
+    }
+</style>
