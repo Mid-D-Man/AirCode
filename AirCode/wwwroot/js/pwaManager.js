@@ -1,278 +1,410 @@
-// PWA Configuration and Update Management
-// Add this to wwwroot/js/pwaManager.js
+// PWA Manager for Blazor WASM - GitHub Pages Compatible
+// Place this in wwwroot/js/pwaManager.js
 
 class PWAManager {
     constructor() {
-        this.config = {
-            enabled: true, // Toggle for production
-            updateCheckInterval: 60000, // 1 minute in dev, 24h in prod
-            showUpdateNotifications: true,
-            autoUpdate: false // Manual updates for better UX
-        };
-
-        this.serviceWorker = null;
+        this.isGitHubPages = window.location.hostname === 'mid-d-man.github.io';
+        this.basePath = this.isGitHubPages ? '/AirCode/' : '/';
+        this.serviceWorkerUrl = this.basePath + 'service-worker.js';
+        this.registration = null;
         this.updateAvailable = false;
-        this.callbacks = {
-            onUpdateAvailable: [],
-            onUpdateInstalled: [],
-            onOfflineReady: []
-        };
-
+        
         this.init();
     }
 
     async init() {
-        if (!('serviceWorker' in navigator) || !this.config.enabled) {
-            console.log('[PWA] Service Worker not supported or disabled');
-            return;
-        }
-
-        try {
-            // Register service worker
-            const registration = await navigator.serviceWorker.register('/service-worker.js');
-            this.serviceWorker = registration;
-
-            console.log('[PWA] Service Worker registered successfully');
-
-            // Set up event listeners
-            this.setupEventListeners(registration);
-
-            // Check for updates periodically
-            if (this.config.updateCheckInterval > 0) {
-                setInterval(() => this.checkForUpdates(), this.config.updateCheckInterval);
+        if ('serviceWorker' in navigator) {
+            try {
+                await this.registerServiceWorker();
+                this.setupUpdateListener();
+                this.setupInstallPrompt();
+            } catch (error) {
+                console.error('PWA Manager initialization failed:', error);
             }
-
-            // Initial update check
-            setTimeout(() => this.checkForUpdates(), 5000);
-
-        } catch (error) {
-            console.error('[PWA] Service Worker registration failed:', error);
+        } else {
+            console.warn('Service Worker not supported in this browser');
         }
     }
 
-    setupEventListeners(registration) {
-        // Listen for updates
-        registration.addEventListener('updatefound', () => {
-            const newWorker = registration.installing;
-            console.log('[PWA] New service worker found');
-
-            newWorker.addEventListener('statechange', () => {
-                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                    console.log('[PWA] New service worker installed, update available');
-                    this.updateAvailable = true;
-                    this.notifyCallbacks('onUpdateAvailable', {
-                        registration,
-                        newWorker
-                    });
-                }
+    async registerServiceWorker() {
+        try {
+            console.log('Registering service worker:', this.serviceWorkerUrl);
+            
+            this.registration = await navigator.serviceWorker.register(this.serviceWorkerUrl, {
+                scope: this.basePath
             });
+
+            console.log('Service Worker registered successfully:', this.registration.scope);
+
+            // Handle different registration states
+            if (this.registration.installing) {
+                console.log('Service Worker installing...');
+                this.trackInstallation(this.registration.installing);
+            } else if (this.registration.waiting) {
+                console.log('Service Worker waiting...');
+                this.showUpdateAvailable();
+            } else if (this.registration.active) {
+                console.log('Service Worker active');
+            }
+
+            // Listen for updates
+            this.registration.addEventListener('updatefound', () => {
+                console.log('New service worker found');
+                this.trackInstallation(this.registration.installing);
+            });
+
+        } catch (error) {
+            console.error('Service Worker registration failed:', error);
+            throw error;
+        }
+    }
+
+    trackInstallation(worker) {
+        worker.addEventListener('statechange', () => {
+            if (worker.state === 'installed') {
+                if (navigator.serviceWorker.controller) {
+                    // New version available
+                    console.log('New version available');
+                    this.showUpdateAvailable();
+                } else {
+                    // First installation
+                    console.log('App is ready for offline use');
+                    this.showInstallSuccess();
+                }
+            }
+        });
+    }
+
+    setupUpdateListener() {
+        // Listen for messages from service worker
+        navigator.serviceWorker.addEventListener('message', event => {
+            if (event.data && event.data.type === 'UPDATE_AVAILABLE') {
+                this.showUpdateAvailable();
+            }
         });
 
-        // Listen for controlling service worker changes
+        // Listen for controller change (new SW activation)
         navigator.serviceWorker.addEventListener('controllerchange', () => {
-            console.log('[PWA] Service worker controller changed');
-            this.notifyCallbacks('onUpdateInstalled');
-
-            if (this.config.autoUpdate) {
+            if (this.updateAvailable) {
                 window.location.reload();
             }
         });
+    }
 
-        // Listen for messages from service worker
-        navigator.serviceWorker.addEventListener('message', (event) => {
-            const { type, version } = event.data || {};
+    setupInstallPrompt() {
+        let deferredPrompt;
 
-            switch (type) {
-                case 'SW_UPDATED':
-                    console.log(`[PWA] Service worker updated to version ${version}`);
-                    break;
-                case 'OFFLINE_READY':
-                    this.notifyCallbacks('onOfflineReady');
-                    break;
-            }
+        // Listen for beforeinstallprompt event
+        window.addEventListener('beforeinstallprompt', (e) => {
+            console.log('Install prompt available');
+            e.preventDefault();
+            deferredPrompt = e;
+            this.showInstallButton(deferredPrompt);
+        });
+
+        // Listen for app installed event
+        window.addEventListener('appinstalled', (evt) => {
+            console.log('App installed successfully');
+            this.hideInstallButton();
+            this.showInstallSuccess();
         });
     }
 
-    async checkForUpdates() {
-        if (!this.serviceWorker) return;
+    showUpdateAvailable() {
+        this.updateAvailable = true;
+        
+        // Create or update notification
+        const notification = this.createNotification(
+            'Update Available',
+            'A new version of AirCode is available. Click to update.',
+            'update',
+            () => this.applyUpdate()
+        );
+        
+        this.showNotification(notification);
+    }
 
-        try {
-            await this.serviceWorker.update();
-            console.log('[PWA] Update check completed');
-        } catch (error) {
-            console.warn('[PWA] Update check failed:', error);
+    showInstallButton(deferredPrompt) {
+        const installButton = this.createInstallButton(deferredPrompt);
+        this.addToUI(installButton);
+    }
+
+    hideInstallButton() {
+        const installButton = document.getElementById('pwa-install-button');
+        if (installButton) {
+            installButton.remove();
         }
+    }
+
+    showInstallSuccess() {
+        const notification = this.createNotification(
+            'App Installed',
+            'AirCode is now installed and ready for offline use!',
+            'success',
+            null,
+            3000
+        );
+        
+        this.showNotification(notification);
     }
 
     async applyUpdate() {
-        if (!this.updateAvailable || !this.serviceWorker) {
-            console.warn('[PWA] No update available or service worker not ready');
-            return false;
+        if (this.registration && this.registration.waiting) {
+            // Send message to waiting service worker to skip waiting
+            this.registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+        }
+    }
+
+    createNotification(title, message, type, action = null, duration = 0) {
+        const notification = document.createElement('div');
+        notification.className = `pwa-notification pwa-notification-${type}`;
+        notification.innerHTML = `
+            <div class="pwa-notification-content">
+                <h4>${title}</h4>
+                <p>${message}</p>
+                ${action ? '<button class="pwa-notification-action">Update Now</button>' : ''}
+                <button class="pwa-notification-close">×</button>
+            </div>
+        `;
+
+        // Add event listeners
+        if (action) {
+            notification.querySelector('.pwa-notification-action').addEventListener('click', action);
         }
 
-        try {
-            // Tell the new service worker to skip waiting
-            const newWorker = this.serviceWorker.waiting || this.serviceWorker.installing;
-            if (newWorker) {
-                newWorker.postMessage({ type: 'SKIP_WAITING' });
-                return true;
+        notification.querySelector('.pwa-notification-close').addEventListener('click', () => {
+            notification.remove();
+        });
+
+        // Auto-remove after duration
+        if (duration > 0) {
+            setTimeout(() => {
+                if (notification.parentElement) {
+                    notification.remove();
+                }
+            }, duration);
+        }
+
+        return notification;
+    }
+
+    createInstallButton(deferredPrompt) {
+        const button = document.createElement('button');
+        button.id = 'pwa-install-button';
+        button.className = 'pwa-install-btn';
+        button.innerHTML = '📱 Install App';
+        
+        button.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const result = await deferredPrompt.userChoice;
+                console.log('Install prompt result:', result);
+                
+                if (result.outcome === 'accepted') {
+                    console.log('User accepted the install prompt');
+                } else {
+                    console.log('User dismissed the install prompt');
+                }
+                
+                deferredPrompt = null;
+                button.remove();
             }
-        } catch (error) {
-            console.error('[PWA] Failed to apply update:', error);
-        }
+        });
 
-        return false;
+        return button;
     }
 
-    async clearCache() {
-        if (!navigator.serviceWorker.controller) {
-            console.warn('[PWA] No active service worker to clear cache');
-            return false;
-        }
+    showNotification(notification) {
+        // Remove existing notifications of the same type
+        const existingNotifications = document.querySelectorAll('.pwa-notification');
+        existingNotifications.forEach(existing => {
+            if (existing.className === notification.className) {
+                existing.remove();
+            }
+        });
 
-        try {
-            const messageChannel = new MessageChannel();
+        // Add to page
+        document.body.appendChild(notification);
 
-            return new Promise((resolve) => {
-                messageChannel.port1.onmessage = (event) => {
-                    resolve(event.data.success === true);
-                };
-
-                navigator.serviceWorker.controller.postMessage(
-                    { type: 'CLEAR_CACHE', payload: { confirm: true } },
-                    [messageChannel.port2]
-                );
-            });
-        } catch (error) {
-            console.error('[PWA] Failed to clear cache:', error);
-            return false;
-        }
+        // Animate in
+        setTimeout(() => {
+            notification.classList.add('pwa-notification-show');
+        }, 100);
     }
 
-    async getServiceWorkerInfo() {
-        if (!navigator.serviceWorker.controller) {
-            return { enabled: false, version: null };
-        }
-
-        try {
-            const messageChannel = new MessageChannel();
-
-            return new Promise((resolve) => {
-                messageChannel.port1.onmessage = (event) => {
-                    resolve(event.data);
-                };
-
-                navigator.serviceWorker.controller.postMessage(
-                    { type: 'GET_VERSION' },
-                    [messageChannel.port2]
-                );
-
-                // Timeout after 5 seconds
-                setTimeout(() => resolve({ enabled: false, version: null }), 5000);
-            });
-        } catch (error) {
-            console.error('[PWA] Failed to get service worker info:', error);
-            return { enabled: false, version: null };
-        }
+    addToUI(element) {
+        // Add to a specific container or append to body
+        const container = document.querySelector('.pwa-controls') || document.body;
+        container.appendChild(element);
     }
 
-    // Event subscription methods
-    onUpdateAvailable(callback) {
-        this.callbacks.onUpdateAvailable.push(callback);
-    }
-
-    onUpdateInstalled(callback) {
-        this.callbacks.onUpdateInstalled.push(callback);
-    }
-
-    onOfflineReady(callback) {
-        this.callbacks.onOfflineReady.push(callback);
-    }
-
-    notifyCallbacks(event, data = null) {
-        this.callbacks[event].forEach(callback => {
+    // Public API methods
+    async checkForUpdates() {
+        if (this.registration) {
             try {
-                callback(data);
+                await this.registration.update();
+                console.log('Update check completed');
             } catch (error) {
-                console.error(`[PWA] Callback error for ${event}:`, error);
+                console.error('Update check failed:', error);
             }
-        });
+        }
     }
 
-    // Configuration methods
-    enablePWA() {
-        this.config.enabled = true;
-        console.log('[PWA] PWA features enabled');
+    async unregister() {
+        if (this.registration) {
+            try {
+                await this.registration.unregister();
+                console.log('Service Worker unregistered');
+                this.registration = null;
+            } catch (error) {
+                console.error('Service Worker unregistration failed:', error);
+            }
+        }
     }
 
-    disablePWA() {
-        this.config.enabled = false;
-        console.log('[PWA] PWA features disabled');
+    isInstallable() {
+        return 'serviceWorker' in navigator && 'PushManager' in window;
     }
 
-    isPWAEnabled() {
-        return this.config.enabled;
+    isInstalled() {
+        return window.matchMedia('(display-mode: standalone)').matches ||
+               window.navigator.standalone === true;
     }
 
-    // Installation prompt handling
-    setupInstallPrompt() {
-        let deferredPrompt = null;
-
-        window.addEventListener('beforeinstallprompt', (e) => {
-            console.log('[PWA] Install prompt available');
-            e.preventDefault();
-            deferredPrompt = e;
-
-            // Show custom install button
-            this.notifyCallbacks('onInstallAvailable', { prompt: deferredPrompt });
-        });
-
+    getInstallationStatus() {
         return {
-            showInstallPrompt: async () => {
-                if (!deferredPrompt) {
-                    console.warn('[PWA] Install prompt not available');
-                    return false;
-                }
-
-                try {
-                    const result = await deferredPrompt.prompt();
-                    console.log('[PWA] Install prompt result:', result.outcome);
-                    deferredPrompt = null;
-                    return result.outcome === 'accepted';
-                } catch (error) {
-                    console.error('[PWA] Install prompt failed:', error);
-                    return false;
-                }
-            }
+            isInstallable: this.isInstallable(),
+            isInstalled: this.isInstalled(),
+            hasServiceWorker: !!this.registration,
+            updateAvailable: this.updateAvailable
         };
     }
 }
 
-// Global PWA manager instance
-window.pwaManager = new PWAManager();
-
-// Blazor interop functions
-window.blazorPWA = {
-    checkForUpdates: () => window.pwaManager.checkForUpdates(),
-    applyUpdate: () => window.pwaManager.applyUpdate(),
-    clearCache: () => window.pwaManager.clearCache(),
-    getInfo: () => window.pwaManager.getServiceWorkerInfo(),
-    enablePWA: () => window.pwaManager.enablePWA(),
-    disablePWA: () => window.pwaManager.disablePWA(),
-    isPWAEnabled: () => window.pwaManager.isPWAEnabled(),
-
-    // Event subscriptions for Blazor
-    onUpdateAvailable: (dotNetRef, methodName) => {
-        window.pwaManager.onUpdateAvailable((data) => {
-            dotNetRef.invokeMethodAsync(methodName, data || {});
-        });
-    },
-
-    onUpdateInstalled: (dotNetRef, methodName) => {
-        window.pwaManager.onUpdateInstalled(() => {
-            dotNetRef.invokeMethodAsync(methodName);
-        });
+// CSS for PWA notifications and install button
+const pwaStyles = `
+    .pwa-notification {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #fff;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        z-index: 10000;
+        max-width: 350px;
+        opacity: 0;
+        transform: translateX(100%);
+        transition: all 0.3s ease;
     }
-};
 
-console.log('[PWA] PWA Manager initialized');
+    .pwa-notification-show {
+        opacity: 1;
+        transform: translateX(0);
+    }
+
+    .pwa-notification-content {
+        padding: 16px;
+    }
+
+    .pwa-notification h4 {
+        margin: 0 0 8px 0;
+        color: #333;
+        font-size: 16px;
+    }
+
+    .pwa-notification p {
+        margin: 0 0 12px 0;
+        color: #666;
+        font-size: 14px;
+    }
+
+    .pwa-notification-action {
+        background: #007bff;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        margin-right: 8px;
+    }
+
+    .pwa-notification-action:hover {
+        background: #0056b3;
+    }
+
+    .pwa-notification-close {
+        background: none;
+        border: none;
+        font-size: 18px;
+        cursor: pointer;
+        color: #999;
+        padding: 4px;
+        position: absolute;
+        top: 8px;
+        right: 8px;
+    }
+
+    .pwa-notification-update {
+        border-left: 4px solid #007bff;
+    }
+
+    .pwa-notification-success {
+        border-left: 4px solid #28a745;
+    }
+
+    .pwa-install-btn {
+        background: #007bff;
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        transition: all 0.2s ease;
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 9999;
+    }
+
+    .pwa-install-btn:hover {
+        background: #0056b3;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    @media (max-width: 768px) {
+        .pwa-notification {
+            left: 20px;
+            right: 20px;
+            max-width: none;
+        }
+        
+        .pwa-install-btn {
+            left: 20px;
+            right: 20px;
+            bottom: 20px;
+        }
+    }
+`;
+
+// Inject styles
+const styleSheet = document.createElement('style');
+styleSheet.textContent = pwaStyles;
+document.head.appendChild(styleSheet);
+
+// Initialize PWA Manager when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        window.pwaManager = new PWAManager();
+    });
+} else {
+    window.pwaManager = new PWAManager();
+}
+
+// Export for use in Blazor components
+window.PWAManager = PWAManager;
