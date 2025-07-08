@@ -625,7 +625,6 @@ body.dark-mode .floating-qr-icon:hover {
 }
 
 .close-button {
-.close-button {
     background: none;
     border: none;
     color: white;
@@ -1259,3 +1258,4 @@ body.dark-mode .session-feature-badge.offline {
         border: 1px solid black;
     }
 }
+
