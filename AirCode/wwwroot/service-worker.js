@@ -79,42 +79,50 @@ let discoveredAssets = new Set();
 // Install event - comprehensive asset caching
 self.addEventListener('install', event => {
   console.log('Service Worker installing...');
-  
+
   event.waitUntil(
-    Promise.all([
-      // Cache essential assets first
-      caches.open(CACHE_NAME).then(cache => {
-        console.log('Caching essential assets...');
-        return cache.addAll(ESSENTIAL_BLAZOR_ASSETS.filter(asset => asset));
-      }),
-      
-      // Discover and cache Blazor runtime assets
-      discoverAndCacheBlazorAssets(),
-      
-      // Cache offline route fallbacks
-      caches.open(OFFLINE_CACHE_NAME).then(cache => {
-        console.log('Preparing offline routes...');
-        return Promise.all(
-          OFFLINE_ROUTES.map(route => {
-            return cache.put(route, new Response(getOfflineHTML(), {
-              status: 200,
-              statusText: 'OK',
-              headers: new Headers({
-                'Content-Type': 'text/html',
-                'Cache-Control': 'no-cache'
-              })
-            }));
-          })
-        );
+      (async () => {
+        try {
+          // Cache essential assets
+          const cache = await caches.open(CACHE_NAME);
+          console.log('Caching essential assets...');
+          await cache.addAll(ESSENTIAL_BLAZOR_ASSETS.filter(asset => asset));
+        } catch (error) {
+          console.error('Failed to cache essential assets:', error);
+        }
+
+        try {
+          // Discover and cache Blazor runtime assets
+          await discoverAndCacheBlazorAssets();
+        } catch (error) {
+          console.error('Failed to cache Blazor runtime assets:', error);
+        }
+
+        try {
+          // Cache offline route fallbacks
+          const offlineCache = await caches.open(OFFLINE_CACHE_NAME);
+          console.log('Preparing offline routes...');
+          await Promise.all(
+              OFFLINE_ROUTES.map(route =>
+                  offlineCache.put(route, new Response(getOfflineHTML(), {
+                    status: 200,
+                    statusText: 'OK',
+                    headers: new Headers({
+                      'Content-Type': 'text/html',
+                      'Cache-Control': 'no-cache'
+                    })
+                  }))
+              )
+          );
+        } catch (error) {
+          console.error('Failed to cache offline routes:', error);
+        }
+
+        console.log('Service Worker installed successfully');
+        return self.skipWaiting();
+      })().catch(error => {
+        console.error('Service Worker installation failed:', error);
       })
-    ])
-    .then(() => {
-      console.log('Service Worker installed successfully');
-      return self.skipWaiting();
-    })
-    .catch(error => {
-      console.error('Service Worker installation failed:', error);
-    })
   );
 });
 
