@@ -253,8 +253,31 @@ window.updateDiagnostics = function(info) {
         });
     }
 };
+async function checkServiceWorkerStatus() {
+    if (!navigator.serviceWorker) {
+        return 'Not supported';
+    }
 
-window.addEventListener('DOMContentLoaded', function() {
+    try {
+        const registration = await navigator.serviceWorker.getRegistration();
+        if (registration) {
+            if (registration.active) {
+                return 'Active';
+            } else if (registration.installing) {
+                return 'Installing';
+            } else if (registration.waiting) {
+                return 'Waiting';
+            } else {
+                return 'Registered';
+            }
+        } else {
+            return 'Not registered';
+        }
+    } catch (error) {
+        return `Error: ${error.message}`;
+    }
+}
+window.addEventListener('DOMContentLoaded', async function() {
     // Log current page and service worker details
     console.log('Current base href:', document.querySelector('base')?.href);
     console.log('Current path:', window.location.pathname);
@@ -289,12 +312,26 @@ window.addEventListener('DOMContentLoaded', function() {
     }, 500);
 
     // Check service worker registrations
+    const swStatus = await checkServiceWorkerStatus();
+
+    window.updateDiagnostics({
+        baseHref: document.querySelector('base')?.href,
+        path: window.location.pathname,
+        blazorLoaded: !!window.Blazor,
+        serviceWorker: swStatus,
+        online: navigator.onLine
+    });
+
+    // Add service worker state change listeners
     if (navigator.serviceWorker) {
-        navigator.serviceWorker.getRegistrations().then(registrations => {
-            console.log('Service Worker registrations:', registrations.length);
-            registrations.forEach(reg => {
-                console.log('- Scope:', reg.scope);
-                console.log('- Active:', !!reg.active);
+        navigator.serviceWorker.addEventListener('controllerchange', async () => {
+            const swStatus = await checkServiceWorkerStatus();
+            window.updateDiagnostics({
+                baseHref: document.querySelector('base')?.href,
+                path: window.location.pathname,
+                blazorLoaded: !!window.Blazor,
+                serviceWorker: swStatus,
+                online: navigator.onLine
             });
         });
     }
