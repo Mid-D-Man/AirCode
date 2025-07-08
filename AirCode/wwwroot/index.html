@@ -8,7 +8,7 @@
     <title>AirCode</title>
     <base href="/" />
 
-    <!-- SPA routing fix for GitHub Pages - must be early in head -->
+     <!-- SPA routing fix for GitHub Pages - must be early in head -->
     <script type="text/javascript">
         // Single Page Apps for GitHub Pages
         // MIT License
@@ -31,7 +31,6 @@
             }
         }(window.location))
     </script>
-
     <!-- CSS -->
     <link href="css/bootstrap/bootstrap.min.css" rel="stylesheet" />
     <link href="css/app.css" rel="stylesheet" />
@@ -65,123 +64,175 @@
 
 <!-- Framework and Core Services -->
 <script src="_framework/blazor.webassembly.js"></script>
-        <!-- PWA Scripts -->
-    <script src="js/pwaManager.js"></script>
-    <script src="js/pwaInterop.js"></script>
-    
-    <!-- Service Worker Registration -->
-    <script>
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('service-worker.js')
-                .then(registration => {
-                    console.log('SW registered: ', registration);
-                })
-                .catch(registrationError => {
-                    console.log('SW registration failed: ', registrationError);
-                });
-        }
-        async function initializePWAWithAssetDiscovery() {
-    // Discover and cache actual Blazor assets
-    const criticalAssets = await discoverBlazorAssets();
-    
-    // Update service worker with discovered assets
-    if ('serviceWorker' in navigator) {
-        try {
-            const registration = await navigator.serviceWorker.register('/AirCode/service-worker.js', {
-                scope: '/AirCode/'
-            });
-            
-            // Send asset list to service worker
-            if (registration.active) {
-                registration.active.postMessage({
-                    type: 'UPDATE_ASSETS',
-                    assets: criticalAssets
-                });
-            }
-            
-            console.log('PWA initialized with asset discovery');
-        } catch (error) {
-            console.error('Service worker registration failed:', error);
-        }
-    }
-}
+<!-- PWA Scripts -->
+<script src="js/pwaManager.js"></script>
+<script src="js/pwaInterop.js"></script>
 
-// Enhanced asset discovery with Blazor-specific detection
-async function discoverBlazorAssets() {
-    const assets = new Set();
-    const basePath = '/AirCode/';
+<!-- Enhanced Service Worker Registration with Offline Support -->
+<script>
+    // Global offline state
+    window.isOfflineMode = !navigator.onLine;
     
-    // Wait for Blazor to fully load
-    await new Promise(resolve => {
-        if (window.Blazor) {
-            resolve();
+    // Enhanced PWA initialization with better offline support
+    async function initializeEnhancedPWA() {
+        console.log('Initializing Enhanced PWA...');
+        
+        if ('serviceWorker' in navigator) {
+            try {
+                // Register service worker
+                const registration = await navigator.serviceWorker.register('/AirCode/service-worker.js', {
+                    scope: '/AirCode/'
+                });
+                
+                console.log('Service Worker registered:', registration);
+                
+                // Handle updates
+                registration.addEventListener('updatefound', () => {
+                    const newWorker = registration.installing;
+                    if (newWorker) {
+                        newWorker.addEventListener('statechange', () => {
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                console.log('New service worker installed, update available');
+                                // You can show update notification here
+                            }
+                        });
+                    }
+                });
+                
+                // Wait for service worker to be ready
+                await navigator.serviceWorker.ready;
+                console.log('Service Worker ready');
+                
+                // If we're offline, let the app know
+                if (!navigator.onLine) {
+                    console.log('Starting in offline mode');
+                    window.isOfflineMode = true;
+                }
+                
+                // Discover and cache assets after Blazor loads
+                if (navigator.onLine) {
+                    // Wait for Blazor to load, then discover assets
+                    waitForBlazorAndDiscoverAssets();
+                }
+                
+            } catch (error) {
+                console.error('Service Worker registration failed:', error);
+            }
         } else {
-            window.addEventListener('blazor:started', resolve);
-        }
-    });
-    
-    // Collect all loaded resources
-    performance.getEntriesByType('resource').forEach(entry => {
-        const url = entry.name;
-        if (url.includes(basePath)) {
-            const relativePath = url.substring(url.indexOf(basePath));
-            
-            // Include critical Blazor assets
-            if (relativePath.includes('_framework/') || 
-                relativePath.endsWith('.css') ||
-                relativePath.endsWith('.js') ||
-                relativePath.endsWith('.json') ||
-                relativePath.includes('blazor.webassembly.js') ||
-                relativePath.includes('dotnet.') ||
-                relativePath.includes('.dll') ||
-                relativePath.includes('.wasm') ||
-                relativePath.includes('.dat') ||
-                relativePath.includes('.pdb')) {
-                assets.add(relativePath);
-            }
-        }
-    });
-    
-    // Add essential static assets
-    const staticAssets = [
-        basePath,
-        basePath + 'index.html',
-        basePath + 'manifest.json',
-        basePath + 'css/app.css',
-        basePath + 'css/bootstrap/bootstrap.min.css',
-        basePath + 'js/app.js'
-    ];
-    
-    staticAssets.forEach(asset => assets.add(asset));
-    
-    return Array.from(assets).sort();
-}
-
-// Network-aware initialization
-function initializeWithNetworkDetection() {
-    if (navigator.onLine) {
-        // Online: Full initialization with asset discovery
-        initializePWAWithAssetDiscovery();
-    } else {
-        // Offline: Basic initialization
-        console.log('Starting in offline mode');
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/AirCode/service-worker.js', {
-                scope: '/AirCode/'
-            }).catch(error => {
-                console.error('Offline service worker registration failed:', error);
-            });
+            console.warn('Service Worker not supported');
         }
     }
-}
+    
+    // Wait for Blazor to load completely and then discover assets
+    async function waitForBlazorAndDiscoverAssets() {
+        // Wait for Blazor to be ready
+        const blazorReady = new Promise((resolve) => {
+            if (window.Blazor) {
+                resolve();
+            } else {
+                window.addEventListener('blazor:started', resolve);
+            }
+        });
+        
+        await blazorReady;
+        
+        // Give Blazor a moment to fully initialize
+        setTimeout(async () => {
+            await discoverAndCacheBlazorAssets();
+        }, 2000);
+    }
+    
+    // Enhanced asset discovery
+    async function discoverAndCacheBlazorAssets() {
+        try {
+            console.log('Discovering Blazor assets...');
+            
+            const assets = new Set();
+            const basePath = '/AirCode/';
+            
+            // Get all loaded resources
+            const resourceEntries = performance.getEntriesByType('resource');
+            
+            resourceEntries.forEach(entry => {
+                const url = entry.name;
+                if (url.includes(basePath)) {
+                    const relativePath = url.substring(url.indexOf(basePath));
+                    
+                    // Include all Blazor-related assets
+                    if (relativePath.includes('_framework/') || 
+                        relativePath.endsWith('.css') ||
+                        relativePath.endsWith('.js') ||
+                        relativePath.endsWith('.json') ||
+                        relativePath.endsWith('.dll') ||
+                        relativePath.endsWith('.wasm') ||
+                        relativePath.endsWith('.dat') ||
+                        relativePath.endsWith('.pdb') ||
+                        relativePath.includes('dotnet.') ||
+                        relativePath.includes('blazor.') ||
+                        relativePath.includes('Microsoft.') ||
+                        relativePath.includes('System.') ||
+                        relativePath.includes('AirCode.')) {
+                        assets.add(relativePath);
+                    }
+                }
+            });
+            
+            // Send discovered assets to service worker
+            if (navigator.serviceWorker.controller) {
+                navigator.serviceWorker.controller.postMessage({
+                    type: 'UPDATE_ASSETS',
+                    assets: Array.from(assets)
+                });
+                
+                console.log('Sent', assets.size, 'assets to service worker for caching');
+            }
+            
+        } catch (error) {
+            console.error('Asset discovery failed:', error);
+        }
+    }
+    
+    // Network status monitoring
+    function setupNetworkMonitoring() {
+        const updateOnlineStatus = () => {
+            const wasOffline = window.isOfflineMode;
+            window.isOfflineMode = !navigator.onLine;
+            
+            if (wasOffline !== window.isOfflineMode) {
+                console.log('Network status changed:', window.isOfflineMode ? 'offline' : 'online');
+                
+                // Notify app components if they exist
+                if (window.onNetworkStatusChange) {
+                    window.onNetworkStatusChange(window.isOfflineMode);
+                }
+            }
+        };
+        
+        window.addEventListener('online', updateOnlineStatus);
+        window.addEventListener('offline', updateOnlineStatus);
+        
+        // Initial check
+        updateOnlineStatus();
+    }
+    
+    // Initialize everything
+    document.addEventListener('DOMContentLoaded', () => {
+        setupNetworkMonitoring();
+        initializeEnhancedPWA();
+    });
+    
+    // Fallback for already loaded DOM
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+            setupNetworkMonitoring();
+            initializeEnhancedPWA();
+        });
+    } else {
+        setupNetworkMonitoring();
+        initializeEnhancedPWA();
+    }
+</script>
 
-// Initialize when DOM is ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeWithNetworkDetection);
-} else {
-    initializeWithNetworkDetection();
-}
-    </script>
 <!--<script>navigator.serviceWorker.register('service-worker.js');</script>-->
 <script src="_content/Microsoft.AspNetCore.Components.WebAssembly.Authentication/AuthenticationService.js"></script>
 
