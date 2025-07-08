@@ -337,7 +337,7 @@ self.addEventListener('fetch', event => {
               } else {
                 return new Response(`
                   <!DOCTYPE html>
-                  <html>
+                  <html lang="en">
                   <head>
                     <meta charset="utf-8">
                     <title>AirCode - Offline</title>
