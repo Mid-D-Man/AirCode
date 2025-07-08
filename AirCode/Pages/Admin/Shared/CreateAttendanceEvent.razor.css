@@ -580,6 +580,8 @@ body.dark-mode .floating-qr-icon:hover {
     position: fixed;
     top: 0;
     left: 0;
+    right: 0;
+    bottom: 0;
     width: 100vw;
     height: 100vh;
     background: rgba(0, 0, 0, 0.5);
@@ -589,17 +591,21 @@ body.dark-mode .floating-qr-icon:hover {
     justify-content: center;
     z-index: 1000;
     animation: fadeIn 0.3s ease-out;
+    padding: 1rem;
+    box-sizing: border-box;
 }
 
 .session-restore-dialog {
     background: white;
     border-radius: 16px;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+    width: 100%;
     max-width: 600px;
-    width: 90vw;
-    max-height: 80vh;
+    max-height: calc(100vh - 2rem);
     overflow: hidden;
     animation: slideUp 0.3s ease-out;
+    margin: auto;
+    position: relative;
 }
 
 .dialog-header {
@@ -609,6 +615,7 @@ body.dark-mode .floating-qr-icon:hover {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-shrink: 0;
 }
 
 .dialog-header h3 {
@@ -618,19 +625,21 @@ body.dark-mode .floating-qr-icon:hover {
 }
 
 .close-button {
+.close-button {
     background: none;
     border: none;
     color: white;
     font-size: 1.5rem;
     cursor: pointer;
-    padding: 0;
-    width: 30px;
-    height: 30px;
+    padding: 0.25rem;
+    width: 32px;
+    height: 32px;
     display: flex;
     align-items: center;
     justify-content: center;
     border-radius: 50%;
     transition: background-color 0.2s;
+    flex-shrink: 0;
 }
 
 .close-button:hover {
@@ -639,9 +648,11 @@ body.dark-mode .floating-qr-icon:hover {
 
 .dialog-content {
     padding: 1.5rem 2rem;
-    max-height: 60vh;
+    max-height: calc(100vh - 200px);
     overflow-y: auto;
+    flex: 1;
 }
+
 
 .dialog-message {
     color: #4a5568;
@@ -717,8 +728,8 @@ body.dark-mode .floating-qr-icon:hover {
     display: flex;
     gap: 1rem;
     justify-content: flex-end;
+    flex-shrink: 0;
 }
-
 .secondary-button {
     background: #e2e8f0;
     border: none;
@@ -932,6 +943,63 @@ body.dark-mode .floating-qr-icon:hover {
 
     .session-status-indicators {
         padding: var(--spacing-md);
+    }
+     .dialog-actions {
+    padding: 1rem 2rem 1.5rem;
+    background: #f7fafc;
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    flex-shrink: 0;
+}
+    .session-restore-backdrop {
+        padding: 0.25rem;
+    }
+    
+    .session-restore-dialog {
+        max-height: calc(100vh - 0.5rem);
+        border-radius: 8px;
+    }
+    
+    .dialog-header {
+        padding: 0.75rem 1rem;
+    }
+    
+    .dialog-header h3 {
+        font-size: 1rem;
+    }
+    
+    .close-button {
+        width: 24px;
+        height: 24px;
+        font-size: 1rem;
+    }
+    
+    .dialog-content {
+        padding: 0.75rem 1rem;
+        max-height: calc(100vh - 140px);
+    }
+    
+    .dialog-actions {
+        padding: 0.75rem 1rem;
+    }
+    
+    .stored-session-item {
+        padding: 0.5rem;
+        gap: 0.5rem;
+    }
+    
+    .session-details {
+        gap: 0.125rem;
+    }
+    
+    .session-details strong {
+        font-size: 0.875rem;
+    }
+    
+    .session-time,
+    .session-started {
+        font-size: 0.75rem;
     }
 }
 
@@ -1216,7 +1284,177 @@ body.dark-mode .session-feature-badge.offline {
         display: none;
     }
 }
+@media (max-width: 768px) {
+ .dialog-actions {
+    padding: 1rem 2rem 1.5rem;
+    background: #f7fafc;
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    flex-shrink: 0;
+}
+    .session-restore-backdrop {
+        padding: 0.25rem;
+    }
+    
+    .session-restore-dialog {
+        max-height: calc(100vh - 0.5rem);
+        border-radius: 8px;
+    }
+    
+    .dialog-header {
+        padding: 0.75rem 1rem;
+    }
+    
+    .dialog-header h3 {
+        font-size: 1rem;
+    }
+    
+    .close-button {
+        width: 24px;
+        height: 24px;
+        font-size: 1rem;
+    }
+    
+    .dialog-content {
+        padding: 0.75rem 1rem;
+        max-height: calc(100vh - 140px);
+    }
+    
+    .dialog-actions {
+        padding: 0.75rem 1rem;
+    }
+    
+    .stored-session-item {
+        padding: 0.5rem;
+        gap: 0.5rem;
+    }
+    
+    .session-details {
+        gap: 0.125rem;
+    }
+    
+    .session-details strong {
+        font-size: 0.875rem;
+    }
+    
+    .session-time,
+    .session-started {
+        font-size: 0.75rem;
+    }
+}
 
+/* Landscape mobile adjustments */
+@media (max-height: 500px) and (orientation: landscape) {
+    .session-restore-backdrop {
+        padding: 0.25rem;
+    }
+    
+    .session-restore-dialog {
+        max-height: calc(100vh - 0.5rem);
+    }
+    
+    .dialog-header {
+        padding: 0.75rem 1rem;
+    }
+    
+    .dialog-content {
+        padding: 0.75rem 1rem;
+        max-height: calc(100vh - 120px);
+    }
+    
+    .dialog-actions {
+        padding: 0.5rem 1rem;
+        flex-direction: row;
+        justify-content: flex-end;
+    }
+    
+    .stored-session-item {
+        flex-direction: row;
+        align-items: center;
+        padding: 0.5rem;
+    }
+    
+    .delete-session-btn {
+        align-self: center;
+    }
+}
+
+/* Dark mode adjustments */
+body.dark-mode .session-restore-dialog {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+body.dark-mode .dialog-actions {
+    background: var(--bg-tertiary);
+}
+
+body.dark-mode .stored-session-item {
+    border-color: var(--border);
+    background: var(--bg-tertiary);
+}
+
+body.dark-mode .stored-session-item:hover {
+    border-color: var(--primary-300);
+    background: var(--bg-primary);
+}
+
+body.dark-mode .stored-session-item.selected {
+    border-color: var(--primary-400);
+    background: rgba(33, 150, 243, 0.1);
+}
+
+body.dark-mode .session-details strong {
+    color: var(--text-primary);
+}
+
+body.dark-mode .session-time,
+body.dark-mode .session-started {
+    color: var(--text-secondary);
+}
+
+/* Accessibility improvements */
+.session-restore-dialog {
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+.stored-session-item:focus {
+    outline: 2px solid var(--primary-500);
+    outline-offset: 2px;
+}
+
+.close-button:focus,
+.delete-session-btn:focus {
+    outline: 2px solid rgba(255, 255, 255, 0.8);
+    outline-offset: 2px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: more) {
+    .session-restore-backdrop {
+        background: rgba(0, 0, 0, 0.8);
+    }
+    
+    .stored-session-item {
+        border-width: 2px;
+    }
+    
+    .stored-session-item.selected {
+        border-width: 3px;
+    }
+}
+
+/* Reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+    .session-restore-backdrop {
+        animation: none;
+    }
+    
+    .session-restore-dialog {
+        animation: none;
+    }
+    }
 /* Print styles */
 @media print {
     .create-session-page {
