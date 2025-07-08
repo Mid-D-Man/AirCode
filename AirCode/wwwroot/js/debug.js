@@ -285,7 +285,7 @@ window.addEventListener('DOMContentLoaded', async function() {
     console.log('Service worker scope:', navigator.serviceWorker?.controller?.scriptURL || 'No active service worker');
 
     // Start diagnostics panel after a short delay
-    setTimeout(addDiagnosticsPanel, 1000);
+    setTimeout(await addDiagnosticsPanel, 1000);
 
     // Check accessibility for critical files
     const criticalFiles = [
@@ -364,7 +364,7 @@ window.addEventListener('DOMContentLoaded', async function() {
 });
 
 // Adds a floating diagnostics panel for real-time feedback and storage management
-function addDiagnosticsPanel() {
+async function addDiagnosticsPanel() {
     if (!document.getElementById('debug-panel')) {
         const panel = document.createElement('div');
         panel.id = 'debug-panel';
