@@ -277,63 +277,66 @@ async function checkServiceWorkerStatus() {
         return `Error: ${error.message}`;
     }
 }
-window.addEventListener('DOMContentLoaded', async function() {
-    // Log current page and service worker details
-    console.log('Current base href:', document.querySelector('base')?.href);
-    console.log('Current path:', window.location.pathname);
-    console.log('Document URL:', document.URL);
-    console.log('Service worker scope:', navigator.serviceWorker?.controller?.scriptURL || 'No active service worker');
+window.addEventListener('DOMContentLoaded', function() {
+    (async function() {
+        // Log current page and service worker details
+        console.log('Current base href:', document.querySelector('base')?.href);
+        console.log('Current path:', window.location.pathname);
+        console.log('Document URL:', document.URL);
+        console.log('Service worker scope:', navigator.serviceWorker?.controller?.scriptURL || 'No active service worker');
 
-    // Start diagnostics panel after a short delay
-    setTimeout(() => addDiagnosticsPanel(), 1000);
-    // Check accessibility for critical files
-    const criticalFiles = [
-        '_framework/blazor.webassembly.js',
-        'manifest.json',
-        'css/app.css',
-        'favicon.png',
-        'service-worker.js'
-    ];
-    criticalFiles.forEach(checkFile);
+        // Start diagnostics panel after a short delay
+        setTimeout(() => addDiagnosticsPanel(), 1000);
 
-    // Monitor Blazor loading state
-    let blazorCheckInterval = setInterval(() => {
-        if (window.Blazor) {
-            console.log('✅ Blazor loaded successfully');
-            clearInterval(blazorCheckInterval);
-            if (document.getElementById('debug-content')) {
-                window.updateDiagnostics({
-                    blazorLoaded: true,
-                    loadTime: `${(performance.now() / 1000).toFixed(2)}s`
-                });
+        // Check accessibility for critical files
+        const criticalFiles = [
+            '_framework/blazor.webassembly.js',
+            'manifest.json',
+            'css/app.css',
+            'favicon.png',
+            'service-worker.js'
+        ];
+        criticalFiles.forEach(checkFile);
+
+        // Monitor Blazor loading state
+        let blazorCheckInterval = setInterval(() => {
+            if (window.Blazor) {
+                console.log('✅ Blazor loaded successfully');
+                clearInterval(blazorCheckInterval);
+                if (document.getElementById('debug-content')) {
+                    window.updateDiagnostics({
+                        blazorLoaded: true,
+                        loadTime: `${(performance.now() / 1000).toFixed(2)}s`
+                    });
+                }
             }
-        }
-    }, 500);
+        }, 500);
 
-    // Check service worker registrations - FIXED
-    const swStatus = await checkServiceWorkerStatus();
+        // Check service worker registrations - FIXED
+        const swStatus = await checkServiceWorkerStatus();
 
-    window.updateDiagnostics({
-        baseHref: document.querySelector('base')?.href,
-        path: window.location.pathname,
-        blazorLoaded: !!window.Blazor,
-        serviceWorker: swStatus, // Now uses the detailed status
-        online: navigator.onLine
-    });
-
-    // Add service worker state change listeners
-    if (navigator.serviceWorker) {
-        navigator.serviceWorker.addEventListener('controllerchange', async () => {
-            const swStatus = await checkServiceWorkerStatus();
-            window.updateDiagnostics({
-                baseHref: document.querySelector('base')?.href,
-                path: window.location.pathname,
-                blazorLoaded: !!window.Blazor,
-                serviceWorker: swStatus,
-                online: navigator.onLine
-            });
+        window.updateDiagnostics({
+            baseHref: document.querySelector('base')?.href,
+            path: window.location.pathname,
+            blazorLoaded: !!window.Blazor,
+            serviceWorker: swStatus, // Now uses the detailed status
+            online: navigator.onLine
         });
-    }
+
+        // Add service worker state change listeners
+        if (navigator.serviceWorker) {
+            navigator.serviceWorker.addEventListener('controllerchange', async () => {
+                const swStatus = await checkServiceWorkerStatus();
+                window.updateDiagnostics({
+                    baseHref: document.querySelector('base')?.href,
+                    path: window.location.pathname,
+                    blazorLoaded: !!window.Blazor,
+                    serviceWorker: swStatus,
+                    online: navigator.onLine
+                });
+            });
+        }
+    })();
 });
 
     // Check service worker registrations
