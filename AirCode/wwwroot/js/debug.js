@@ -285,8 +285,7 @@ window.addEventListener('DOMContentLoaded', async function() {
     console.log('Service worker scope:', navigator.serviceWorker?.controller?.scriptURL || 'No active service worker');
 
     // Start diagnostics panel after a short delay
-    setTimeout(await addDiagnosticsPanel, 1000);
-
+    setTimeout(() => addDiagnosticsPanel(), 1000);
     // Check accessibility for critical files
     const criticalFiles = [
         '_framework/blazor.webassembly.js',
