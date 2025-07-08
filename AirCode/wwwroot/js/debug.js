@@ -311,6 +311,32 @@ window.addEventListener('DOMContentLoaded', async function() {
         }
     }, 500);
 
+    // Check service worker registrations - FIXED
+    const swStatus = await checkServiceWorkerStatus();
+
+    window.updateDiagnostics({
+        baseHref: document.querySelector('base')?.href,
+        path: window.location.pathname,
+        blazorLoaded: !!window.Blazor,
+        serviceWorker: swStatus, // Now uses the detailed status
+        online: navigator.onLine
+    });
+
+    // Add service worker state change listeners
+    if (navigator.serviceWorker) {
+        navigator.serviceWorker.addEventListener('controllerchange', async () => {
+            const swStatus = await checkServiceWorkerStatus();
+            window.updateDiagnostics({
+                baseHref: document.querySelector('base')?.href,
+                path: window.location.pathname,
+                blazorLoaded: !!window.Blazor,
+                serviceWorker: swStatus,
+                online: navigator.onLine
+            });
+        });
+    }
+});
+
     // Check service worker registrations
     const swStatus = await checkServiceWorkerStatus();
 
@@ -517,13 +543,15 @@ function addDiagnosticsPanel() {
         document.body.appendChild(panel);
 
         // Call global functions
+                const swStatus = await checkServiceWorkerStatus();
         window.updateDiagnostics({
             baseHref: document.querySelector('base')?.href,
             path: window.location.pathname,
             blazorLoaded: !!window.Blazor,
-            serviceWorker: navigator.serviceWorker?.controller ? true : false,
+            serviceWorker: swStatus, // Now uses detailed status instead of boolean
             online: navigator.onLine
         });
+
 
         // Initialize storage info
         window.updateStorageInfo();
