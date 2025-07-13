@@ -182,26 +182,26 @@
     
     // Network status monitoring
     function setupNetworkMonitoring() {
-        const updateOnlineStatus = () => {
-            const wasOffline = window.isOfflineMode;
-            window.isOfflineMode = !navigator.onLine;
+    const updateOnlineStatus = () => {
+        const wasOffline = window.isOfflineMode;
+        window.isOfflineMode = !navigator.onLine;
+        
+        if (wasOffline !== window.isOfflineMode) {
+            console.log('Network status changed:', window.isOfflineMode ? 'offline' : 'online');
             
-            if (wasOffline !== window.isOfflineMode) {
-                console.log('Network status changed:', window.isOfflineMode ? 'offline' : 'online');
-                
-                // Notify app components if they exist
-                if (window.onNetworkStatusChange) {
-                    window.onNetworkStatusChange(window.isOfflineMode);
-                }
+            // Notify app components if they exist
+            if (window.onNetworkStatusChange) {
+                window.onNetworkStatusChange(window.isOfflineMode);
             }
-        };
-        
-        window.addEventListener('online', updateOnlineStatus);
-        window.addEventListener('offline', updateOnlineStatus);
-        
-        // Initial check
-        updateOnlineStatus();
-    }
+        }
+    };
+    
+    window.addEventListener('online', updateOnlineStatus);
+    window.addEventListener('offline', updateOnlineStatus);
+    
+    // Initial check
+    updateOnlineStatus();
+}
     
     // Initialize everything with proper sequencing
     function initializeApp() {
