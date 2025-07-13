@@ -3,26 +3,44 @@
 
 class PWAManager {
     constructor() {
+        // Prevent multiple instantiation
+        if (PWAManager.instance) {
+            return PWAManager.instance;
+        }
+        
         this.isGitHubPages = window.location.hostname === 'mid-d-man.github.io';
         this.basePath = this.isGitHubPages ? '/AirCode/' : '/';
         this.serviceWorkerUrl = this.basePath + 'service-worker.js';
         this.registration = null;
         this.updateAvailable = false;
+        this.initialized = false;
         
+        // Store singleton instance
+        PWAManager.instance = this;
+        
+        // Initialize only once
         this.init();
     }
 
     async init() {
+        if (this.initialized) {
+            console.log('PWA Manager already initialized');
+            return;
+        }
+
         if ('serviceWorker' in navigator) {
             try {
                 await this.registerServiceWorker();
                 this.setupUpdateListener();
                 this.setupInstallPrompt();
+                this.initialized = true;
+                console.log('PWA Manager initialized successfully');
             } catch (error) {
                 console.error('PWA Manager initialization failed:', error);
             }
         } else {
             console.warn('Service Worker not supported in this browser');
+            this.initialized = true;
         }
     }
 
@@ -279,6 +297,14 @@ class PWAManager {
             updateAvailable: this.updateAvailable
         };
     }
+
+    // Static method to get singleton instance
+    static getInstance() {
+        if (!PWAManager.instance) {
+            new PWAManager();
+        }
+        return PWAManager.instance;
+    }
 }
 
 // CSS for PWA notifications and install button
@@ -392,18 +418,17 @@ const pwaStyles = `
     }
 `;
 
-// Inject styles
-const styleSheet = document.createElement('style');
-styleSheet.textContent = pwaStyles;
-document.head.appendChild(styleSheet);
+// Inject styles only once
+if (!document.getElementById('pwa-styles')) {
+    const styleSheet = document.createElement('style');
+    styleSheet.id = 'pwa-styles';
+    styleSheet.textContent = pwaStyles;
+    document.head.appendChild(styleSheet);
+}
 
-// Initialize PWA Manager when DOM is ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        window.pwaManager = new PWAManager();
-    });
-} else {
-    window.pwaManager = new PWAManager();
+// Initialize PWA Manager singleton - safe to call multiple times
+if (!window.pwaManager) {
+    window.pwaManager = PWAManager.getInstance();
 }
 
 // Export for use in Blazor components
