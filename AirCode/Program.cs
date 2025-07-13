@@ -19,6 +19,7 @@ using AirCode.Services.Permissions;
 using AirCode.Services.Search;
 using AirCode.Services.Storage;
 using AirCode.Services.Academic;
+
 using AirCode.Services.VisualElements;
 using AirCode.Utilities.DataStructures;
 using AirCode.Utilities.HelperScripts;
@@ -153,7 +154,7 @@ builder.Services.AddScoped<IAcademicSessionService, AcademicSessionService>();
 builder.Services.AddScoped<ISearchContextService, SearchContextService>();
 builder.Services.AddScoped<SessionStateService>();
 builder.Services.AddScoped<QRCodeDecoder>();
-
+builder.Services.AddSingleton<ConnectivityService>();
 // UI and visual component services
 builder.Services.AddScoped<ISvgIconService, SvgIconService>();
 builder.Services.AddPWAServices(builder.Configuration);
