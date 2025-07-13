@@ -8,18 +8,11 @@
     <title>AirCode</title>
     <base href="/" />
 
-     <!-- SPA routing fix for GitHub Pages - must be early in head -->
+    <!-- SPA routing fix for GitHub Pages - must be early in head -->
     <script type="text/javascript">
-        // Single Page Apps for GitHub  Pages
+        // Single Page Apps for GitHub Pages
         // MIT License
         // https://github.com/rafgraph/spa-github-pages
-        // This script checks to see if a redirect is present in the query string,
-        // converts it back into the correct url and adds it to the
-        // browser's history using window.history.replaceState(...),
-        // which won't cause the browser to attempt to load the new url.
-        // When the single page app is loaded further down in this file,
-        // the correct url will be waiting in the browser's history for
-        // the single page app to route accordingly.
         (function(l) {
             if (l.search[1] === '/' ) {
                 let decoded = l.search.slice(1).split('&').map(function(s) {
@@ -31,6 +24,7 @@
             }
         }(window.location))
     </script>
+
     <!-- CSS -->
     <link href="css/bootstrap/bootstrap.min.css" rel="stylesheet" />
     <link href="css/app.css" rel="stylesheet" />
@@ -62,79 +56,101 @@
     <a class="dismiss">🗙</a>
 </div>
 
-<!-- Framework and Core Services  -->
+<!-- Framework and Core Services -->
 <script src="_framework/blazor.webassembly.js"></script>
-<!-- PWA Scripts -->
+
+<!-- PWA Scripts - Load before service worker registration -->
 <script src="js/pwaManager.js"></script>
 <script src="js/pwaInterop.js"></script>
 <script src="js/connectivityServices.js"></script>
-<!-- Enhanced Service Worker Registration with Offline Support -->
 
+<!-- CRITICAL: Proper Service Worker Registration -->
 <script>
-    // Global offline state
-    window.isOfflineMode = !navigator.onLine;
-    
-    // Enhanced PWA initialization with singleton pattern
-    async function initializeEnhancedPWA() {
-        console.log('Initializing Enhanced PWA...');
-        
-        // Use singleton instance instead of creating new one
-        if (!window.pwaManager) {
-            // PWA Manager will be initialized from pwaManager.js
-            console.log('Waiting for PWA Manager...');
-            return;
-        }
-        
-        if ('serviceWorker' in navigator) {
+    // Service Worker Registration - MUST be before other scripts
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', async () => {
             try {
+                // Register the service worker
+                const registration = await navigator.serviceWorker.register('service-worker.js', {
+                    scope: '/AirCode/'
+                });
+
+                console.log('Service Worker registered successfully:', registration);
+
+                // Handle updates
+                registration.addEventListener('updatefound', () => {
+                    const newWorker = registration.installing;
+                    newWorker.addEventListener('statechange', () => {
+                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            console.log('New service worker installed, ready to activate');
+                            // Optionally show update notification
+                            if (window.showUpdateNotification) {
+                                window.showUpdateNotification();
+                            }
+                        }
+                    });
+                });
+
+                // Handle controller change
+                navigator.serviceWorker.addEventListener('controllerchange', () => {
+                    console.log('Service worker controller changed, reloading page');
+                    window.location.reload();
+                });
+
                 // Wait for service worker to be ready
                 await navigator.serviceWorker.ready;
-                console.log('Service Worker ready');
-                
-                // If we're offline, let the app know
-                if (!navigator.onLine) {
-                    console.log('Starting in offline mode');
-                    window.isOfflineMode = true;
-                }
-                
-                // Discover and cache assets after Blazor loads
-                if (navigator.onLine) {
-                    // Wait for Blazor to load, then discover assets
-                    waitForBlazorAndDiscoverAssets();
-                }
-                
+                console.log('Service Worker is ready');
+
+                // Initialize offline capabilities
+                window.isOfflineMode = !navigator.onLine;
+                setupOfflineHandling();
+
             } catch (error) {
-                console.error('Enhanced PWA initialization failed:', error);
-            }
-        } else {
-            console.warn('Service Worker not supported');
-        }
-    }
-    
-    // Wait for Blazor to load completely and then discover assets
-    async function waitForBlazorAndDiscoverAssets() {
-        // Wait for Blazor to be ready
-        const blazorReady = new Promise((resolve) => {
-            if (window.Blazor) {
-                resolve();
-            } else {
-                window.addEventListener('blazor:started', resolve);
+                console.error('Service Worker registration failed:', error);
             }
         });
-        
-        await blazorReady;
-        
-        // Give Blazor a moment to fully initialize
-        setTimeout(async () => {
-            await discoverAndCacheBlazorAssets();
-        }, 2000);
+    } else {
+        console.warn('Service Workers are not supported in this browser');
     }
-    
-    // Enhanced asset discovery
-    async function discoverAndCacheBlazorAssets() {
-        try {
-            console.log('Discovering Blazor assets...');
+
+    // Enhanced offline handling
+    function setupOfflineHandling() {
+        // Network status monitoring
+        const updateOnlineStatus = () => {
+            const wasOffline = window.isOfflineMode;
+            window.isOfflineMode = !navigator.onLine;
             
+            if (wasOffline !== window.isOfflineMode) {
+                console.log('Network status changed:', window.isOfflineMode ? 'offline' : 'online');
+                
+                // Update UI indicators
+                document.body.classList.toggle('offline-mode', window.isOfflineMode);
+                
+                // Notify app components
+                if (window.onNetworkStatusChange) {
+                    window.onNetworkStatusChange(window.isOfflineMode);
+                }
+            }
+        };
+
+        window.addEventListener('online', updateOnlineStatus);
+        window.addEventListener('offline', updateOnlineStatus);
+        updateOnlineStatus(); // Initial check
+    }
+
+    // Blazor initialization handling
+    window.addEventListener('blazor:started', () => {
+        console.log('Blazor started');
+        
+        // Discover and cache assets after Blazor loads
+        if (navigator.onLine && navigator.serviceWorker.controller) {
+            discoverBlazorAssets();
+        }
+    });
+
+    // Asset discovery for service worker caching
+    async function discoverBlazorAssets() {
+        try {
             const assets = new Set();
             const basePath = '/AirCode/';
             
@@ -146,7 +162,7 @@
                 if (url.includes(basePath)) {
                     const relativePath = url.substring(url.indexOf(basePath));
                     
-                    // Include all Blazor-related assets
+                    // Include Blazor-related assets
                     if (relativePath.includes('_framework/') || 
                         relativePath.endsWith('.css') ||
                         relativePath.endsWith('.js') ||
@@ -154,7 +170,6 @@
                         relativePath.endsWith('.dll') ||
                         relativePath.endsWith('.wasm') ||
                         relativePath.endsWith('.dat') ||
-                        relativePath.endsWith('.pdb') ||
                         relativePath.includes('dotnet.') ||
                         relativePath.includes('blazor.') ||
                         relativePath.includes('Microsoft.') ||
@@ -165,74 +180,22 @@
                 }
             });
             
-            // Send discovered assets to service worker
+            // Send to service worker
             if (navigator.serviceWorker.controller) {
                 navigator.serviceWorker.controller.postMessage({
-                    type: 'UPDATE_ASSETS',
+                    type: 'CACHE_ASSETS',
                     assets: Array.from(assets)
                 });
-                
-                console.log('Sent', assets.size, 'assets to service worker for caching');
+                console.log('Sent', assets.size, 'assets to service worker');
             }
             
         } catch (error) {
             console.error('Asset discovery failed:', error);
         }
     }
-    
-    // Network status monitoring
-    function setupNetworkMonitoring() {
-    const updateOnlineStatus = () => {
-        const wasOffline = window.isOfflineMode;
-        window.isOfflineMode = !navigator.onLine;
-        
-        if (wasOffline !== window.isOfflineMode) {
-            console.log('Network status changed:', window.isOfflineMode ? 'offline' : 'online');
-            
-            // Notify app components if they exist
-            if (window.onNetworkStatusChange) {
-                window.onNetworkStatusChange(window.isOfflineMode);
-            }
-        }
-    };
-    
-    window.addEventListener('online', updateOnlineStatus);
-    window.addEventListener('offline', updateOnlineStatus);
-    
-    // Initial check
-    updateOnlineStatus();
-}
-    
-    // Initialize everything with proper sequencing
-    function initializeApp() {
-        setupNetworkMonitoring();
-        
-        // Wait for PWA Manager to be available, then initialize enhanced features
-        const checkPWAManager = setInterval(() => {
-            if (window.pwaManager) {
-                clearInterval(checkPWAManager);
-                initializeEnhancedPWA();
-            }
-        }, 100);
-        
-        // Timeout after 5 seconds
-        setTimeout(() => {
-            clearInterval(checkPWAManager);
-            if (!window.pwaManager) {
-                console.warn('PWA Manager not available after 5 seconds');
-            }
-        }, 5000);
-    }
-    
-    // Initialize with proper event handling
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initializeApp);
-    } else {
-        initializeApp();
-    }
 </script>
 
-<!--<script>navigator.serviceWorker.register('service-worker.js');</script>-->
+<!-- Authentication Service -->
 <script src="_content/Microsoft.AspNetCore.Components.WebAssembly.Authentication/AuthenticationService.js"></script>
 
 <!-- Firebase SDK -->
@@ -240,28 +203,23 @@
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
 
-
 <!-- Application Scripts -->
 <script src="js/debug.js"></script>
-
 <script src="js/themeSwitcher.js"></script>
-<!--<script src="js/pageNavigator.js"></script> -->
 <script src="js/authHelper.js"></script>
 <script src="js/cryptographyHandler.js"></script>
 <script src="js/offlineCredentialsHandler.js"></script>
 <script src="js/site.js"></script>
 <script src="js/cameraUtil.js"></script>
- <script src="js/floatingQrDrag.js"></script>
+<script src="js/floatingQrDrag.js"></script>
 <script src="js/firestoreModule.js"></script>
-
-<!-- Extra Load modules -->
 <script src="js/qrCodeModule.js"></script>
-<script src ="js/gpuPerformance.js"></script>
-<script src ="js/search-helpers.js"></script>
-<script src ="js/validateKeyAndIV.js"></script>
+<script src="js/gpuPerformance.js"></script>
+<script src="js/search-helpers.js"></script>
+<script src="js/validateKeyAndIV.js"></script>
 
+<!-- Camera utility functions -->
 <script>
-    // Camera utility functions for QR scanner
     window.getCameraStream = async (constraints) => {
         try {
             return await navigator.mediaDevices.getUserMedia(constraints);
@@ -270,12 +228,13 @@
             throw error;
         }
     };
+    
     window.stopMediaStream = (stream) => {
         if (stream) {
             stream.getTracks().forEach(track => track.stop());
         }
     };
-    // Check camera permissions
+    
     window.checkCameraPermission = async () => {
         try {
             const result = await navigator.permissions.query({ name: 'camera' });
@@ -285,8 +244,9 @@
         }
     };
 </script>
+
+<!-- WASM debugging -->
 <script>
-    // Add this to debug WASM loading
     window.addEventListener('load', async () => {
         try {
             const wasmUrl = './wasm/qr_code_generator_bg.wasm';
@@ -319,5 +279,4 @@
 </script>
 
 </body>
-
-</html>
+        </html>
