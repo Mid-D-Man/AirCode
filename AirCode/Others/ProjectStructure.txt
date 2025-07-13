@@ -1,7 +1,7 @@
 Project Structure Documentation
-Generated: Sun Jul 13 02:06:17 UTC 2025
+Generated: Sun Jul 13 02:08:41 UTC 2025
 Repository: Mid-D-Man/AirCode
-Commit: 9126c8a1bd80aed3795b920376555a472ede9975
+Commit: 57cbd4b054caac3846f4ef6a3e43c297c70c306d
 ==================================
 
 Source Files:
@@ -184,6 +184,7 @@ Services/Auth/CustomAuthStateProvider.cs
 Services/Auth/IAuthService.cs
 Services/Auth/IOfflineCredentialsService.cs
 Services/Auth/OfflineCredentialsService.cs
+Services/Connectivity/ConnectivityService.cs
 Services/Courses/CourseService.cs
 Services/Courses/ICourseService.cs
 Services/Cryptography/CryptographyService.cs
@@ -302,7 +303,7 @@ Directory Structure:
 
 File Count Summary:
 ==================
-.cs       : 87 files
+.cs       : 88 files
 .razor    : 64 files
 .csproj   : 1 files
 .json     : 12 files
