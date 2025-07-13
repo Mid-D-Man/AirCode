@@ -13,6 +13,8 @@
 @inject IOfflineCredentialsService OfflineCredentialService
 @inject IAuthService AuthService
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject ConnectivityService ConnectivityService
+
 @implements IDisposable
 
 <BlobBackground />
@@ -57,33 +59,35 @@
     private bool isOnline = true;
     private DotNetObjectReference<Index> objRef;
     private NotificationComponent notificationComponent;
-    
+
+
     protected override async Task OnInitializedAsync()
-    {
-        // Initialize connectivity checker
-        objRef = DotNetObjectReference.Create(this);
-        await JSRuntime.InvokeVoidAsync("connectivityChecker.init", objRef);
+{
+    await ConnectivityService.InitializeAsync();
+    
+    // Subscribe to connectivity changes
+    ConnectivityService.ConnectivityChanged += OnConnectivityStatusChanged;
+    
+    // Get initial status
+    var status = await ConnectivityService.GetConnectivityStatusAsync();
+    isOnline = status.IsOnline;
+}
 
-        // Get initial online status
-        isOnline = await JSRuntime.InvokeAsync<bool>("connectivityChecker.getOnlineStatus");
-    }
-
-    [JSInvokable]
-    public void OnConnectivityChanged(bool online)
+private void OnConnectivityStatusChanged(ConnectivityStatus status)
+{
+    isOnline = status.IsOnline;
+    
+    if (!status.IsOnline)
     {
-        isOnline = online;
-        
-        if (!online)
-        {
-            notificationComponent?.ShowError("You are currently offline. Some features may be limited.");
-        }
-        else
-        {
-            notificationComponent?.ShowSuccess("Connection restored. All features are now available.");
-        }
-        
-        StateHasChanged();
+        notificationComponent?.ShowError($"You are currently offline. Network quality: {status.NetworkQuality}");
     }
+    else
+    {
+        notificationComponent?.ShowSuccess($"Connection restored. Network quality: {status.NetworkQuality}");
+    }
+    
+    InvokeAsync(StateHasChanged);
+}
 
     private async Task RedirectAuthenticatedUser()
     {
