@@ -69,36 +69,24 @@
 <script src="js/pwaInterop.js"></script>
 
 <!-- Enhanced Service Worker Registration with Offline Support -->
+
 <script>
     // Global offline state
     window.isOfflineMode = !navigator.onLine;
     
-    // Enhanced PWA initialization with better offline support
+    // Enhanced PWA initialization with singleton pattern
     async function initializeEnhancedPWA() {
         console.log('Initializing Enhanced PWA...');
         
+        // Use singleton instance instead of creating new one
+        if (!window.pwaManager) {
+            // PWA Manager will be initialized from pwaManager.js
+            console.log('Waiting for PWA Manager...');
+            return;
+        }
+        
         if ('serviceWorker' in navigator) {
             try {
-                // Register service worker
-                const registration = await navigator.serviceWorker.register('/AirCode/service-worker.js', {
-                    scope: '/AirCode/'
-                });
-                
-                console.log('Service Worker registered:', registration);
-                
-                // Handle updates
-                registration.addEventListener('updatefound', () => {
-                    const newWorker = registration.installing;
-                    if (newWorker) {
-                        newWorker.addEventListener('statechange', () => {
-                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                console.log('New service worker installed, update available');
-                                // You can show update notification here
-                            }
-                        });
-                    }
-                });
-                
                 // Wait for service worker to be ready
                 await navigator.serviceWorker.ready;
                 console.log('Service Worker ready');
@@ -116,7 +104,7 @@
                 }
                 
             } catch (error) {
-                console.error('Service Worker registration failed:', error);
+                console.error('Enhanced PWA initialization failed:', error);
             }
         } else {
             console.warn('Service Worker not supported');
@@ -215,21 +203,32 @@
         updateOnlineStatus();
     }
     
-    // Initialize everything
-    document.addEventListener('DOMContentLoaded', () => {
+    // Initialize everything with proper sequencing
+    function initializeApp() {
         setupNetworkMonitoring();
-        initializeEnhancedPWA();
-    });
+        
+        // Wait for PWA Manager to be available, then initialize enhanced features
+        const checkPWAManager = setInterval(() => {
+            if (window.pwaManager) {
+                clearInterval(checkPWAManager);
+                initializeEnhancedPWA();
+            }
+        }, 100);
+        
+        // Timeout after 5 seconds
+        setTimeout(() => {
+            clearInterval(checkPWAManager);
+            if (!window.pwaManager) {
+                console.warn('PWA Manager not available after 5 seconds');
+            }
+        }, 5000);
+    }
     
-    // Fallback for already loaded DOM
+    // Initialize with proper event handling
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => {
-            setupNetworkMonitoring();
-            initializeEnhancedPWA();
-        });
+        document.addEventListener('DOMContentLoaded', initializeApp);
     } else {
-        setupNetworkMonitoring();
-        initializeEnhancedPWA();
+        initializeApp();
     }
 </script>
 
@@ -260,7 +259,7 @@
 <script src ="js/gpuPerformance.js"></script>
 <script src ="js/search-helpers.js"></script>
 <script src ="js/validateKeyAndIV.js"></script>
-<script src ="js/pwaManager.js"></script>
+
 <script>
     // Camera utility functions for QR scanner
     window.getCameraStream = async (constraints) => {
