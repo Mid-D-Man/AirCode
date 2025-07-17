@@ -18,6 +18,7 @@ using AirCode.Domain.Entities;
 using SessionData = AirCode.Services.Attendance.SessionData;
 using AirCode.Components.SharedPrefabs.Others;
 using AirCode.Services.Auth;
+using AirCode.Components.Admin.Shared;
     public partial class CreateAttendanceEvent : ComponentBase, IDisposable
     {
         /// <summary>
@@ -75,6 +76,9 @@ private bool showSessionRestoreDialog = false;
 private SessionData selectedStoredSession;
 public bool isCurrentUserCourseRep = false;
 public string currentUserMatricNumber = String.Empty;
+
+private bool showManualAttendancePopup = false;
+private SessionData? manualAttendanceSessionData;
 
 
 protected override async Task OnInitializedAsync()
@@ -905,6 +909,36 @@ private async Task AutoSignCourseRepAsync()
         // Don't throw - session should still start even if auto-sign fails
     }
 }
+private void OpenManualAttendancePopup()
+{
+    if (currentActiveSession != null && selectedCourse != null)
+    {
+        manualAttendanceSessionData = new SessionData
+        {
+            SessionId = currentActiveSession.SessionId,
+            CourseCode = selectedCourse.CourseCode,
+            CourseName = selectedCourse.Name,
+            StartTime = currentActiveSession.StartTime,
+            Duration = currentActiveSession.Duration
+        };
+        showManualAttendancePopup = true;
+    }
+}
+
+private void CloseManualAttendancePopup()
+{
+    showManualAttendancePopup = false;
+    manualAttendanceSessionData = null;
+}
+
+private async Task HandleManualAttendanceSigned(string matricNumber)
+{
+    // Optional: Add any additional logic when attendance is manually signed
+    // For example, refresh attendance data, show notifications, etc.
+    
+    // You can add a status message here
+    restorationMessage = $"Attendance manually signed for {matricNumber}";
+    StateHasChanged();
         private string FormatTimeRemaining()
         {
             if (!isSessionStarted || currentActiveSession == null) return "--:--:--";
