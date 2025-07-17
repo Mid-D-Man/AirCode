@@ -1,4 +1,3 @@
-
 using AirCode.Models.Supabase;
 namespace AirCode.Services.Attendance
 {
@@ -52,6 +51,11 @@ namespace AirCode.Services.Attendance
         /// Get attendance statistics for a course
         /// </summary>
         Task<Dictionary<string, object>> GetCourseAttendanceStatsAsync(string courseCode);
+        /// <summary>
+/// Manually sign student attendance by admin/instructor
+/// </summary>
+Task<bool> ManualSignAttendanceAsync(string sessionId, string courseCode, 
+    string studentMatricNumber, bool isManualSign = true);
         /// <summary>
 /// Auto-sign course rep when session is created
 /// </summary>
