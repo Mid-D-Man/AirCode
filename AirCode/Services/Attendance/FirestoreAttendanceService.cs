@@ -629,7 +629,72 @@ public async Task<bool> CreateAttendanceEventWithCourseRepAsync(string sessionId
     }
 }
 
+/// <summary>
+/// Manually sign student attendance by admin/instructor
+/// </summary>
+public async Task<bool> ManualSignAttendanceAsync(string sessionId, string courseCode, 
+    string studentMatricNumber, bool isManualSign = true)
+{
+    try
+    {
+        var documentId = $"AttendanceEvent_{courseCode}";
+        
+        // Get existing document to find the correct event field
+        var existingDoc = await _firestoreService.GetDocumentAsync<Dictionary<string, object>>(
+            ATTENDANCE_EVENTS_COLLECTION, documentId);
 
+        if (existingDoc == null)
+        {
+            _logger.LogWarning($"No Firebase document found for course {courseCode}");
+            return false;
+        }
+
+        // Find the event field that matches the session ID
+        var eventFieldName = existingDoc.Keys
+            .FirstOrDefault(key => key.StartsWith("Event_") && key.Contains(sessionId));
+
+        if (string.IsNullOrEmpty(eventFieldName))
+        {
+            _logger.LogWarning($"No event found for session {sessionId} in course {courseCode}");
+            return false;
+        }
+
+        // Verify student is enrolled in this course
+        var allStudentCourses = await _courseService.GetAllStudentCoursesAsync();
+        var isStudentEnrolled = allStudentCourses
+            .Any(sc => sc.StudentMatricNumber == studentMatricNumber && 
+                      sc.GetEnrolledCourses().Any(cr => cr.CourseCode == courseCode));
+
+        if (!isStudentEnrolled)
+        {
+            _logger.LogWarning($"Student {studentMatricNumber} not enrolled in course {courseCode}");
+            return false;
+        }
+
+        // Update attendance record directly in Firebase
+        var attendanceRecordPath = $"{eventFieldName}.AttendanceRecords.{studentMatricNumber}";
+        
+        var updatedRecord = new
+        {
+            MatricNumber = studentMatricNumber,
+            HasScannedAttendance = true,
+            ScanTime = DateTime.UtcNow,
+            IsOnlineScan = false,
+            IsManualSign = isManualSign
+        };
+
+        await _firestoreService.AddOrUpdateFieldAsync(
+            ATTENDANCE_EVENTS_COLLECTION, documentId, attendanceRecordPath, updatedRecord);
+
+        _logger.LogInformation($"Successfully manually signed attendance for student {studentMatricNumber} in session {sessionId}");
+        return true;
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, $"Error manually signing attendance for student {studentMatricNumber} in session {sessionId}");
+        return false;
+    }
+}
         /// <summary>
         /// Get attendance statistics for a course
         /// </summary>
