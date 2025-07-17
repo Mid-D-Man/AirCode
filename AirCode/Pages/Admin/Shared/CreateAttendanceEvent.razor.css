@@ -765,6 +765,36 @@ body.dark-mode .floating-qr-icon:hover {
     border: 1px solid #e53e3e;
     color: #c53030;
 }
+    .manual-attendance-icon {
+        position: fixed;
+        bottom: 120px;
+        right: 30px;
+        width: 60px;
+        height: 60px;
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        border: none;
+        border-radius: 50%;
+        color: white;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        transition: all 0.3s ease;
+        z-index: 100;
+    }
+
+    .manual-attendance-icon:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+        background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    }
+
+    .manual-attendance-icon:active {
+        transform: translateY(0);
+    }
+
+
 
 /* Animation Keyframes */
 @keyframes fadeIn {
@@ -940,7 +970,12 @@ body.dark-mode .floating-qr-icon:hover {
         width: 100%;
     }
 
-   
+     .manual-attendance-icon {
+            bottom: 140px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+        }
 }
 
 /* Small Screens (481px - 767px) */
