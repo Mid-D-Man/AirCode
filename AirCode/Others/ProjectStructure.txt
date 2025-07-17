@@ -1,7 +1,7 @@
 Project Structure Documentation
-Generated: Thu Jul 17 04:42:32 UTC 2025
+Generated: Thu Jul 17 04:55:49 UTC 2025
 Repository: Mid-D-Man/AirCode
-Commit: 87cd83e2f05661334f44172deb16533db4e94f33
+Commit: a59b39f013dfbb9b1fa605f1e2c0fdc584239548
 ==================================
 
 Source Files:
@@ -15,6 +15,7 @@ Components/Admin/Shared/Burger.razor
 Components/Admin/Shared/Burger.razor.css
 Components/Admin/Shared/DashboardButtonIcon.razor
 Components/Admin/Shared/DashboardButtonIcon.razor.css
+Components/Admin/Shared/ManualAttendancePopup.razor
 Components/Admin/Shared/NavMenuButton.razor
 Components/Admin/Shared/NavMenuButton.razor.css
 Components/Auth/AccessControl.razor
@@ -304,7 +305,7 @@ Directory Structure:
 File Count Summary:
 ==================
 .cs       : 88 files
-.razor    : 64 files
+.razor    : 65 files
 .csproj   : 1 files
 .json     : 12 files
 .css      : 73 files
