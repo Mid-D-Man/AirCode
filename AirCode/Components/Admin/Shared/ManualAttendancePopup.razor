@@ -1,0 +1,81 @@
+@using AirCode.Components.SharedPrefabs.Buttons
+@using AirCode.Components.SharedPrefabs.Spinner
+@using AirCode.Models.Supabase
+@inject IFirestoreAttendanceService FirestoreAttendanceService
+
+@if (IsVisible)
+{
+    <div class="manual-attendance-backdrop" @onclick="HandleBackdropClick">
+        <div class="manual-attendance-popup" @onclick:stopPropagation="true">
+            <div class="popup-header">
+                <h3>Manual Attendance Sign</h3>
+                <button class="close-button" @onclick="ClosePopup">×</button>
+            </div>
+
+            <div class="popup-content">
+                <div class="session-info">
+                    <div class="session-detail">
+                        <strong>Course:</strong> @SessionData?.CourseName (@SessionData?.CourseCode)
+                    </div>
+                    <div class="session-detail">
+                        <strong>Session ID:</strong> @SessionData?.SessionId
+                    </div>
+                    <div class="session-detail">
+                        <strong>Started:</strong> @SessionData?.StartTime.ToString("MMM dd, yyyy HH:mm")
+                    </div>
+                </div>
+
+                <div class="input-section">
+                    <div class="form-group">
+                        <label for="matricNumber">Student Matric Number</label>
+                        <input type="text" 
+                               id="matricNumber" 
+                               @bind="matricNumber" 
+                               @oninput="HandleMatricInput"
+                               class="form-control @(hasError ? "error" : "")" 
+                               placeholder="Enter matric number (e.g., 20CS1234)"
+                               disabled="@isProcessing" />
+                        
+                        @if (hasError)
+                        {
+                            <div class="error-message">
+                                <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                                </svg>
+                                @errorMessage
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                @if (!string.IsNullOrEmpty(successMessage))
+                {
+                    <div class="success-message">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                        </svg>
+                        @successMessage
+                    </div>
+                }
+            </div>
+
+            <div class="popup-actions">
+                <button class="secondary-button" @onclick="ClosePopup" disabled="@isProcessing">
+                    Cancel
+                </button>
+                <PrimaryButton Text="Sign Attendance" 
+                             OnClick="SignAttendanceAsync" 
+                             Disabled="@(string.IsNullOrWhiteSpace(matricNumber) || isProcessing)" />
+            </div>
+
+            @if (isProcessing)
+            {
+                <div class="processing-overlay">
+                    <LoadingSpinner Title="Processing Manual Sign" 
+                                  Subtitle="Signing attendance for @matricNumber..." />
+                </div>
+            }
+        </div>
+    </div>
+}
+
