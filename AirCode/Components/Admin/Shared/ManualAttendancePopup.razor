@@ -2,7 +2,6 @@
 @using AirCode.Components.SharedPrefabs.Spinner
 @using AirCode.Models.Supabase
 @using AirCode.Services.Attendance
-@inject IFirestoreAttendanceService FirestoreAttendanceService
 
 @if (IsVisible)
 {
@@ -73,7 +72,7 @@
             {
                 <div class="processing-overlay">
                     <LoadingSpinner Title="Processing Manual Sign" 
-                                  Subtitle="Signing attendance for @matricNumber..." />
+                                  Subtitle="@SpinnerSubtitle"
                 </div>
             }
         </div>
