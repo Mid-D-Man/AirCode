@@ -28,7 +28,7 @@ namespace AirCode.Components.Admin.Shared
         private string errorMessage = string.Empty;
         private string successMessage = string.Empty;
         private Timer? successTimer;
-
+public string SpinnerSubtitle => $"Signing attendance for {matricNumber}...";
         // Matric number validation pattern
         private static readonly Regex MatricNumberPattern = new(
             @"^[0-9]{2}[A-Z]{2}[0-9]{4}$",
