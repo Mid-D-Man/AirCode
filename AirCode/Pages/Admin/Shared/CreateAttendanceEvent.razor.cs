@@ -939,6 +939,8 @@ private async Task HandleManualAttendanceSigned(string matricNumber)
     // You can add a status message here
     restorationMessage = $"Attendance manually signed for {matricNumber}";
     StateHasChanged();
+
+}
         private string FormatTimeRemaining()
         {
             if (!isSessionStarted || currentActiveSession == null) return "--:--:--";
