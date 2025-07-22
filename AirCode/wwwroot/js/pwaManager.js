@@ -3,7 +3,7 @@
 
 class PWAManager {
     constructor() {
-        // Prevent multiple instantiation
+        // Prevent multiple instantiation .
         if (PWAManager.instance) {
             return PWAManager.instance;
         }
