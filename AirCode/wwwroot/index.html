@@ -44,26 +44,7 @@
     <link rel="apple-touch-icon" sizes="512x512" href="icon-512.png" />
     <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
 
-    <script>
-        window.AuthenticationService = {
-            init: function() {
-                return new Promise((resolve) => {
-                    // Initialize any required authentication state
-                    console.log('Custom authentication service initialized');
-                    resolve();
-                });
-            },
 
-            // Add other methods as needed by your authentication flow
-            signIn: function() {
-                return Promise.resolve();
-            },
-
-            signOut: function() {
-                return Promise.resolve();
-            }
-        };
-    </script>
 </head>
 
 <body>
@@ -96,6 +77,8 @@
 <!-- Critical Scripts with error handling -->
 <script src="_framework/blazor.webassembly.js" onerror="console.warn('Blazor failed to load')"></script>
 <script src="js/pwaManager.js" onerror="console.warn('PWA Manager failed')"></script>
+    <-- thus idiot forgot authentication-->   
+        <script src="_content/Microsoft.AspNetCore.Components.WebAssembly.Authentication/AuthenticationService.js"></script>
 
 <!-- Non-critical scripts -->
 <script src="js/connectivityServices.js"></script>
