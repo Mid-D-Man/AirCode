@@ -1,31 +1,36 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-
     <title>AirCode</title>
     <base href="/" />
 
-    <!-- SPA routing fix for GitHub Pages - must be early in head -->
-    <script type="text/javascript">
-        // Single Page Apps for GitHub Pages
-        // MIT License
-        // https://github.com/rafgraph/spa-github-pages
+    <!-- SPA routing fix -->
+    <script>
         (function(l) {
             if (l.search[1] === '/' ) {
-                let decoded = l.search.slice(1).split('&').map(function(s) {
-                    return s.replace(/~and~/g, '&')
-                }).join('?');
-                window.history.replaceState(null, null,
-                    l.pathname.slice(0, -1) + decoded + l.hash
-                );
+                let decoded = l.search.slice(1).split('&').map(s => s.replace(/~and~/g, '&')).join('?');
+                window.history.replaceState(null, null, l.pathname.slice(0, -1) + decoded + l.hash);
             }
         }(window.location))
     </script>
 
-    <!-- CSS -->
+    <!-- Critical CSS inline for offline -->
+    <style>
+        .loading-progress { width: 8rem; height: 8rem; margin: 20vh auto; }
+        .loading-progress circle { fill: none; stroke: #e6e6e6; stroke-width: 0.6rem; transform-origin: 50% 50%; }
+        .loading-progress circle:last-child { stroke: #1b6ec2; stroke-dasharray: calc(3.141 * 6rem); }
+        .loading-progress-text { position: absolute; text-align: center; font-weight: bold; inset: calc(20vh + 3.25rem) 0 auto 0.75rem; }
+        #blazor-error-ui { background: lightyellow; bottom: 0; box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.2); display: none; left: 0; padding: 0.6rem 1.25rem 0.7rem 1.25rem; position: fixed; width: 100%; z-index: 1000; }
+    </style>
+
+    <!-- Preload critical resources -->
+    <link rel="preload" href="css/bootstrap/bootstrap.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <link rel="preload" href="css/app.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <link rel="preload" href="_framework/blazor.webassembly.js" as="script">
+
+    <!-- CSS with fallback -->
     <link href="css/bootstrap/bootstrap.min.css" rel="stylesheet" />
     <link href="css/app.css" rel="stylesheet" />
     <link href="css/colors.css" rel="stylesheet" />
@@ -33,12 +38,10 @@
     <link href="AirCode.styles.css" rel="stylesheet" />
 
     <!-- Icons and Manifest -->
-    <link rel="icon" type="image/png" href="favicon.png" />
-    <link rel="icon" href="/favicon.ico">
+    <link rel="icon" href="favicon.png">
     <link href="manifest.json" rel="manifest" />
     <link rel="apple-touch-icon" sizes="512x512" href="icon-512.png" />
     <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
-
 </head>
 
 <body>
@@ -56,45 +59,28 @@
     <a class="dismiss">🗙</a>
 </div>
 
-<!-- Framework and Core Services -->
-<script src="_framework/blazor.webassembly.js"></script>
-
-<!-- PWA Scripts - Load before service worker registration -->
-<!-- Load PWA scripts first -->
-<script src="js/pwaManager.js"></script>
-<script src="js/pwaInterop.js"></script>
-<script src="js/connectivityServices.js"></script>
-
-<!-- Register through manager -->
+<!-- Optimized Service Worker Registration -->
 <script>
-    if (window.pwaManager) {
-        // Manager handles registration with correct paths
-    } else {
-        // Fallback only
+    // Immediate SW registration
+    if ('serviceWorker' in navigator) {
         const basePath = window.location.hostname === 'mid-d-man.github.io' ? '/AirCode/' : '/';
-        navigator.serviceWorker.register(basePath + 'service-worker.js', { scope: basePath });
+        navigator.serviceWorker.register(basePath + 'service-worker.js', { scope: basePath })
+            .then(reg => console.log('SW registered:', reg.scope))
+            .catch(err => console.log('SW failed (expected offline):', err));
     }
 </script>
 
-<!-- CRITICAL: Proper Service Worker Registration 
-<script>
-    const basePath = window.location.hostname === 'mid-d-man.github.io' ? '/AirCode/' : '/';
-    navigator.serviceWorker.register(basePath + 'service-worker.js', { scope: basePath });
-</script> -->
-<!-- Authentication Service -->
-<script src="_content/Microsoft.AspNetCore.Components.WebAssembly.Authentication/AuthenticationService.js"></script>
+<!-- Critical Scripts with error handling -->
+<script src="_framework/blazor.webassembly.js" onerror="console.warn('Blazor failed to load')"></script>
+<script src="js/pwaManager.js" onerror="console.warn('PWA Manager failed')"></script>
+<script src="js/pwaInterop.js" onerror="console.warn('PWA Interop failed')"></script>
 
-<!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
-
-<!-- Application Scripts -->
+<!-- Non-critical scripts -->
+<script src="js/connectivityServices.js"></script>
 <script src="js/debug.js"></script>
 <script src="js/themeSwitcher.js"></script>
 <script src="js/authHelper.js"></script>
 <script src="js/cryptographyHandler.js"></script>
-<script src="js/offlineCredentialsHandler.js"></script>
 <script src="js/site.js"></script>
 <script src="js/cameraUtil.js"></script>
 <script src="js/floatingQrDrag.js"></script>
@@ -114,13 +100,13 @@
             throw error;
         }
     };
-    
+
     window.stopMediaStream = (stream) => {
         if (stream) {
             stream.getTracks().forEach(track => track.stop());
         }
     };
-    
+
     window.checkCameraPermission = async () => {
         try {
             const result = await navigator.permissions.query({ name: 'camera' });
@@ -148,21 +134,21 @@
     });
 </script>
 
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+
 <!-- Firebase Configuration -->
 <script>
-    const firebaseConfig = {
-        apiKey: "AIzaSyAM9mrDb2-eFgtMsMm7eJzt6GHIBCHEeGw",
-        authDomain: "aircode-4d07c.firebaseapp.com",
-        projectId: "aircode-4d07c",
-        storageBucket: "aircode-4d07c.firebasestorage.app",
-        messagingSenderId: "1041427366169",
-        appId: "1:1041427366169:web:6b7c84fefdcbe64edc4588",
-        measurementId: "G-PLN2D6PVVX",
-        databaseURL: "https://aircode-4d07c-default-rtdb.firebaseio.com/"
-    };
-
-    firebase.initializeApp(firebaseConfig);
+    if (typeof firebase !== 'undefined') {
+        const firebaseConfig = {
+            apiKey: "AIzaSyAM9mrDb2-eFgtMsMm7eJzt6GHIBCHEeGw",
+            authDomain: "aircode-4d07c.firebaseapp.com",
+            projectId: "aircode-4d07c",
+            databaseURL: "https://aircode-4d07c-default-rtdb.firebaseio.com/"
+        };
+        firebase.initializeApp(firebaseConfig);
+    }
 </script>
-
 </body>
-        </html>
+</html>

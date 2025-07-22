@@ -1,8 +1,11 @@
 @using Blazored.Toast
 @using Blazored.Toast.Configuration
+@using AirCode.Components.SharedPrefabs.Others
 @inherits LayoutComponentBase
 
 <div class="main-layout">
+    <PWAComponent ShowControls="false"
+                  OnOfflineStatusChanged="HandleOfflineStatus" />
     <BlazoredToasts Position="ToastPosition.TopRight"
                     Timeout="5"
                     IconType="IconType.FontAwesome"
@@ -15,3 +18,10 @@
         @Body
     </div>
 </div>
+
+@code {
+    private async Task HandleOfflineStatus(bool isOffline)
+    {
+        // Optional: Handle offline state changes
+    }
+}
