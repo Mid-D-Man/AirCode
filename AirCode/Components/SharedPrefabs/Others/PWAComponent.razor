@@ -1,91 +1,49 @@
 @* PWAComponent.razor *@
 @using Microsoft.JSInterop
 @implements IAsyncDisposable
-@inject IJSRuntime JSRuntime
-@inject NavigationManager NavigationManager
-@inject ConnectivityService ConnectivityService
 
-<div class="pwa-status-bar">
-    @if (IsOffline)
+<div class="pwa-container">
+    @if (!_status.IsOnline)
     {
         <div class="pwa-status offline">
-            <span class="pwa-icon">📡</span>
-            <span>Offline Mode - Limited Functionality</span>
-        </div>
-    }
-    else if (IsInstalled)
-    {
-        <div class="pwa-status installed">
-            <span class="pwa-icon">📱</span>
-            <span>App Mode Active</span>
-        </div>
-    }
-    else if (IsInstallable)
-    {
-        <div class="pwa-status installable">
-            <span class="pwa-icon">⬇️</span>
-            <span>App can be installed</span>
+            <span>📡 Offline Mode</span>
+            @if (!IsCurrentRouteOffline)
+            {
+                <div class="offline-routes">
+                    @foreach (var route in _offlineRoutes)
+                    {
+                        <a href="@route.Url" class="offline-link">@route.DisplayName</a>
+                    }
+                </div>
+            }
         </div>
     }
 
-    @if (UpdateAvailable)
+    @if (_status.IsInstallable)
     {
-        <div class="pwa-update-banner">
-            <span>🔄 Update available</span>
-            <button class="btn btn-sm btn-primary" @onclick="ApplyUpdate">Update Now</button>
+        <button class="pwa-install" @onclick="InstallApp">📱 Install App</button>
+    }
+
+    @if (_status.UpdateAvailable)
+    {
+        <div class="pwa-update">
+            <span>🔄 Update ready</span>
+            <button @onclick="ApplyUpdate">Update</button>
+        </div>
+    }
+
+    @if (ShowControls && _status.IsInstalled)
+    {
+        <div class="pwa-controls">
+            <button @onclick="CheckForUpdates">Check Updates</button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(_statusMessage))
+    {
+        <div class="pwa-message">
+            @_statusMessage
+            <button @onclick="ClearStatus">×</button>
         </div>
     }
 </div>
-
-@if (IsOffline && !IsCurrentRouteOfflineAccessible)
-{
-    <div class="offline-route-warning">
-        <div class="alert alert-warning">
-            <h5>⚠️ Limited Offline Access</h5>
-            <p>This page requires an internet connection. Available offline pages:</p>
-            <div class="offline-routes">
-                @foreach (var route in OfflineRoutes)
-                {
-                    <a href="@route.Url" class="btn btn-outline-primary btn-sm me-2 mb-2">
-                        @route.DisplayName
-                    </a>
-                }
-            </div>
-        </div>
-    </div>
-}
-
-@if (ShowControls)
-{
-    <div class="pwa-controls">
-        <button class="btn btn-outline-primary btn-sm" @onclick="CheckForUpdates">
-            Check for Updates
-        </button>
-
-        <button class="btn btn-outline-secondary btn-sm" @onclick="ForceConnectivityCheck">
-            @(IsOffline ? "Check Connection" : "Connection OK")
-        </button>
-
-        @if (IsInstalled)
-        {
-            <button class="btn btn-outline-secondary btn-sm" @onclick="GetAppInfo">
-                App Info
-            </button>
-        }
-
-        @if (IsOffline)
-        {
-            <button class="btn btn-outline-info btn-sm" @onclick="ShowOfflineRoutes">
-                Available Offline
-            </button>
-        }
-    </div>
-}
-
-@if (!string.IsNullOrEmpty(StatusMessage))
-{
-    <div class="alert alert-info alert-dismissible fade show mt-2" role="alert">
-        @StatusMessage
-        <button type="button" class="btn-close" @onclick="ClearStatus"></button>
-    </div>
-}
