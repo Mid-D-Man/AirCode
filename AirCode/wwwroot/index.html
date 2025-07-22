@@ -162,15 +162,31 @@
 
 <!-- Firebase Configuration -->
 <script>
-    if (typeof firebase !== 'undefined') {
-        const firebaseConfig = {
-            apiKey: "AIzaSyAM9mrDb2-eFgtMsMm7eJzt6GHIBCHEeGw",
-            authDomain: "aircode-4d07c.firebaseapp.com",
-            projectId: "aircode-4d07c",
-            databaseURL: "https://aircode-4d07c-default-rtdb.firebaseio.com/"
-        };
-        firebase.initializeApp(firebaseConfig);
-    }
+
+    const firebaseConfig = {
+
+        apiKey: "AIzaSyAM9mrDb2-eFgtMsMm7eJzt6GHIBCHEeGw",
+
+        authDomain: "aircode-4d07c.firebaseapp.com",
+
+        projectId: "aircode-4d07c",
+
+        storageBucket: "aircode-4d07c.firebasestorage.app",
+
+        messagingSenderId: "1041427366169",
+
+        appId: "1:1041427366169:web:6b7c84fefdcbe64edc4588",
+
+        measurementId: "G-PLN2D6PVVX",
+
+        databaseURL: "https://aircode-4d07c-default-rtdb.firebaseio.com/"
+
+    };
+
+
+
+    firebase.initializeApp(firebaseConfig);
+
 </script>
 </body>
 </html>
