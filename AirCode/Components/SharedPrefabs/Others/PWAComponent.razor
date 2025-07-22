@@ -6,7 +6,8 @@
     @if (!_status.IsOnline)
     {
         <div class="pwa-status offline">
-            <span>📡 Offline Mode</span>
+            <span class="pwa-icon">📡</span>
+            <span>Offline Mode</span>
             @if (!IsCurrentRouteOffline)
             {
                 <div class="offline-routes">
@@ -19,31 +20,42 @@
         </div>
     }
 
-    @if (_status.IsInstallable)
+    @if (ShouldShowInstallButton)
     {
-        <button class="pwa-install" @onclick="InstallApp">📱 Install App</button>
+        <div class="pwa-install-container">
+            <button class="pwa-install-btn" @onclick="InstallApp">
+                <span class="install-icon">📱</span>
+                <span class="install-text">Install App</span>
+                <span class="install-hint">Add to Home Screen</span>
+            </button>
+        </div>
     }
 
     @if (_status.UpdateAvailable)
     {
-        <div class="pwa-update">
-            <span>🔄 Update ready</span>
-            <button @onclick="ApplyUpdate">Update</button>
+        <div class="pwa-update-banner">
+            <div class="update-content">
+                <span class="update-icon">🔄</span>
+                <span>Update Available</span>
+            </div>
+            <button class="update-btn" @onclick="ApplyUpdate">Update Now</button>
         </div>
     }
 
     @if (ShowControls && _status.IsInstalled)
     {
         <div class="pwa-controls">
-            <button @onclick="CheckForUpdates">Check Updates</button>
+            <button class="control-btn" @onclick="CheckForUpdates">
+                <span>🔍</span> Check Updates
+            </button>
         </div>
     }
 
     @if (!string.IsNullOrEmpty(_statusMessage))
     {
         <div class="pwa-message">
-            @_statusMessage
-            <button @onclick="ClearStatus">×</button>
+            <span class="message-text">@_statusMessage</span>
+            <button class="close-btn" @onclick="ClearStatus">×</button>
         </div>
     }
 </div>

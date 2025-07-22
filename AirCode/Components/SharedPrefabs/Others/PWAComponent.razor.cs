@@ -23,6 +23,22 @@ public partial class PWAComponent : ComponentBase, IAsyncDisposable
         new() { Url = "/Admin/OfflineAttendanceEven", DisplayName = "Offline Attendance" },
         new() { Url = "/Client/OfflineScan", DisplayName = "Offline Scan" }
     };
+
+    private bool ShouldShowInstallButton => IsOnBasePage && _status.IsInstallable;
+
+    private bool IsOnBasePage
+    {
+        get
+        {
+            var relativePath = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+            
+            // Handle both standard deployment and GitHub Pages paths
+            return string.IsNullOrEmpty(relativePath) || 
+                   relativePath == "/" || 
+                   relativePath == "AirCode" || 
+                   relativePath == "AirCode/";
+        }
+    }
    
     private bool IsCurrentRouteOffline => _offlineRoutes.Any(r =>
         NavigationManager.ToBaseRelativePath(NavigationManager.Uri)
