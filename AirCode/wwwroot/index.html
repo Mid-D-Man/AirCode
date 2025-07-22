@@ -44,26 +44,7 @@
     <link rel="apple-touch-icon" sizes="512x512" href="icon-512.png" />
     <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
 
-    <script>
-        window.AuthenticationService = {
-            init: function() {
-                return new Promise((resolve) => {
-                    // Initialize any required authentication state
-                    console.log('Custom authentication service initialized');
-                    resolve();
-                });
-            },
 
-            // Add other methods as needed by your authentication flow
-            signIn: function() {
-                return Promise.resolve();
-            },
-
-            signOut: function() {
-                return Promise.resolve();
-            }
-        };
-    </script>
 </head>
 
 <body>
@@ -96,6 +77,8 @@
 <!-- Critical Scripts with error handling -->
 <script src="_framework/blazor.webassembly.js" onerror="console.warn('Blazor failed to load')"></script>
 <script src="js/pwaManager.js" onerror="console.warn('PWA Manager failed')"></script>
+    <-- thus idiot forgot authentication-->   
+        <script src="_content/Microsoft.AspNetCore.Components.WebAssembly.Authentication/AuthenticationService.js"></script>
 
 <!-- Non-critical scripts -->
 <script src="js/connectivityServices.js"></script>
@@ -158,19 +141,37 @@
 
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
 
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
 <!-- Firebase Configuration -->
 <script>
-    if (typeof firebase !== 'undefined') {
-        const firebaseConfig = {
-            apiKey: "AIzaSyAM9mrDb2-eFgtMsMm7eJzt6GHIBCHEeGw",
-            authDomain: "aircode-4d07c.firebaseapp.com",
-            projectId: "aircode-4d07c",
-            databaseURL: "https://aircode-4d07c-default-rtdb.firebaseio.com/"
-        };
-        firebase.initializeApp(firebaseConfig);
-    }
+
+    const firebaseConfig = {
+
+        apiKey: "AIzaSyAM9mrDb2-eFgtMsMm7eJzt6GHIBCHEeGw",
+
+        authDomain: "aircode-4d07c.firebaseapp.com",
+
+        projectId: "aircode-4d07c",
+
+        storageBucket: "aircode-4d07c.firebasestorage.app",
+
+        messagingSenderId: "1041427366169",
+
+        appId: "1:1041427366169:web:6b7c84fefdcbe64edc4588",
+
+        measurementId: "G-PLN2D6PVVX",
+
+        databaseURL: "https://aircode-4d07c-default-rtdb.firebaseio.com/"
+
+    };
+
+
+
+    firebase.initializeApp(firebaseConfig);
+
 </script>
 </body>
 </html>
