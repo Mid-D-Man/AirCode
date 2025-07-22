@@ -69,7 +69,8 @@ builder.Services.AddOidcAuthentication(options =>
     options.ProviderOptions.AdditionalProviderParameters.Add("post_logout_redirect_uri", 
         "https://mid-d-man.github.io/AirCode/authentication/logout-callback");
 });
-
+// Program.cs - Add after builder.Services.AddOidcAuthentication
+builder.Services.AddApiAuthorization();
 // Preserve original JWT claim names from Auth0 (prevent automatic claim mapping)
 JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
 
