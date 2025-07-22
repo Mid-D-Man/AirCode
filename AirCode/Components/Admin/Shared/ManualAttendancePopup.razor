@@ -1,10 +1,12 @@
 @using AirCode.Components.SharedPrefabs.Buttons
 @using AirCode.Components.SharedPrefabs.Spinner
+@using AirCode.Components.SharedPrefabs.Fields
 @using AirCode.Models.Supabase
 @using AirCode.Services.Attendance
 
 @if (IsVisible)
-{
+{  
+    
     <div class="manual-attendance-backdrop" @onclick="HandleBackdropClick">
         <div class="manual-attendance-popup" @onclick:stopPropagation="true">
             <div class="popup-header">
@@ -26,26 +28,16 @@
                 </div>
 
                 <div class="input-section">
-                    <div class="form-group">
-                        <label for="matricNumber">Student Matric Number</label>
-                        <input type="text" 
-                               id="matricNumber" 
-                               @bind="matricNumber" 
-                               @oninput="HandleMatricInput"
-                               class="form-control @(hasError ? "error" : "")" 
-                               placeholder="Enter matric number (e.g., 20CS1234)"
-                               disabled="@isProcessing" />
-                        
-                        @if (hasError)
-                        {
-                            <div class="error-message">
-                                <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
-                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                                </svg>
-                                @errorMessage
-                            </div>
-                        }
-                    </div>
+                    <FormField
+                        Label="Student Matric Number"
+                        Placeholder="Enter matric number (e.g., U221CYS1000)"
+                        Value="@matricNumber"
+                        ValueChanged="HandleMatricInput"
+                        IsRequired="true"
+                        IsInvalid="@hasError"
+                        ErrorMessage="@errorMessage"
+                        MaxLength="11"
+                        OnValidate="ValidateMatricNumber" />
                 </div>
 
                 @if (!string.IsNullOrEmpty(successMessage))
@@ -63,19 +55,18 @@
                 <button class="secondary-button" @onclick="ClosePopup" disabled="@isProcessing">
                     Cancel
                 </button>
-                <PrimaryButton Text="Sign Attendance" 
-                             OnClick="SignAttendanceAsync" 
-                             Disabled="@(string.IsNullOrWhiteSpace(matricNumber) || isProcessing)" />
+                <PrimaryButton Text="Sign Attendance"
+                               OnClick="SignAttendanceAsync"
+                               Disabled="@(string.IsNullOrWhiteSpace(matricNumber) || isProcessing)" />
             </div>
 
             @if (isProcessing)
             {
                 <div class="processing-overlay">
-                    <LoadingSpinner Title="Processing Manual Sign" 
+                    <LoadingSpinner Title="Processing Manual Sign"
                                     Subtitle="@SpinnerSubtitle"/>
                 </div>
             }
         </div>
     </div>
 }
-

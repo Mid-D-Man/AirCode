@@ -1,8 +1,9 @@
 using Microsoft.AspNetCore.Components;
 using AirCode.Services.Attendance;
+using AirCode.Components.SharedPrefabs.Fields;
 using System.Text.RegularExpressions;
-using AirCode.Services.Attendance;
 using SessionData = AirCode.Services.Attendance.SessionData;
+
 namespace AirCode.Components.Admin.Shared
 {
     public partial class ManualAttendancePopup : ComponentBase
@@ -22,17 +23,20 @@ namespace AirCode.Components.Admin.Shared
         [Parameter]
         public EventCallback<string> OnAttendanceSigned { get; set; }
 
-        // Private fields
+        // Private  fields 
         private string matricNumber = string.Empty;
         private bool isProcessing = false;
         private bool hasError = false;
         private string errorMessage = string.Empty;
         private string successMessage = string.Empty;
         private Timer? successTimer;
-public string SpinnerSubtitle => $"Signing attendance for {matricNumber}...";
-        // Matric number validation pattern
+
+        public string SpinnerSubtitle => $"Signing attendance for {matricNumber}...";
+
+        // Updated matric number validation: U + year + department + number
+        // Format: U21CYS1000, U22CS1083, U24CYS1094
         private static readonly Regex MatricNumberPattern = new(
-            @"^[0-9]{2}[A-Z]{2}[0-9]{4}$",
+            @"^U[0-9]{2}[A-Z]{2,3}[0-9]{4}$",
             RegexOptions.Compiled | RegexOptions.IgnoreCase
         );
 
@@ -40,24 +44,26 @@ public string SpinnerSubtitle => $"Signing attendance for {matricNumber}...";
         {
             if (IsVisible)
             {
-                // Reset form state when popup opens
                 ResetForm();
             }
         }
 
-        private void HandleMatricInput(ChangeEventArgs e)
+        // Fixed: Use EventCallback instead of ChangeEventArgs to prevent field clearing
+        private async Task HandleMatricInput(string value)
         {
-            var input = e.Value?.ToString()?.ToUpper() ?? string.Empty;
-            matricNumber = input;
-            
-            // Clear previous error/success messages
+            matricNumber = value.ToUpper();
             ClearMessages();
-            
-            // Validate format in real-time
-            if (!string.IsNullOrEmpty(matricNumber) && !IsValidMatricFormat(matricNumber))
+            await InvokeAsync(StateHasChanged);
+        }
+
+        private async Task ValidateMatricNumber(FormField.ValidationEventArgs args)
+        {
+            if (string.IsNullOrEmpty(args.Value))
+                return;
+
+            if (!IsValidMatricFormat(args.Value))
             {
-                hasError = true;
-                errorMessage = "Invalid format. Expected: 20CS1234";
+                ShowError("Invalid format. Expected: U22CYS1000");
             }
         }
 
@@ -82,7 +88,7 @@ public string SpinnerSubtitle => $"Signing attendance for {matricNumber}...";
 
             if (!IsValidMatricFormat(matricNumber))
             {
-                ShowError("Invalid matric number format. Expected format: 20CS1234");
+                ShowError("Invalid matric number format. Expected format: U22CYS1000");
                 return;
             }
 
@@ -103,13 +109,9 @@ public string SpinnerSubtitle => $"Signing attendance for {matricNumber}...";
                 {
                     ShowSuccess($"Successfully signed attendance for {matricNumber}");
                     
-                    // Notify parent component
                     await OnAttendanceSigned.InvokeAsync(matricNumber);
-                    
-                    // Clear form after successful sign
                     matricNumber = string.Empty;
                     
-                    // Auto-close popup after 2 seconds
                     successTimer = new Timer(async _ => 
                     {
                         await InvokeAsync(async () =>
@@ -161,7 +163,6 @@ public string SpinnerSubtitle => $"Signing attendance for {matricNumber}...";
             ClearMessages();
             isProcessing = false;
             
-            // Clear any existing timer
             successTimer?.Dispose();
             successTimer = null;
         }
@@ -186,7 +187,6 @@ public string SpinnerSubtitle => $"Signing attendance for {matricNumber}...";
         }
     }
 
-    // Session data model for the popup
     public class SessionData
     {
         public string SessionId { get; set; } = string.Empty;
