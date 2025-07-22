@@ -30,6 +30,7 @@ namespace AirCode.Components.Admin.Shared
         private string errorMessage = string.Empty;
         private string successMessage = string.Empty;
         private Timer? successTimer;
+        private bool _previousVisibleState = false;
 
         public string SpinnerSubtitle => $"Signing attendance for {matricNumber}...";
 
@@ -42,10 +43,12 @@ namespace AirCode.Components.Admin.Shared
 
         protected override void OnParametersSet()
         {
-            if (IsVisible)
+            // Only reset when popup becomes visible (state change)
+            if (IsVisible && !_previousVisibleState)
             {
                 ResetForm();
             }
+            _previousVisibleState = IsVisible;
         }
 
         // FIXED: Removed async to prevent clearing behavior
