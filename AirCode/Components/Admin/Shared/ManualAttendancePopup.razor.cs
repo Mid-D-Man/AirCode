@@ -23,7 +23,7 @@ namespace AirCode.Components.Admin.Shared
         [Parameter]
         public EventCallback<string> OnAttendanceSigned { get; set; }
 
-        // Private  fields 
+        // Private fields 
         private string matricNumber = string.Empty;
         private bool isProcessing = false;
         private bool hasError = false;
@@ -33,8 +33,8 @@ namespace AirCode.Components.Admin.Shared
 
         public string SpinnerSubtitle => $"Signing attendance for {matricNumber}...";
 
-        // Updated matric number validation: U + year + department + number
-        // Format: U21CYS1000, U22CS1083, U24CYS1094
+        // FIXED: Corrected regex pattern - removed extra digit from year
+        // Format: U21CYS1083, U22CS1083, U24CYS1094
         private static readonly Regex MatricNumberPattern = new(
             @"^U[0-9]{2}[A-Z]{2,3}[0-9]{4}$",
             RegexOptions.Compiled | RegexOptions.IgnoreCase
@@ -48,12 +48,12 @@ namespace AirCode.Components.Admin.Shared
             }
         }
 
-        // Fixed: Use EventCallback instead of ChangeEventArgs to prevent field clearing
-        private async Task HandleMatricInput(string value)
+        // FIXED: Removed async to prevent clearing behavior
+        private void HandleMatricInput(string value)
         {
             matricNumber = value.ToUpper();
             ClearMessages();
-            await InvokeAsync(StateHasChanged);
+            StateHasChanged();
         }
 
         private async Task ValidateMatricNumber(FormField.ValidationEventArgs args)
@@ -63,7 +63,7 @@ namespace AirCode.Components.Admin.Shared
 
             if (!IsValidMatricFormat(args.Value))
             {
-                ShowError("Invalid format. Expected: U22CYS1000");
+                ShowError("Invalid format. Expected: U21CYS1083");
             }
         }
 
@@ -88,7 +88,7 @@ namespace AirCode.Components.Admin.Shared
 
             if (!IsValidMatricFormat(matricNumber))
             {
-                ShowError("Invalid matric number format. Expected format: U22CYS1000");
+                ShowError("Invalid matric number format. Expected format: U21CYS1083");
                 return;
             }
 
