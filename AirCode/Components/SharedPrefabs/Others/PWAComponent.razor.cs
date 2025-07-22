@@ -27,6 +27,7 @@ public partial class PWAComponent : ComponentBase, IAsyncDisposable
     private bool IsCurrentRouteOffline => _offlineRoutes.Any(r =>
         NavigationManager.ToBaseRelativePath(NavigationManager.Uri)
             .StartsWith(r.Url.TrimStart('/'), StringComparison.OrdinalIgnoreCase));
+            
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender) await InitializePWA();
@@ -93,22 +94,33 @@ public partial class PWAComponent : ComponentBase, IAsyncDisposable
     }
 
     // JS Callbacks
-    [JSInvokable] public async Task OnUpdateAvailable()
+    [JSInvokable] 
+    public async Task OnInstallPromptReady()
+    {
+        _status.IsInstallable = true;
+        _statusMessage = "App can be installed!";
+        StateHasChanged();
+    }
+
+    [JSInvokable] 
+    public async Task OnUpdateAvailable()
     {
         _status.UpdateAvailable = true;
         _statusMessage = "Update available!";
         StateHasChanged();
     }
 
-    [JSInvokable] public async Task OnAppInstalled()
+    [JSInvokable] 
+    public async Task OnAppInstalled()
     {
         _status.IsInstalled = true;
         _status.IsInstallable = false;
-        _statusMessage = "App installed!";
+        _statusMessage = "App installed successfully!";
         StateHasChanged();
     }
 
-    [JSInvokable] public async Task OnConnectivityChanged(bool isOnline)
+    [JSInvokable] 
+    public async Task OnConnectivityChanged(bool isOnline)
     {
         var wasOffline = !_status.IsOnline;
         _status.IsOnline = isOnline;
@@ -121,7 +133,8 @@ public partial class PWAComponent : ComponentBase, IAsyncDisposable
         }
     }
 
-    [JSInvokable] public async Task OnVisibilityChange(bool visible)
+    [JSInvokable] 
+    public async Task OnVisibilityChange(bool visible)
     {
         if (visible && _pwaManager != null)
         {
