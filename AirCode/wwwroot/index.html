@@ -43,6 +43,27 @@
     <link href="manifest.json" rel="manifest" />
     <link rel="apple-touch-icon" sizes="512x512" href="icon-512.png" />
     <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
+
+    <script>
+        window.AuthenticationService = {
+            init: function() {
+                return new Promise((resolve) => {
+                    // Initialize any required authentication state
+                    console.log('Custom authentication service initialized');
+                    resolve();
+                });
+            },
+
+            // Add other methods as needed by your authentication flow
+            signIn: function() {
+                return Promise.resolve();
+            },
+
+            signOut: function() {
+                return Promise.resolve();
+            }
+        };
+    </script>
 </head>
 
 <body>
@@ -69,6 +90,7 @@
             .then(reg => console.log('SW registered:', reg.scope))
             .catch(err => console.log('SW failed (expected offline):', err));
     }
+   
 </script>
 
 <!-- Critical Scripts with error handling -->
