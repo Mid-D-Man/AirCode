@@ -150,10 +150,13 @@ class UnifiedPWAManager {
         }
     }
 
+    // pwaManager.js - isAppInstalled() update
     isAppInstalled() {
         return window.matchMedia('(display-mode: standalone)').matches ||
-            window.navigator.standalone ||
-            document.referrer.includes('android-app://');
+            window.navigator.standalone === true ||
+            document.referrer.includes('android-app://') ||
+            window.matchMedia('(display-mode: fullscreen)').matches ||
+            window.matchMedia('(display-mode: minimal-ui)').matches;
     }
 
     isHTTPS() {
@@ -210,7 +213,18 @@ class UnifiedPWAManager {
             }
         }
     }
+    isChromiumBrowser() {
+        const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+        const isEdge = /Edg/.test(navigator.userAgent);
+        const isOpera = /OPR/.test(navigator.userAgent);
+        const isBrave = navigator.brave !== undefined;
 
+        // Exclude non-PWA supporting browsers
+        const isFirefox = /Firefox/.test(navigator.userAgent);
+        const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+
+        return (isChrome || isEdge || isOpera || isBrave) && !isFirefox && !isSafari;
+    }
     getStatus() {
         return {
             isInstallable: this.installable || !!this.deferredPrompt,
@@ -218,6 +232,7 @@ class UnifiedPWAManager {
             hasServiceWorker: !!this.registration,
             updateAvailable: this.updateAvailable,
             isOnline: navigator.onLine,
+            isChromiumBased: this.isChromiumBrowser(),
             canBeInstalled: this.canBeInstalled()
         };
     }

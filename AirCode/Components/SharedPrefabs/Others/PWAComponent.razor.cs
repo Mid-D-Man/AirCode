@@ -27,7 +27,10 @@ public partial class PWAComponent : ComponentBase, IAsyncDisposable
     private bool ShouldShowInstallButton => 
         IsOnBasePage && 
         _status.IsInstallable && 
-        !_status.IsInstalled;
+        !_status.IsInstalled &&
+        _status.IsChromiumBased;
+
+    private Timer? _statusTimer;
 
     private bool IsOnBasePage
     {
@@ -117,8 +120,8 @@ public partial class PWAComponent : ComponentBase, IAsyncDisposable
     public async Task OnInstallPromptReady()
     {
         _status.IsInstallable = true;
-        _statusMessage = "App can be installed!";
-        StateHasChanged();
+        _status.IsChromiumBased = await _pwaManager.InvokeAsync<bool>("isChromiumBrowser");
+        SetStatusWithTimeout("App can be installed!");
     }
 
     [JSInvokable] 
@@ -160,7 +163,20 @@ public partial class PWAComponent : ComponentBase, IAsyncDisposable
             await UpdateStatus();
         }
     }
-
+    private void SetStatusWithTimeout(string message)
+    {
+        _statusMessage = message;
+        StateHasChanged();
+    
+        _statusTimer?.Dispose();
+        _statusTimer = new Timer(ClearStatusCallback, null, 4000, Timeout.Infinite);
+    }
+    private void ClearStatusCallback(object? state)
+    {
+        _statusMessage = string.Empty;
+        InvokeAsync(StateHasChanged);
+        _statusTimer?.Dispose();
+    }
     private void ClearStatus()
     {
         _statusMessage = string.Empty;
@@ -169,6 +185,7 @@ public partial class PWAComponent : ComponentBase, IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
+        _statusTimer?.Dispose();
         if (_pwaManager != null) await _pwaManager.DisposeAsync();
         _dotNetRef?.Dispose();
     }
@@ -180,8 +197,8 @@ public partial class PWAComponent : ComponentBase, IAsyncDisposable
         public bool HasServiceWorker { get; set; }
         public bool UpdateAvailable { get; set; }
         public bool IsOnline { get; set; } = true;
+        public bool IsChromiumBased { get; set; }
     }
-
     public class OfflineRoute
     {
         public string Url { get; set; } = string.Empty;
