@@ -1,196 +1,145 @@
 // Blazor WASM PWA Service Worker - GitHub Pages Compatible
-// Base path for GitHub Pages deployment
-const GITHUB_PAGES_BASE = '/AirCode/';
-const CACHE_NAME = 'aircode-cache-v1';
+const isGitHubPages = self.location.hostname === 'mid-d-man.github.io';
+const BASE_PATH = isGitHubPages ? '/AirCode/' : '/';
+const CACHE_NAME = 'aircode-cache-v2';
 
-// Critical assets that must be cached for offline functionality
+// Essential assets only
 const CRITICAL_ASSETS = [
-  GITHUB_PAGES_BASE,
-  GITHUB_PAGES_BASE + 'index.html',
-  GITHUB_PAGES_BASE + 'manifest.json',
-  GITHUB_PAGES_BASE + 'css/app.css',
-  GITHUB_PAGES_BASE + 'css/bootstrap/bootstrap.min.css',
-  GITHUB_PAGES_BASE + '_framework/blazor.webassembly.js',
-  GITHUB_PAGES_BASE + '_framework/blazor.boot.json',
-  GITHUB_PAGES_BASE + '_framework/dotnet.wasm',
-  GITHUB_PAGES_BASE + '_framework/dotnet.js',
-  GITHUB_PAGES_BASE + 'js/site.js',
-  GITHUB_PAGES_BASE + 'favicon.ico',
-  GITHUB_PAGES_BASE + 'icon-192.png',
-  GITHUB_PAGES_BASE + 'icon-512.png'
+  BASE_PATH,
+  BASE_PATH + 'index.html',
+  BASE_PATH + 'manifest.json',
+  BASE_PATH + 'icon-192.png',
+  BASE_PATH + 'icon-512.png',
+  BASE_PATH + 'favicon.ico'
 ];
 
-// Install event - cache critical assets and discover Blazor assemblies
 self.addEventListener('install', event => {
-  console.log('SW: Installing...');
-  
   event.waitUntil(
-    (async () => {
-      const cache = await caches.open(CACHE_NAME);
-      
-      // Cache critical assets first
-      await cache.addAll(CRITICAL_ASSETS);
-      console.log('SW: Critical assets cached');
-      
-      // Discover and cache Blazor assemblies
-      try {
-        const bootResponse = await fetch(GITHUB_PAGES_BASE + '_framework/blazor.boot.json');
-        const bootData = await bootResponse.json();
-        
-        // Cache the boot.json
-        await cache.put(GITHUB_PAGES_BASE + '_framework/blazor.boot.json', bootResponse.clone());
-        
-        // Cache all assembly resources
-        const assemblyUrls = [];
-        
-        // Runtime assemblies
-        if (bootData.resources?.runtime) {
-          Object.keys(bootData.resources.runtime).forEach(file => {
-            assemblyUrls.push(GITHUB_PAGES_BASE + '_framework/' + file);
-          });
-        }
-        
-        // Application assemblies
-        if (bootData.resources?.assembly) {
-          Object.keys(bootData.resources.assembly).forEach(file => {
-            assemblyUrls.push(GITHUB_PAGES_BASE + '_framework/' + file);
-          });
-        }
-        
-        // Cache assemblies with error handling
-        const cachePromises = assemblyUrls.map(async (url) => {
+      (async () => {
+        const cache = await caches.open(CACHE_NAME);
+
+        // Cache critical assets with error handling
+        for (const asset of CRITICAL_ASSETS) {
           try {
-            const response = await fetch(url);
-            if (response.ok) {
-              await cache.put(url, response);
-            }
+            await cache.add(asset);
           } catch (error) {
-            console.warn('SW: Failed to cache:', url);
+            console.warn('Failed to cache:', asset);
           }
-        });
-        
-        await Promise.allSettled(cachePromises);
-        console.log('SW: Blazor assemblies cached');
-        
-      } catch (error) {
-        console.error('SW: Failed to cache Blazor assemblies:', error);
-      }
-      
-      self.skipWaiting();
-    })()
+        }
+
+        // Dynamic Blazor asset discovery
+        try {
+          const bootResponse = await fetch(BASE_PATH + '_framework/blazor.boot.json');
+          if (bootResponse.ok) {
+            const bootData = await bootResponse.json();
+            await cache.put(BASE_PATH + '_framework/blazor.boot.json', bootResponse.clone());
+
+            // Cache framework essentials
+            const frameworkAssets = [
+              '_framework/blazor.webassembly.js',
+              '_framework/dotnet.wasm',
+              '_framework/dotnet.js'
+            ];
+
+            for (const asset of frameworkAssets) {
+              try {
+                await cache.add(BASE_PATH + asset);
+              } catch (error) {
+                console.warn('Failed to cache framework asset:', asset);
+              }
+            }
+
+            // Cache assemblies
+            if (bootData.resources?.assembly) {
+              for (const file of Object.keys(bootData.resources.assembly)) {
+                try {
+                  await cache.add(BASE_PATH + '_framework/' + file);
+                } catch (error) {
+                  console.warn('Failed to cache assembly:', file);
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Blazor boot.json fetch failed:', error);
+        }
+
+        self.skipWaiting();
+      })()
   );
 });
 
-// Activate event
 self.addEventListener('activate', event => {
-  console.log('SW: Activating...');
-  
   event.waitUntil(
-    (async () => {
-      // Clean up old caches
-      const cacheNames = await caches.keys();
-      await Promise.all(
-        cacheNames.map(cacheName => {
-          if (cacheName !== CACHE_NAME) {
-            return caches.delete(cacheName);
-          }
-        })
-      );
-      
-      // Take control of all pages
-      await self.clients.claim();
-      console.log('SW: Activated and claimed clients');
-    })()
+      (async () => {
+        const cacheNames = await caches.keys();
+        await Promise.all(
+            cacheNames.map(cacheName => {
+              if (cacheName !== CACHE_NAME) {
+                return caches.delete(cacheName);
+              }
+            })
+        );
+        await self.clients.claim();
+      })()
   );
 });
 
-// Fetch event - handle offline requests
 self.addEventListener('fetch', event => {
-  const request = event.request;
-  
-  // Only handle GET requests
-  if (request.method !== 'GET') {
-    return;
-  }
-  
-  // Skip external requests
-  if (!request.url.startsWith(self.location.origin)) {
-    return;
-  }
-  
-  event.respondWith(handleRequest(request));
+  if (event.request.method !== 'GET') return;
+  if (!event.request.url.startsWith(self.location.origin)) return;
+
+  event.respondWith(handleRequest(event.request));
 });
 
 async function handleRequest(request) {
-  const url = new URL(request.url);
-  
-  // For navigation requests, always return index.html from cache
+  // Navigation requests - serve index.html
   if (request.mode === 'navigate') {
     try {
-      // Try network first
       const response = await fetch(request);
-      if (response.ok) {
-        return response;
-      }
-    } catch (error) {
-      // Network failed, serve from cache
-    }
-    
-    // Serve index.html for all navigation requests (SPA routing)
-    const cachedIndex = await caches.match(GITHUB_PAGES_BASE + 'index.html');
-    if (cachedIndex) {
-      return cachedIndex;
-    }
-    
-    // Fallback offline page
-    return new Response(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>AirCode - Offline</title>
-        <base href="${GITHUB_PAGES_BASE}" />
-      </head>
-      <body>
-        <div style="text-align: center; margin-top: 50px;">
-          <h1>AirCode</h1>
-          <p>Loading offline mode...</p>
-          <p>If this persists, please check your internet connection and refresh.</p>
-        </div>
-      </body>
-      </html>
-    `, {
-      headers: { 'Content-Type': 'text/html' }
-    });
+      if (response.ok) return response;
+    } catch {}
+
+    const cachedIndex = await caches.match(BASE_PATH + 'index.html');
+    return cachedIndex || createOfflinePage();
   }
-  
-  // For asset requests, try cache first, then network
+
+  // Asset requests - cache first
+  const cachedResponse = await caches.match(request);
+  if (cachedResponse) return cachedResponse;
+
   try {
-    const cachedResponse = await caches.match(request);
-    if (cachedResponse) {
-      return cachedResponse;
-    }
-    
-    // Not in cache, try network
     const response = await fetch(request);
-    
     if (response.ok) {
-      // Cache the response for future use
       const cache = await caches.open(CACHE_NAME);
       cache.put(request, response.clone());
-      return response;
     }
-    
-    throw new Error('Network response not ok');
-    
-  } catch (error) {
-    console.error('SW: Request failed:', request.url, error);
-    
-    // Return a generic error response
-    return new Response('Resource not available offline', {
-      status: 503,
-      statusText: 'Service Unavailable'
-    });
+    return response;
+  } catch {
+    return new Response('Offline', { status: 503 });
   }
 }
 
-console.log('SW: Blazor PWA Service Worker loaded');
+function createOfflinePage() {
+  return new Response(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>AirCode - Offline</title>
+      <base href="${BASE_PATH}" />
+      <style>
+        body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }
+        .retry { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; }
+      </style>
+    </head>
+    <body>
+      <h1>AirCode - Offline Mode</h1>
+      <p>App is loading in offline mode...</p>
+      <button class="retry" onclick="location.reload()">Retry</button>
+      <script>
+        setTimeout(() => location.reload(), 3000);
+      </script>
+    </body>
+    </html>
+  `, { headers: { 'Content-Type': 'text/html' } });
+}

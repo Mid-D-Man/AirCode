@@ -60,12 +60,27 @@
 <script src="_framework/blazor.webassembly.js"></script>
 
 <!-- PWA Scripts - Load before service worker registration -->
+<!-- Load PWA scripts first -->
 <script src="js/pwaManager.js"></script>
 <script src="js/pwaInterop.js"></script>
 <script src="js/connectivityServices.js"></script>
 
-<!-- CRITICAL: Proper Service Worker Registration -->
-<script>navigator.serviceWorker.register('service-worker.js');</script>
+<!-- Register through manager -->
+<script>
+    if (window.pwaManager) {
+        // Manager handles registration with correct paths
+    } else {
+        // Fallback only
+        const basePath = window.location.hostname === 'mid-d-man.github.io' ? '/AirCode/' : '/';
+        navigator.serviceWorker.register(basePath + 'service-worker.js', { scope: basePath });
+    }
+</script>
+
+<!-- CRITICAL: Proper Service Worker Registration 
+<script>
+    const basePath = window.location.hostname === 'mid-d-man.github.io' ? '/AirCode/' : '/';
+    navigator.serviceWorker.register(basePath + 'service-worker.js', { scope: basePath });
+</script> -->
 <!-- Authentication Service -->
 <script src="_content/Microsoft.AspNetCore.Components.WebAssembly.Authentication/AuthenticationService.js"></script>
 

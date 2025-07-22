@@ -47,8 +47,10 @@ class PWAManager {
     async registerServiceWorker() {
         try {
             console.log('Registering service worker:', this.serviceWorkerUrl);
-            
-            this.registration = await navigator.serviceWorker.register(this.serviceWorkerUrl, {
+
+            const swPath = this.basePath + 'service-worker.js';
+
+            this.registration = await navigator.serviceWorker.register(swPath, {
                 scope: this.basePath
             });
 
