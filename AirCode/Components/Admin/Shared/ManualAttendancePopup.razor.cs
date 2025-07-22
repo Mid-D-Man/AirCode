@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Components;
 using AirCode.Services.Attendance;
 using System.Text.RegularExpressions;
 using AirCode.Services.Attendance;
+using SessionData = AirCode.Services.Attendance.SessionData;
 namespace AirCode.Components.Admin.Shared
 {
     public partial class ManualAttendancePopup : ComponentBase
@@ -13,7 +14,7 @@ namespace AirCode.Components.Admin.Shared
         public bool IsVisible { get; set; } = false;
 
         [Parameter]
-        public SessionData? SessionData { get; set; }
+        public AirCode.Services.Attendance.SessionData? SessionData { get; set; }
 
         [Parameter]
         public EventCallback OnClose { get; set; }

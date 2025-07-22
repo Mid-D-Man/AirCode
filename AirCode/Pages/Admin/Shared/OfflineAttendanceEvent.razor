@@ -316,7 +316,7 @@
                     @if (showOfflineQR && currentOfflineSession != null)
                     {
                         <QRCodeCompo SessionId="@currentOfflineSession.SessionId"
-                                     CourseCode="@currentOfflineSession.SessionDetails.CourseId"
+                                     CourseCode="@currentOfflineSession.SessionDetails.CourseCode"
                                      StartTime="@currentOfflineSession.SessionDetails.StartTime"
                                      Duration="@sessionDuration"
                                      Theme="@ConvertStringToTheme(selectedTheme)"
@@ -362,7 +362,7 @@
                         <div class="session-info">
                             <div class="session-main-info">
                                 <strong>@session.SessionDetails.CourseName</strong>
-                                <span class="course-code">(@session.SessionDetails.CourseId)</span>
+                                <span class="course-code">(@session.SessionDetails.CourseCode)</span>
                             </div>
                             <div class="session-metadata">
                                 <span class="session-date">@session.CreatedAt.ToString("MMM dd, yyyy HH:mm")</span>

@@ -140,7 +140,7 @@ private async Task CheckForStoredSessionsAsync()
             .Select(ps => new SessionData
             {
                 SessionId = ps.SessionId,
-                CourseId = ps.CourseId,
+                CourseCode = ps.CourseId,
                 CourseName = ps.CourseName,
                 StartTime = ps.StartTime,
                 Duration = ps.Duration,
@@ -340,9 +340,9 @@ private async Task RestoreExistingSessionAsync(ActiveSessionData activeSession, 
     securityFeatures = activeSession.SecurityFeatures;
 
     // Restore selected course
-    if (!string.IsNullOrEmpty(sessionData.CourseId))
+    if (!string.IsNullOrEmpty(sessionData.CourseCode))
     {
-        selectedCourse = await CourseService.GetCourseByIdAsync(sessionData.CourseId);
+        selectedCourse = await CourseService.GetCourseByIdAsync(sessionData.CourseCode);
     }
 
     // Restart temporal key timer if it was enabled
@@ -440,7 +440,7 @@ private async Task CheckForExistingSessionAsync()
             StateHasChanged();
 
             var activeSession = allActiveSessions.FirstOrDefault(s =>
-                s.CourseCode == existingSession.CourseId &&
+                s.CourseCode == existingSession.CourseCode &&
                 DateTime.UtcNow < s.EndTime);
 
             if (activeSession != null)
@@ -488,7 +488,7 @@ private async Task CheckForExistingSessionAsync()
         private void HandleCourseSelected(Course course)
         {
             selectedCourse = course;
-            sessionModel.CourseId = course.CourseCode;
+            sessionModel.CourseCode = course.CourseCode;
             sessionModel.CourseName = course.Name;
             showCourseSelection = false;
             StateHasChanged();
@@ -530,7 +530,7 @@ private async Task StartSessionAsync()
         var attendanceSession = new SupabaseAttendanceSession
         {
             SessionId = sessionModel.SessionId,
-            CourseCode = sessionModel.CourseId,
+            CourseCode = sessionModel.CourseCode,
             StartTime = sessionModel.StartTime,
             Duration = sessionModel.Duration,
             ExpirationTime = sessionEndTime,
@@ -547,7 +547,7 @@ private async Task StartSessionAsync()
         // Generate QR code payload with temporal key
         qrCodePayload = await QRCodeDecoder.EncodeSessionDataAsync(
             sessionModel.SessionId,
-            sessionModel.CourseId,
+            sessionModel.CourseCode,
             sessionModel.StartTime,
             sessionModel.Duration,
             allowOfflineSync,
@@ -564,7 +564,7 @@ private async Task StartSessionAsync()
         {
             SessionId = sessionModel.SessionId,
             CourseName = sessionModel.CourseName,
-            CourseCode = sessionModel.CourseId,
+            CourseCode = sessionModel.CourseCode,
             StartTime = sessionModel.StartTime,
             EndTime = sessionEndTime,
             Duration = sessionModel.Duration,
@@ -673,7 +673,7 @@ public async ValueTask DisposeAsync()
             try
             {
                
-               await FirebaseAttendanceService.CreateAttendanceEventAsync(sessionModel.SessionId,sessionModel.CourseId,sessionModel.CourseName,DateTime.UtcNow,sessionModel.Duration,selectedTheme);
+               await FirebaseAttendanceService.CreateAttendanceEventAsync(sessionModel.SessionId,sessionModel.CourseCode,sessionModel.CourseName,DateTime.UtcNow,sessionModel.Duration,selectedTheme);
                
             }
             catch (Exception ex)
@@ -892,7 +892,7 @@ private async Task AutoSignCourseRepAsync()
     
         bool success = await FirebaseAttendanceService.AutoSignCourseRepAsync(
             sessionModel.SessionId, 
-            sessionModel.CourseId);
+            sessionModel.CourseCode);
             
         if (success)
         {

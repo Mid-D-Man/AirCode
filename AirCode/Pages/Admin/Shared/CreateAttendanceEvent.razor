@@ -35,7 +35,7 @@
                                  @onclick="() => SelectStoredSession(session)">
                                 <div class="session-details">
                                     <strong>@session.CourseName</strong>
-                                    <span class="session-course-id">(@session.CourseId)</span>
+                                    <span class="session-course-id">(@session.CourseCode)</span>
                                     <div class="session-metadata">
                                         <span class="session-time">Duration: @session.Duration min</span>
                                         <span class="session-started">Started: @session.StartTime.ToString("MMM dd, HH:mm")</span>
@@ -319,7 +319,7 @@
 
                 <div class="qr-code-wrapper">
                     <QRCodeCompo SessionId="@sessionModel.SessionId"
-                                 CourseCode="@sessionModel.CourseId"
+                                 CourseCode="@sessionModel.CourseCode"
                                  StartTime="@sessionModel.StartTime"
                                  Duration="@sessionModel.Duration"
                                  Theme="@ConvertStringToTheme(selectedTheme)"

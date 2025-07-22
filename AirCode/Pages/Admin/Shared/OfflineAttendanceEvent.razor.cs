@@ -155,7 +155,7 @@ public partial class OfflineAttendanceEvent : ComponentBase, IDisposable
             var sessionData = new SessionData
             {
                 SessionId = Guid.NewGuid().ToString("N"),
-                CourseId = selectedCourse.CourseCode,
+                CourseCode = selectedCourse.CourseCode,
                 CourseName = selectedCourse.Name,
                 StartTime = DateTime.UtcNow,
                 Duration = sessionDuration,
@@ -211,7 +211,7 @@ public partial class OfflineAttendanceEvent : ComponentBase, IDisposable
         var payloadData = new
         {
             SessionId = sessionData.SessionId,
-            CourseId = sessionData.CourseId,
+            CourseId = sessionData.CourseCode,
             StartTime = sessionData.StartTime,
             Duration = sessionData.Duration,
             TemporalKey = temporalKey,
@@ -243,7 +243,7 @@ public partial class OfflineAttendanceEvent : ComponentBase, IDisposable
             {
                 Id = Guid.NewGuid().ToString(),
                 SessionId = currentOfflineSession.SessionId,
-                CourseCode = currentOfflineSession.SessionDetails.CourseId,
+                CourseCode = currentOfflineSession.SessionDetails.CourseCode,
                 MatricNumber = matricNumber,
                 DeviceGuid = deviceGuid,
                 ScanTime = DateTime.UtcNow,

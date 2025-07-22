@@ -149,7 +149,7 @@ namespace AirCode.Services.Attendance
                 var offlineSession = new SupabaseOfflineAttendanceSession
                 {
                     SessionId = session.SessionId,
-                    CourseCode = session.SessionDetails.CourseId,
+                    CourseCode = session.SessionDetails.CourseCode,
                     StartTime = session.SessionDetails.StartTime,
                     Duration = session.SessionDetails.Duration,
                     CreatedAt = session.CreatedAt,

@@ -446,7 +446,7 @@ public async Task RemoveStoredSessionAsync(string sessionId)
     {
         public string SessionId { get; set; } = Guid.NewGuid().ToString("N");
         public string CourseName { get; set; }
-        public string CourseId { get; set; }
+        public string CourseCode { get; set; }
         public DateTime StartTime { get; set; }
         public DateTime Date { get; set; }
         public int Duration { get; set; }
