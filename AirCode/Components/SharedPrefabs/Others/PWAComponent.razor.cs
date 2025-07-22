@@ -24,7 +24,10 @@ public partial class PWAComponent : ComponentBase, IAsyncDisposable
         new() { Url = "/Client/OfflineScan", DisplayName = "Offline Scan" }
     };
 
-    private bool ShouldShowInstallButton => IsOnBasePage && _status.IsInstallable;
+    private bool ShouldShowInstallButton => 
+        IsOnBasePage && 
+        _status.IsInstallable && 
+        !_status.IsInstalled;
 
     private bool IsOnBasePage
     {
