@@ -175,3 +175,22 @@ namespace AirCode.FutureImprovements
         /// </summary>
     }
   }
+
+
+/*
+removed this from manifest 
+  "screenshots": [
+    {
+      "src": "screenshots/desktop.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide"
+    },
+    {
+      "src": "screenshots/mobile.png",
+      "sizes": "360x640",
+      "type": "image/png",
+      "form_factor": "narrow"
+    }
+  ],
+*/
