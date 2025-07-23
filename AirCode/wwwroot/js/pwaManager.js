@@ -1,5 +1,4 @@
-// Fixed Unified PWA Manager - Install Button Issue Resolution
-// PWA Manager - Install Button Removed, Component-Only Approach
+// Fixed PWA Manager - Critical Initialization Issues Resolved
 class UnifiedPWAManager {
     constructor() {
         if (UnifiedPWAManager.instance) return UnifiedPWAManager.instance;
@@ -13,25 +12,35 @@ class UnifiedPWAManager {
         this.dotNetRef = null;
         this.installable = false;
         this.initialized = false;
+        this.initPromise = null;
 
         UnifiedPWAManager.instance = this;
 
+        // Immediate initialization
         this.setupEventListeners();
-        this.init();
+        this.initPromise = this.init();
     }
 
     async init() {
         if (this.initialized) return;
 
         try {
+            // Wait for DOM if not ready
+            if (document.readyState === 'loading') {
+                await new Promise(resolve => {
+                    document.addEventListener('DOMContentLoaded', resolve, { once: true });
+                });
+            }
+
             await this.registerServiceWorker();
             this.initialized = true;
-            console.log('Unified PWA Manager initialized');
+            console.log('PWA Manager initialized successfully');
 
-            setTimeout(() => this.checkInstallStatus(), 1000);
+            // Check install status after a brief delay
+            setTimeout(() => this.checkInstallStatus(), 500);
         } catch (error) {
             console.error('PWA initialization failed:', error);
-            this.initialized = true;
+            this.initialized = true; // Mark as initialized even on failure
         }
     }
 
@@ -54,6 +63,7 @@ class UnifiedPWAManager {
 
             console.log('SW registered successfully:', this.registration.scope);
 
+            // Handle updates
             this.registration.addEventListener('updatefound', () => {
                 this.trackInstallation(this.registration.installing);
             });
@@ -63,13 +73,17 @@ class UnifiedPWAManager {
                 this.notifyDotNet('OnUpdateAvailable');
             }
 
+            // Check for updates
             await this.registration.update();
         } catch (error) {
             console.error('SW registration failed:', error);
+            // Don't throw - allow app to continue without SW
         }
     }
 
     trackInstallation(worker) {
+        if (!worker) return;
+
         worker.addEventListener('statechange', () => {
             if (worker.state === 'installed') {
                 if (navigator.serviceWorker.controller) {
@@ -83,8 +97,9 @@ class UnifiedPWAManager {
     }
 
     setupEventListeners() {
+        // Install prompt handling
         window.addEventListener('beforeinstallprompt', (e) => {
-            console.log('🎯 beforeinstallprompt event captured!');
+            console.log('beforeinstallprompt event captured');
             e.preventDefault();
             this.deferredPrompt = e;
             this.installable = true;
@@ -92,22 +107,25 @@ class UnifiedPWAManager {
         });
 
         window.addEventListener('appinstalled', () => {
-            console.log('✅ App was installed');
+            console.log('App was installed');
             this.deferredPrompt = null;
             this.installable = false;
             this.notifyDotNet('OnAppInstalled');
         });
 
+        // Connectivity monitoring
         ['online', 'offline'].forEach(event => {
             window.addEventListener(event, () => {
                 this.notifyDotNet('OnConnectivityChanged', navigator.onLine);
             });
         });
 
+        // Visibility change
         document.addEventListener('visibilitychange', () => {
             this.notifyDotNet('OnVisibilityChange', !document.hidden);
         });
 
+        // Service Worker messages
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.addEventListener('message', event => {
                 if (event.data?.type === 'UPDATE_AVAILABLE') {
@@ -117,12 +135,22 @@ class UnifiedPWAManager {
             });
 
             navigator.serviceWorker.addEventListener('controllerchange', () => {
-                if (this.updateAvailable) window.location.reload();
+                if (this.updateAvailable) {
+                    console.log('SW controller changed, reloading...');
+                    window.location.reload();
+                }
             });
         }
 
+        // Initialize check when DOM is ready
+        this.scheduleInstallCheck();
+    }
+
+    scheduleInstallCheck() {
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => this.checkInstallStatus());
+            document.addEventListener('DOMContentLoaded', () => {
+                setTimeout(() => this.checkInstallStatus(), 100);
+            });
         } else {
             setTimeout(() => this.checkInstallStatus(), 100);
         }
@@ -130,12 +158,13 @@ class UnifiedPWAManager {
 
     checkInstallStatus() {
         const isInstalled = this.isAppInstalled();
-        console.log('📱 Install status check:', {
+        console.log('Install status check:', {
             installed: isInstalled,
             installable: this.installable,
             hasDeferredPrompt: !!this.deferredPrompt,
             isHTTPS: this.isHTTPS(),
-            hasManifest: this.hasManifest()
+            hasManifest: this.hasManifest(),
+            canBeInstalled: this.canBeInstalled()
         });
 
         if (isInstalled) {
@@ -143,14 +172,14 @@ class UnifiedPWAManager {
             return;
         }
 
+        // Manual installability detection for browsers that support PWA without beforeinstallprompt
         if (!this.deferredPrompt && this.canBeInstalled()) {
-            console.log('🔧 Manual installability detected');
+            console.log('Manual installability detected');
             this.installable = true;
             this.notifyDotNet('OnInstallPromptReady');
         }
     }
 
-    // pwaManager.js - isAppInstalled() update
     isAppInstalled() {
         return window.matchMedia('(display-mode: standalone)').matches ||
             window.navigator.standalone === true ||
@@ -170,11 +199,26 @@ class UnifiedPWAManager {
     }
 
     canBeInstalled() {
-        return this.isHTTPS() && this.hasManifest() && 'serviceWorker' in navigator;
+        return this.isHTTPS() &&
+            this.hasManifest() &&
+            'serviceWorker' in navigator &&
+            this.isChromiumBrowser();
+    }
+
+    isChromiumBrowser() {
+        const userAgent = navigator.userAgent;
+        const isChrome = /Chrome/.test(userAgent) && /Google Inc/.test(navigator.vendor);
+        const isEdge = /Edg/.test(userAgent);
+        const isOpera = /OPR/.test(userAgent);
+        const isBrave = navigator.brave !== undefined;
+        const isFirefox = /Firefox/.test(userAgent);
+        const isSafari = /Safari/.test(userAgent) && !/Chrome/.test(userAgent);
+
+        return (isChrome || isEdge || isOpera || isBrave) && !isFirefox && !isSafari;
     }
 
     async installApp() {
-        console.log('🚀 Install attempt:', {
+        console.log('Install attempt:', {
             hasDeferredPrompt: !!this.deferredPrompt,
             installable: this.installable
         });
@@ -191,6 +235,7 @@ class UnifiedPWAManager {
                 return result.outcome === 'accepted';
             } catch (error) {
                 console.error('Install failed:', error);
+                return false;
             }
         }
 
@@ -199,8 +244,11 @@ class UnifiedPWAManager {
 
     async applyUpdate() {
         if (this.registration?.waiting) {
+            console.log('Applying update...');
             this.registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+            return true;
         }
+        return false;
     }
 
     async checkForUpdates() {
@@ -208,23 +256,15 @@ class UnifiedPWAManager {
             try {
                 await this.registration.update();
                 console.log('Update check completed');
+                return true;
             } catch (error) {
                 console.error('Update check failed:', error);
+                return false;
             }
         }
+        return false;
     }
-    isChromiumBrowser() {
-        const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
-        const isEdge = /Edg/.test(navigator.userAgent);
-        const isOpera = /OPR/.test(navigator.userAgent);
-        const isBrave = navigator.brave !== undefined;
 
-        // Exclude non-PWA supporting browsers
-        const isFirefox = /Firefox/.test(navigator.userAgent);
-        const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
-
-        return (isChrome || isEdge || isOpera || isBrave) && !isFirefox && !isSafari;
-    }
     getStatus() {
         return {
             isInstallable: this.installable || !!this.deferredPrompt,
@@ -233,17 +273,24 @@ class UnifiedPWAManager {
             updateAvailable: this.updateAvailable,
             isOnline: navigator.onLine,
             isChromiumBased: this.isChromiumBrowser(),
-            canBeInstalled: this.canBeInstalled()
+            canBeInstalled: this.canBeInstalled(),
+            isInitialized: this.initialized
         };
     }
 
-    setDotNetReference(dotNetRef) {
+    async setDotNetReference(dotNetRef) {
         this.dotNetRef = dotNetRef;
-        console.log('🔗 .NET reference set');
+        console.log('.NET reference set');
 
+        // Wait for initialization before sending status
+        if (this.initPromise) {
+            await this.initPromise;
+        }
+
+        // Send current status after brief delay
         setTimeout(() => {
             const status = this.getStatus();
-            console.log('📤 Sending status to .NET:', status);
+            console.log('Sending status to .NET:', status);
 
             if (status.isInstallable) {
                 this.notifyDotNet('OnInstallPromptReady');
@@ -251,17 +298,23 @@ class UnifiedPWAManager {
             if (status.updateAvailable) {
                 this.notifyDotNet('OnUpdateAvailable');
             }
-        }, 100);
+
+            // Send connectivity status
+            this.notifyDotNet('OnConnectivityChanged', navigator.onLine);
+        }, 200);
     }
 
     notifyDotNet(method, data = null) {
-        console.log(`📡 Notifying .NET: ${method}`, data);
         if (this.dotNetRef) {
             try {
-                this.dotNetRef.invokeMethodAsync(method, data);
+                console.log(`Notifying .NET: ${method}`, data);
+                this.dotNetRef.invokeMethodAsync(method, data)
+                    .catch(error => console.error(`Failed to invoke ${method}:`, error));
             } catch (error) {
-                console.error('Failed to notify .NET:', error);
+                console.error(`Failed to notify .NET ${method}:`, error);
             }
+        } else {
+            console.log(`Queued notification: ${method}`, data);
         }
     }
 
@@ -272,11 +325,13 @@ class UnifiedPWAManager {
 
 // Global functions for Blazor
 window.getPWAManager = () => UnifiedPWAManager.getInstance();
-window.setupPWAMonitoring = (dotNetRef) => {
+
+window.setupPWAMonitoring = async (dotNetRef) => {
     const manager = UnifiedPWAManager.getInstance();
-    manager.setDotNetReference(dotNetRef);
+    await manager.setDotNetReference(dotNetRef);
     return manager.getStatus();
 };
 
+// Initialize PWA Manager immediately
 window.pwaManager = UnifiedPWAManager.getInstance();
-console.log('🎉 PWA Manager loaded and initialized');
+console.log('PWA Manager loaded and initialized');

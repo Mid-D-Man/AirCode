@@ -21,20 +21,58 @@
         .loading-progress {
             width: 8rem;
             height: 8rem;
-            margin: 20vh auto 0 auto; /* Fixed centering */
-            display: block; /* Explicit block display */
+            margin: 20vh auto 0 auto;
+            display: block;
         }
-        .loading-progress circle { fill: none; stroke: #e6e6e6; stroke-width: 0.6rem; transform-origin: 50% 50%; }
-        .loading-progress circle:last-child { stroke: #1b6ec2; stroke-dasharray: calc(3.141 * 6rem); }
-        .loading-progress-text { position: absolute; text-align: center; font-weight: bold; inset: calc(20vh + 3.25rem) 0 auto 0.75rem; }
-        #blazor-error-ui { background: lightyellow; bottom: 0; box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.2); display: none; left: 0; padding: 0.6rem 1.25rem 0.7rem 1.25rem; position: fixed; width: 100%; z-index: 1000; }
-       
+        .loading-progress circle {
+            fill: none;
+            stroke: #e6e6e6;
+            stroke-width: 0.6rem;
+            transform-origin: 50% 50%;
+            animation: loading-progress-circle 2s linear infinite;
+        }
+        .loading-progress circle:last-child {
+            stroke: #1b6ec2;
+            stroke-dasharray: calc(3.141 * 6rem);
+            stroke-dashoffset: calc(3.141 * 6rem);
+            animation: loading-progress-circle-fill 2s ease-in-out infinite;
+        }
+        @keyframes loading-progress-circle-fill {
+            0% { stroke-dashoffset: calc(3.141 * 6rem); }
+            50% { stroke-dashoffset: calc(3.141 * 3rem); }
+            100% { stroke-dashoffset: calc(3.141 * 6rem); }
+        }
+        .loading-progress-text {
+            position: absolute;
+            text-align: center;
+            font-weight: bold;
+            inset: calc(20vh + 3.25rem) 0 auto 0.75rem;
+            font-family: system-ui, -apple-system, sans-serif;
+            color: #1b6ec2;
+        }
+        #blazor-error-ui {
+            background: #ffebee;
+            bottom: 0;
+            box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.2);
+            display: none;
+            left: 0;
+            padding: 0.6rem 1.25rem 0.7rem 1.25rem;
+            position: fixed;
+            width: 100%;
+            z-index: 1000;
+            border-top: 2px solid #f44336;
+        }
+        #blazor-error-ui .reload {
+            color: #1976d2;
+            text-decoration: underline;
+            margin-right: 1rem;
+        }
+        #blazor-error-ui .dismiss {
+            color: #666;
+            cursor: pointer;
+            text-decoration: none;
+        }
     </style>
-
-    <!--  Preload critical resources -->
-    <link rel="preload" href="css/bootstrap/bootstrap.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <link rel="preload" href="css/app.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <link rel="preload" href="_framework/blazor.webassembly.js" as="script">
 
     <!-- CSS with fallback -->
     <link href="css/bootstrap/bootstrap.min.css" rel="stylesheet" />
@@ -49,8 +87,6 @@
     <link href="manifest.json" rel="manifest" />
     <link rel="apple-touch-icon" sizes="512x512" href="icon-512.png" />
     <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
-
-
 </head>
 
 <body>
@@ -59,7 +95,7 @@
         <circle r="40%" cx="50%" cy="50%" />
         <circle r="40%" cx="50%" cy="50%" />
     </svg>
-    <div class="loading-progress-text"></div>
+    <div class="loading-progress-text">Loading...</div>
 </div>
 
 <div id="blazor-error-ui">
@@ -68,38 +104,56 @@
     <a class="dismiss">🗙</a>
 </div>
 
-<!-- Optimized Service Worker Registration -->
+<!-- Service Worker Registration - FIXED -->
 <script>
-    // Immediate SW registration
+    let swRegistered = false;
+
     if ('serviceWorker' in navigator) {
         const basePath = window.location.hostname === 'mid-d-man.github.io' ? '/AirCode/' : '/';
-        navigator.serviceWorker.register(basePath + 'service-worker.js', { scope: basePath })
-            .then(reg => console.log('SW registered:', reg.scope))
-            .catch(err => console.log('SW failed (expected offline):', err));
+
+        navigator.serviceWorker.register(basePath + 'service-worker.js', {
+            scope: basePath,
+            updateViaCache: 'none'
+        })
+            .then(reg => {
+                console.log('SW registered:', reg.scope);
+                swRegistered = true;
+            })
+            .catch(err => {
+                console.warn('SW registration failed:', err);
+                swRegistered = false;
+            });
     }
-   
 </script>
 
-<!-- Critical Scripts with error handling -->
-<script src="_framework/blazor.webassembly.js" onerror="console.warn('Blazor failed to load')"></script>
-<script src="js/pwaManager.js" onerror="console.warn('PWA Manager failed')"></script>
-    <!-- This idiot forgot authentication-->   
-<script src="_content/Microsoft.AspNetCore.Components.WebAssembly.Authentication/AuthenticationService.js"></script>
+<!-- Blazor Framework - CRITICAL LOAD ORDER -->
+<script src="_framework/blazor.webassembly.js"
+        onerror="console.error('Blazor framework failed to load'); document.querySelector('.loading-progress-text').textContent = 'Framework Load Error';">
+</script>
 
-<!-- Non-critical scripts -->
-<script src="js/connectivityServices.js"></script>
-<script src="js/debug.js"></script>
-<script src="js/themeSwitcher.js"></script>
-<!-- <script src="js/authHelper.js"></script> -->
-<script src="js/cryptographyHandler.js"></script>
-<script src="js/site.js"></script>
-<script src="js/cameraUtil.js"></script>
-<script src="js/floatingQrDrag.js"></script>
-<script src="js/firestoreModule.js"></script>
-<script src="js/qrCodeModule.js"></script>
-<script src="js/gpuPerformance.js"></script>
-<script src="js/search-helpers.js"></script>
-<script src="js/validateKeyAndIV.js"></script>
+<!-- Authentication Service - Load after Blazor -->
+<script src="_content/Microsoft.AspNetCore.Components.WebAssembly.Authentication/AuthenticationService.js"
+        onerror="console.warn('Auth service failed to load');">
+</script>
+
+<!-- PWA Manager - Load after framework -->
+<script src="js/pwaManager.js"
+        onerror="console.warn('PWA Manager failed to load');">
+</script>
+
+<!-- Utility Scripts -->
+<script src="js/connectivityServices.js" onerror="console.warn('Connectivity services failed')"></script>
+<script src="js/debug.js" onerror="console.warn('Debug utilities failed')"></script>
+<script src="js/themeSwitcher.js" onerror="console.warn('Theme switcher failed')"></script>
+<script src="js/cryptographyHandler.js" onerror="console.warn('Crypto handler failed')"></script>
+<script src="js/site.js" onerror="console.warn('Site utilities failed')"></script>
+<script src="js/cameraUtil.js" onerror="console.warn('Camera utilities failed')"></script>
+<script src="js/floatingQrDrag.js" onerror="console.warn('QR drag failed')"></script>
+<script src="js/firestoreModule.js" onerror="console.warn('Firestore module failed')"></script>
+<script src="js/qrCodeModule.js" onerror="console.warn('QR code module failed')"></script>
+<script src="js/gpuPerformance.js" onerror="console.warn('GPU performance failed')"></script>
+<script src="js/search-helpers.js" onerror="console.warn('Search helpers failed')"></script>
+<script src="js/validateKeyAndIV.js" onerror="console.warn('Validation utilities failed')"></script>
 
 <!-- Camera utility functions -->
 <script>
@@ -128,56 +182,92 @@
     };
 </script>
 
-<!-- WASM debugging -->
+<!-- WASM debugging with timeout -->
 <script>
     window.addEventListener('load', async () => {
+        const timeout = setTimeout(() => {
+            console.warn('WASM check timed out');
+        }, 5000);
+
         try {
             const wasmUrl = './wasm/qr_code_generator_bg.wasm';
             const response = await fetch(wasmUrl);
+            clearTimeout(timeout);
             console.log('WASM fetch response:', {
                 status: response.status,
                 contentType: response.headers.get('content-type'),
                 url: response.url
             });
         } catch (error) {
+            clearTimeout(timeout);
             console.error('WASM fetch failed:', error);
         }
     });
 </script>
 
-<!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
-
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
-<!-- Firebase Configuration -->
+<!-- Error handling for Blazor -->
 <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const errorUI = document.getElementById('blazor-error-ui');
 
-    const firebaseConfig = {
+        // Show error UI on unhandled errors
+        window.addEventListener('error', (e) => {
+            console.error('Global error:', e.error);
+            errorUI.style.display = 'block';
+        });
 
-        apiKey: "AIzaSyAM9mrDb2-eFgtMsMm7eJzt6GHIBCHEeGw",
+        window.addEventListener('unhandledrejection', (e) => {
+            console.error('Unhandled promise rejection:', e.reason);
+            errorUI.style.display = 'block';
+        });
 
-        authDomain: "aircode-4d07c.firebaseapp.com",
+        // Dismiss error UI
+        errorUI.querySelector('.dismiss').addEventListener('click', () => {
+            errorUI.style.display = 'none';
+        });
 
-        projectId: "aircode-4d07c",
+        // Reload functionality
+        errorUI.querySelector('.reload').addEventListener('click', (e) => {
+            e.preventDefault();
+            window.location.reload();
+        });
+    });
+</script>
 
-        storageBucket: "aircode-4d07c.firebasestorage.app",
+<!-- Firebase SDK with error handling -->
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"
+        onerror="console.warn('Firebase app failed to load')">
+</script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"
+        onerror="console.warn('Firebase firestore failed to load')">
+</script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"
+        onerror="console.warn('Firebase database failed to load')">
+</script>
 
-        messagingSenderId: "1041427366169",
+<!-- Firebase Configuration with error handling -->
+<script>
+    try {
+        const firebaseConfig = {
+            apiKey: "AIzaSyAM9mrDb2-eFgtMsMm7eJzt6GHIBCHEeGw",
+            authDomain: "aircode-4d07c.firebaseapp.com",
+            projectId: "aircode-4d07c",
+            storageBucket: "aircode-4d07c.firebasestorage.app",
+            messagingSenderId: "1041427366169",
+            appId: "1:1041427366169:web:6b7c84fefdcbe64edc4588",
+            measurementId: "G-PLN2D6PVVX",
+            databaseURL: "https://aircode-4d07c-default-rtdb.firebaseio.com/"
+        };
 
-        appId: "1:1041427366169:web:6b7c84fefdcbe64edc4588",
-
-        measurementId: "G-PLN2D6PVVX",
-
-        databaseURL: "https://aircode-4d07c-default-rtdb.firebaseio.com/"
-
-    };
-
-
-
-    firebase.initializeApp(firebaseConfig);
-
+        if (typeof firebase !== 'undefined') {
+            firebase.initializeApp(firebaseConfig);
+            console.log('Firebase initialized successfully');
+        } else {
+            console.warn('Firebase SDK not loaded');
+        }
+    } catch (error) {
+        console.error('Firebase initialization failed:', error);
+    }
 </script>
 </body>
 </html>
