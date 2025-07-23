@@ -1,7 +1,7 @@
 Project Structure Documentation
-Generated: Wed Jul 23 09:27:36 UTC 2025
+Generated: Wed Jul 23 15:38:41 UTC 2025
 Repository: Mid-D-Man/AirCode
-Commit: 2ec19e436775594b9d35fc08ed3a50a8bfb2bddb
+Commit: 77efcb1c46811d2ad3ba3593607e0eef8adb6a78
 ==================================
 
 Source Files:
@@ -275,6 +275,7 @@ wwwroot/css/open-iconic/README.md
 wwwroot/css/open-iconic/font/css/open-iconic-bootstrap.min.css
 wwwroot/css/responsive.css
 wwwroot/index.html
+wwwroot/js/PwaDiagnostics.js
 wwwroot/js/attendanceSSE.js
 wwwroot/js/authHelper.js
 wwwroot/js/cameraUtil.js
@@ -312,5 +313,5 @@ File Count Summary:
 .csproj   : 1 files
 .json     : 12 files
 .css      : 74 files
-.js       : 44 files
+.js       : 45 files
 .html     : 3 files
