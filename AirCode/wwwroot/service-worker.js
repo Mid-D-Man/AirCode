@@ -1,7 +1,7 @@
 // Enhanced Service Worker - Aggressive Offline Caching
 const isGitHubPages = self.location.hostname === 'mid-d-man.github.io';
 const BASE_PATH = isGitHubPages ? '/AirCode/' : '/';
-const CACHE_NAME = 'aircode-cache-v5';
+const CACHE_NAME = 'aircode-cache-v6';
 
 //#region Critical Assets Configuration
 const CRITICAL_ASSETS = [
@@ -28,6 +28,13 @@ const CRITICAL_ASSETS = [
     BASE_PATH + '_framework/blazor.webassembly.js',
     BASE_PATH + '_framework/blazor.boot.json',
     BASE_PATH + '_framework/dotnet.7.0.17.5xcw3lqzx7.js',
+    BASE_PATH + '_framework/blazor.boot.json',
+    BASE_PATH + '_framework/dotnet.wasm',
+    BASE_PATH + '_framework/AirCode.dll',
+    BASE_PATH + '_framework/System.*.dll',
+
+    // Blazor compiled assemblies 
+    BASE_PATH + '_framework/Microsoft.AspNetCore.Components.WebAssembly.dll',
 
     // Critical offline services
     BASE_PATH + 'js/pwaManager.js',
@@ -45,7 +52,7 @@ const CRITICAL_ASSETS = [
     BASE_PATH + 'wasm/qr_code_generator.js',
     BASE_PATH + 'wasm/qr_code_generator_bg.wasm',
 
-    // Auth service
+    // Auth service dependencies
     BASE_PATH + '_content/Microsoft.AspNetCore.Components.WebAssembly.Authentication/AuthenticationService.js'
 ];
 
