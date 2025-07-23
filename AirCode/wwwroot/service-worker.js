@@ -1,7 +1,7 @@
 // Enhanced Service Worker - Aggressive Offline Caching
 const isGitHubPages = self.location.hostname === 'mid-d-man.github.io';
 const BASE_PATH = isGitHubPages ? '/AirCode/' : '/';
-const CACHE_NAME = 'aircode-cache-v7';
+const CACHE_NAME = 'aircode-cache-v8';
 
 //#region Critical Assets Configuration
 const CRITICAL_ASSETS = [
