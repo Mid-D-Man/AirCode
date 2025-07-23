@@ -108,7 +108,7 @@ self.addEventListener('install', event => {
                 await Promise.allSettled(criticalPromises);
 
                 // Cache secondary assets (non-blocking)
-                SECONDARY_ASSETS.forEach(async url => {
+                for (const url of SECONDARY_ASSETS) {
                     try {
                         const response = await fetch(url);
                         if (response.ok) {
@@ -117,7 +117,7 @@ self.addEventListener('install', event => {
                     } catch (error) {
                         console.warn('SW: Secondary cache miss:', url);
                     }
-                });
+                }
 
                 console.log('SW: Critical assets cached, skipping waiting');
                 return self.skipWaiting();
