@@ -1,5 +1,5 @@
 // Blazor WASM PWA Service Worker - Production Offline-Capable Version
-// Based on Microsoft's recommended patterns and Blazor asset manifest integration
+//  Based on Microsoft's recommended patterns and Blazor asset manifest integration 
 
 const isGitHubPages = self.location.hostname === 'mid-d-man.github.io';
 const BASE_PATH = isGitHubPages ? '/AirCode/' : '/';
@@ -204,7 +204,7 @@ async function handleNavigation(request) {
         if (networkResponse.ok) {
             // Cache the response for future use
             const cache = await caches.open(CACHE_NAME);
-            cache.put(BASE_PATH + 'index.html', networkResponse.clone());
+           await cache.put(BASE_PATH + 'index.html', networkResponse.clone());
             return networkResponse;
         }
 
@@ -214,7 +214,8 @@ async function handleNavigation(request) {
         console.error('SW: Navigation completely failed - app unavailable', error);
         return new Response(
             `<!DOCTYPE html>
-            <html>
+            <html lang="en">
+            
             <head><title>App Unavailable</title></head>
             <body>
                 <h1>Application Unavailable</h1>
@@ -263,7 +264,7 @@ async function handleResource(request, url) {
         if (networkResponse.ok) {
             // Cache successful network responses
             const cache = await caches.open(CACHE_NAME);
-            cache.put(cacheKey, networkResponse.clone());
+           await cache.put(cacheKey, networkResponse.clone());
             console.log(`SW: Network success, cached: ${url.pathname}`);
             return networkResponse;
         }
