@@ -1,368 +1,403 @@
-// Blazor WASM Offline-First Service Worker - TypeScript Fixes Applied
+// Blazor WASM PWA Service Worker - Production Offline-Capable Version
+// Based on Microsoft's recommended patterns and Blazor asset manifest integration
+
 const isGitHubPages = self.location.hostname === 'mid-d-man.github.io';
 const BASE_PATH = isGitHubPages ? '/AirCode/' : '/';
-const CACHE_NAME = 'aircode-cache-v10';
+const CACHE_NAME = 'aircode-cache-v11';
+const OFFLINE_CACHE = 'aircode-offline-v11';
 
-// CRITICAL: Boot sequence assets must be cached FIRST
-const BOOT_SEQUENCE_ASSETS = [
-    BASE_PATH + '_framework/blazor.boot.json',
-    BASE_PATH + '_framework/blazor.webassembly.js',
-    BASE_PATH + '_framework/dotnet.js',
-    BASE_PATH + '_framework/dotnet.wasm'
-];
+// CRITICAL: Import Blazor-generated asset manifest
+self.importScripts(BASE_PATH + 'service-worker-assets.js');
 
-const CRITICAL_ASSETS = [
+// Get all assets from Blazor manifest - this is the key to proper offline support
+const assetsManifest = self.assetsManifest;
+const offlineAssetsInclude = assetsManifest?.offlineAssetsInclude || [];
+const offlineAssetsExclude = assetsManifest?.offlineAssetsExclude || [];
+
+// Core navigation assets - must be cached first
+const NAVIGATION_ASSETS = [
     BASE_PATH,
-    BASE_PATH + 'index.html',
-    ...BOOT_SEQUENCE_ASSETS,
-    BASE_PATH + '_framework/AirCode.dll',
-    BASE_PATH + '_framework/Microsoft.AspNetCore.Components.dll',
-    BASE_PATH + '_framework/Microsoft.AspNetCore.Components.WebAssembly.dll',
-    BASE_PATH + '_framework/Microsoft.Extensions.Configuration.dll',
-    BASE_PATH + '_framework/Microsoft.Extensions.Configuration.Json.dll',
-    BASE_PATH + '_framework/Microsoft.Extensions.DependencyInjection.dll',
-    BASE_PATH + '_framework/Microsoft.Extensions.Logging.dll',
-    BASE_PATH + '_framework/System.Net.Http.dll',
-    BASE_PATH + '_framework/System.Text.Json.dll',
-    BASE_PATH + 'manifest.json',
-    BASE_PATH + 'icon-192.png',
-    BASE_PATH + 'icon-512.png',
-    BASE_PATH + 'favicon.ico',
-    BASE_PATH + 'css/bootstrap/bootstrap.min.css',
-    BASE_PATH + 'css/app.css',
-    BASE_PATH + 'AirCode.styles.css',
-    BASE_PATH + '_content/Microsoft.AspNetCore.Components.WebAssembly.Authentication/AuthenticationService.js',
-    BASE_PATH + 'js/pwaManager.js'
+    BASE_PATH + 'index.html'
 ];
 
-// Framework patterns for dynamic discovery
-const FRAMEWORK_PATTERNS = [
-    /_framework\/.*\.dll$/,
-    /_framework\/.*\.pdb$/,
-    /_framework\/.*\.dat$/,
-    /_framework\/.*\.wasm$/,
-    /_framework\/.*\.js$/,
-    /_framework\/.*\.json$/
+// Filter assets for offline capability
+const offlineAssets = [
+    ...NAVIGATION_ASSETS,
+    ...assetsManifest.assets
+        ?.filter(asset => offlineAssetsInclude.length === 0 || offlineAssetsInclude.some(pattern => asset.url.includes(pattern)))
+        ?.filter(asset => !offlineAssetsExclude.some(pattern => asset.url.includes(pattern)))
+        ?.map(asset => BASE_PATH + asset.url) || []
 ];
+
+console.log(`SW: v11 - Caching ${offlineAssets.length} offline assets`);
 
 self.addEventListener('install', event => {
-    console.log('SW: Installing v10 - Offline-First Fix');
+    console.log('SW: Installing v11 - Blazor Asset Manifest Integration');
+
     event.waitUntil(
-        caches.open(CACHE_NAME)
-            .then(async cache => {
-                // PHASE 1: Cache boot sequence with integrity bypass
-                console.log('SW: Phase 1 - Boot sequence caching');
-                for (const url of BOOT_SEQUENCE_ASSETS) {
-                    try {
-                        const response = await fetch(url, {
-                            cache: 'reload',
-                            credentials: 'same-origin',
-                            mode: 'cors'
-                        });
+        (async () => {
+            // Clear old caches first
+            const cacheNames = await caches.keys();
+            await Promise.all(
+                cacheNames
+                    .filter(name => name.startsWith('aircode-cache-') && name !== CACHE_NAME)
+                    .map(name => caches.delete(name))
+            );
 
-                        if (response.ok) {
-                            await cache.put(url, response.clone());
-                            console.log(`SW: Boot asset cached: ${url}`);
-                        }
-                    } catch (error) {
-                        console.error(`SW: CRITICAL - Boot asset failed: ${url}`, error);
-                    }
-                }
+            // Open fresh cache
+            const cache = await caches.open(CACHE_NAME);
 
-                // PHASE 2: Dynamic framework discovery from blazor.boot.json
+            // Phase 1: Cache navigation assets immediately
+            console.log('SW: Phase 1 - Navigation assets');
+            for (const url of NAVIGATION_ASSETS) {
                 try {
-                    const bootResponse = await cache.match(BASE_PATH + '_framework/blazor.boot.json');
-                    if (bootResponse) {
-                        const bootData = await bootResponse.json();
-                        const dynamicAssets = [];
-
-                        // Extract all DLLs and resources from boot.json
-                        if (bootData.resources?.assembly) {
-                            Object.keys(bootData.resources.assembly).forEach(dll => {
-                                dynamicAssets.push(BASE_PATH + '_framework/' + dll);
-                            });
-                        }
-
-                        if (bootData.resources?.runtime) {
-                            Object.keys(bootData.resources.runtime).forEach(runtime => {
-                                dynamicAssets.push(BASE_PATH + '_framework/' + runtime);
-                            });
-                        }
-
-                        // Cache discovered assets
-                        console.log(`SW: Phase 2 - Caching ${dynamicAssets.length} discovered assets`);
-                        for (const asset of dynamicAssets) {
-                            try {
-                                const response = await fetch(asset, { cache: 'reload' });
-                                if (response.ok) {
-                                    await cache.put(asset, response);
-                                }
-                            } catch (error) {
-                                console.warn(`SW: Dynamic asset cache miss: ${asset}`);
-                            }
-                        }
+                    const response = await fetch(url, {
+                        cache: 'reload',
+                        credentials: 'same-origin'
+                    });
+                    if (response.ok) {
+                        await cache.put(url, response);
+                        console.log(`SW: Cached navigation: ${url}`);
                     }
                 } catch (error) {
-                    console.warn('SW: Dynamic discovery failed, using static list');
+                    console.warn(`SW: Navigation cache failed: ${url}`, error);
                 }
+            }
 
-                // PHASE 3: Cache remaining critical assets
-                console.log('SW: Phase 3 - Critical assets');
-                const remainingAssets = CRITICAL_ASSETS.filter(url =>
-                    !BOOT_SEQUENCE_ASSETS.includes(url)
-                );
+            // Phase 2: Batch cache all Blazor assets with integrity verification
+            console.log('SW: Phase 2 - Blazor assets with integrity');
+            const batchSize = 10; // Process in smaller batches to avoid overwhelming
+
+            for (let i = 0; i < offlineAssets.length; i += batchSize) {
+                const batch = offlineAssets.slice(i, i + batchSize);
 
                 await Promise.allSettled(
-                    remainingAssets.map(async url => {
+                    batch.map(async (assetUrl) => {
+                        if (NAVIGATION_ASSETS.includes(assetUrl)) return; // Skip already cached
+
                         try {
-                            const response = await fetch(url, { cache: 'reload' });
+                            // Find asset info for integrity check
+                            const assetInfo = assetsManifest.assets?.find(a =>
+                                assetUrl.endsWith(a.url)
+                            );
+
+                            const response = await fetch(assetUrl, {
+                                cache: 'reload',
+                                credentials: 'same-origin'
+                            });
+
                             if (response.ok) {
-                                await cache.put(url, response);
+                                // Verify integrity if available
+                                if (assetInfo?.hash) {
+                                    const responseClone = response.clone();
+                                    const buffer = await responseClone.arrayBuffer();
+                                    const hashArray = new Uint8Array(
+                                        await crypto.subtle.digest('SHA-256', buffer)
+                                    );
+                                    const hashHex = Array.from(hashArray)
+                                        .map(b => b.toString(16).padStart(2, '0'))
+                                        .join('');
+
+                                    if (!assetInfo.hash.includes(hashHex)) {
+                                        console.warn(`SW: Integrity mismatch for ${assetUrl}`);
+                                        return; // Skip caching if integrity fails
+                                    }
+                                }
+
+                                await cache.put(assetUrl, response);
+                                console.log(`SW: Cached asset: ${assetUrl}`);
                             }
                         } catch (error) {
-                            console.warn(`SW: Critical asset miss: ${url}`);
+                            console.warn(`SW: Asset cache failed: ${assetUrl}`, error);
                         }
                     })
                 );
+            }
 
-                console.log('SW: All phases complete - Skip waiting');
-                return self.skipWaiting();
-            })
-            .catch(error => {
-                console.error('SW: Install failed:', error);
-            })
+            // Phase 3: Create offline cache for runtime assets
+            const offlineCache = await caches.open(OFFLINE_CACHE);
+            const offlineResponse = new Response(
+                JSON.stringify({
+                    offline: true,
+                    timestamp: new Date().toISOString(),
+                    cached: true
+                }),
+                {
+                    status: 200,
+                    headers: { 'Content-Type': 'application/json' }
+                }
+            );
+            await offlineCache.put('/offline-indicator', offlineResponse);
+
+            console.log('SW: Installation complete - Ready for offline use');
+            await self.skipWaiting();
+        })()
     );
 });
 
 self.addEventListener('activate', event => {
-    console.log('SW: Activating v10');
+    console.log('SW: Activating v11');
+
     event.waitUntil(
-        Promise.all([
-            // FIX 1: Explicit type alignment for Promise.all
-            caches.keys().then(names =>
-                Promise.all(
-                    names
-                        .filter(name => name !== CACHE_NAME)
-                        .map(name => caches.delete(name))
-                )
-            ),
-            self.clients.claim()
-        ]).then(() => {
-            console.log('SW: Activated - Offline-first ready');
-            return self.clients.matchAll();
-        }).then(clients => {
+        (async () => {
+            // Clean up old caches
+            const cacheNames = await caches.keys();
+            await Promise.all(
+                cacheNames
+                    .filter(name =>
+                        (name.startsWith('aircode-cache-') && name !== CACHE_NAME) ||
+                        (name.startsWith('aircode-offline-') && name !== OFFLINE_CACHE)
+                    )
+                    .map(name => caches.delete(name))
+            );
+
+            // Take control immediately
+            await self.clients.claim();
+
+            // Notify all clients
+            const clients = await self.clients.matchAll();
             clients.forEach(client => {
                 client.postMessage({
                     type: 'SW_ACTIVATED',
-                    version: 10,
-                    offlineReady: true
+                    version: 11,
+                    offlineReady: true,
+                    assetsCount: offlineAssets.length
                 });
             });
-        })
+
+            console.log('SW: Activated - Full offline capability enabled');
+        })()
     );
 });
 
 self.addEventListener('fetch', event => {
-    if (event.request.method !== 'GET' ||
-        !event.request.url.startsWith(self.location.origin)) {
+    const { request } = event;
+
+    // Only handle GET requests from same origin
+    if (request.method !== 'GET' || !request.url.startsWith(self.location.origin)) {
         return;
     }
 
-    const url = new URL(event.request.url);
-    const isFrameworkAsset = FRAMEWORK_PATTERNS.some(pattern => pattern.test(url.pathname));
-    const isCriticalAsset = CRITICAL_ASSETS.some(asset => url.pathname.endsWith(asset.replace(BASE_PATH, '')));
-
-    // OFFLINE-FIRST: Always try cache first for all GET requests
-    event.respondWith(handleOfflineFirstRequest(event.request, isFrameworkAsset, isCriticalAsset));
-});
-
-async function handleOfflineFirstRequest(request, isFrameworkAsset, isCriticalAsset) {
     const url = new URL(request.url);
 
-    try {
-        // STEP 1: Always check cache first (offline-first strategy)
-        const cachedResponse = await caches.match(request);
-        if (cachedResponse) {
-            console.log('SW: Cache hit (offline-first):', url.pathname);
+    // Navigation requests - always serve cached index.html for SPA routing
+    if (request.mode === 'navigate') {
+        event.respondWith(handleNavigation(request));
+        return;
+    }
 
-            // For non-critical assets, update cache in background
-            if (!isCriticalAsset && !isFrameworkAsset) {
-                await updateCacheInBackground(request);
+    // All other requests - cache-first with network fallback
+    event.respondWith(handleResource(request, url));
+});
+
+async function handleNavigation(request) {
+    try {
+        // Always try cache first for navigation
+        const cachedResponse = await caches.match(BASE_PATH + 'index.html');
+        if (cachedResponse) {
+            console.log('SW: Serving cached index.html for navigation');
+            return cachedResponse;
+        }
+
+        // Network fallback
+        const networkResponse = await fetch(request);
+        if (networkResponse.ok) {
+            // Cache the response for future use
+            const cache = await caches.open(CACHE_NAME);
+            cache.put(BASE_PATH + 'index.html', networkResponse.clone());
+            return networkResponse;
+        }
+
+        throw new Error(`Navigation failed: ${networkResponse.status}`);
+
+    } catch (error) {
+        console.error('SW: Navigation completely failed - app unavailable', error);
+        return new Response(
+            `<!DOCTYPE html>
+            <html>
+            <head><title>App Unavailable</title></head>
+            <body>
+                <h1>Application Unavailable</h1>
+                <p>The application is not available offline and cannot connect to the server.</p>
+                <button onclick="location.reload()">Retry</button>
+            </body>
+            </html>`,
+            {
+                status: 503,
+                headers: { 'Content-Type': 'text/html' }
+            }
+        );
+    }
+}
+
+async function handleResource(request, url) {
+    const cacheKey = request.url;
+
+    try {
+        // CACHE FIRST - Check all cache instances
+        let cachedResponse = await caches.match(cacheKey);
+
+        if (cachedResponse) {
+            console.log(`SW: Cache hit: ${url.pathname}`);
+
+            // Background update for non-critical resources
+            if (!url.pathname.includes('_framework/')) {
+                fetch(request).then(response => {
+                    if (response.ok) {
+                        caches.open(CACHE_NAME).then(cache => {
+                            cache.put(cacheKey, response.clone());
+                        });
+                    }
+                }).catch(() => {}); // Silent background update
             }
 
             return cachedResponse;
         }
 
-        // STEP 2: Cache miss - try network
-        console.log('SW: Cache miss, trying network:', url.pathname);
+        // NETWORK FALLBACK
+        console.log(`SW: Cache miss, trying network: ${url.pathname}`);
         const networkResponse = await fetch(request, {
-            credentials: 'same-origin',
-            cache: 'no-cache'
+            credentials: 'same-origin'
         });
 
         if (networkResponse.ok) {
             // Cache successful network responses
             const cache = await caches.open(CACHE_NAME);
-            cache.put(request, networkResponse.clone()).catch(err =>
-                console.warn('SW: Cache write failed:', err)
-            );
-            console.log('SW: Network response cached:', url.pathname);
+            cache.put(cacheKey, networkResponse.clone());
+            console.log(`SW: Network success, cached: ${url.pathname}`);
             return networkResponse;
-        } else {
-            throw new Error(`HTTP ${networkResponse.status}`);
         }
 
-    } catch (networkError) {
-        console.warn('SW: Network failed for:', url.pathname, networkError.message);
+        throw new Error(`Network failed: ${networkResponse.status}`);
 
-        // STEP 3: Network failed - provide offline fallbacks
+    } catch (networkError) {
+        console.warn(`SW: Network unavailable for: ${url.pathname}`, networkError);
         return handleOfflineRequest(request, url);
     }
 }
 
-// Background cache update for non-critical assets
-async function updateCacheInBackground(request) {
-    try {
-        const response = await fetch(request, { cache: 'no-cache' });
-        if (response.ok) {
-            const cache = await caches.open(CACHE_NAME);
-            await cache.put(request, response);
-            console.log('SW: Background cache update:', request.url);
-        }
-    } catch (error) {
-        // Silent fail for background updates
-    }
-}
-
 function handleOfflineRequest(request, url) {
-    // Navigation requests - serve cached index.html
-    if (request.mode === 'navigate') {
-        return caches.match(BASE_PATH + 'index.html')
-            .then(response => {
-                if (response) {
-                    console.log('SW: Serving cached index for navigation (offline)');
-                    return response;
-                }
-                return createOfflineResponse('App unavailable - no cached version', 503);
-            });
-    }
+    const pathname = url.pathname;
 
-    // Framework assets - critical for app functionality
-    if (url.pathname.includes('_framework/')) {
-        return caches.match(request)
-            .then(response => {
-                if (response) {
-                    console.log('SW: Serving cached framework asset (offline):', url.pathname);
-                    return response;
-                }
-                console.error('SW: CRITICAL - Framework asset missing offline:', url.pathname);
-                return createOfflineResponse('Framework component missing', 503);
-            });
-    }
-
-    // JavaScript files
-    if (url.pathname.endsWith('.js')) {
-        return caches.match(request).then(response => {
-            if (response) return response;
-            return new Response('console.warn("Script unavailable offline");', {
-                status: 200,
-                headers: { 'Content-Type': 'application/javascript' }
-            });
+    // Framework assets - critical, must be available
+    if (pathname.includes('_framework/')) {
+        console.error(`SW: CRITICAL - Framework asset missing offline: ${pathname}`);
+        return new Response('Framework asset unavailable offline', {
+            status: 503,
+            statusText: 'Service Unavailable'
         });
     }
 
-    // CSS files
-    if (url.pathname.endsWith('.css')) {
-        return caches.match(request).then(response => {
-            if (response) return response;
-            return new Response('/* Offline - styles unavailable */', {
-                status: 200,
-                headers: { 'Content-Type': 'text/css' }
-            });
+    // JavaScript fallback
+    if (pathname.endsWith('.js')) {
+        return new Response(`
+            console.warn('Script unavailable offline: ${pathname}');
+            // Offline stub - prevents errors
+        `, {
+            status: 200,
+            headers: { 'Content-Type': 'application/javascript' }
         });
     }
 
-    // JSON files (including blazor.boot.json)
-    if (url.pathname.endsWith('.json')) {
-        return caches.match(request).then(response => {
-            if (response) return response;
-            return createOfflineResponse('Configuration unavailable offline', 503);
+    // CSS fallback
+    if (pathname.endsWith('.css')) {
+        return new Response(`
+            /* Offline - stylesheet unavailable: ${pathname} */
+            body::before {
+                content: "Some styles unavailable offline";
+                display: block;
+                background: #fff3cd;
+                color: #856404;
+                padding: 8px;
+                text-align: center;
+                font-size: 12px;
+            }
+        `, {
+            status: 200,
+            headers: { 'Content-Type': 'text/css' }
         });
     }
 
-    // WASM files
-    if (url.pathname.endsWith('.wasm')) {
-        return caches.match(request).then(response => {
-            if (response) return response;
-            return createOfflineResponse('WebAssembly module unavailable', 503);
+    // JSON/API fallback
+    if (pathname.endsWith('.json') || pathname.includes('/api/')) {
+        return new Response(JSON.stringify({
+            error: 'Offline',
+            message: 'This resource is not available offline',
+            offline: true,
+            path: pathname
+        }), {
+            status: 503,
+            headers: { 'Content-Type': 'application/json' }
         });
     }
 
     // Image fallback
     if (request.destination === 'image') {
-        return new Response(`<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
-            <circle cx="100" cy="100" r="80" fill="#f0f0f0" stroke="#ccc" stroke-width="2"/>
-            <text x="100" y="105" text-anchor="middle" fill="#666" font-family="sans-serif" font-size="14">Offline</text>
-        </svg>`, {
+        return new Response(`
+            <svg xmlns="http://www.w3.org/2000/svg" width="200" height="100" viewBox="0 0 200 100">
+                <rect width="200" height="100" fill="#f8f9fa" stroke="#dee2e6"/>
+                <text x="100" y="50" text-anchor="middle" dy=".3em" fill="#6c757d" font-family="system-ui">
+                    Offline
+                </text>
+            </svg>
+        `, {
             status: 200,
             headers: { 'Content-Type': 'image/svg+xml' }
         });
     }
 
-    return createOfflineResponse('Resource not available offline');
-}
-
-function createOfflineResponse(message = 'Offline', status = 503, contentType = 'application/json') {
-    const body = contentType === 'application/javascript'
-        ? `console.warn('${message}');`
-        : JSON.stringify({
-            error: 'Offline',
-            message: message,
-            timestamp: new Date().toISOString(),
-            cached: false
-        });
-
-    return new Response(body, {
-        status: status,
-        statusText: status === 200 ? 'OK' : 'Service Unavailable',
-        headers: {
-            'Content-Type': contentType,
-            'Cache-Control': 'no-cache'
-        }
+    // Generic fallback
+    return new Response('Resource not available offline', {
+        status: 503,
+        statusText: 'Service Unavailable'
     });
 }
 
-// Enhanced message handling
+// Enhanced messaging for PWA management
 self.addEventListener('message', event => {
-    if (event.data?.type === 'SKIP_WAITING') {
-        // FIX 2: Properly handle skipWaiting Promise
+    const { data } = event;
+
+    if (data?.type === 'SKIP_WAITING') {
         event.waitUntil(self.skipWaiting());
         return;
     }
 
-    if (event.data?.type === 'GET_OFFLINE_STATUS') {
-        caches.open(CACHE_NAME)
-            .then(cache => cache.keys())
-            .then(keys => {
+    if (data?.type === 'GET_CACHE_STATUS') {
+        event.waitUntil(
+            (async () => {
+                const cache = await caches.open(CACHE_NAME);
+                const keys = await cache.keys();
                 const cachedUrls = keys.map(req => req.url);
-                const bootCached = BOOT_SEQUENCE_ASSETS.every(asset =>
+
+                const offlineCoverage = offlineAssets.filter(asset =>
                     cachedUrls.some(url => url.includes(asset.replace(BASE_PATH, '')))
-                );
-                const criticalCached = CRITICAL_ASSETS.filter(asset =>
-                    cachedUrls.some(url => url.includes(asset.replace(BASE_PATH, '')))
-                );
+                ).length;
+
+                const isOfflineReady = offlineCoverage >= offlineAssets.length * 0.9; // 90% threshold
 
                 event.ports[0]?.postMessage({
-                    type: 'OFFLINE_STATUS',
-                    offlineReady: bootCached && criticalCached.length >= CRITICAL_ASSETS.length * 0.8,
-                    bootSequenceReady: bootCached,
-                    criticalCached: criticalCached.length,
-                    criticalTotal: CRITICAL_ASSETS.length,
-                    totalCached: keys.length
+                    type: 'CACHE_STATUS',
+                    offlineReady: isOfflineReady,
+                    totalAssets: offlineAssets.length,
+                    cachedAssets: offlineCoverage,
+                    coverage: Math.round((offlineCoverage / offlineAssets.length) * 100),
+                    version: 11
                 });
-            });
+            })()
+        );
+        return;
+    }
+
+    if (data?.type === 'FORCE_UPDATE') {
+        event.waitUntil(
+            (async () => {
+                await caches.delete(CACHE_NAME);
+                await caches.delete(OFFLINE_CACHE);
+                await self.skipWaiting();
+            })()
+        );
         return;
     }
 });
 
-console.log('SW: v10 Loaded - Offline-First Strategy Active');
+console.log('SW: v11 Loaded - Blazor Asset Manifest Integration Active');

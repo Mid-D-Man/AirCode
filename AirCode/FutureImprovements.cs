@@ -193,4 +193,376 @@ removed this from manifest
       "form_factor": "narrow"
     }
   ],
+  
+  // Blazor WASM Offline-First Service Worker - Production Ready
+   const isGitHubPages = self.location.hostname === 'mid-d-man.github.io';
+   const BASE_PATH = isGitHubPages ? '/AirCode/' : '/';
+   const CACHE_NAME = 'aircode-cache-v11';
+   
+   // CRITICAL: Import official asset list with integrity checks
+   let OFFICIAL_ASSETS = [];
+   let assetsLoaded = false;
+   
+   // Boot sequence - minimal critical assets
+   const BOOT_SEQUENCE_ASSETS = [
+       BASE_PATH + '_framework/blazor.boot.json',
+       BASE_PATH + '_framework/blazor.webassembly.js',
+       BASE_PATH + '_framework/dotnet.js',
+       BASE_PATH + '_framework/dotnet.wasm'
+   ];
+   
+   // Fallback critical assets (used if service-worker-assets.js fails)
+   const FALLBACK_CRITICAL_ASSETS = [
+       BASE_PATH,
+       BASE_PATH + 'index.html',
+       ...BOOT_SEQUENCE_ASSETS,
+       BASE_PATH + '_framework/AirCode.dll',
+       BASE_PATH + 'manifest.json',
+       BASE_PATH + 'icon-192.png',
+       BASE_PATH + 'icon-512.png',
+       BASE_PATH + 'css/app.css'
+   ];
+   
+   // Load official assets with integrity checks
+   async function loadOfficialAssets() {
+       try {
+           const response = await fetch(BASE_PATH + 'service-worker-assets.js', { 
+               cache: 'no-cache' 
+           });
+           
+           if (response.ok) {
+               const assetsScript = await response.text();
+               // Extract assets array from the generated file
+               const assetsMatch = assetsScript.match(/self\.assetsManifest\s*=\s*({[\s\S]*?});/);
+               
+               if (assetsMatch) {
+                   const manifest = JSON.parse(assetsMatch[1]);
+                   OFFICIAL_ASSETS = manifest.assets || [];
+                   console.log(`SW: Loaded ${OFFICIAL_ASSETS.length} official assets with integrity`);
+                   assetsLoaded = true;
+                   return true;
+               }
+           }
+       } catch (error) {
+           console.warn('SW: service-worker-assets.js not found, using fallback');
+       }
+       
+       // Fallback to static list
+       OFFICIAL_ASSETS = FALLBACK_CRITICAL_ASSETS.map(url => ({ url, hash: null }));
+       assetsLoaded = true;
+       return false;
+   }
+   
+   self.addEventListener('install', event => {
+       console.log('SW: Installing v11 - Production Ready');
+       
+       event.waitUntil(
+           loadOfficialAssets()
+               .then(hasIntegrity => installAssets(hasIntegrity))
+               .then(() => self.skipWaiting())
+               .catch(error => {
+                   console.error('SW: Install failed:', error);
+                   throw error;
+               })
+       );
+   });
+   
+   async function installAssets(hasIntegrity) {
+       const cache = await caches.open(CACHE_NAME);
+       
+       // Phase 1: Boot sequence with integrity preservation
+       console.log('SW: Phase 1 - Boot sequence');
+       for (const bootAsset of BOOT_SEQUENCE_ASSETS) {
+           await cacheAssetSafely(cache, bootAsset, null, hasIntegrity);
+       }
+       
+       // Phase 2: Dynamic framework discovery
+       console.log('SW: Phase 2 - Dynamic discovery');
+       await discoverAndCacheFrameworkAssets(cache, hasIntegrity);
+       
+       // Phase 3: Remaining official assets
+       console.log('SW: Phase 3 - Official assets');
+       const remainingAssets = OFFICIAL_ASSETS.filter(asset => 
+           !BOOT_SEQUENCE_ASSETS.includes(getFullUrl(asset.url))
+       );
+       
+       // Batch cache remaining assets
+       await Promise.allSettled(
+           remainingAssets.map(asset => 
+               cacheAssetSafely(cache, getFullUrl(asset.url), asset.hash, hasIntegrity)
+           )
+       );
+       
+       console.log('SW: Installation complete');
+   }
+   
+   async function cacheAssetSafely(cache, url, expectedHash, hasIntegrity) {
+       try {
+           const request = new Request(url, {
+               cache: hasIntegrity ? 'default' : 'reload',
+               credentials: 'same-origin',
+               mode: 'cors'
+           });
+           
+           const response = await fetch(request);
+           
+           if (response.ok) {
+               // Verify integrity if hash provided
+               if (expectedHash && hasIntegrity) {
+                   const buffer = await response.clone().arrayBuffer();
+                   const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+                   const hashArray = Array.from(new Uint8Array(hashBuffer));
+                   const computedHash = btoa(String.fromCharCode.apply(null, hashArray));
+                   
+                   if (`sha256-${computedHash}` !== expectedHash) {
+                       console.warn(`SW: Integrity mismatch for ${url}`);
+                       return false;
+                   }
+               }
+               
+               await cache.put(request, response);
+               console.log(`SW: Cached: ${url}`);
+               return true;
+           }
+       } catch (error) {
+           console.warn(`SW: Cache failed: ${url}`, error.message);
+       }
+       return false;
+   }
+   
+   async function discoverAndCacheFrameworkAssets(cache, hasIntegrity) {
+       try {
+           const bootResponse = await cache.match(BASE_PATH + '_framework/blazor.boot.json');
+           if (!bootResponse) return;
+           
+           const bootData = await bootResponse.json();
+           const discoveredAssets = [];
+           
+           // Extract runtime and assembly assets
+           ['runtime', 'assembly'].forEach(category => {
+               if (bootData.resources?.[category]) {
+                   Object.entries(bootData.resources[category]).forEach(([file, hash]) => {
+                       discoveredAssets.push({
+                           url: BASE_PATH + '_framework/' + file,
+                           hash: hash ? `sha256-${hash}` : null
+                       });
+                   });
+               }
+           });
+           
+           console.log(`SW: Discovered ${discoveredAssets.length} framework assets`);
+           
+           // Cache discovered assets with integrity
+           await Promise.allSettled(
+               discoveredAssets.map(asset => 
+                   cacheAssetSafely(cache, asset.url, asset.hash, hasIntegrity)
+               )
+           );
+           
+       } catch (error) {
+           console.warn('SW: Framework discovery failed:', error);
+       }
+   }
+   
+   function getFullUrl(url) {
+       return url.startsWith('http') ? url : BASE_PATH + url.replace(/^\//, '');
+   }
+   
+   self.addEventListener('activate', event => {
+       console.log('SW: Activating v11');
+       event.waitUntil(
+           Promise.all([
+               // Clean old caches
+               caches.keys().then(names =>
+                   Promise.all(names.map(name =>
+                       name !== CACHE_NAME ? caches.delete(name) : null
+                   ))
+               ),
+               self.clients.claim()
+           ]).then(() => {
+               console.log('SW: Activated - Production ready');
+               return notifyClients({ type: 'SW_ACTIVATED', version: 11, ready: true });
+           })
+       );
+   });
+   
+   self.addEventListener('fetch', event => {
+       if (event.request.method !== 'GET' || 
+           !event.request.url.startsWith(self.location.origin)) {
+           return;
+       }
+   
+       event.respondWith(handleOfflineFirstRequest(event.request));
+   });
+   
+   async function handleOfflineFirstRequest(request) {
+       const url = new URL(request.url);
+       
+       try {
+           // Step 1: Check cache first (offline-first)
+           const cachedResponse = await caches.match(request);
+           if (cachedResponse) {
+               console.log('SW: Cache hit:', url.pathname);
+               
+               // Background update for non-critical assets
+               if (!isCriticalPath(url.pathname)) {
+                   updateCacheInBackground(request);
+               }
+               
+               return cachedResponse;
+           }
+           
+           // Step 2: Network fallback
+           console.log('SW: Network fetch:', url.pathname);
+           const networkResponse = await fetch(request, {
+               credentials: 'same-origin',
+               cache: 'default'
+           });
+           
+           if (networkResponse.ok) {
+               // Cache successful responses
+               const cache = await caches.open(CACHE_NAME);
+               cache.put(request, networkResponse.clone()).catch(console.warn);
+               return networkResponse;
+           }
+           
+           throw new Error(`HTTP ${networkResponse.status}`);
+           
+       } catch (networkError) {
+           console.warn('SW: Network failed:', url.pathname);
+           return handleOfflineFallback(request, url);
+       }
+   }
+   
+   function isCriticalPath(pathname) {
+       return pathname.includes('_framework/') || 
+              pathname.endsWith('index.html') ||
+              pathname.includes('blazor.boot.json');
+   }
+   
+   async function updateCacheInBackground(request) {
+       try {
+           const response = await fetch(request, { cache: 'default' });
+           if (response.ok) {
+               const cache = await caches.open(CACHE_NAME);
+               await cache.put(request, response);
+           }
+       } catch (error) {
+           // Silent background update failure
+       }
+   }
+   
+   async function handleOfflineFallback(request, url) {
+       // Navigation requests -> cached index.html
+       if (request.mode === 'navigate') {
+           const indexResponse = await caches.match(BASE_PATH + 'index.html');
+           if (indexResponse) {
+               console.log('SW: Serving cached index (offline)');
+               return indexResponse;
+           }
+           return createErrorResponse('App unavailable offline', 503);
+       }
+       
+       // Framework assets are critical
+       if (url.pathname.includes('_framework/')) {
+           const cached = await caches.match(request);
+           if (cached) {
+               console.log('SW: Serving cached framework asset');
+               return cached;
+           }
+           return createErrorResponse('Critical asset missing', 503);
+       }
+       
+       // File type fallbacks
+       if (url.pathname.endsWith('.js')) {
+           return new Response('console.warn("Script unavailable offline");', {
+               headers: { 'Content-Type': 'application/javascript' }
+           });
+       }
+       
+       if (url.pathname.endsWith('.css')) {
+           return new Response('/* Offline fallback * /', {
+               headers: { 'Content-Type': 'text/css' }
+           });
+       }
+       
+       if (request.destination === 'image') {
+           return new Response(createOfflineSVG(), {
+               headers: { 'Content-Type': 'image/svg+xml' }
+           });
+       }
+       
+       return createErrorResponse('Resource unavailable offline');
+   }
+   
+   function createErrorResponse(message, status = 503) {
+       return new Response(JSON.stringify({
+           error: 'Offline',
+           message,
+           timestamp: new Date().toISOString()
+       }), {
+           status,
+           headers: { 'Content-Type': 'application/json' }
+       });
+   }
+   
+   function createOfflineSVG() {
+       return `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
+           <circle cx="100" cy="100" r="80" fill="#f0f0f0" stroke="#ccc" stroke-width="2"/>
+           <text x="100" y="105" text-anchor="middle" fill="#666" font-size="14">Offline</text>
+       </svg>`;
+   }
+   
+   async function notifyClients(message) {
+       const clients = await self.clients.matchAll();
+       clients.forEach(client => client.postMessage(message));
+   }
+   
+   // Enhanced message handling
+   self.addEventListener('message', event => {
+       const { data } = event;
+       
+       if (data?.type === 'SKIP_WAITING') {
+           self.skipWaiting();
+           return;
+       }
+       
+       if (data?.type === 'GET_CACHE_STATUS') {
+           getCacheStatus().then(status => {
+               event.ports[0]?.postMessage({
+                   type: 'CACHE_STATUS',
+                   ...status
+               });
+           });
+           return;
+       }
+   });
+   
+   async function getCacheStatus() {
+       try {
+           const cache = await caches.open(CACHE_NAME);
+           const keys = await cache.keys();
+           const cachedUrls = keys.map(req => req.url);
+           
+           const bootCached = BOOT_SEQUENCE_ASSETS.every(asset =>
+               cachedUrls.some(url => url.includes(asset.replace(BASE_PATH, '')))
+           );
+           
+           const officialCached = OFFICIAL_ASSETS.filter(asset =>
+               cachedUrls.some(url => url.includes(getFullUrl(asset.url).replace(BASE_PATH, '')))
+           ).length;
+           
+           return {
+               offlineReady: bootCached && officialCached >= OFFICIAL_ASSETS.length * 0.8,
+               bootSequenceReady: bootCached,
+               assetsLoaded,
+               totalCached: keys.length,
+               officialAssetsCovered: `${officialCached}/${OFFICIAL_ASSETS.length}`
+           };
+       } catch (error) {
+           return { error: error.message };
+       }
+   }
+   
+   console.log('SW: v11 Production Ready - Integrity Preserved');
 */
