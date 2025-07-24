@@ -1,337 +1,350 @@
-// Fixed PWA Manager - Critical Initialization Issues Resolved
-class UnifiedPWAManager {
+// PWA Manager - Enhanced Service Worker Integration for Blazor
+// Handles PWA installation, updates, and offline status
+
+class PWAManager {
     constructor() {
-        if (UnifiedPWAManager.instance) return UnifiedPWAManager.instance;
-
-        this.isGitHubPages = window.location.hostname === 'mid-d-man.github.io';
-        this.basePath = this.isGitHubPages ? '/AirCode/' : '/';
-        this.serviceWorkerUrl = this.basePath + 'service-worker.js';
-        this.registration = null;
-        this.updateAvailable = false;
+        this.serviceWorker = null;
         this.deferredPrompt = null;
-        this.dotNetRef = null;
-        this.installable = false;
-        this.initialized = false;
-        this.initPromise = null;
+        this.isOnline = navigator.onLine;
+        this.offlineReady = false;
 
-        UnifiedPWAManager.instance = this;
-
-        // Immediate initialization
-        this.setupEventListeners();
-        this.initPromise = this.init();
+        this.init();
     }
 
     async init() {
-        if (this.initialized) return;
+        // Register service worker
+        await this.registerServiceWorker();
 
-        try {
-            // Wait for DOM if not ready
-            if (document.readyState === 'loading') {
-                await new Promise(resolve => {
-                    document.addEventListener('DOMContentLoaded', resolve, { once: true });
-                });
-            }
+        // Setup PWA installation prompt
+        this.setupInstallPrompt();
 
-            await this.registerServiceWorker();
-            this.initialized = true;
-            console.log('PWA Manager initialized successfully');
+        // Monitor online/offline status
+        this.setupConnectivityMonitoring();
 
-            // Check install status after a brief delay
-            setTimeout(() => this.checkInstallStatus(), 500);
-        } catch (error) {
-            console.error('PWA initialization failed:', error);
-            this.initialized = true; // Mark as initialized even on failure
-        }
+        // Check cache status
+        await this.checkCacheStatus();
+
+        console.log('PWA Manager initialized');
     }
 
     async registerServiceWorker() {
-        if (!('serviceWorker' in navigator)) {
-            console.log('Service Worker not supported');
-            return;
-        }
+        if ('serviceWorker' in navigator) {
+            try {
+                const registration = await navigator.serviceWorker.register('/AirCode/service-worker.js', {
+                    scope: '/AirCode/'
+                });
 
-        try {
-            console.log('Registering SW at:', this.serviceWorkerUrl);
+                this.serviceWorker = registration;
 
-            this.registration = await navigator.serviceWorker.register(
-                this.serviceWorkerUrl,
-                {
-                    scope: this.basePath,
-                    updateViaCache: 'none'
+                console.log('Service Worker registered:', registration.scope);
+
+                // Handle service worker updates
+                registration.addEventListener('updatefound', () => {
+                    const newWorker = registration.installing;
+                    if (newWorker) {
+                        newWorker.addEventListener('statechange', () => {
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                // New version available
+                                this.showUpdateNotification();
+                            }
+                        });
+                    }
+                });
+
+                // Listen for service worker messages
+                navigator.serviceWorker.addEventListener('message', event => {
+                    this.handleServiceWorkerMessage(event.data);
+                });
+
+                // If there's a waiting service worker, prompt for update
+                if (registration.waiting) {
+                    this.showUpdateNotification();
                 }
-            );
 
-            console.log('SW registered successfully:', this.registration.scope);
+            } catch (error) {
+                console.error('Service Worker registration failed:', error);
+            }
+        } else {
+            console.warn('Service Workers not supported');
+        }
+    }
 
-            // Handle updates
-            this.registration.addEventListener('updatefound', () => {
-                this.trackInstallation(this.registration.installing);
+    handleServiceWorkerMessage(data) {
+        switch (data.type) {
+            case 'SW_ACTIVATED':
+                console.log('Service Worker activated:', data);
+                this.offlineReady = data.offlineReady;
+                this.showOfflineReadyNotification();
+                break;
+
+            case 'CACHE_STATUS':
+                console.log('Cache status:', data);
+                this.offlineReady = data.offlineReady;
+                this.updateOfflineIndicator();
+                break;
+
+            default:
+                console.log('SW Message:', data);
+        }
+    }
+
+    async checkCacheStatus() {
+        if (this.serviceWorker && this.serviceWorker.active) {
+            const messageChannel = new MessageChannel();
+
+            return new Promise((resolve) => {
+                messageChannel.port1.onmessage = (event) => {
+                    this.handleServiceWorkerMessage(event.data);
+                    resolve(event.data);
+                };
+
+                this.serviceWorker.active.postMessage(
+                    { type: 'GET_CACHE_STATUS' },
+                    [messageChannel.port2]
+                );
             });
-
-            if (this.registration.waiting) {
-                this.updateAvailable = true;
-                this.notifyDotNet('OnUpdateAvailable');
-            }
-
-            // Check for updates
-            await this.registration.update();
-        } catch (error) {
-            console.error('SW registration failed:', error);
-            // Don't throw - allow app to continue without SW
         }
     }
 
-    trackInstallation(worker) {
-        if (!worker) return;
-
-        worker.addEventListener('statechange', () => {
-            if (worker.state === 'installed') {
-                if (navigator.serviceWorker.controller) {
-                    this.updateAvailable = true;
-                    this.notifyDotNet('OnUpdateAvailable');
-                } else {
-                    this.notifyDotNet('OnAppInstalled');
-                }
-            }
-        });
-    }
-
-    setupEventListeners() {
-        // Install prompt handling
-        window.addEventListener('beforeinstallprompt', (e) => {
-            console.log('beforeinstallprompt event captured');
-            e.preventDefault();
-            this.deferredPrompt = e;
-            this.installable = true;
-            this.notifyDotNet('OnInstallPromptReady');
+    setupInstallPrompt() {
+        window.addEventListener('beforeinstallprompt', (event) => {
+            console.log('PWA install prompt available');
+            event.preventDefault();
+            this.deferredPrompt = event;
+            this.showInstallButton();
         });
 
         window.addEventListener('appinstalled', () => {
-            console.log('App was installed');
+            console.log('PWA installed successfully');
+            this.hideInstallButton();
             this.deferredPrompt = null;
-            this.installable = false;
-            this.notifyDotNet('OnAppInstalled');
         });
-
-        // Connectivity monitoring
-        ['online', 'offline'].forEach(event => {
-            window.addEventListener(event, () => {
-                this.notifyDotNet('OnConnectivityChanged', navigator.onLine);
-            });
-        });
-
-        // Visibility change
-        document.addEventListener('visibilitychange', () => {
-            this.notifyDotNet('OnVisibilityChange', !document.hidden);
-        });
-
-        // Service Worker messages
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.addEventListener('message', event => {
-                if (event.data?.type === 'UPDATE_AVAILABLE') {
-                    this.updateAvailable = true;
-                    this.notifyDotNet('OnUpdateAvailable');
-                }
-            });
-
-            navigator.serviceWorker.addEventListener('controllerchange', () => {
-                if (this.updateAvailable) {
-                    console.log('SW controller changed, reloading...');
-                    window.location.reload();
-                }
-            });
-        }
-
-        // Initialize check when DOM is ready
-        this.scheduleInstallCheck();
     }
 
-    scheduleInstallCheck() {
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => {
-                setTimeout(() => this.checkInstallStatus(), 100);
-            });
-        } else {
-            setTimeout(() => this.checkInstallStatus(), 100);
+    async installPWA() {
+        if (!this.deferredPrompt) {
+            console.log('PWA install prompt not available');
+            return false;
+        }
+
+        try {
+            this.deferredPrompt.prompt();
+            const { outcome } = await this.deferredPrompt.userChoice;
+
+            console.log('PWA install outcome:', outcome);
+
+            if (outcome === 'accepted') {
+                this.hideInstallButton();
+            }
+
+            this.deferredPrompt = null;
+            return outcome === 'accepted';
+
+        } catch (error) {
+            console.error('PWA installation failed:', error);
+            return false;
         }
     }
 
-    checkInstallStatus() {
-        const isInstalled = this.isAppInstalled();
-        console.log('Install status check:', {
-            installed: isInstalled,
-            installable: this.installable,
-            hasDeferredPrompt: !!this.deferredPrompt,
-            isHTTPS: this.isHTTPS(),
-            hasManifest: this.hasManifest(),
-            canBeInstalled: this.canBeInstalled()
+    setupConnectivityMonitoring() {
+        window.addEventListener('online', () => {
+            console.log('Connection restored');
+            this.isOnline = true;
+            this.updateConnectivityStatus();
+            this.syncWhenOnline();
         });
 
-        if (isInstalled) {
-            this.installable = false;
-            return;
-        }
-
-        // Manual installability detection for browsers that support PWA without beforeinstallprompt
-        if (!this.deferredPrompt && this.canBeInstalled()) {
-            console.log('Manual installability detected');
-            this.installable = true;
-            this.notifyDotNet('OnInstallPromptReady');
-        }
-    }
-
-    isAppInstalled() {
-        return window.matchMedia('(display-mode: standalone)').matches ||
-            window.navigator.standalone === true ||
-            document.referrer.includes('android-app://') ||
-            window.matchMedia('(display-mode: fullscreen)').matches ||
-            window.matchMedia('(display-mode: minimal-ui)').matches;
-    }
-
-    isHTTPS() {
-        return location.protocol === 'https:' ||
-            location.hostname === 'localhost' ||
-            location.hostname === '127.0.0.1';
-    }
-
-    hasManifest() {
-        return !!document.querySelector('link[rel="manifest"]');
-    }
-
-    canBeInstalled() {
-        return this.isHTTPS() &&
-            this.hasManifest() &&
-            'serviceWorker' in navigator &&
-            this.isChromiumBrowser();
-    }
-
-    isChromiumBrowser() {
-        const userAgent = navigator.userAgent;
-        const isChrome = /Chrome/.test(userAgent) && /Google Inc/.test(navigator.vendor);
-        const isEdge = /Edg/.test(userAgent);
-        const isOpera = /OPR/.test(userAgent);
-        const isBrave = navigator.brave !== undefined;
-        const isFirefox = /Firefox/.test(userAgent);
-        const isSafari = /Safari/.test(userAgent) && !/Chrome/.test(userAgent);
-
-        return (isChrome || isEdge || isOpera || isBrave) && !isFirefox && !isSafari;
-    }
-
-    async installApp() {
-        console.log('Install attempt:', {
-            hasDeferredPrompt: !!this.deferredPrompt,
-            installable: this.installable
+        window.addEventListener('offline', () => {
+            console.log('Connection lost');
+            this.isOnline = false;
+            this.updateConnectivityStatus();
         });
 
-        if (this.deferredPrompt) {
-            try {
-                this.deferredPrompt.prompt();
-                const result = await this.deferredPrompt.userChoice;
-                console.log('Install result:', result);
+        // Initial status
+        this.updateConnectivityStatus();
+    }
 
-                this.deferredPrompt = null;
-                this.installable = false;
-
-                return result.outcome === 'accepted';
-            } catch (error) {
-                console.error('Install failed:', error);
-                return false;
+    updateConnectivityStatus() {
+        const statusElement = document.getElementById('connectivity-status');
+        if (statusElement) {
+            if (this.isOnline) {
+                statusElement.textContent = 'Online';
+                statusElement.className = 'connectivity-status online';
+            } else {
+                statusElement.textContent = this.offlineReady ? 'Offline (Ready)' : 'Offline (Limited)';
+                statusElement.className = `connectivity-status offline ${this.offlineReady ? 'ready' : 'limited'}`;
             }
         }
 
-        return false;
+        // Update body class for CSS styling
+        document.body.classList.toggle('app-online', this.isOnline);
+        document.body.classList.toggle('app-offline', !this.isOnline);
+        document.body.classList.toggle('offline-ready', this.offlineReady);
+    }
+
+    updateOfflineIndicator() {
+        const indicator = document.getElementById('offline-indicator');
+        if (indicator) {
+            if (this.offlineReady) {
+                indicator.textContent = '✓ Offline Ready';
+                indicator.className = 'offline-indicator ready';
+            } else {
+                indicator.textContent = '⚠ Limited Offline';
+                indicator.className = 'offline-indicator limited';
+            }
+        }
+    }
+
+    showInstallButton() {
+        const installBtn = document.getElementById('pwa-install-btn');
+        if (installBtn) {
+            installBtn.style.display = 'block';
+            installBtn.addEventListener('click', () => this.installPWA());
+        } else {
+            // Create install button if it doesn't exist
+            this.createInstallButton();
+        }
+    }
+
+    hideInstallButton() {
+        const installBtn = document.getElementById('pwa-install-btn');
+        if (installBtn) {
+            installBtn.style.display = 'none';
+        }
+    }
+
+    createInstallButton() {
+        const button = document.createElement('button');
+        button.id = 'pwa-install-btn';
+        button.textContent = 'Install App';
+        button.className = 'pwa-install-button';
+        button.addEventListener('click', () => this.installPWA());
+
+        // Add to page (you might want to customize this)
+        document.body.appendChild(button);
+    }
+
+    showUpdateNotification() {
+        // Create or show update notification
+        const notification = document.getElementById('update-notification') || this.createUpdateNotification();
+        notification.style.display = 'block';
+    }
+
+    createUpdateNotification() {
+        const notification = document.createElement('div');
+        notification.id = 'update-notification';
+        notification.className = 'update-notification';
+        notification.innerHTML = `
+            <div class="update-content">
+                <span>New version available!</span>
+                <button onclick="window.pwaManager.applyUpdate()">Update</button>
+                <button onclick="window.pwaManager.dismissUpdate()">Later</button>
+            </div>
+        `;
+
+        document.body.appendChild(notification);
+        return notification;
     }
 
     async applyUpdate() {
-        if (this.registration?.waiting) {
-            console.log('Applying update...');
-            this.registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-            return true;
+        if (this.serviceWorker && this.serviceWorker.waiting) {
+            this.serviceWorker.waiting.postMessage({ type: 'SKIP_WAITING' });
+
+            // Listen for controlling change
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                window.location.reload();
+            });
         }
-        return false;
     }
 
-    async checkForUpdates() {
-        if (this.registration) {
-            try {
-                await this.registration.update();
-                console.log('Update check completed');
-                return true;
-            } catch (error) {
-                console.error('Update check failed:', error);
-                return false;
+    dismissUpdate() {
+        const notification = document.getElementById('update-notification');
+        if (notification) {
+            notification.style.display = 'none';
+        }
+    }
+
+    showOfflineReadyNotification() {
+        console.log('App is ready for offline use!');
+
+        // You can customize this notification
+        const toast = document.createElement('div');
+        toast.className = 'offline-ready-toast';
+        toast.textContent = 'App is ready for offline use!';
+        toast.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #28a745;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 4px;
+            z-index: 9999;
+            font-family: Arial, sans-serif;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        `;
+
+        document.body.appendChild(toast);
+
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.parentNode.removeChild(toast);
             }
-        }
-        return false;
+        }, 5000);
     }
 
+    syncWhenOnline() {
+        if (this.isOnline) {
+            // Trigger any pending sync operations
+            console.log('Triggering sync operations...');
+
+            // You can dispatch custom events here for your Blazor components to handle
+            window.dispatchEvent(new CustomEvent('pwa-online', {
+                detail: { timestamp: new Date().toISOString() }
+            }));
+        }
+    }
+
+    async forceUpdateCache() {
+        if (this.serviceWorker && this.serviceWorker.active) {
+            this.serviceWorker.active.postMessage({ type: 'FORCE_UPDATE_CACHE' });
+
+            // Wait a bit then reload
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        }
+    }
+
+    // Get current PWA status for debugging
     getStatus() {
         return {
-            isInstallable: this.installable || !!this.deferredPrompt,
-            isInstalled: this.isAppInstalled(),
-            hasServiceWorker: !!this.registration,
-            updateAvailable: this.updateAvailable,
-            isOnline: navigator.onLine,
-            isChromiumBased: this.isChromiumBrowser(),
-            canBeInstalled: this.canBeInstalled(),
-            isInitialized: this.initialized
+            isOnline: this.isOnline,
+            offlineReady: this.offlineReady,
+            serviceWorkerRegistered: !!this.serviceWorker,
+            installPromptAvailable: !!this.deferredPrompt,
+            isPWAInstalled: window.matchMedia('(display-mode: standalone)').matches
         };
     }
 
-    async setDotNetReference(dotNetRef) {
-        this.dotNetRef = dotNetRef;
-        console.log('.NET reference set');
-
-        // Wait for initialization before sending status
-        if (this.initPromise) {
-            await this.initPromise;
-        }
-
-        // Send current status after brief delay
-        setTimeout(() => {
-            const status = this.getStatus();
-            console.log('Sending status to .NET:', status);
-
-            if (status.isInstallable) {
-                this.notifyDotNet('OnInstallPromptReady');
-            }
-            if (status.updateAvailable) {
-                this.notifyDotNet('OnUpdateAvailable');
-            }
-
-            // Send connectivity status
-            this.notifyDotNet('OnConnectivityChanged', navigator.onLine);
-        }, 200);
-    }
-
-    notifyDotNet(method, data = null) {
-        if (this.dotNetRef) {
-            try {
-                console.log(`Notifying .NET: ${method}`, data);
-                this.dotNetRef.invokeMethodAsync(method, data)
-                    .catch(error => console.error(`Failed to invoke ${method}:`, error));
-            } catch (error) {
-                console.error(`Failed to notify .NET ${method}:`, error);
-            }
-        } else {
-            console.log(`Queued notification: ${method}`, data);
-        }
-    }
-
-    static getInstance() {
-        return UnifiedPWAManager.instance || new UnifiedPWAManager();
+    // Utility method for Blazor interop
+    async getStatusForBlazor() {
+        const status = this.getStatus();
+        const cacheStatus = await this.checkCacheStatus();
+        return { ...status, ...cacheStatus };
     }
 }
 
-// Global functions for Blazor
-window.getPWAManager = () => UnifiedPWAManager.getInstance();
+// Initialize PWA Manager when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        window.pwaManager = new PWAManager();
+    });
+} else {
+    window.pwaManager = new PWAManager();
+}
 
-window.setupPWAMonitoring = async (dotNetRef) => {
-    const manager = UnifiedPWAManager.getInstance();
-    await manager.setDotNetReference(dotNetRef);
-    return manager.getStatus();
-};
-
-// Initialize PWA Manager immediately
-window.pwaManager = UnifiedPWAManager.getInstance();
-console.log('PWA Manager loaded and initialized');
+// Export for module usage
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = PWAManager;
+}

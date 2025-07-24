@@ -79,6 +79,7 @@
     <link href="css/app.css" rel="stylesheet" />
     <link href="css/colors.css" rel="stylesheet" />
     <link href="css/responsive.css" rel="stylesheet" />
+    <link href="css/pwa-styles.css" rel="stylesheet" />
     <link href="AirCode.styles.css" rel="stylesheet" />
 
     <!-- Icons and Manifest -->
@@ -103,7 +104,8 @@
     <a href="" class="reload">Reload</a>
     <a class="dismiss">🗙</a>
 </div>
-
+<div id="connectivity-status" class="connectivity-status"></div>
+<div id="offline-indicator" class="offline-indicator"></div>
 <!-- Service Worker Registration - FIXED -->
 <script>
     let swRegistered = false;
@@ -140,7 +142,6 @@
 <script src="js/pwaManager.js"
         onerror="console.warn('PWA Manager failed to load');">
 </script>
-
 <!-- Utility Scripts -->
 <script src="js/connectivityServices.js" onerror="console.warn('Connectivity services failed')"></script>
 <script src="js/debug.js" onerror="console.warn('Debug utilities failed')"></script>
