@@ -1,4 +1,4 @@
-// Blazor WASM PWA Service Worker - Production Offline-Capable Version
+// Blazor WASM PWA Service Worker - Production Offline-Capable Version try fire fox pwa
 //  Based on Microsoft's recommended patterns and Blazor asset manifest integration 
 
 const isGitHubPages = self.location.hostname === 'mid-d-man.github.io';
