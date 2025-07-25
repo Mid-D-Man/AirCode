@@ -53,9 +53,9 @@
 
     @if (!string.IsNullOrEmpty(_statusMessage))
     {
-        <div class="pwa-message">
-            <span class="message-text">@_statusMessage</span>
-            <button class="close-btn" @onclick="ClearStatus">×</button>
-        </div>
+    <div class="pwa-message fade-in">
+        <span class="message-text">@_statusMessage</span>
+        <button class="close-btn" @onclick="ClearStatus">×</button>
+    </div>
     }
 </div>

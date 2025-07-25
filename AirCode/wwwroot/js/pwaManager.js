@@ -8,6 +8,7 @@ class PWAManager {
         this.isOnline = navigator.onLine;
         this.offlineReady = false;
         this.dotNetRef = null;
+        this.initialized = false;
 
         this.init();
     }
@@ -17,6 +18,7 @@ class PWAManager {
         this.setupInstallPrompt();
         this.setupConnectivityMonitoring();
         await this.checkCacheStatus();
+        this.initialized = true;
         console.log('PWA Manager initialized');
     }
 
@@ -30,6 +32,7 @@ class PWAManager {
                 this.serviceWorker = registration;
                 console.log('Service Worker registered:', registration.scope);
 
+                // Listen for updates
                 registration.addEventListener('updatefound', () => {
                     const newWorker = registration.installing;
                     if (newWorker) {
@@ -41,13 +44,18 @@ class PWAManager {
                     }
                 });
 
+                // Listen for messages from service worker
                 navigator.serviceWorker.addEventListener('message', event => {
                     this.handleServiceWorkerMessage(event.data);
                 });
 
+                // Check if there's already an update waiting
                 if (registration.waiting) {
                     this.notifyBlazorUpdate();
                 }
+
+                // Send initial cache status request after a brief delay
+                setTimeout(() => this.checkCacheStatus(), 1000);
 
             } catch (error) {
                 console.error('Service Worker registration failed:', error);
@@ -56,30 +64,47 @@ class PWAManager {
     }
 
     handleServiceWorkerMessage(data) {
+        if (!data || !data.type) return;
+
         switch (data.type) {
             case 'SW_ACTIVATED':
-                this.offlineReady = data.offlineReady;
+                this.offlineReady = data.offlineReady || false;
+                console.log('[PWA] Service Worker activated, offline ready:', this.offlineReady);
                 break;
             case 'CACHE_STATUS':
-                this.offlineReady = data.offlineReady;
+                this.offlineReady = data.offlineReady || false;
+                console.log('[PWA] Cache status updated, offline ready:', this.offlineReady);
                 break;
         }
     }
 
     async checkCacheStatus() {
         if (this.serviceWorker?.active) {
-            const messageChannel = new MessageChannel();
-            return new Promise((resolve) => {
-                messageChannel.port1.onmessage = (event) => {
-                    this.handleServiceWorkerMessage(event.data);
-                    resolve(event.data);
-                };
-                this.serviceWorker.active.postMessage(
-                    { type: 'GET_CACHE_STATUS' },
-                    [messageChannel.port2]
-                );
-            });
+            try {
+                const messageChannel = new MessageChannel();
+
+                const response = await new Promise((resolve, reject) => {
+                    messageChannel.port1.onmessage = (event) => {
+                        resolve(event.data);
+                    };
+
+                    // Timeout after 3 seconds
+                    setTimeout(() => reject(new Error('Timeout')), 3000);
+
+                    this.serviceWorker.active.postMessage(
+                        { type: 'GET_CACHE_STATUS' },
+                        [messageChannel.port2]
+                    );
+                });
+
+                this.handleServiceWorkerMessage(response);
+                return response;
+            } catch (error) {
+                console.warn('[PWA] Cache status check failed:', error.message);
+                return null;
+            }
         }
+        return null;
     }
 
     setupInstallPrompt() {
@@ -129,9 +154,11 @@ class PWAManager {
     async applyUpdate() {
         if (this.serviceWorker?.waiting) {
             this.serviceWorker.waiting.postMessage({ type: 'SKIP_WAITING' });
+
+            // Wait for controller change, then reload
             navigator.serviceWorker.addEventListener('controllerchange', () => {
                 window.location.reload();
-            });
+            }, { once: true });
         }
     }
 
@@ -158,38 +185,39 @@ class PWAManager {
             IsInstalled: window.matchMedia('(display-mode: standalone)').matches,
             HasServiceWorker: !!this.serviceWorker,
             UpdateAvailable: !!this.serviceWorker?.waiting,
-            IsChromiumBased: this.isChromiumBrowser()
+            IsChromiumBased: this.isChromiumBrowser(),
+            OfflineReady: this.offlineReady
         };
     }
 
     // Blazor notification methods
     notifyBlazorInstallReady() {
         if (this.dotNetRef) {
-            this.dotNetRef.invokeMethodAsync('OnInstallPromptReady');
+            this.dotNetRef.invokeMethodAsync('OnInstallPromptReady').catch(console.error);
         }
     }
 
     notifyBlazorUpdate() {
         if (this.dotNetRef) {
-            this.dotNetRef.invokeMethodAsync('OnUpdateAvailable');
+            this.dotNetRef.invokeMethodAsync('OnUpdateAvailable').catch(console.error);
         }
     }
 
     notifyBlazorInstalled() {
         if (this.dotNetRef) {
-            this.dotNetRef.invokeMethodAsync('OnAppInstalled');
+            this.dotNetRef.invokeMethodAsync('OnAppInstalled').catch(console.error);
         }
     }
 
     notifyBlazorConnectivity(isOnline) {
         if (this.dotNetRef) {
-            this.dotNetRef.invokeMethodAsync('OnConnectivityChanged', isOnline);
+            this.dotNetRef.invokeMethodAsync('OnConnectivityChanged', isOnline).catch(console.error);
         }
     }
 
     notifyBlazorVisibility(visible) {
         if (this.dotNetRef) {
-            this.dotNetRef.invokeMethodAsync('OnVisibilityChange', visible);
+            this.dotNetRef.invokeMethodAsync('OnVisibilityChange', visible).catch(console.error);
         }
     }
 }

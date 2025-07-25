@@ -1,4 +1,4 @@
-// PWA Diagnostic Script - Add to debug.js or run in console
+// PWA Diagnostic Script - Fixed for Firefox compatibility
 class PWADiagnostics {
     static async runFullDiagnostic() {
         console.log('🔍 Starting PWA Diagnostic...');
@@ -22,6 +22,7 @@ class PWADiagnostics {
         const env = {
             isHTTPS: location.protocol === 'https:' || location.hostname === 'localhost',
             userAgent: navigator.userAgent,
+            browser: this.getBrowserInfo(),
             isGitHubPages: location.hostname === 'mid-d-man.github.io',
             basePath: location.hostname === 'mid-d-man.github.io' ? '/AirCode/' : '/',
             displayMode: window.matchMedia('(display-mode: standalone)').matches ? 'standalone' : 'browser',
@@ -36,6 +37,15 @@ class PWADiagnostics {
         return env;
     }
 
+    static getBrowserInfo() {
+        const ua = navigator.userAgent;
+        if (ua.includes('Firefox')) return 'Firefox';
+        if (ua.includes('Chrome')) return 'Chrome';
+        if (ua.includes('Safari') && !ua.includes('Chrome')) return 'Safari';
+        if (ua.includes('Edge')) return 'Edge';
+        return 'Unknown';
+    }
+
     static async checkManifest() {
         const manifestLink = document.querySelector('link[rel="manifest"]');
         if (!manifestLink) {
@@ -45,6 +55,9 @@ class PWADiagnostics {
 
         try {
             const response = await fetch(manifestLink.href);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
             const manifest = await response.json();
             console.log('📱 Manifest loaded:', manifest);
             return { success: true, manifest };
@@ -60,7 +73,9 @@ class PWADiagnostics {
         }
 
         try {
+            // Get current registration
             const registration = await navigator.serviceWorker.getRegistration();
+
             const swInfo = {
                 hasRegistration: !!registration,
                 scope: registration?.scope,
@@ -68,22 +83,20 @@ class PWADiagnostics {
                 scriptURL: registration?.active?.scriptURL,
                 updateViaCache: registration?.updateViaCache,
                 waiting: !!registration?.waiting,
-                installing: !!registration?.installing
+                installing: !!registration?.installing,
+                controller: !!navigator.serviceWorker.controller
             };
 
             console.log('🔧 Service Worker Status:', swInfo);
 
-            // Test cache status
-            if (registration) {
-                const channel = new MessageChannel();
-                registration.active?.postMessage({ type: 'GET_CACHE_STATUS' }, [channel.port2]);
-
-                const cacheStatus = await new Promise(resolve => {
-                    channel.port1.onmessage = event => resolve(event.data);
-                    setTimeout(() => resolve({ timeout: true }), 3000);
-                });
-
-                swInfo.cacheStatus = cacheStatus;
+            // Test cache status if SW is active
+            if (registration?.active) {
+                try {
+                    const cacheStatus = await this.testServiceWorkerMessage(registration.active);
+                    swInfo.cacheStatus = cacheStatus;
+                } catch (error) {
+                    swInfo.cacheStatusError = error.message;
+                }
             }
 
             return swInfo;
@@ -91,6 +104,28 @@ class PWADiagnostics {
             console.error('❌ Service Worker check failed:', error);
             return { error: error.message };
         }
+    }
+
+    static async testServiceWorkerMessage(activeWorker) {
+        return new Promise((resolve, reject) => {
+            const channel = new MessageChannel();
+
+            const timeout = setTimeout(() => {
+                reject(new Error('Service Worker message timeout'));
+            }, 3000);
+
+            channel.port1.onmessage = (event) => {
+                clearTimeout(timeout);
+                resolve(event.data || { timeout: false, responded: true });
+            };
+
+            try {
+                activeWorker.postMessage({ type: 'GET_CACHE_STATUS' }, [channel.port2]);
+            } catch (error) {
+                clearTimeout(timeout);
+                reject(error);
+            }
+        });
     }
 
     static async checkCache() {
@@ -103,10 +138,25 @@ class PWADiagnostics {
             const cacheInfo = { names: cacheNames };
 
             if (cacheNames.length > 0) {
+                // Check the first cache (usually the most recent)
                 const cache = await caches.open(cacheNames[0]);
                 const keys = await cache.keys();
                 cacheInfo.entries = keys.length;
                 cacheInfo.urls = keys.slice(0, 10).map(req => req.url); // First 10 URLs
+
+                // Check for critical resources
+                const criticalResources = [
+                    '/AirCode/',
+                    '/AirCode/index.html',
+                    '/AirCode/_framework/blazor.webassembly.js'
+                ];
+
+                cacheInfo.criticalCached = 0;
+                for (const resource of criticalResources) {
+                    const cachedResponse = await cache.match(resource);
+                    if (cachedResponse) cacheInfo.criticalCached++;
+                }
+                cacheInfo.criticalTotal = criticalResources.length;
             }
 
             console.log('💾 Cache Status:', cacheInfo);
@@ -129,13 +179,16 @@ class PWADiagnostics {
         const criticalFiles = [
             '_framework/blazor.webassembly.js',
             '_framework/blazor.boot.json',
-            '_framework/dotnet.wasm'
+            '_framework/wasm/dotnet.wasm'
         ];
 
         const fileChecks = await Promise.allSettled(
             criticalFiles.map(async file => {
                 try {
-                    const response = await fetch(file, { method: 'HEAD' });
+                    const response = await fetch(file, {
+                        method: 'HEAD',
+                        cache: 'no-cache'
+                    });
                     return { file, status: response.status, ok: response.ok };
                 } catch (error) {
                     return { file, error: error.message };
@@ -144,7 +197,7 @@ class PWADiagnostics {
         );
 
         blazorInfo.criticalFiles = fileChecks.map(result =>
-            result.status === 'fulfilled' ? result.value : result.reason
+            result.status === 'fulfilled' ? result.value : { file: 'unknown', error: result.reason }
         );
 
         console.log('⚡ Blazor Framework Check:', blazorInfo);
@@ -158,13 +211,13 @@ class PWADiagnostics {
                 effectiveType: navigator.connection.effectiveType,
                 downlink: navigator.connection.downlink,
                 rtt: navigator.connection.rtt
-            } : 'Not available'
+            } : 'Not available (Firefox doesn\'t expose connection API)'
         };
 
         // Test network connectivity with key resources
         const testUrls = [
             '',  // Base URL
-            'manifest.json',
+            'manifest.webmanifest',
             '_framework/blazor.boot.json'
         ];
 
@@ -172,11 +225,16 @@ class PWADiagnostics {
             testUrls.map(async url => {
                 const startTime = performance.now();
                 try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 5000);
+
                     const response = await fetch(url, {
                         method: 'HEAD',
                         cache: 'no-cache',
-                        signal: AbortSignal.timeout(5000)
+                        signal: controller.signal
                     });
+
+                    clearTimeout(timeoutId);
                     const duration = performance.now() - startTime;
                     return { url: url || '/', status: response.status, duration: Math.round(duration) };
                 } catch (error) {
@@ -197,14 +255,19 @@ class PWADiagnostics {
     static checkPWAManager() {
         const pwaInfo = {
             pwaManagerExists: typeof window.pwaManager !== 'undefined',
-            pwaManagerClass: typeof window.UnifiedPWAManager !== 'undefined',
+            pwaManagerClass: typeof window.PWAManager !== 'undefined',
             getPWAManager: typeof window.getPWAManager === 'function',
             setupPWAMonitoring: typeof window.setupPWAMonitoring === 'function'
         };
 
         if (window.pwaManager) {
-            pwaInfo.status = window.pwaManager.getStatus?.();
-            pwaInfo.initialized = window.pwaManager.initialized;
+            try {
+                pwaInfo.status = window.pwaManager.getStatus?.();
+                pwaInfo.initialized = window.pwaManager.initialized;
+                pwaInfo.serviceWorkerRef = !!window.pwaManager.serviceWorker;
+            } catch (error) {
+                pwaInfo.error = error.message;
+            }
         }
 
         console.log('📱 PWA Manager Check:', pwaInfo);
@@ -219,7 +282,7 @@ class PWADiagnostics {
         // Environment
         const env = results.environment;
         console.log(`🌍 Environment: ${env.isHTTPS ? '✅' : '❌'} HTTPS | ${env.serviceWorkerSupport ? '✅' : '❌'} SW Support`);
-        console.log(`   Display Mode: ${env.displayMode} | Online: ${env.online ? '✅' : '❌'}`);
+        console.log(`   Browser: ${env.browser} | Display Mode: ${env.displayMode} | Online: ${env.online ? '✅' : '❌'}`);
 
         // Service Worker
         const sw = results.serviceWorker;
@@ -227,9 +290,24 @@ class PWADiagnostics {
             console.log(`🔧 Service Worker: ❌ ${sw.error}`);
         } else {
             console.log(`🔧 Service Worker: ${sw.hasRegistration ? '✅' : '❌'} Registered | State: ${sw.state || 'Unknown'}`);
-            if (sw.cacheStatus && !sw.cacheStatus.timeout) {
-                console.log(`   Cache: ${sw.cacheStatus.criticalCached}/${sw.cacheStatus.criticalTotal} critical assets`);
+            console.log(`   Controller: ${sw.controller ? '✅' : '❌'} | Waiting: ${sw.waiting ? '⚠️' : '✅'}`);
+
+            if (sw.cacheStatus && !sw.cacheStatusError) {
+                console.log(`   SW Communication: ✅ Working`);
+            } else if (sw.cacheStatusError) {
+                console.log(`   SW Communication: ❌ ${sw.cacheStatusError}`);
             }
+        }
+
+        // Cache
+        const cache = results.cache;
+        if (!cache.error && cache.names?.length > 0) {
+            console.log(`💾 Cache: ✅ ${cache.names.length} cache(s) | ${cache.entries || 0} entries`);
+            if (cache.criticalCached !== undefined) {
+                console.log(`   Critical Resources: ${cache.criticalCached}/${cache.criticalTotal} cached`);
+            }
+        } else {
+            console.log(`💾 Cache: ❌ ${cache.error || 'No caches found'}`);
         }
 
         // Blazor
@@ -251,9 +329,13 @@ class PWADiagnostics {
         if (!env.isHTTPS) issues.push('Not served over HTTPS');
         if (!env.serviceWorkerSupport) issues.push('Service Worker not supported');
         if (!sw.hasRegistration && !sw.error) issues.push('Service Worker not registered');
+        if (sw.cacheStatusError) issues.push(`Service Worker communication failed: ${sw.cacheStatusError}`);
         if (!blazor.blazorLoaded) issues.push('Blazor framework not loaded');
         if (criticalOk < criticalTotal) issues.push(`Missing ${criticalTotal - criticalOk} critical Blazor files`);
         if (!pwa.pwaManagerExists) issues.push('PWA Manager not loaded');
+        if (env.browser === 'Firefox' && sw.hasRegistration && sw.cacheStatusError) {
+            issues.push('Firefox: Service Worker message communication issue (common in Firefox due to stricter security)');
+        }
 
         if (issues.length === 0) {
             console.log('✅ No obvious issues detected');

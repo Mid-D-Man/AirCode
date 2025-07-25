@@ -116,44 +116,42 @@ public partial class PWAComponent : ComponentBase, IAsyncDisposable
     }
 
     // JS Callbacks
-    [JSInvokable] 
-    public async Task OnInstallPromptReady()
-    {
-        _status.IsInstallable = true;
-        _status.IsChromiumBased = await _pwaManager.InvokeAsync<bool>("isChromiumBrowser");
-        SetStatusWithTimeout("App can be installed!");
-    }
+  [JSInvokable] 
+      public async Task OnInstallPromptReady()
+      {
+          _status.IsInstallable = true;
+          _status.IsChromiumBased = await _pwaManager.InvokeAsync<bool>("isChromiumBrowser");
+          SetStatusWithTimeout("App can be installed!");
+      }
 
     [JSInvokable] 
-    public async Task OnUpdateAvailable()
-    {
-        _status.UpdateAvailable = true;
-        _statusMessage = "Update available!";
-        StateHasChanged();
-    }
+       public async Task OnUpdateAvailable()
+       {
+           _status.UpdateAvailable = true;
+           SetStatusWithTimeout("Update available!");
+       }
+
 
     [JSInvokable] 
-    public async Task OnAppInstalled()
-    {
-        _status.IsInstalled = true;
-        _status.IsInstallable = false;
-        _statusMessage = "App installed successfully!";
-        StateHasChanged();
-    }
+       public async Task OnAppInstalled()
+       {
+           _status.IsInstalled = true;
+           _status.IsInstallable = false;
+           SetStatusWithTimeout("App installed successfully!");
+       }
 
-    [JSInvokable] 
-    public async Task OnConnectivityChanged(bool isOnline)
-    {
-        var wasOffline = !_status.IsOnline;
-        _status.IsOnline = isOnline;
-        
-        if (wasOffline != !isOnline)
+       [JSInvokable] 
+        public async Task OnConnectivityChanged(bool isOnline)
         {
-            await OnOfflineStatusChanged.InvokeAsync(!isOnline);
-            _statusMessage = isOnline ? "Back online" : "Offline mode";
-            StateHasChanged();
+            var wasOffline = !_status.IsOnline;
+            _status.IsOnline = isOnline;
+            
+            if (wasOffline != !isOnline)
+            {
+                await OnOfflineStatusChanged.InvokeAsync(!isOnline);
+                SetStatusWithTimeout(isOnline ? "Back online" : "Offline mode");
+            }
         }
-    }
 
     [JSInvokable] 
     public async Task OnVisibilityChange(bool visible)
