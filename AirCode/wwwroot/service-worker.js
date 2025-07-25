@@ -75,7 +75,30 @@ self.addEventListener('fetch', event => {
 
     event.respondWith(handleRequest(request));
 });
+//GitHub Pages specific handling
+async function handleNavigation(request) {
+    try {
+        const networkResponse = await fetch(request);
+        if (networkResponse.ok) {
+            return networkResponse;
+        }
+    } catch (error) {
+        console.log('[SW] Network failed for navigation, serving from cache');
+    }
 
+    // GitHub Pages fallback - serve index.html for SPA routing
+    const cache = await caches.open(CACHE_NAME);
+    const cachedResponse = await cache.match(`${BASE_URL}index.html`);
+
+    if (cachedResponse) {
+        return cachedResponse;
+    }
+
+    return new Response('App is offline', {
+        status: 200,
+        headers: { 'Content-Type': 'text/html' }
+    });
+}
 async function handleRequest(request) {
     const url = new URL(request.url);
     const relativePath = url.pathname;
