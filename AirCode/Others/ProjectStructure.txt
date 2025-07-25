@@ -1,7 +1,7 @@
 Project Structure Documentation
-Generated: Fri Jul 25 14:23:14 UTC 2025
+Generated: Fri Jul 25 16:06:33 UTC 2025
 Repository: Mid-D-Man/AirCode
-Commit: c601af9f9da1797852ae307b0ba60073bf9072e8
+Commit: 8c65bdffcabd9d7c590b3e2529c11d2bd47260d6
 ==================================
 
 Source Files:
@@ -195,7 +195,9 @@ Services/Cryptography/CryptographyService.cs
 Services/Cryptography/ICryptographyService.cs
 Services/Department/DepartmentService.cs
 Services/Department/IDepartmentService.cs
+Services/Firebase/FirestoreNotificationService.cs
 Services/Firebase/FirestoreService.cs
+Services/Firebase/IFirestoreNotificationService.cs
 Services/Firebase/IFirestoreService.cs
 Services/Guards/BusinessHoursGuard.cs
 Services/Guards/IBusinessHoursGuard.cs
@@ -284,6 +286,7 @@ wwwroot/js/connectivityServices.js
 wwwroot/js/cryptographyHandler.js
 wwwroot/js/debug.js
 wwwroot/js/firestoreModule.js
+wwwroot/js/firestoreNotificationModule.js
 wwwroot/js/gpuPerformance.js
 wwwroot/js/offlineCredentialsHandler.js
 wwwroot/js/pageNavigator.js
@@ -309,10 +312,10 @@ Directory Structure:
 
 File Count Summary:
 ==================
-.cs       : 90 files
+.cs       : 92 files
 .razor    : 65 files
 .csproj   : 1 files
 .json     : 12 files
 .css      : 75 files
-.js       : 45 files
+.js       : 46 files
 .html     : 3 files
