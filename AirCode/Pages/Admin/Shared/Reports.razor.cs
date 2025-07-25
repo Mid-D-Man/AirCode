@@ -2,10 +2,8 @@ using Microsoft.AspNetCore.Components;
 using System.Text.Json;
 using AirCode.Domain.Entities;
 using AirCode.Domain.Enums;
-using AirCode.Models.Supabase;
 using AirCode.Services.Courses;
 using AirCode.Services.Attendance;
-using AirCode.Services.Firebase;
 using Course = AirCode.Domain.Entities.Course;
 
 namespace AirCode.Pages.Admin.Shared
