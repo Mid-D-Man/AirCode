@@ -1,7 +1,7 @@
 Project Structure Documentation
-Generated: Thu Jul 24 17:34:50 UTC 2025
+Generated: Fri Jul 25 03:12:12 UTC 2025
 Repository: Mid-D-Man/AirCode
-Commit: 0b01450b397fca8044c05f04bb5129c2c757569f
+Commit: 5d02ab4d147a0fc6276adb422d08e79718487457
 ==================================
 
 Source Files:
@@ -273,6 +273,7 @@ wwwroot/css/bootstrap/bootstrap.min.css
 wwwroot/css/colors.css
 wwwroot/css/open-iconic/README.md
 wwwroot/css/open-iconic/font/css/open-iconic-bootstrap.min.css
+wwwroot/css/pwa-styles.css
 wwwroot/css/responsive.css
 wwwroot/index.html
 wwwroot/js/PwaDiagnostics.js
@@ -312,6 +313,6 @@ File Count Summary:
 .razor    : 65 files
 .csproj   : 1 files
 .json     : 12 files
-.css      : 74 files
+.css      : 75 files
 .js       : 45 files
 .html     : 3 files
