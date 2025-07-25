@@ -27,7 +27,9 @@ window.firestoreModule = (function () {
 
                 // Enable persistence only once
                 try {
-                    await db.enablePersistence({ synchronizeTabs: true });
+                    //we disabled presistence as no encrypion is used and we cant set which and which collections
+                    //we allow to be saved which is a security risk or something like that 
+                   // await db.enablePersistence({ synchronizeTabs: true });
                 } catch (err) {
                     if (err.code === 'failed-precondition') {
                         console.warn("Persistence failed: Multiple tabs open");

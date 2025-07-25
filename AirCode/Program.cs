@@ -19,7 +19,7 @@ using AirCode.Services.Permissions;
 using AirCode.Services.Search;
 using AirCode.Services.Storage;
 using AirCode.Services.Academic;
-
+using AirCode.Services.Firebase;
 using AirCode.Services.VisualElements;
 using AirCode.Utilities.DataStructures;
 using AirCode.Utilities.HelperScripts;
@@ -165,8 +165,8 @@ builder.Services.AddPWAServices(builder.Configuration);
 // ============================================================================
 
 // Firebase Firestore for real-time data synchronization
-builder.Services.AddScoped<AirCode.Services.Firebase.IFirestoreService, AirCode.Services.Firebase.FirestoreService>();
-
+builder.Services.AddScoped<IFirestoreService, FirestoreService>();
+builder.Services.AddScoped<IFirestoreNotificationService, FirestoreNotificationService>();
 // Supabase integration for backend services
 builder.Services.AddSupabaseServices();
 builder.Services.AddBusinessHoursGuard();
