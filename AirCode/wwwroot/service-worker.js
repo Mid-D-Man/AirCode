@@ -42,7 +42,7 @@ self.addEventListener('install', event => {
     );
 });
 
-// Activate event - cleanup old caches
+// Activate event - cleanup old caches . 
 self.addEventListener('activate', event => {
     console.log('[SW] Activating version:', VERSION);
 
