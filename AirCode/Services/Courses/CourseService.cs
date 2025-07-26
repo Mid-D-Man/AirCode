@@ -864,7 +864,7 @@ public async Task<bool> PromoteAllStudentsToNextLevelAsync()
 
 #endregion
 
-#region Student Course Helper Methods
+     #region Student Course Helper Methods
 
 private string GetStudentDocumentFromLevel(LevelType level)
 {
@@ -1050,7 +1050,7 @@ private async Task<T> GetUserCoursesFromLocalStorageAsync<T>(string userId)
 
 #endregion
 
-// Add these Firestore model classes at the end of the file:
+
 
 public class StudentCourseFirestoreModel
 {

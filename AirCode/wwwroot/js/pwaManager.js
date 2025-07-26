@@ -9,8 +9,13 @@ class PWAManager {
         this.offlineReady = false;
         this.dotNetRef = null;
         this.initialized = false;
+        this.basePath = this.getBasePath();
 
         this.init();
+    }
+
+    getBasePath() {
+        return window.location.hostname === 'mid-d-man.github.io' ? '/AirCode/' : '/';
     }
 
     async init() {
@@ -25,8 +30,9 @@ class PWAManager {
     async registerServiceWorker() {
         if ('serviceWorker' in navigator) {
             try {
-                const registration = await navigator.serviceWorker.register('/AirCode/service-worker.js', {
-                    scope: '/AirCode/'
+                const registration = await navigator.serviceWorker.register(this.basePath + 'service-worker.js', {
+                    scope: this.basePath,
+                    updateViaCache: 'none'
                 });
 
                 this.serviceWorker = registration;
@@ -88,7 +94,6 @@ class PWAManager {
                         resolve(event.data);
                     };
 
-                    // Timeout after 3 seconds
                     setTimeout(() => reject(new Error('Timeout')), 3000);
 
                     this.serviceWorker.active.postMessage(
@@ -108,24 +113,58 @@ class PWAManager {
     }
 
     setupInstallPrompt() {
+        // CRITICAL FIX: Store reference to this for event handlers
+        const self = this;
+
+        // Set up beforeinstallprompt event listener
         window.addEventListener('beforeinstallprompt', (event) => {
+            console.log('[PWA] beforeinstallprompt event fired');
             event.preventDefault();
-            this.deferredPrompt = event;
-            this.notifyBlazorInstallReady();
+            self.deferredPrompt = event;
+
+            // Immediately notify Blazor
+            setTimeout(() => {
+                self.notifyBlazorInstallReady();
+            }, 100);
         });
 
         window.addEventListener('appinstalled', () => {
-            this.deferredPrompt = null;
-            this.notifyBlazorInstalled();
+            console.log('[PWA] App installed');
+            self.deferredPrompt = null;
+            self.notifyBlazorInstalled();
+        });
+
+        // Force check for install prompt after initialization
+        setTimeout(() => {
+            if (!self.deferredPrompt && !self.isInstalled()) {
+                console.log('[PWA] No install prompt detected, checking conditions...');
+                self.checkInstallability();
+            }
+        }, 2000);
+    }
+
+    checkInstallability() {
+        // Log current state for debugging
+        console.log('[PWA] Install conditions:', {
+            isStandalone: window.matchMedia('(display-mode: standalone)').matches,
+            hasServiceWorker: !!this.serviceWorker,
+            isSecure: location.protocol === 'https:' || location.hostname === 'localhost',
+            isChromium: this.isChromiumBrowser(),
+            deferredPrompt: !!this.deferredPrompt
         });
     }
 
     async installApp() {
-        if (!this.deferredPrompt) return false;
+        if (!this.deferredPrompt) {
+            console.warn('[PWA] No deferred prompt available');
+            return false;
+        }
 
         try {
+            console.log('[PWA] Triggering install prompt');
             this.deferredPrompt.prompt();
             const { outcome } = await this.deferredPrompt.userChoice;
+            console.log('[PWA] Install prompt result:', outcome);
             this.deferredPrompt = null;
             return outcome === 'accepted';
         } catch (error) {
@@ -145,7 +184,6 @@ class PWAManager {
             this.notifyBlazorConnectivity(false);
         });
 
-        // Monitor visibility changes
         document.addEventListener('visibilitychange', () => {
             this.notifyBlazorVisibility(!document.hidden);
         });
@@ -155,7 +193,6 @@ class PWAManager {
         if (this.serviceWorker?.waiting) {
             this.serviceWorker.waiting.postMessage({ type: 'SKIP_WAITING' });
 
-            // Wait for controller change, then reload
             navigator.serviceWorker.addEventListener('controllerchange', () => {
                 window.location.reload();
             }, { once: true });
@@ -170,7 +207,6 @@ class PWAManager {
     }
 
     async updateStatus() {
-        // Force status update
         await this.checkCacheStatus();
     }
 
@@ -178,20 +214,29 @@ class PWAManager {
         return /Chrome|Chromium|Edge/i.test(navigator.userAgent);
     }
 
+    isInstalled() {
+        return window.matchMedia('(display-mode: standalone)').matches ||
+            window.navigator.standalone === true;
+    }
+
     getStatus() {
-        return {
+        const status = {
             IsOnline: this.isOnline,
             IsInstallable: !!this.deferredPrompt,
-            IsInstalled: window.matchMedia('(display-mode: standalone)').matches,
+            IsInstalled: this.isInstalled(),
             HasServiceWorker: !!this.serviceWorker,
             UpdateAvailable: !!this.serviceWorker?.waiting,
             IsChromiumBased: this.isChromiumBrowser(),
             OfflineReady: this.offlineReady
         };
+
+        console.log('[PWA] Current status:', status);
+        return status;
     }
 
     // Blazor notification methods
     notifyBlazorInstallReady() {
+        console.log('[PWA] Notifying Blazor: install ready');
         if (this.dotNetRef) {
             this.dotNetRef.invokeMethodAsync('OnInstallPromptReady').catch(console.error);
         }
@@ -234,5 +279,12 @@ window.setupPWAMonitoring = (dotNetRef) => {
     if (window.pwaManager) {
         window.pwaManager.dotNetRef = dotNetRef;
         console.log('PWA monitoring setup complete');
+
+        // Force status check after setup
+        setTimeout(() => {
+            if (window.pwaManager.initialized) {
+                window.pwaManager.checkInstallability();
+            }
+        }, 500);
     }
 };

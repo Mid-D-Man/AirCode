@@ -571,6 +571,390 @@ window.firestoreModule = (function () {
         }
     }
 
+    //#region ==================== DISTRIBUTED DOCUMENT OPERATIONS ====================
+
+    // Add data to distributed document structure
+    async function addToDistributedDocument(collection, documentId, key, jsonData) {
+        try {
+            if (!isInitialized) await initializeFirestore();
+
+            let data = JSON.parse(jsonData);
+            const updateData = {};
+            updateData[key] = data;
+
+            // Check if document exists
+            const docRef = db.collection(collection).doc(documentId);
+            const doc = await docRef.get();
+
+            if (doc.exists) {
+                // Update existing document
+                await docRef.update(updateData);
+            } else {
+                // Create new document
+                await docRef.set(updateData);
+            }
+
+            console.log(`Data added to distributed document ${collection}/${documentId}[${key}]`);
+            return key;
+        } catch (error) {
+            console.error(`Error adding to distributed document:`, error);
+            return null;
+        }
+    }
+
+    // Update field in distributed document
+    async function updateFieldInDistributedDocument(collection, documentId, key, jsonData) {
+        try {
+            if (!isInitialized) await initializeFirestore();
+
+            let data = JSON.parse(jsonData);
+            const updateData = {};
+            updateData[key] = data;
+
+            await db.collection(collection).doc(documentId).update(updateData);
+            console.log(`Field updated in distributed document ${collection}/${documentId}[${key}]`);
+            return true;
+        } catch (error) {
+            console.error(`Error updating field in distributed document:`, error);
+            return false;
+        }
+    }
+
+    // Check if document contains a specific key
+    async function documentContainsKey(collection, documentId, key) {
+        try {
+            if (!isInitialized) await initializeFirestore();
+
+            const doc = await db.collection(collection).doc(documentId).get();
+
+            if (!doc.exists) {
+                return false;
+            }
+
+            const data = doc.data();
+            return data && data.hasOwnProperty(key);
+        } catch (error) {
+            console.error(`Error checking if document contains key:`, error);
+            return false;
+        }
+    }
+
+    // Check if document exists
+    async function documentExists(collection, documentId) {
+        try {
+            if (!isInitialized) await initializeFirestore();
+
+            const doc = await db.collection(collection).doc(documentId).get();
+            return doc.exists;
+        } catch (error) {
+            console.error(`Error checking document existence:`, error);
+            return false;
+        }
+    }
+
+    // Get document size information (estimated)
+    async function getDocumentSizeInfo(collection, documentId) {
+        try {
+            if (!isInitialized) await initializeFirestore();
+
+            const doc = await db.collection(collection).doc(documentId).get();
+
+            if (!doc.exists) {
+                return null;
+            }
+
+            const data = doc.data();
+            const estimatedSize = estimateDocumentSize(data);
+            const fieldCount = Object.keys(data).length;
+
+            return JSON.stringify({
+                EstimatedSize: estimatedSize,
+                FieldCount: fieldCount,
+                Exists: true
+            });
+        } catch (error) {
+            console.error(`Error getting document size info:`, error);
+            return null;
+        }
+    }
+
+    // Estimate document size in bytes
+    function estimateDocumentSize(data) {
+        try {
+            // Convert to JSON string and get byte length
+            const jsonString = JSON.stringify(data);
+            return new Blob([jsonString]).size;
+        } catch (error) {
+            console.error("Error estimating document size:", error);
+            return 0;
+        }
+    }
+
+    // Get all documents with a specific prefix pattern
+    async function getDocumentsWithPrefix(collection, prefix) {
+        try {
+            if (!isInitialized) await initializeFirestore();
+
+            // Firestore doesn't support prefix queries directly, so we'll use a range query
+            const endPrefix = prefix.slice(0, -1) + String.fromCharCode(prefix.charCodeAt(prefix.length - 1) + 1);
+
+            const querySnapshot = await db.collection(collection)
+                .where(firebase.firestore.FieldPath.documentId(), '>=', prefix)
+                .where(firebase.firestore.FieldPath.documentId(), '<', endPrefix)
+                .get();
+
+            const documents = [];
+            querySnapshot.forEach((doc) => {
+                documents.push({
+                    id: doc.id,
+                    data: doc.data()
+                });
+            });
+
+            return JSON.stringify(documents);
+        } catch (error) {
+            console.error(`Error getting documents with prefix:`, error);
+            return JSON.stringify([]);
+        }
+    }
+
+    // Batch get multiple documents
+    async function batchGetDocuments(collection, documentIds) {
+        try {
+            if (!isInitialized) await initializeFirestore();
+
+            const docIds = JSON.parse(documentIds);
+            const batch = [];
+
+            docIds.forEach(id => {
+                batch.push(db.collection(collection).doc(id).get());
+            });
+
+            const docs = await Promise.all(batch);
+            const results = [];
+
+            docs.forEach((doc, index) => {
+                if (doc.exists) {
+                    const data = doc.data();
+                    data.id = doc.id;
+                    results.push(data);
+                } else {
+                    results.push(null);
+                }
+            });
+
+            return JSON.stringify(results);
+        } catch (error) {
+            console.error(`Error batch getting documents:`, error);
+            return JSON.stringify([]);
+        }
+    }
+
+    // Remove key from distributed document
+    async function removeKeyFromDistributedDocument(collection, documentId, key) {
+        try {
+            if (!isInitialized) await initializeFirestore();
+
+            const updateData = {};
+            updateData[key] = firebase.firestore.FieldValue.delete();
+
+            await db.collection(collection).doc(documentId).update(updateData);
+            console.log(`Key ${key} removed from distributed document ${collection}/${documentId}`);
+            return true;
+        } catch (error) {
+            console.error(`Error removing key from distributed document:`, error);
+            return false;
+        }
+    }
+
+    // Get document field count
+    async function getDocumentFieldCount(collection, documentId) {
+        try {
+            if (!isInitialized) await initializeFirestore();
+
+            const doc = await db.collection(collection).doc(documentId).get();
+
+            if (!doc.exists) {
+                return 0;
+            }
+
+            const data = doc.data();
+            return Object.keys(data).length;
+        } catch (error) {
+            console.error(`Error getting document field count:`, error);
+            return 0;
+        }
+    }
+
+    // Merge data into distributed document (combines with existing data)
+    async function mergeIntoDistributedDocument(collection, documentId, jsonData) {
+        try {
+            if (!isInitialized) await initializeFirestore();
+
+            let data = JSON.parse(jsonData);
+            data = removeUndefinedConservative(data);
+
+            const docRef = db.collection(collection).doc(documentId);
+            await docRef.set(data, { merge: true });
+
+            console.log(`Data merged into distributed document ${collection}/${documentId}`);
+            return true;
+        } catch (error) {
+            console.error(`Error merging into distributed document:`, error);
+            return false;
+        }
+    }
+
+    // Get multiple fields from distributed document
+    async function getMultipleFieldsFromDistributedDocument(collection, documentId, fieldNames) {
+        try {
+            if (!isInitialized) await initializeFirestore();
+
+            const fields = JSON.parse(fieldNames);
+            const doc = await db.collection(collection).doc(documentId).get();
+
+            if (!doc.exists) {
+                return JSON.stringify(null);
+            }
+
+            const data = doc.data();
+            const result = {};
+
+            fields.forEach(fieldName => {
+                if (data.hasOwnProperty(fieldName)) {
+                    result[fieldName] = data[fieldName];
+                }
+            });
+
+            return JSON.stringify(result);
+        } catch (error) {
+            console.error(`Error getting multiple fields from distributed document:`, error);
+            return JSON.stringify(null);
+        }
+    }
+
+    // Search across distributed documents for a specific key pattern
+    async function searchDistributedDocuments(collection, baseDocumentId, searchKey, searchValue) {
+        try {
+            if (!isInitialized) await initializeFirestore();
+
+            const results = [];
+            let documentIndex = 1;
+            let currentDocumentId = baseDocumentId;
+
+            // Search base document
+            await searchInDocument(collection, baseDocumentId, searchKey, searchValue, results);
+
+            // Search additional documents
+            while (true) {
+                currentDocumentId = `${baseDocumentId}_${documentIndex}`;
+                const doc = await db.collection(collection).doc(currentDocumentId).get();
+
+                if (!doc.exists) {
+                    break; // No more documents
+                }
+
+                await searchInDocument(collection, currentDocumentId, searchKey, searchValue, results);
+                documentIndex++;
+            }
+
+            return JSON.stringify(results);
+        } catch (error) {
+            console.error(`Error searching distributed documents:`, error);
+            return JSON.stringify([]);
+        }
+    }
+
+    // Helper function to search within a single document
+    async function searchInDocument(collection, documentId, searchKey, searchValue, results) {
+        try {
+            const doc = await db.collection(collection).doc(documentId).get();
+
+            if (!doc.exists) {
+                return;
+            }
+
+            const data = doc.data();
+
+            // Search through all fields in the document
+            Object.keys(data).forEach(key => {
+                const fieldData = data[key];
+                if (fieldData && typeof fieldData === 'object' && fieldData[searchKey] === searchValue) {
+                    results.push({
+                        documentId: documentId,
+                        key: key,
+                        data: fieldData
+                    });
+                }
+            });
+        } catch (error) {
+            console.error(`Error searching in document ${documentId}:`, error);
+        }
+    }
+
+    // Get statistics for distributed document collection
+    async function getDistributedDocumentStats(collection, baseDocumentId) {
+        try {
+            if (!isInitialized) await initializeFirestore();
+
+            const stats = {
+                totalDocuments: 0,
+                totalFields: 0,
+                estimatedTotalSize: 0,
+                documents: []
+            };
+
+            let documentIndex = 1;
+            let currentDocumentId = baseDocumentId;
+
+            // Check base document
+            await addDocumentStats(collection, baseDocumentId, stats);
+
+            // Check additional documents
+            while (true) {
+                currentDocumentId = `${baseDocumentId}_${documentIndex}`;
+                const doc = await db.collection(collection).doc(currentDocumentId).get();
+
+                if (!doc.exists) {
+                    break; // No more documents
+                }
+
+                await addDocumentStats(collection, currentDocumentId, stats);
+                documentIndex++;
+            }
+
+            return JSON.stringify(stats);
+        } catch (error) {
+            console.error(`Error getting distributed document stats:`, error);
+            return JSON.stringify({ error: error.message });
+        }
+    }
+
+    // Helper function to add document statistics
+    async function addDocumentStats(collection, documentId, stats) {
+        try {
+            const doc = await db.collection(collection).doc(documentId).get();
+
+            if (doc.exists) {
+                const data = doc.data();
+                const fieldCount = Object.keys(data).length;
+                const estimatedSize = estimateDocumentSize(data);
+
+                stats.totalDocuments++;
+                stats.totalFields += fieldCount;
+                stats.estimatedTotalSize += estimatedSize;
+
+                stats.documents.push({
+                    id: documentId,
+                    fieldCount: fieldCount,
+                    estimatedSize: estimatedSize
+                });
+            }
+        } catch (error) {
+            console.error(`Error adding stats for document ${documentId}:`, error);
+        }
+    }
+    //#endregion
     // ==================== OFFLINE SUPPORT ====================
 
     function storeOfflineOperation(operation) {
@@ -714,6 +1098,20 @@ window.firestoreModule = (function () {
         getCollection,
         queryCollection,
         addBatch,
-        findAndDeleteCourse
+        findAndDeleteCourse,
+        // New distributed document functions
+        addToDistributedDocument,
+        updateFieldInDistributedDocument,
+        documentContainsKey,
+        documentExists,
+        getDocumentSizeInfo,
+        getDocumentsWithPrefix,
+        batchGetDocuments,
+        removeKeyFromDistributedDocument,
+        getDocumentFieldCount,
+        mergeIntoDistributedDocument,
+        getMultipleFieldsFromDistributedDocument,
+        searchDistributedDocuments,
+        getDistributedDocumentStats
     };
 })();

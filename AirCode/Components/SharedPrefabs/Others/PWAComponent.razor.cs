@@ -61,16 +61,22 @@ public partial class PWAComponent : ComponentBase, IAsyncDisposable
         {
             _dotNetRef = DotNetObjectReference.Create(this);
             _pwaManager = await JSRuntime.InvokeAsync<IJSObjectReference>("getPWAManager");
-            
+         
             await JSRuntime.InvokeVoidAsync("setupPWAMonitoring", _dotNetRef);
             await UpdateStatus();
-            
+         
             _statusMessage = "PWA ready";
+         
+            // Force check for install prompt after initialization
+            await Task.Delay(1000);
+            await UpdateStatus();
+         
             StateHasChanged();
         }
         catch (Exception ex)
         {
             _statusMessage = $"PWA init failed: {ex.Message}";
+            Console.WriteLine($"[PWA Component] Initialization error: {ex}");
             StateHasChanged();
         }
     }
@@ -115,14 +121,21 @@ public partial class PWAComponent : ComponentBase, IAsyncDisposable
         }
     }
 
-    // JS Callbacks
-  [JSInvokable] 
-      public async Task OnInstallPromptReady()
-      {
-          _status.IsInstallable = true;
-          _status.IsChromiumBased = await _pwaManager.InvokeAsync<bool>("isChromiumBrowser");
-          SetStatusWithTimeout("App can be installed!");
-      }
+ // Key fixes for PWAComponent.razor.cs
+ // Add these changes to your existing file:
+ 
+ [JSInvokable] 
+ public async Task OnInstallPromptReady()
+ {
+     Console.WriteLine("[PWA Component] Install prompt ready callback");
+     _status.IsInstallable = true;
+     _status.IsChromiumBased = await _pwaManager.InvokeAsync<bool>("isChromiumBrowser");
+     SetStatusWithTimeout("App can be installed!");
+     
+     // Force UI update
+     await InvokeAsync(StateHasChanged);
+ }
+ 
 
     [JSInvokable] 
        public async Task OnUpdateAvailable()
