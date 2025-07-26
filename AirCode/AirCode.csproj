@@ -4,8 +4,7 @@
         <TargetFramework>net7.0</TargetFramework>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
-        <!-- Disable Blazor's default caching to prevent conflicts -->
-        <BlazorCacheBootResources>false</BlazorCacheBootResources>
+      
         <ServiceWorkerAssetsManifest>service-worker-assets.js</ServiceWorkerAssetsManifest>
    <PWA>true</PWA>
     </PropertyGroup>

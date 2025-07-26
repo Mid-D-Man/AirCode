@@ -160,116 +160,102 @@ jobs:
         working-directory: ./AirCode
         run: dotnet publish --configuration Release --no-build --output ../dist
 
-      - name: Fix PWA Integrity Issues
+      - name: Prepare for GitHub Pages with PWA Support
         run: |
-          echo "🔧 Fixing PWA integrity issues for GitHub Pages deployment..."
-          
-          # Set deployment variables
-          REPO_NAME="${{ github.event.repository.name }}"
-          SHORT_SHA="${{ github.sha }}"
-          SHORT_SHA="${SHORT_SHA:0:8}"
-          BASE_PATH="/${REPO_NAME}/"
-          
-          # Create pages directory
           mkdir -p ./pages
-          cp -r ./dist/wwwroot/* ./pages/
+          
+          if [ -d "./dist/wwwroot" ]; then
+            cp -r ./dist/wwwroot/* ./pages/
+          else
+            echo "ERROR: wwwroot not found"
+            exit 1
+          fi
+          
+          # Critical: Add .nojekyll to prevent Jekyll processing
           touch ./pages/.nojekyll
           
-          # 1. Fix service-worker-assets.js for GitHub Pages paths
-          if [ -f "./pages/service-worker-assets.js" ]; then
-            echo "📝 Updating service worker assets for GitHub Pages..."
-            
-            # Update all asset URLs to include the repository path
-            sed -i "s|\"url\": \"/|\"url\": \"${BASE_PATH}|g" ./pages/service-worker-assets.js
-            
-            # Update the service worker URL itself
-            sed -i "s|\"url\": \"service-worker.js\"|\"url\": \"${BASE_PATH}service-worker.js\"|g" ./pages/service-worker-assets.js
-            
-            echo "✅ Service worker assets updated"
-          fi
+          # Create 404.html for SPA routing
+          cp ./pages/index.html ./pages/404.html
           
-          # 2. Fix service-worker.published.js integrity checks
-          if [ -f "./pages/service-worker.published.js" ]; then
-            echo "🛠️ Fixing service worker integrity checks..."
-            
-            # Copy and modify the service worker
-            cp ./pages/service-worker.published.js ./pages/service-worker.js
-            
-            # Remove integrity parameter to fix GitHub Pages deployment issues
-            sed -i 's|new Request(asset\.url, { integrity: asset\.hash })|new Request(asset.url)|g' ./pages/service-worker.js
-            
-            # Update cache names and version
-            sed -i "s|'AirCode-cache-'|'${REPO_NAME}-cache-'|g" ./pages/service-worker.js
-            sed -i "s|cache-v1|cache-v${SHORT_SHA}|g" ./pages/service-worker.js
-            
-            echo "✅ Service worker integrity checks fixed"
-          fi
+          # Update base href for GitHub Pages subpath in both files
+          sed -i 's|<base href="/" />|<base href="/AirCode/" />|g' ./pages/index.html
+          sed -i 's|<base href="/" />|<base href="/AirCode/" />|g' ./pages/404.html
           
-          # 3. Configure PWA manifest for GitHub Pages
+          # Update manifest.json scope for GitHub Pages subpath
           if [ -f "./pages/manifest.json" ]; then
-            echo "📱 Configuring PWA manifest..."
-            
-            # Update start_url and scope for GitHub Pages
-            sed -i "s|\"start_url\": \"/\"|\"start_url\": \"${BASE_PATH}\"|g" ./pages/manifest.json
-            sed -i "s|\"scope\": \"/\"|\"scope\": \"${BASE_PATH}\"|g" ./pages/manifest.json
-            
-            # Update icon paths
-            sed -i "s|\"src\": \"/|\"src\": \"${BASE_PATH}|g" ./pages/manifest.json
-            
-            echo "✅ PWA manifest configured"
+            sed -i 's|"start_url": "/AirCode/"|"start_url": "/AirCode/"|g' ./pages/manifest.json
+            sed -i 's|"scope": "/AirCode/"|"scope": "/AirCode/"|g' ./pages/manifest.json
           fi
           
-          # 4. Update index.html for GitHub Pages
-          echo "🌐 Configuring index.html for GitHub Pages..."
-          
-          # Update base href
-          sed -i "s|<base href=\"/\" />|<base href=\"${BASE_PATH}\" />|g" ./pages/index.html
-          
-          # Add SPA routing support script
-          sed -i "/<base href=\"[^\"]*\" \/>/a\\    \\n    <!-- SPA routing support for GitHub Pages -->\\n    <script type=\"text/javascript\">\\n        (function(l) {\\n            if (l.search[1] === \"/\" ) {\\n                var decoded = l.search.slice(1).split(\"&\").map(function(s) { \\n                return s.replace(/~and~/g, \"&\")\\n                }).join(\"?\");\\n                window.history.replaceState(null, null,\\n                    l.pathname.slice(0, -1) + decoded + l.hash\\n                );\\n            }\\n        }(window.location))\\n    </script>" ./pages/index.html
-          
-          echo "✅ Index.html configured"
-          
-          # 5. Create 404.html for SPA routing
-          echo "🔀 Creating SPA routing support..."
-          
-          cat > ./pages/404.html << 'EOF'
-          <!DOCTYPE html>
-          <html lang="en">
-            <head>
-              <meta charset="utf-8">
-              <title>AirCode - Page Not Found</title>
-              <script type="text/javascript">
-                var pathSegmentsToKeep = 1;
-                var l = window.location;
-                l.replace(
-                  l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
-                  l.pathname.split('/').slice(0, 1 + pathSegmentsToKeep).join('/') + '/?/' +
-                  l.pathname.slice(1).split('/').slice(pathSegmentsToKeep).join('/').replace(/&/g, '~and~') +
-                  (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
-                  l.hash
-                );
-              </script>
-            </head>
-            <body>
-              <p>Redirecting to AirCode...</p>
-            </body>
-          </html>
+          # Fix MIME type issues - Add _headers file
+          cat > ./pages/_headers << 'EOF'
+          /*.wasm
+            Content-Type: application/wasm
+          /*.js
+            Content-Type: application/javascript
+          /*.webmanifest
+            Content-Type: application/manifest+json
           EOF
           
-          echo "✅ 404.html created"
+          # Create .htaccess for Apache servers
+          cat > ./pages/.htaccess << 'EOF'
+          AddType application/wasm .wasm
+          AddType application/javascript .js
+          AddType application/manifest+json .webmanifest
           
-          # 6. Verify and log final structure
-          echo "📊 Final PWA structure verification:"
-          echo "- Service worker: $([ -f "./pages/service-worker.js" ] && echo "✅" || echo "❌")"
-          echo "- Service worker assets: $([ -f "./pages/service-worker-assets.js" ] && echo "✅" || echo "❌")"
-          echo "- PWA manifest: $([ -f "./pages/manifest.json" ] && echo "✅" || echo "❌")"
-          echo "- SPA routing: $([ -f "./pages/404.html" ] && echo "✅" || echo "❌")"
-          echo "- Icons directory: $([ -d "./pages/icons" ] && echo "✅" || echo "❌")"
+          # SPA routing fallback
+          RewriteEngine On
+          RewriteCond %{REQUEST_FILENAME} !-f
+          RewriteCond %{REQUEST_FILENAME} !-d
+          RewriteRule . /index.html [L]
           
-          echo "🚀 PWA deployment preparation completed successfully"
+          # PWA caching headers
+          <IfModule mod_expires.c>
+            ExpiresActive on
+            ExpiresByType application/wasm "access plus 1 year"
+            ExpiresByType application/javascript "access plus 1 month"
+            ExpiresByType text/css "access plus 1 month"
+            ExpiresByType image/png "access plus 1 year"
+            ExpiresByType image/jpg "access plus 1 year"
+            ExpiresByType application/manifest+json "access plus 1 week"
+          </IfModule>
+          EOF
+          
+          # Verify critical PWA files
+          echo "=== Verifying PWA deployment ==="
+          
+          # Check service worker
+          if [ -f "./pages/service-worker.js" ]; then
+            echo "✅ Service worker found"
+          else
+            echo "❌ Service worker missing"
+          fi
+          
+          # Check manifest
+          if [ -f "./pages/manifest.webmanifest" ] || [ -f "./pages/manifest.json" ]; then
+            echo "✅ Manifest found"
+          else
+            echo "❌ Manifest missing"
+          fi
+          
+          # Check WASM files
+          find ./pages -name "*.wasm" -type f -exec echo "Found WASM: {}" \;
+          
+          # Check service worker assets
+          if [ -f "./pages/service-worker-assets.js" ]; then
+            echo "✅ Service worker assets manifest found"
+          else
+            echo "❌ Service worker assets manifest missing"
+          fi
+          
+          # Verify icons
+          if [ -f "./pages/icon-192.png" ] && [ -f "./pages/icon-512.png" ]; then
+            echo "✅ PWA icons found"
+          else
+            echo "❌ PWA icons missing"
+          fi
 
-      - name: Upload Pages
+      - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./pages
@@ -282,6 +268,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     steps:
-      - name: Deploy
+      - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4

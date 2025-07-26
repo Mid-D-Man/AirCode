@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
@@ -16,64 +17,6 @@
         }(window.location))
     </script>
 
-    <!-- Critical CSS inline for offline -->
-    <style>
-        .loading-progress {
-            width: 8rem;
-            height: 8rem;
-            margin: 20vh auto 0 auto;
-            display: block;
-        }
-        .loading-progress circle {
-            fill: none;
-            stroke: #e6e6e6;
-            stroke-width: 0.6rem;
-            transform-origin: 50% 50%;
-            animation: loading-progress-circle 2s linear infinite;
-        }
-        .loading-progress circle:last-child {
-            stroke: #1b6ec2;
-            stroke-dasharray: calc(3.141 * 6rem);
-            stroke-dashoffset: calc(3.141 * 6rem);
-            animation: loading-progress-circle-fill 2s ease-in-out infinite;
-        }
-        @keyframes loading-progress-circle-fill {
-            0% { stroke-dashoffset: calc(3.141 * 6rem); }
-            50% { stroke-dashoffset: calc(3.141 * 3rem); }
-            100% { stroke-dashoffset: calc(3.141 * 6rem); }
-        }
-        .loading-progress-text {
-            position: absolute;
-            text-align: center;
-            font-weight: bold;
-            inset: calc(20vh + 3.25rem) 0 auto 0.75rem;
-            font-family: system-ui, -apple-system, sans-serif;
-            color: #1b6ec2;
-        }
-        #blazor-error-ui {
-            background: #ffebee;
-            bottom: 0;
-            box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.2);
-            display: none;
-            left: 0;
-            padding: 0.6rem 1.25rem 0.7rem 1.25rem;
-            position: fixed;
-            width: 100%;
-            z-index: 1000;
-            border-top: 2px solid #f44336;
-        }
-        #blazor-error-ui .reload {
-            color: #1976d2;
-            text-decoration: underline;
-            margin-right: 1rem;
-        }
-        #blazor-error-ui .dismiss {
-            color: #666;
-            cursor: pointer;
-            text-decoration: none;
-        }
-    </style>
-
     <!-- CSS with fallback -->
     <link href="css/bootstrap/bootstrap.min.css" rel="stylesheet" />
     <link href="css/app.css" rel="stylesheet" />
@@ -88,6 +31,13 @@
     <link href="manifest.json" rel="manifest" />
     <link rel="apple-touch-icon" sizes="512x512" href="icon-512.png" />
     <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
+
+    <!-- PWA meta tags -->
+    <meta name="theme-color" content="#007bff" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="AirCode" />
 </head>
 
 <body>
@@ -96,7 +46,7 @@
         <circle r="40%" cx="50%" cy="50%" />
         <circle r="40%" cx="50%" cy="50%" />
     </svg>
-    <div class="loading-progress-text">Loading...</div>
+    <div class="loading-progress-text"></div>
 </div>
 
 <div id="blazor-error-ui">
@@ -104,44 +54,22 @@
     <a href="" class="reload">Reload</a>
     <a class="dismiss">🗙</a>
 </div>
-<div id="connectivity-status" class="connectivity-status"></div>
-<div id="offline-indicator" class="offline-indicator"></div>
-<!-- Service Worker Registration - FIXED -->
-<script>
-    let swRegistered = false;
 
-    if ('serviceWorker' in navigator) {
-        const basePath = window.location.hostname === 'mid-d-man.github.io' ? '/AirCode/' : '/';
-
-        navigator.serviceWorker.register(basePath + 'service-worker.js', {
-            scope: basePath,
-            updateViaCache: 'none'
-        })
-            .then(reg => {
-                console.log('SW registered:', reg.scope);
-                swRegistered = true;
-            })
-            .catch(err => {
-                console.warn('SW registration failed:', err);
-                swRegistered = false;
-            });
-    }
-</script>
-
-<!-- Blazor Framework - CRITICAL LOAD ORDER -->
+<!-- Blazor Framework -->
 <script src="_framework/blazor.webassembly.js"
-        onerror="console.error('Blazor framework failed to load'); document.querySelector('.loading-progress-text').textContent = 'Framework Load Error';">
+        onerror="console.error('Blazor framework failed to load');">
 </script>
 
-<!-- Authentication Service - Load after Blazor -->
+<!-- Authentication Service -->
 <script src="_content/Microsoft.AspNetCore.Components.WebAssembly.Authentication/AuthenticationService.js"
         onerror="console.warn('Auth service failed to load');">
 </script>
 
-<!-- PWA Manager - Load after framework -->
+<!-- PWA Manager -->
 <script src="js/pwaManager.js"
         onerror="console.warn('PWA Manager failed to load');">
 </script>
+
 <!-- Utility Scripts -->
 <script src="js/connectivityServices.js" onerror="console.warn('Connectivity services failed')"></script>
 <script src="js/debug.js" onerror="console.warn('Debug utilities failed')"></script>
@@ -184,29 +112,6 @@
     };
 </script>
 
-<!-- WASM debugging with timeout 
-<script>
-    window.addEventListener('load', async () => {
-        const timeout = setTimeout(() => {
-            console.warn('WASM check timed out');
-        }, 5000);
-
-        try {
-            const wasmUrl = './wasm/qr_code_generator_bg.wasm';
-            const response = await fetch(wasmUrl);
-            clearTimeout(timeout);
-            console.log('WASM fetch response:', {
-                status: response.status,
-                contentType: response.headers.get('content-type'),
-                url: response.url
-            });
-        } catch (error) {
-            clearTimeout(timeout);
-            console.error('WASM fetch failed:', error);
-        }
-    });
-</script>
--->
 <!-- Error handling for Blazor -->
 <script>
     document.addEventListener('DOMContentLoaded', () => {

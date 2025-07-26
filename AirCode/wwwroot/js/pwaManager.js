@@ -1,290 +1,135 @@
-// PWA Manager - Enhanced Service Worker Integration for Blazor
-// Handles PWA installation, updates, and offline status
+// PWA Manager for AirCode - Service Worker Registration and Management
+(function() {
+    'use strict';
 
-class PWAManager {
-    constructor() {
-        this.serviceWorker = null;
-        this.deferredPrompt = null;
-        this.isOnline = navigator.onLine;
-        this.offlineReady = false;
-        this.dotNetRef = null;
-        this.initialized = false;
-        this.basePath = this.getBasePath();
+    let deferredPrompt;
+    let waitingServiceWorker = null;
 
-        this.init();
-    }
-
-    getBasePath() {
-        return window.location.hostname === 'mid-d-man.github.io' ? '/AirCode/' : '/';
-    }
-
-    async init() {
-        await this.registerServiceWorker();
-        this.setupInstallPrompt();
-        this.setupConnectivityMonitoring();
-        await this.checkCacheStatus();
-        this.initialized = true;
-        console.log('PWA Manager initialized');
-    }
-
-    async registerServiceWorker() {
+    // Service Worker Registration
+    function registerServiceWorker() {
         if ('serviceWorker' in navigator) {
-            try {
-                const registration = await navigator.serviceWorker.register(this.basePath + 'service-worker.js', {
-                    scope: this.basePath,
-                    updateViaCache: 'none'
-                });
+            navigator.serviceWorker.register('./service-worker.js', { scope: './' })
+                .then(registration => {
+                    console.log('AirCode SW registered: ', registration);
 
-                this.serviceWorker = registration;
-                console.log('Service Worker registered:', registration.scope);
-
-                // Listen for updates
-                registration.addEventListener('updatefound', () => {
-                    const newWorker = registration.installing;
-                    if (newWorker) {
+                    registration.addEventListener('updatefound', () => {
+                        const newWorker = registration.installing;
                         newWorker.addEventListener('statechange', () => {
                             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                this.notifyBlazorUpdate();
+                                // New version is available
+                                waitingServiceWorker = newWorker;
+                                notifyUpdateAvailable();
                             }
                         });
-                    }
+                    });
+                })
+                .catch(registrationError => {
+                    console.log('AirCode SW registration failed: ', registrationError);
                 });
 
-                // Listen for messages from service worker
-                navigator.serviceWorker.addEventListener('message', event => {
-                    this.handleServiceWorkerMessage(event.data);
-                });
-
-                // Check if there's already an update waiting
-                if (registration.waiting) {
-                    this.notifyBlazorUpdate();
+            // Listen for the service worker's message that a new version is ready
+            navigator.serviceWorker.addEventListener('message', event => {
+                if (event.data && event.data.type === 'NEW_VERSION_AVAILABLE') {
+                    notifyUpdateAvailable();
                 }
+            });
 
-                // Send initial cache status request after a brief delay
-                setTimeout(() => this.checkCacheStatus(), 1000);
-
-            } catch (error) {
-                console.error('Service Worker registration failed:', error);
-            }
+            // Listen for the controlling service worker changing and reload the page
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                window.location.reload();
+            });
         }
     }
 
-    handleServiceWorkerMessage(data) {
-        if (!data || !data.type) return;
-
-        switch (data.type) {
-            case 'SW_ACTIVATED':
-                this.offlineReady = data.offlineReady || false;
-                console.log('[PWA] Service Worker activated, offline ready:', this.offlineReady);
-                break;
-            case 'CACHE_STATUS':
-                this.offlineReady = data.offlineReady || false;
-                console.log('[PWA] Cache status updated, offline ready:', this.offlineReady);
-                break;
-        }
-    }
-
-    async checkCacheStatus() {
-        if (this.serviceWorker?.active) {
-            try {
-                const messageChannel = new MessageChannel();
-
-                const response = await new Promise((resolve, reject) => {
-                    messageChannel.port1.onmessage = (event) => {
-                        resolve(event.data);
-                    };
-
-                    setTimeout(() => reject(new Error('Timeout')), 3000);
-
-                    this.serviceWorker.active.postMessage(
-                        { type: 'GET_CACHE_STATUS' },
-                        [messageChannel.port2]
-                    );
-                });
-
-                this.handleServiceWorkerMessage(response);
-                return response;
-            } catch (error) {
-                console.warn('[PWA] Cache status check failed:', error.message);
-                return null;
-            }
-        }
-        return null;
-    }
-
-    setupInstallPrompt() {
-        // CRITICAL FIX: Store reference to this for event handlers
-        const self = this;
-
-        // Set up beforeinstallprompt event listener
-        window.addEventListener('beforeinstallprompt', (event) => {
-            console.log('[PWA] beforeinstallprompt event fired');
-            event.preventDefault();
-            self.deferredPrompt = event;
-
-            // Immediately notify Blazor
-            setTimeout(() => {
-                self.notifyBlazorInstallReady();
-            }, 100);
+    // PWA Install Prompt Handling
+    function setupInstallPrompt() {
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            notifyInstallReady();
         });
 
         window.addEventListener('appinstalled', () => {
-            console.log('[PWA] App installed');
-            self.deferredPrompt = null;
-            self.notifyBlazorInstalled();
-        });
-
-        // Force check for install prompt after initialization
-        setTimeout(() => {
-            if (!self.deferredPrompt && !self.isInstalled()) {
-                console.log('[PWA] No install prompt detected, checking conditions...');
-                self.checkInstallability();
-            }
-        }, 2000);
-    }
-
-    checkInstallability() {
-        // Log current state for debugging
-        console.log('[PWA] Install conditions:', {
-            isStandalone: window.matchMedia('(display-mode: standalone)').matches,
-            hasServiceWorker: !!this.serviceWorker,
-            isSecure: location.protocol === 'https:' || location.hostname === 'localhost',
-            isChromium: this.isChromiumBrowser(),
-            deferredPrompt: !!this.deferredPrompt
+            console.log('AirCode PWA installed');
+            deferredPrompt = null;
+            notifyAppInstalled();
         });
     }
 
-    async installApp() {
-        if (!this.deferredPrompt) {
-            console.warn('[PWA] No deferred prompt available');
+    // Update handling
+    function applyUpdate() {
+        if (waitingServiceWorker) {
+            waitingServiceWorker.postMessage({ type: 'SKIP_WAITING' });
+            waitingServiceWorker = null;
+        }
+        window.location.reload();
+    }
+
+    // Install PWA
+    async function installPWA() {
+        if (!deferredPrompt) {
             return false;
         }
 
         try {
-            console.log('[PWA] Triggering install prompt');
-            this.deferredPrompt.prompt();
-            const { outcome } = await this.deferredPrompt.userChoice;
-            console.log('[PWA] Install prompt result:', outcome);
-            this.deferredPrompt = null;
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            console.log(`AirCode install prompt result: ${outcome}`);
+            deferredPrompt = null;
             return outcome === 'accepted';
         } catch (error) {
-            console.error('PWA installation failed:', error);
+            console.error('AirCode PWA installation failed:', error);
             return false;
         }
     }
 
-    setupConnectivityMonitoring() {
-        window.addEventListener('online', () => {
-            this.isOnline = true;
-            this.notifyBlazorConnectivity(true);
-        });
-
-        window.addEventListener('offline', () => {
-            this.isOnline = false;
-            this.notifyBlazorConnectivity(false);
-        });
-
-        document.addEventListener('visibilitychange', () => {
-            this.notifyBlazorVisibility(!document.hidden);
-        });
-    }
-
-    async applyUpdate() {
-        if (this.serviceWorker?.waiting) {
-            this.serviceWorker.waiting.postMessage({ type: 'SKIP_WAITING' });
-
-            navigator.serviceWorker.addEventListener('controllerchange', () => {
-                window.location.reload();
-            }, { once: true });
-        }
-    }
-
-    async checkForUpdates() {
-        if (this.serviceWorker) {
-            await this.serviceWorker.update();
-            await this.updateStatus();
-        }
-    }
-
-    async updateStatus() {
-        await this.checkCacheStatus();
-    }
-
-    isChromiumBrowser() {
-        return /Chrome|Chromium|Edge/i.test(navigator.userAgent);
-    }
-
-    isInstalled() {
+    // Status check functions
+    function isInstalled() {
         return window.matchMedia('(display-mode: standalone)').matches ||
             window.navigator.standalone === true;
     }
 
-    getStatus() {
-        const status = {
-            IsOnline: this.isOnline,
-            IsInstallable: !!this.deferredPrompt,
-            IsInstalled: this.isInstalled(),
-            HasServiceWorker: !!this.serviceWorker,
-            UpdateAvailable: !!this.serviceWorker?.waiting,
-            IsChromiumBased: this.isChromiumBrowser(),
-            OfflineReady: this.offlineReady
-        };
-
-        console.log('[PWA] Current status:', status);
-        return status;
+    function canInstall() {
+        return !!deferredPrompt;
     }
 
-    // Blazor notification methods
-    notifyBlazorInstallReady() {
-        console.log('[PWA] Notifying Blazor: install ready');
-        if (this.dotNetRef) {
-            this.dotNetRef.invokeMethodAsync('OnInstallPromptReady').catch(console.error);
-        }
+    function hasUpdate() {
+        return !!waitingServiceWorker;
     }
 
-    notifyBlazorUpdate() {
-        if (this.dotNetRef) {
-            this.dotNetRef.invokeMethodAsync('OnUpdateAvailable').catch(console.error);
-        }
+    // Notification functions (to be connected to Blazor components)
+    function notifyInstallReady() {
+        // Dispatch custom event for Blazor to listen to
+        window.dispatchEvent(new CustomEvent('pwa-install-ready'));
     }
 
-    notifyBlazorInstalled() {
-        if (this.dotNetRef) {
-            this.dotNetRef.invokeMethodAsync('OnAppInstalled').catch(console.error);
-        }
+    function notifyUpdateAvailable() {
+        // Dispatch custom event for Blazor to listen to
+        window.dispatchEvent(new CustomEvent('pwa-update-available'));
     }
 
-    notifyBlazorConnectivity(isOnline) {
-        if (this.dotNetRef) {
-            this.dotNetRef.invokeMethodAsync('OnConnectivityChanged', isOnline).catch(console.error);
-        }
+    function notifyAppInstalled() {
+        // Dispatch custom event for Blazor to listen to
+        window.dispatchEvent(new CustomEvent('pwa-app-installed'));
     }
 
-    notifyBlazorVisibility(visible) {
-        if (this.dotNetRef) {
-            this.dotNetRef.invokeMethodAsync('OnVisibilityChange', visible).catch(console.error);
-        }
+    // Global PWA object for Blazor interop
+    window.AirCodePWA = {
+        install: installPWA,
+        applyUpdate: applyUpdate,
+        isInstalled: isInstalled,
+        canInstall: canInstall,
+        hasUpdate: hasUpdate
+    };
+
+    // Initialize when DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+            registerServiceWorker();
+            setupInstallPrompt();
+        });
+    } else {
+        registerServiceWorker();
+        setupInstallPrompt();
     }
-}
-
-// Global PWA Manager instance
-window.pwaManager = new PWAManager();
-
-// Blazor Interop Functions
-window.getPWAManager = () => {
-    return window.pwaManager;
-};
-
-window.setupPWAMonitoring = (dotNetRef) => {
-    if (window.pwaManager) {
-        window.pwaManager.dotNetRef = dotNetRef;
-        console.log('PWA monitoring setup complete');
-
-        // Force status check after setup
-        setTimeout(() => {
-            if (window.pwaManager.initialized) {
-                window.pwaManager.checkInstallability();
-            }
-        }, 500);
-    }
-};
+})();
