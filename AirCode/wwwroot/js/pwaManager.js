@@ -4,6 +4,7 @@
 
     let deferredPrompt;
     let waitingServiceWorker = null;
+    let blazorComponent = null;
 
     // Service Worker Registration
     function registerServiceWorker() {
@@ -16,7 +17,6 @@
                         const newWorker = registration.installing;
                         newWorker.addEventListener('statechange', () => {
                             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                // New version is available
                                 waitingServiceWorker = newWorker;
                                 notifyUpdateAvailable();
                             }
@@ -27,14 +27,12 @@
                     console.log('AirCode SW registration failed: ', registrationError);
                 });
 
-            // Listen for the service worker's message that a new version is ready
             navigator.serviceWorker.addEventListener('message', event => {
                 if (event.data && event.data.type === 'NEW_VERSION_AVAILABLE') {
                     notifyUpdateAvailable();
                 }
             });
 
-            // Listen for the controlling service worker changing and reload the page
             navigator.serviceWorker.addEventListener('controllerchange', () => {
                 window.location.reload();
             });
@@ -56,13 +54,30 @@
         });
     }
 
+    // Connectivity Monitoring
+    function setupConnectivityMonitoring(dotNetRef) {
+        blazorComponent = dotNetRef;
+
+        const updateConnectivity = () => {
+            if (blazorComponent) {
+                blazorComponent.invokeMethodAsync('OnConnectivityChanged', navigator.onLine);
+            }
+        };
+
+        window.addEventListener('online', updateConnectivity);
+        window.addEventListener('offline', updateConnectivity);
+
+        // Initial check
+        updateConnectivity();
+    }
+
     // Update handling
     function applyUpdate() {
         if (waitingServiceWorker) {
             waitingServiceWorker.postMessage({ type: 'SKIP_WAITING' });
             waitingServiceWorker = null;
         }
-        window.location.reload();
+        setTimeout(() => window.location.reload(), 100);
     }
 
     // Install PWA
@@ -97,19 +112,25 @@
         return !!waitingServiceWorker;
     }
 
-    // Notification functions (to be connected to Blazor components)
+    // Notification functions
     function notifyInstallReady() {
-        // Dispatch custom event for Blazor to listen to
+        if (blazorComponent) {
+            blazorComponent.invokeMethodAsync('OnInstallPromptReady');
+        }
         window.dispatchEvent(new CustomEvent('pwa-install-ready'));
     }
 
     function notifyUpdateAvailable() {
-        // Dispatch custom event for Blazor to listen to
+        if (blazorComponent) {
+            blazorComponent.invokeMethodAsync('OnUpdateAvailable');
+        }
         window.dispatchEvent(new CustomEvent('pwa-update-available'));
     }
 
     function notifyAppInstalled() {
-        // Dispatch custom event for Blazor to listen to
+        if (blazorComponent) {
+            blazorComponent.invokeMethodAsync('OnAppInstalled');
+        }
         window.dispatchEvent(new CustomEvent('pwa-app-installed'));
     }
 
@@ -121,6 +142,9 @@
         canInstall: canInstall,
         hasUpdate: hasUpdate
     };
+
+    // Setup connectivity monitoring function for Blazor
+    window.setupConnectivityMonitoring = setupConnectivityMonitoring;
 
     // Initialize when DOM is ready
     if (document.readyState === 'loading') {

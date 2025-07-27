@@ -194,7 +194,7 @@
     box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
 }
 
-/* Status Messages */
+/* Status Messages with Auto-fade */
 .pwa-message {
     background: linear-gradient(135deg, #d1ecf1, #bee5eb);
     border: 1px solid #b8daff;
@@ -206,7 +206,9 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    animation: slideIn 0.3s ease-out;
+    animation: fadeInOut 3.5s ease-in-out forwards;
+    opacity: 1;
+    transform: translateX(0);
 }
 
 .message-text {
@@ -245,14 +247,22 @@
     }
 }
 
-@keyframes slideIn {
-    from {
+@keyframes fadeInOut {
+    0% {
         opacity: 0;
         transform: translateX(20px);
     }
-    to {
+    15% {
         opacity: 1;
         transform: translateX(0);
+    }
+    85% {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    100% {
+        opacity: 0;
+        transform: translateX(-20px);
     }
 }
 
@@ -292,6 +302,22 @@
     }
     to {
         transform: rotate(360deg);
+    }
+}
+
+/* Fade-out class for manual dismissal */
+.fade-out {
+    animation: fadeOut 0.3s ease-out forwards !important;
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateX(-20px);
     }
 }
 
@@ -379,5 +405,10 @@
         animation-duration: 0.01ms !important;
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
+    }
+
+    .pwa-message {
+        animation: none !important;
+        opacity: 1 !important;
     }
 }
