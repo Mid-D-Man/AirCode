@@ -149,14 +149,22 @@ namespace AirCode.Pages.Admin.Shared
             }
         }
 
-       private List<FirebaseAttendanceEvent> ExtractAttendanceEvents(Dictionary<string, object> courseAttendanceData)
+    private List<FirebaseAttendanceEvent> ExtractAttendanceEvents(Dictionary<string, object> courseAttendanceData)
 {
     var events = new List<FirebaseAttendanceEvent>();
 
+    Console.WriteLine($"Total fields in courseAttendanceData: {courseAttendanceData.Count}");
+    
     foreach (var kvp in courseAttendanceData)
     {
+        Console.WriteLine($"Processing field: {kvp.Key}, Type: {kvp.Value?.GetType().Name}");
+        
         // Skip metadata fields, only process event fields
-        if (!kvp.Key.StartsWith("Event_")) continue;
+        if (!kvp.Key.StartsWith("Event_")) 
+        {
+            Console.WriteLine($"Skipping non-event field: {kvp.Key}");
+            continue;
+        }
 
         try
         {
@@ -166,16 +174,20 @@ namespace AirCode.Pages.Admin.Shared
             if (kvp.Value is JsonElement jsonElement)
             {
                 // Convert JsonElement to Dictionary
-                eventData = JsonSerializer.Deserialize<Dictionary<string, object>>(jsonElement.GetRawText());
+                var rawJson = jsonElement.GetRawText();
+                Console.WriteLine($"JsonElement raw text for {kvp.Key}: {rawJson}");
+                eventData = JsonSerializer.Deserialize<Dictionary<string, object>>(rawJson);
             }
             else if (kvp.Value is Dictionary<string, object> dict)
             {
                 eventData = dict;
+                Console.WriteLine($"Direct dictionary for {kvp.Key}, keys: {string.Join(", ", dict.Keys)}");
             }
             else
             {
                 // Try to deserialize as JSON string
                 var jsonString = kvp.Value?.ToString();
+                Console.WriteLine($"Attempting JSON parse for {kvp.Key}: {jsonString}");
                 if (!string.IsNullOrEmpty(jsonString))
                 {
                     eventData = JsonSerializer.Deserialize<Dictionary<string, object>>(jsonString);
@@ -184,11 +196,21 @@ namespace AirCode.Pages.Admin.Shared
 
             if (eventData != null)
             {
+                Console.WriteLine($"Successfully parsed event data for {kvp.Key}, keys: {string.Join(", ", eventData.Keys)}");
                 var firebaseEvent = ParseFirebaseAttendanceEventFromDict(eventData);
                 if (firebaseEvent != null)
                 {
+                    Console.WriteLine($"Successfully created FirebaseAttendanceEvent for {kvp.Key}");
                     events.Add(firebaseEvent);
                 }
+                else
+                {
+                    Console.WriteLine($"Failed to create FirebaseAttendanceEvent for {kvp.Key}");
+                }
+            }
+            else
+            {
+                Console.WriteLine($"Failed to parse event data for {kvp.Key}");
             }
         }
         catch (Exception ex)
@@ -198,6 +220,7 @@ namespace AirCode.Pages.Admin.Shared
         }
     }
 
+    Console.WriteLine($"Total events extracted: {events.Count}");
     return events.OrderBy(e => e.StartTime).ToList();
 }
 
@@ -234,18 +257,18 @@ private FirebaseAttendanceEvent? ParseFirebaseAttendanceEventFromDict(Dictionary
         {
             attendanceEvent.AttendanceRecords = new Dictionary<string, FirebaseAttendanceRecord>();
 
+            Dictionary<string, object> recordsDict = null;
+
             if (recordsObj is JsonElement recordsElement)
             {
-                foreach (var recordProperty in recordsElement.EnumerateObject())
-                {
-                    var record = ParseFirebaseAttendanceRecord(recordProperty.Value);
-                    if (record != null)
-                    {
-                        attendanceEvent.AttendanceRecords[recordProperty.Name] = record;
-                    }
-                }
+                recordsDict = JsonSerializer.Deserialize<Dictionary<string, object>>(recordsElement.GetRawText());
             }
-            else if (recordsObj is Dictionary<string, object> recordsDict)
+            else if (recordsObj is Dictionary<string, object> dict)
+            {
+                recordsDict = dict;
+            }
+
+            if (recordsDict != null)
             {
                 foreach (var recordKvp in recordsDict)
                 {
@@ -256,6 +279,13 @@ private FirebaseAttendanceEvent? ParseFirebaseAttendanceEventFromDict(Dictionary
                     }
                 }
             }
+        }
+
+        // Validate required fields
+        if (string.IsNullOrEmpty(attendanceEvent.SessionId) || attendanceEvent.StartTime == default)
+        {
+            Console.WriteLine($"Invalid event data - missing SessionId or StartTime");
+            return null;
         }
 
         return attendanceEvent;
@@ -282,33 +312,54 @@ private FirebaseAttendanceRecord? ParseFirebaseAttendanceRecordFromObject(object
             recordData = dict;
         }
 
-        if (recordData == null) return null;
+        if (recordData == null) 
+        {
+            Console.WriteLine("Record data is null");
+            return null;
+        }
+
+        Console.WriteLine($"Parsing record with keys: {string.Join(", ", recordData.Keys)}");
 
         var record = new FirebaseAttendanceRecord();
 
         if (recordData.TryGetValue("MatricNumber", out var matricObj))
+        {
             record.MatricNumber = matricObj?.ToString() ?? string.Empty;
+            Console.WriteLine($"MatricNumber: {record.MatricNumber}");
+        }
 
         if (recordData.TryGetValue("HasScannedAttendance", out var hasScannedObj))
         {
             if (bool.TryParse(hasScannedObj?.ToString(), out var hasScanned))
+            {
                 record.HasScannedAttendance = hasScanned;
+                Console.WriteLine($"HasScannedAttendance: {record.HasScannedAttendance}");
+            }
         }
 
         if (recordData.TryGetValue("ScanTime", out var scanTimeObj) && scanTimeObj != null)
         {
             if (DateTime.TryParse(scanTimeObj.ToString(), out var scanTime))
+            {
                 record.ScanTime = scanTime;
+                Console.WriteLine($"ScanTime: {record.ScanTime}");
+            }
         }
 
         if (recordData.TryGetValue("IsOnlineScan", out var isOnlineObj))
         {
             if (bool.TryParse(isOnlineObj?.ToString(), out var isOnline))
+            {
                 record.IsOnlineScan = isOnline;
+                Console.WriteLine($"IsOnlineScan: {record.IsOnlineScan}");
+            }
         }
 
         if (recordData.TryGetValue("DeviceGUID", out var deviceObj))
+        {
             record.DeviceGUID = deviceObj?.ToString();
+            Console.WriteLine($"DeviceGUID: {record.DeviceGUID}");
+        }
 
         return record;
     }
