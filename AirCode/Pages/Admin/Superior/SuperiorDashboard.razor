@@ -6,6 +6,7 @@
 @using AirCode.Layout.AdminLayout.Superior
 @using AirCode.Models.Admin
 @inject IJSRuntime JSRuntime
+@implements IDisposable
 
 <PageTitle>Superior Admin Dashboard</PageTitle>
 
@@ -134,7 +135,13 @@
                 </select>
             </div>
             <div class="card-content">
-                <canvas id="enrollmentChart" width="400" height="200"></canvas>
+                <div class="chart-placeholder">
+                    <div class="placeholder-content">
+                        <i class="fas fa-chart-bar fa-3x"></i>
+                        <p>Enrollment Chart</p>
+                        <small>Chart implementation pending</small>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -240,10 +247,19 @@
     private List<SystemAlert> _systemAlerts = new();
     private List<AdminActivity> _recentActivities = new();
 
+    // Component lifecycle flags
+    private bool _disposed = false;
+
     protected override async Task OnInitializedAsync()
     {
-        await LoadDashboardData();
-        //await InitializeCharts();
+        try
+        {
+            await LoadDashboardData();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Dashboard initialization error: {ex.Message}");
+        }
     }
 
     private async Task LoadDashboardData()
@@ -276,18 +292,24 @@
             new() { Title = "System Backup Initiated", Description = "Scheduled backup started", 
                    Type = "System", User = "System", Timestamp = DateTime.Now.AddHours(-4) }
         };
-    }
 
-    private async Task InitializeCharts()
-    {
-        await Task.CompletedTask;
-        //await JSRuntime.InvokeVoidAsync("initializeEnrollmentChart");
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task OnLevelFilterChange(ChangeEventArgs e)
     {
-        var selectedLevel = e.Value.ToString();
-        await JSRuntime.InvokeVoidAsync("updateEnrollmentChart", selectedLevel);
+        if (_disposed) return;
+        
+        try
+        {
+            var selectedLevel = e.Value?.ToString() ?? "";
+            // Placeholder for future chart update functionality
+            Console.WriteLine($"Level filter changed to: {selectedLevel}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Filter change error: {ex.Message}");
+        }
     }
 
     private string GetAlertIcon(string severity) => severity.ToLower() switch
@@ -307,12 +329,88 @@
         _ => "circle"
     };
 
-    // Action handlers
-    private async Task ManageSessions() => await JSRuntime.InvokeVoidAsync("location.assign", "/Admin/Sessions");
-    private async Task ManageUsers() => await JSRuntime.InvokeVoidAsync("location.assign", "/Admin/Users");
-    private async Task CreateAcademicSession() => await JSRuntime.InvokeVoidAsync("location.assign", "/Admin/Sessions/Create");
-    private async Task SystemBackup() => await JSRuntime.InvokeVoidAsync("showNotification", "System backup initiated");
-    private async Task GenerateReports() => await JSRuntime.InvokeVoidAsync("location.assign", "/Admin/Reports");
-    private async Task ViewAllActivities() => await JSRuntime.InvokeVoidAsync("location.assign", "/Admin/Activities");
+    // Safe navigation methods
+    private async Task ManageSessions()
+    {
+        if (_disposed) return;
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("location.assign", "/Admin/Sessions");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Navigation error: {ex.Message}");
+        }
+    }
 
+    private async Task ManageUsers()
+    {
+        if (_disposed) return;
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("location.assign", "/Admin/Users");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Navigation error: {ex.Message}");
+        }
+    }
+
+    private async Task CreateAcademicSession()
+    {
+        if (_disposed) return;
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("location.assign", "/Admin/Sessions/Create");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Navigation error: {ex.Message}");
+        }
+    }
+
+    private async Task SystemBackup()
+    {
+        if (_disposed) return;
+        try
+        {
+            // Show notification without external dependencies
+            Console.WriteLine("System backup initiated");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Backup error: {ex.Message}");
+        }
+    }
+
+    private async Task GenerateReports()
+    {
+        if (_disposed) return;
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("location.assign", "/Admin/Reports");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Navigation error: {ex.Message}");
+        }
+    }
+
+    private async Task ViewAllActivities()
+    {
+        if (_disposed) return;
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("location.assign", "/Admin/Activities");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Navigation error: {ex.Message}");
+        }
+    }
+
+    public void Dispose()
+    {
+        _disposed = true;
+    }
 }
