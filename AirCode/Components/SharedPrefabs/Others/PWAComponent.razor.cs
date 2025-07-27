@@ -121,13 +121,21 @@ public partial class PWAComponent : ComponentBase, IAsyncDisposable
                 _status.IsInstallable = await _airCodePWA.InvokeAsync<bool>("canInstall");
                 _status.IsInstalled = await _airCodePWA.InvokeAsync<bool>("isInstalled");
                 _status.UpdateAvailable = await _airCodePWA.InvokeAsync<bool>("hasUpdate");
-                _status.IsOnline = await JSRuntime.InvokeAsync<bool>("navigator.onLine");
+                // Fixed: Use property access instead of function call
+                _status.IsOnline = await JSRuntime.InvokeAsync<bool>("eval", "navigator.onLine");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"[PWA Component] Status update error: {ex.Message}");
                 // Fallback to basic online status
-                _status.IsOnline = await JSRuntime.InvokeAsync<bool>("navigator.onLine");
+                try
+                {
+                    _status.IsOnline = await JSRuntime.InvokeAsync<bool>("eval", "navigator.onLine");
+                }
+                catch
+                {
+                    _status.IsOnline = true; // Default fallback
+                }
             }
         }
     }
@@ -250,5 +258,4 @@ public partial class PWAComponent : ComponentBase, IAsyncDisposable
         if (_airCodePWA != null) await _airCodePWA.DisposeAsync();
         _dotNetRef?.Dispose();
     }
-
 }
