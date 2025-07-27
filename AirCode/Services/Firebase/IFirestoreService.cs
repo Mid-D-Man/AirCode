@@ -50,5 +50,40 @@ namespace AirCode.Services.Firebase
         Task<bool> FindAndDeleteCourseAsync(string courseCode);
         Task<bool> DeleteFromSpecificCollectionAsync(string collection, string courseCode);
         Task<bool> SyncCollectionWithLocalAsync<T>(string collection, List<T> localData) where T : class;
+        
+        // Add these methods to IFirestoreService interface
+
+        // Add these missing interface members to IFirestoreService
+
+        // Add these methods to IFirestoreService interface
+
+        #region Distributed Document Operations
+
+        /// <summary>
+        /// Add data to distributed document
+        /// </summary>
+        Task<string> AddToDistributedDocumentAsync(string collection, string documentId, string key, string jsonData);
+
+        /// <summary>
+        /// Update field in distributed document
+        /// </summary>
+        Task<bool> UpdateFieldInDistributedDocumentAsync(string collection, string documentId, string key, string jsonData);
+
+        /// <summary>
+        /// Get document size information
+        /// </summary>
+        Task<string> GetDocumentSizeInfoAsync(string collection, string documentId);
+
+        /// <summary>
+        /// Check if document contains specific key
+        /// </summary>
+        Task<bool> DocumentContainsKeyAsync(string collection, string documentId, string key);
+
+        /// <summary>
+        /// Check if document exists
+        /// </summary>
+        Task<bool> DocumentExistsAsync(string collection, string documentId);
+
+        #endregion
     }
 }

@@ -506,29 +506,6 @@ namespace AirCode.Services.Firebase
         // ==================== DISTRIBUTED DOCUMENT OPERATIONS ====================
 
     /// <summary>
-    /// Add student course data with automatic document distribution
-    /// </summary>
-    public async Task<string> AddStudentCourseAsync(string matricNumber, object courseData, string level)
-    {
-        try
-        {
-            if (!_isInitialized) await InitializeAsync();
-            
-            string baseDocumentId = $"studentcourses_{level.ToLower()}level";
-            string targetDocumentId = await FindAvailableDocumentAsync("StudentCourses", baseDocumentId, ESTIMATED_STUDENT_ENTRY_SIZE);
-            
-            var json = JsonConvert.SerializeObject(courseData, _jsonSettings);
-            return await _jsRuntime.InvokeAsync<string>("firestoreModule.addToDistributedDocument", 
-                "StudentCourses", targetDocumentId, matricNumber, json);
-        }
-        catch (Exception ex)
-        {
-            MID_HelperFunctions.DebugMessage($"Error adding student course: {ex.Message}", DebugClass.Exception);
-            return null;
-        }
-    }
-
-    /// <summary>
     /// Add attendance event with automatic document distribution
     /// </summary>
     public async Task<string> AddAttendanceEventAsync(string courseCode, object attendanceData)
@@ -552,40 +529,6 @@ namespace AirCode.Services.Firebase
         }
     }
 
-    /// <summary>
-    /// Get all student courses for a level (across all distributed documents)
-    /// </summary>
-    public async Task<Dictionary<string, T>> GetAllStudentCoursesAsync<T>(string level) where T : class
-    {
-        try
-        {
-            if (!_isInitialized) await InitializeAsync();
-            
-            string baseDocumentId = $"studentcourses_{level.ToLower()}level";
-            var allDocuments = await GetDistributedDocumentsAsync("StudentCourses", baseDocumentId);
-            
-            var combinedData = new Dictionary<string, T>();
-            
-            foreach (var docData in allDocuments)
-            {
-                var studentData = JsonConvert.DeserializeObject<Dictionary<string, T>>(docData, _jsonSettings);
-                if (studentData != null)
-                {
-                    foreach (var kvp in studentData)
-                    {
-                        combinedData[kvp.Key] = kvp.Value;
-                    }
-                }
-            }
-            
-            return combinedData;
-        }
-        catch (Exception ex)
-        {
-            MID_HelperFunctions.DebugMessage($"Error getting student courses: {ex.Message}", DebugClass.Exception);
-            return new Dictionary<string, T>();
-        }
-    }
 
     /// <summary>
     /// Get all attendance events for a course (across all distributed documents)
@@ -619,53 +562,6 @@ namespace AirCode.Services.Firebase
         }
     }
 
-    /// <summary>
-    /// Get specific student course data (searches across distributed documents)
-    /// </summary>
-    public async Task<T> GetStudentCourseAsync<T>(string matricNumber, string level) where T : class
-    {
-        try
-        {
-            if (!_isInitialized) await InitializeAsync();
-            
-            string baseDocumentId = $"studentcourses_{level.ToLower()}level";
-            return await GetFromDistributedDocumentsAsync<T>("StudentCourses", baseDocumentId, matricNumber);
-        }
-        catch (Exception ex)
-        {
-            MID_HelperFunctions.DebugMessage($"Error getting student course: {ex.Message}", DebugClass.Exception);
-            return null;
-        }
-    }
-
-    /// <summary>
-    /// Update student course data (finds correct distributed document automatically)
-    /// </summary>
-    public async Task<bool> UpdateStudentCourseAsync<T>(string matricNumber, string level, T courseData) where T : class
-    {
-        try
-        {
-            if (!_isInitialized) await InitializeAsync();
-            
-            string baseDocumentId = $"studentcourses_{level.ToLower()}level";
-            string targetDocumentId = await FindDocumentContainingKeyAsync("StudentCourses", baseDocumentId, matricNumber);
-            
-            if (string.IsNullOrEmpty(targetDocumentId))
-            {
-                // Student not found, add to available document
-                return !string.IsNullOrEmpty(await AddStudentCourseAsync(matricNumber, courseData, level));
-            }
-            
-            var json = JsonConvert.SerializeObject(courseData, _jsonSettings);
-            return await _jsRuntime.InvokeAsync<bool>("firestoreModule.updateFieldInDistributedDocument", 
-                "StudentCourses", targetDocumentId, matricNumber, json);
-        }
-        catch (Exception ex)
-        {
-            MID_HelperFunctions.DebugMessage($"Error updating student course: {ex.Message}", DebugClass.Exception);
-            return false;
-        }
-    }
 
     // ==================== HELPER METHODS ====================
 
@@ -812,6 +708,88 @@ namespace AirCode.Services.Firebase
     }
         
         #endregion
+        // Add these implementations to FirestoreService class
+
+#region Distributed Document Operations
+
+public async Task<string> AddToDistributedDocumentAsync(string collection, string documentId, string key, string jsonData)
+{
+    try
+    {
+        if (!_isInitialized) await InitializeAsync();
+        
+        return await _jsRuntime.InvokeAsync<string>("firestoreModule.addToDistributedDocument", 
+            collection, documentId, key, jsonData);
+    }
+    catch (Exception ex)
+    {
+        MID_HelperFunctions.DebugMessage($"Error adding to distributed document: {ex.Message}", DebugClass.Exception);
+        return null;
+    }
+}
+
+public async Task<bool> UpdateFieldInDistributedDocumentAsync(string collection, string documentId, string key, string jsonData)
+{
+    try
+    {
+        if (!_isInitialized) await InitializeAsync();
+        
+        return await _jsRuntime.InvokeAsync<bool>("firestoreModule.updateFieldInDistributedDocument", 
+            collection, documentId, key, jsonData);
+    }
+    catch (Exception ex)
+    {
+        MID_HelperFunctions.DebugMessage($"Error updating field in distributed document: {ex.Message}", DebugClass.Exception);
+        return false;
+    }
+}
+
+public async Task<string> GetDocumentSizeInfoAsync(string collection, string documentId)
+{
+    try
+    {
+        if (!_isInitialized) await InitializeAsync();
+        
+        return await _jsRuntime.InvokeAsync<string>("firestoreModule.getDocumentSizeInfo", collection, documentId);
+    }
+    catch (Exception ex)
+    {
+        MID_HelperFunctions.DebugMessage($"Error getting document size info: {ex.Message}", DebugClass.Exception);
+        return null;
+    }
+}
+
+public async Task<bool> DocumentContainsKeyAsync(string collection, string documentId, string key)
+{
+    try
+    {
+        if (!_isInitialized) await InitializeAsync();
+        
+        return await _jsRuntime.InvokeAsync<bool>("firestoreModule.documentContainsKey", collection, documentId, key);
+    }
+    catch (Exception ex)
+    {
+        MID_HelperFunctions.DebugMessage($"Error checking if document contains key: {ex.Message}", DebugClass.Exception);
+        return false;
+    }
+}
+
+public async Task<bool> DocumentExistsAsync(string collection, string documentId)
+{
+    try
+    {
+        if (!_isInitialized) await InitializeAsync();
+        
+        return await _jsRuntime.InvokeAsync<bool>("firestoreModule.documentExists", collection, documentId);
+    }
+    catch (Exception ex)
+    {
+        MID_HelperFunctions.DebugMessage($"Error checking if document exists: {ex.Message}", DebugClass.Exception);
+        return false;
+    }
+}
+
+#endregion
         
     }
 }

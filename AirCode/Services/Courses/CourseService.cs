@@ -29,7 +29,16 @@ namespace AirCode.Services.Courses
         private const string ALL_COURSES_KEY = "AllCourses";
         private const string STUDENT_COURSES_KEY = "AllStudentCourses";
         private const string USER_COURSES_PREFIX = "UserCourses_";
+        private const int MAX_DOCUMENT_SIZE_BYTES = 1048576; // 1MB
+        private const int ESTIMATED_STUDENT_ENTRY_SIZE = 2048; // 2KB per student entry
 
+// JSON settings for consistent serialization
+        private readonly JsonSerializerSettings _jsonSettings = new JsonSerializerSettings
+        {
+            Converters = new List<JsonConverter> { new StringEnumConverter() },
+            NullValueHandling = NullValueHandling.Ignore,
+            DateTimeZoneHandling = DateTimeZoneHandling.Utc
+        };
         private bool _disposed;
         
         public CourseService(IFirestoreService firestoreService, IBlazorAppLocalStorageService localStorage)
@@ -1051,9 +1060,269 @@ private async Task<T> GetUserCoursesFromLocalStorageAsync<T>(string userId)
 
 #endregion
 
+#region Distributed Storage Operations
 
+/// <summary>
+/// Add student course data with automatic document distribution
+/// </summary>
+public async Task<string> AddStudentCourseDistributedAsync(string matricNumber, object courseData, string level)
+{
+    if (_disposed) throw new ObjectDisposedException(nameof(CourseService));
+    
+    try
+    {
+        string baseDocumentId = $"StudentCourses_{level}Level";
+        string targetDocumentId = await FindAvailableDocumentAsync(_studentCourseCollection, baseDocumentId, ESTIMATED_STUDENT_ENTRY_SIZE);
         
-        #region Private Helper Methods
+        var json = JsonConvert.SerializeObject(courseData, _jsonSettings);
+        return await _firestoreService.AddToDistributedDocumentAsync(_studentCourseCollection, targetDocumentId, matricNumber, json);
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error adding student course distributed: {ex.Message}");
+        return null;
+    }
+}
+
+/// <summary>
+/// Get all student courses for a level (across all distributed documents)
+/// </summary>
+public async Task<Dictionary<string, T>> GetAllStudentCoursesDistributedAsync<T>(string level) where T : class
+{
+    if (_disposed) throw new ObjectDisposedException(nameof(CourseService));
+    
+    try
+    {
+        string baseDocumentId = $"StudentCourses_{level}Level";
+        var allDocuments = await GetDistributedDocumentsAsync(_studentCourseCollection, baseDocumentId);
+        
+        var combinedData = new Dictionary<string, T>();
+        
+        foreach (var docData in allDocuments)
+        {
+            if (string.IsNullOrEmpty(docData)) continue;
+            
+            var studentData = JsonConvert.DeserializeObject<Dictionary<string, T>>(docData, _jsonSettings);
+            if (studentData != null)
+            {
+                foreach (var kvp in studentData)
+                {
+                    if (!kvp.Key.StartsWith("StudentCourses_") && 
+                        !kvp.Key.Equals("id", StringComparison.OrdinalIgnoreCase))
+                    {
+                        combinedData[kvp.Key] = kvp.Value;
+                    }
+                }
+            }
+        }
+        
+        return combinedData;
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error getting all student courses distributed: {ex.Message}");
+        return new Dictionary<string, T>();
+    }
+}
+
+/// <summary>
+/// Get specific student course data (searches across distributed documents)
+/// </summary>
+public async Task<T> GetStudentCourseDistributedAsync<T>(string matricNumber, string level) where T : class
+{
+    if (_disposed) throw new ObjectDisposedException(nameof(CourseService));
+    
+    try
+    {
+        string baseDocumentId = $"StudentCourses_{level}Level";
+        return await GetFromDistributedDocumentsAsync<T>(_studentCourseCollection, baseDocumentId, matricNumber);
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error getting student course distributed: {ex.Message}");
+        return null;
+    }
+}
+
+/// <summary>
+/// Update student course data (finds correct distributed document automatically)
+/// </summary>
+public async Task<bool> UpdateStudentCourseDistributedAsync<T>(string matricNumber, string level, T courseData) where T : class
+{
+    if (_disposed) throw new ObjectDisposedException(nameof(CourseService));
+    
+    try
+    {
+        string baseDocumentId = $"StudentCourses_{level}Level";
+        string targetDocumentId = await FindDocumentContainingKeyAsync(_studentCourseCollection, baseDocumentId, matricNumber);
+        
+        if (string.IsNullOrEmpty(targetDocumentId))
+        {
+            // Student not found, add to available document
+            return !string.IsNullOrEmpty(await AddStudentCourseDistributedAsync(matricNumber, courseData, level));
+        }
+        
+        var json = JsonConvert.SerializeObject(courseData, _jsonSettings);
+        return await _firestoreService.UpdateFieldInDistributedDocumentAsync(_studentCourseCollection, targetDocumentId, matricNumber, json);
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error updating student course distributed: {ex.Message}");
+        return false;
+    }
+}
+
+#endregion
+
+#region Distributed Storage Helper Methods
+
+/// <summary>
+/// Find an available document that can accommodate new data
+/// </summary>
+private async Task<string> FindAvailableDocumentAsync(string collection, string baseDocumentId, int estimatedDataSize)
+{
+    try
+    {
+        int documentIndex = 1;
+        string currentDocumentId = baseDocumentId;
+        
+        while (true)
+        {
+            var documentSizeInfo = await _firestoreService.GetDocumentSizeInfoAsync(collection, currentDocumentId);
+            
+            if (string.IsNullOrEmpty(documentSizeInfo))
+            {
+                // Document doesn't exist, use this one
+                return currentDocumentId;
+            }
+            
+            var sizeInfo = JsonConvert.DeserializeObject<DocumentSizeInfo>(documentSizeInfo);
+            if (sizeInfo.EstimatedSize + estimatedDataSize < MAX_DOCUMENT_SIZE_BYTES)
+            {
+                return currentDocumentId;
+            }
+            
+            // Try next document
+            documentIndex++;
+            currentDocumentId = $"{baseDocumentId}_{documentIndex}";
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error finding available document: {ex.Message}");
+        return baseDocumentId; // Fallback to base document
+    }
+}
+
+/// <summary>
+/// Get all distributed documents for a base document ID
+/// </summary>
+private async Task<List<string>> GetDistributedDocumentsAsync(string collection, string baseDocumentId)
+{
+    try
+    {
+        var documents = new List<string>();
+        int documentIndex = 1;
+        string currentDocumentId = baseDocumentId;
+        
+        // Get base document
+        var baseData = await _firestoreService.GetDocumentAsync<object>(collection, baseDocumentId);
+        if (baseData != null)
+        {
+            var jsonString = JsonConvert.SerializeObject(baseData);
+            documents.Add(jsonString);
+        }
+        
+        // Get additional documents
+        while (true)
+        {
+            currentDocumentId = $"{baseDocumentId}_{documentIndex}";
+            var documentData = await _firestoreService.GetDocumentAsync<object>(collection, currentDocumentId);
+            
+            if (documentData == null)
+            {
+                break; // No more documents
+            }
+            
+            var jsonString = JsonConvert.SerializeObject(documentData);
+            documents.Add(jsonString);
+            documentIndex++;
+        }
+        
+        return documents;
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error getting distributed documents: {ex.Message}");
+        return new List<string>();
+    }
+}
+
+/// <summary>
+/// Find which distributed document contains a specific key
+/// </summary>
+private async Task<string> FindDocumentContainingKeyAsync(string collection, string baseDocumentId, string key)
+{
+    try
+    {
+        int documentIndex = 1;
+        string currentDocumentId = baseDocumentId;
+        
+        while (true)
+        {
+            var hasKey = await _firestoreService.DocumentContainsKeyAsync(collection, currentDocumentId, key);
+            
+            if (hasKey)
+            {
+                return currentDocumentId;
+            }
+            
+            // Check if document exists
+            var exists = await _firestoreService.DocumentExistsAsync(collection, currentDocumentId);
+            if (!exists)
+            {
+                break; // No more documents to check
+            }
+            
+            documentIndex++;
+            currentDocumentId = $"{baseDocumentId}_{documentIndex}";
+        }
+        
+        return null; // Key not found in any document
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error finding document containing key: {ex.Message}");
+        return null;
+    }
+}
+
+/// <summary>
+/// Get data from distributed documents by key
+/// </summary>
+private async Task<T> GetFromDistributedDocumentsAsync<T>(string collection, string baseDocumentId, string key) where T : class
+{
+    try
+    {
+        string targetDocumentId = await FindDocumentContainingKeyAsync(collection, baseDocumentId, key);
+        
+        if (string.IsNullOrEmpty(targetDocumentId))
+        {
+            return null;
+        }
+        
+        return await _firestoreService.GetFieldAsync<T>(collection, targetDocumentId, key);
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error getting from distributed documents: {ex.Message}");
+        return null;
+    }
+}
+
+#endregion
+
+     #region Private Helper Methods
         
         private string GetDocumentFromLevel(LevelType level)
         {

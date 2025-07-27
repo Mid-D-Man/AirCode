@@ -38,5 +38,31 @@ namespace AirCode.Services.Courses
 // Bulk Operations
                 Task<bool> ClearAllStudentCourseReferencesAsync();
                 Task<bool> PromoteAllStudentsToNextLevelAsync();
+                
+                // Add these methods to ICourseService interface
+
+                #region Distributed Storage Operations
+
+                /// <summary>
+                /// Add student course data with automatic document distribution
+                /// </summary>
+                Task<string> AddStudentCourseDistributedAsync(string matricNumber, object courseData, string level);
+
+                /// <summary>
+                /// Get all student courses for a level (across all distributed documents)
+                /// </summary>
+                Task<Dictionary<string, T>> GetAllStudentCoursesDistributedAsync<T>(string level) where T : class;
+
+                /// <summary>
+                /// Get specific student course data (searches across distributed documents)
+                /// </summary>
+                Task<T> GetStudentCourseDistributedAsync<T>(string matricNumber, string level) where T : class;
+
+                /// <summary>
+                /// Update student course data (finds correct distributed document automatically)
+                /// </summary>
+                Task<bool> UpdateStudentCourseDistributedAsync<T>(string matricNumber, string level, T courseData) where T : class;
+
+                #endregion
         }
 }
