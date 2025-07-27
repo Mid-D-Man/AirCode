@@ -977,26 +977,4 @@ public class OperationResult
     }
     #endregion
 
-    #region Inner Classes
-    private class Collections
-    {
-        public List<StudentSkeletonUser> Students { get; } = new();
-        public List<LecturerSkeletonUser> Lecturers { get; } = new();
-        public List<CourseRepSkeletonUser> CourseReps { get; } = new();
-    }
-    
-    private class PaginationState
-    {
-        public int StudentsCurrentPage { get; set; } = 1;
-        public int LecturersCurrentPage { get; set; } = 1;
-        public int CourseRepsCurrentPage { get; set; } = 1;
-        
-        public void ResetAllPages()
-        {
-            StudentsCurrentPage = 1;
-            LecturersCurrentPage = 1;
-            CourseRepsCurrentPage = 1;
-        }
-    }
-    #endregion
 }

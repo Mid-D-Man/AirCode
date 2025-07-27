@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using AirCode.Models.Search;
 
 namespace AirCode.Services.Search;
 
@@ -36,30 +37,6 @@ public interface ISearchContextService
     void RegisterContextProvider(string context, ISearchContextProvider provider);
 }
 
-/// <summary>
-/// Represents a search suggestion
-/// </summary>
-public class SearchSuggestion
-{
-    public string Text { get; set; }
-    public string Context { get; set; }
-    public string Url { get; set; }
-    public string IconPath { get; set; }
-    public int Priority { get; set; } = 0;
-}
-
-/// <summary>
-/// Represents a search result
-/// </summary>
-public class SearchResult
-{
-    public string Title { get; set; }
-    public string Description { get; set; }
-    public string Url { get; set; }
-    public string Context { get; set; }
-    public string IconPath { get; set; }
-    public double Relevance { get; set; }
-}
 
 /// <summary>
 /// Provides context-specific search functionality

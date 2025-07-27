@@ -1,4 +1,5 @@
 
+using AirCode.Models.Search;
 using AirCode.Services.Auth;
 using Microsoft.AspNetCore.Components;
 namespace AirCode.Services.Search;

@@ -1,3 +1,5 @@
+using AirCode.Domain.Entities;
+
 namespace AirCode.Services.Auth;
 
 /// <summary>
@@ -93,20 +95,4 @@ public interface IOfflineCredentialsService
     /// Gets comprehensive credential status for debugging
     /// </summary>
     Task<object> GetCredentialStatusAsync();
-}
-
-/// <summary>
-/// Enhanced user credentials model with role-specific data
-/// </summary>
-public class OfflineUserCredentials
-{
-    public string UserId { get; set; }
-    public string Role { get; set; }
-    public DateTime IssuedAt { get; set; }
-    public DateTime ExpiresAt { get; set; }
-    public string DeviceGuid { get; set; }
-    
-    // Role-specific properties
-    public string LecturerId { get; set; } // For LecturerAdmin role
-    public string MatricNumber { get; set; } // For Student/CourseRepAdmin roles
 }

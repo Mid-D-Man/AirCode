@@ -18,7 +18,7 @@ namespace AirCode.Domain.ValueObjects
         public string ErrorMessage { get; init; } = string.Empty;
     }
 
-    public struct ConnectivityStatus
+    public  class ConnectivityStatus
     {
         public ConnectivityStatus()
         {
@@ -49,4 +49,6 @@ namespace AirCode.Domain.ValueObjects
         public override string ToString() => 
             MID_HelperFunctions.GetStructOrClassMemberValues(this);
     }
+    
+    
 }

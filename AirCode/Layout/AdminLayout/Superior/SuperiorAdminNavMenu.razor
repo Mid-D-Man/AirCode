@@ -2,6 +2,7 @@
 @using AirCode.Components.Admin.Shared
 @using AirCode.Utilities.DataStructures
 @using Aircode.Components.Admin.Shared
+@using AirCode.Models.UI
 @using Microsoft.AspNetCore.Components.Authorization
 @using AirCode.Services.Auth
 @inject IJSRuntime JSRuntime
@@ -139,24 +140,5 @@
         objRef?.Dispose();
     }
 
-    private class NavItemExtended
-    {
-        public string IconName { get; set; }
-        public string Label { get; set; }
-        public string? Path { get; set; }
-        public bool RequiresOnline { get; set; }
-        public string[] AllowedRoles { get; set; }
-        public Action? Action { get; set; }
-        public bool IsAvailable => true; // Can be extended for more complex logic
-
-        public NavItemExtended(string iconName, string label, string? path, bool requiresOnline, string[] allowedRoles, Action? action = null)
-        {
-            IconName = iconName;
-            Label = label;
-            Path = path;
-            RequiresOnline = requiresOnline;
-            AllowedRoles = allowedRoles;
-            Action = action;
-        }
-    }
+    
 }

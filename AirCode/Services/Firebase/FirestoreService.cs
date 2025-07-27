@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using AirCode.Models.Firebase;
 using Microsoft.JSInterop;
 using AirCode.Utilities.HelperScripts;
 using Newtonsoft.Json;
@@ -812,14 +813,5 @@ namespace AirCode.Services.Firebase
         
         #endregion
         
-        
-        // ==================== DATA MODELS ====================
-    
-        private class DocumentSizeInfo
-        {
-            public int EstimatedSize { get; set; }
-            public int FieldCount { get; set; }
-            public bool Exists { get; set; }
-        }
     }
 }

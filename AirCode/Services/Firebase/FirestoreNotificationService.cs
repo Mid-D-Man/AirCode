@@ -1,5 +1,6 @@
 using Microsoft.JSInterop;
 using System.Text.Json;
+using AirCode.Models.Firebase;
 
 namespace AirCode.Services.Firebase;
 
@@ -304,74 +305,3 @@ namespace AirCode.Services.Firebase;
         }
     }
 
-    // Data models
-    public record FirestoreListener(
-        string Id,
-        string Type,
-        string Collection,
-        string? DocumentId,
-        string? WhereField,
-        object? WhereValue,
-        DateTime CreatedAt
-    );
-
-    public record DocumentChangeData(
-        string ListenerId,
-        string Collection,
-        string DocumentId,
-        bool Exists,
-        JsonElement? Data,
-        DateTime Timestamp
-    );
-
-    public record CollectionChangeData(
-        string ListenerId,
-        string Collection,
-        List<DocumentChange> Changes,
-        int Size,
-        DateTime Timestamp
-    );
-
-    public record DocumentChange(
-        string Type,
-        JsonElement Document,
-        int OldIndex,
-        int NewIndex
-    );
-
-    public record ListenerErrorData(
-        string ListenerId,
-        string Error,
-        DateTime Timestamp
-    );
-
-    // Event argument classes
-    public class DocumentChangedEventArgs : EventArgs
-    {
-        public DocumentChangeData Data { get; }
-        public DocumentChangedEventArgs(DocumentChangeData data) => Data = data;
-    }
-
-    public class CollectionChangedEventArgs : EventArgs
-    {
-        public CollectionChangeData Data { get; }
-        public CollectionChangedEventArgs(CollectionChangeData data) => Data = data;
-    }
-
-    public class AttendanceSessionChangedEventArgs : EventArgs
-    {
-        public DocumentChangeData Data { get; }
-        public AttendanceSessionChangedEventArgs(DocumentChangeData data) => Data = data;
-    }
-
-    public class ActiveSessionsChangedEventArgs : EventArgs
-    {
-        public CollectionChangeData Data { get; }
-        public ActiveSessionsChangedEventArgs(CollectionChangeData data) => Data = data;
-    }
-
-    public class ListenerErrorEventArgs : EventArgs
-    {
-        public ListenerErrorData Data { get; }
-        public ListenerErrorEventArgs(ListenerErrorData data) => Data = data;
-    }

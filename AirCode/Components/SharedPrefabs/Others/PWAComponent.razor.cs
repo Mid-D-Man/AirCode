@@ -1,3 +1,4 @@
+using AirCode.Models.PWA;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 
@@ -250,19 +251,4 @@ public partial class PWAComponent : ComponentBase, IAsyncDisposable
         _dotNetRef?.Dispose();
     }
 
-    public class PWAStatus
-    {
-        public bool IsInstallable { get; set; }
-        public bool IsInstalled { get; set; }
-        public bool HasServiceWorker { get; set; }
-        public bool UpdateAvailable { get; set; }
-        public bool IsOnline { get; set; } = true;
-        public bool IsChromiumBased { get; set; }
-    }
-
-    public class OfflineRoute
-    {
-        public string Url { get; set; } = string.Empty;
-        public string DisplayName { get; set; } = string.Empty;
-    }
 }

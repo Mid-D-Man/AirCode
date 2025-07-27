@@ -7,12 +7,13 @@ using AirCode.Services.Storage;
 using AirCode.Services.Firebase;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
+using AirCode.Domain.Entities;
 
 namespace AirCode.Services.Attendance
 {
     public class SessionStateService
     {
-        private readonly List<ActiveSessionData> _activeSessions = new();
+        private readonly List<SessionData> _activeSessions = new();
         private readonly Dictionary<string, SessionData> _currentSessions = new();
         private readonly IBlazorAppLocalStorageService _localStorage;
         private readonly IFirestoreService _firestoreService;
@@ -42,7 +43,7 @@ namespace AirCode.Services.Attendance
             await RecoverOrphanedSessions();
         }
 //Retrives current stored sesssion
-public async Task<List<PersistentSessionData>> GetStoredSessionsAsync()
+public async Task<List<SessionData>> GetStoredSessionsAsync()
 {
     var persistedSessions = await GetPersistedSessionsAsync();
     return persistedSessions.Values.ToList();
@@ -52,7 +53,7 @@ public async Task RemoveStoredSessionAsync(string sessionId)
 {
     await RemovePersistedSessionAsync(sessionId);
 }
-        public List<ActiveSessionData> GetActiveSessions() => _activeSessions.ToList();
+        public List<SessionData> GetActiveSessions() => _activeSessions.ToList();
 
         public SessionData GetCurrentSession(string courseId)
         {
@@ -60,7 +61,7 @@ public async Task RemoveStoredSessionAsync(string sessionId)
             return session;
         }
 
-        public async Task AddActiveSessionAsync(ActiveSessionData session)
+        public async Task AddActiveSessionAsync(SessionData session)
         {
             _activeSessions.Add(session);
             await PersistSessionAsync(session);
@@ -78,7 +79,7 @@ public async Task RemoveStoredSessionAsync(string sessionId)
             }
         }
 
-        public async Task UpdateActiveSessionAsync(ActiveSessionData updatedSession)
+        public async Task UpdateActiveSessionAsync(SessionData updatedSession)
         {
             var existingSession = _activeSessions.FirstOrDefault(s => s.SessionId == updatedSession.SessionId);
             if (existingSession != null)
@@ -134,14 +135,14 @@ public async Task RemoveStoredSessionAsync(string sessionId)
         /// <summary>
         /// Persist active session data to local storage
         /// </summary>
-        private async Task PersistSessionAsync(ActiveSessionData session)
+        private async Task PersistSessionAsync(SessionData session)
         {
             try
             {
-                var persistentData = new PersistentSessionData
+                var persistentData = new SessionData
                 {
                     SessionId = session.SessionId,
-                    CourseId = session.CourseCode,
+                    CourseCode = session.CourseCode,
                     CourseName = session.CourseName,
                     StartTime = session.StartTime,
                     EndTime = session.EndTime,
@@ -187,17 +188,17 @@ public async Task RemoveStoredSessionAsync(string sessionId)
         /// <summary>
         /// Get all persisted sessions from local storage
         /// </summary>
-        private async Task<Dictionary<string, PersistentSessionData>> GetPersistedSessionsAsync()
+        private async Task<Dictionary<string, SessionData>> GetPersistedSessionsAsync()
         {
             try
             {
-                var sessions = await _localStorage.GetItemAsync<Dictionary<string, PersistentSessionData>>(PERSISTENT_SESSIONS_KEY);
-                return sessions ?? new Dictionary<string, PersistentSessionData>();
+                var sessions = await _localStorage.GetItemAsync<Dictionary<string, SessionData>>(PERSISTENT_SESSIONS_KEY);
+                return sessions ?? new Dictionary<string, SessionData>();
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to get persisted sessions");
-                return new Dictionary<string, PersistentSessionData>();
+                return new Dictionary<string, SessionData>();
             }
         }
 
@@ -228,10 +229,10 @@ public async Task RemoveStoredSessionAsync(string sessionId)
                 foreach (var kvp in persistedSessions)
                 {
                     var persistentData = kvp.Value;
-                    var activeSession = new ActiveSessionData
+                    var activeSession = new SessionData
                     {
                         SessionId = persistentData.SessionId,
-                        CourseCode = persistentData.CourseId,
+                        CourseCode = persistentData.CourseCode,
                         CourseName = persistentData.CourseName,
                         StartTime = persistentData.StartTime,
                         EndTime = persistentData.EndTime,
@@ -313,7 +314,7 @@ public async Task RemoveStoredSessionAsync(string sessionId)
         /// <summary>
         /// Mark Firebase session as expired/ended
         /// </summary>
-        private async Task MarkFirebaseSessionExpired(ActiveSessionData session)
+        private async Task MarkFirebaseSessionExpired(SessionData session)
         {
             try
             {
@@ -340,35 +341,6 @@ public async Task RemoveStoredSessionAsync(string sessionId)
             }
         }
 
-        /// <summary>
-        /// Mark Firebase session as expired using persistent data
-        /// </summary>
-        private async Task MarkFirebaseSessionExpired(PersistentSessionData session)
-        {
-            try
-            {
-                var documentId = $"AttendanceEvent_{session.CourseId}";
-                var eventFieldName = $"Event_{session.SessionId}_{session.StartTime:yyyyMMdd}";
-                
-                await _firestoreService.AddOrUpdateFieldAsync(
-                    "ATTENDANCE_EVENTS", 
-                    documentId, 
-                    $"{eventFieldName}.Status", 
-                    "Expired"
-                );
-                
-                await _firestoreService.AddOrUpdateFieldAsync(
-                    "ATTENDANCE_EVENTS", 
-                    documentId, 
-                    $"{eventFieldName}.ActualEndTime", 
-                    DateTime.UtcNow
-                );
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to mark Firebase session as expired: {SessionId}", session.SessionId);
-            }
-        }
 
         /// <summary>
         /// Clear all persisted data (use when sessions are properly ended)
@@ -387,13 +359,13 @@ public async Task RemoveStoredSessionAsync(string sessionId)
         }
 
         // Legacy methods for backward compatibility
-        public void AddActiveSession(ActiveSessionData session) => 
+        public void AddActiveSession(SessionData session) => 
             AddActiveSessionAsync(session).ConfigureAwait(false);
         
         public void RemoveActiveSession(string sessionId) => 
             RemoveActiveSessionAsync(sessionId).ConfigureAwait(false);
         
-        public void UpdateActiveSession(ActiveSessionData updatedSession) => 
+        public void UpdateActiveSession(SessionData updatedSession) => 
             UpdateActiveSessionAsync(updatedSession).ConfigureAwait(false);
         
         public void UpdateCurrentSession(string courseId, SessionData session) => 
@@ -406,50 +378,7 @@ public async Task RemoveStoredSessionAsync(string sessionId)
             CleanupExpiredSessionsAsync().ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// Simplified session data for persistence
-    /// </summary>
-    public class PersistentSessionData
-    {
-        public string SessionId { get; set; }
-        public string CourseId { get; set; }
-        public string CourseName { get; set; }
-        public DateTime StartTime { get; set; }
-        public DateTime EndTime { get; set; }
-        public int Duration { get; set; }
-        public DateTime CreatedAt { get; set; }
-        public string QrCodePayload { get; set; }
-        public string Theme { get; set; }
-        public bool UseTemporalKeyRefresh { get; set; }
-        public AdvancedSecurityFeatures SecurityFeatures { get; set; }
-        public string TemporalKey { get; set; }
-    }
+    
 
-    // Existing classes remain unchanged
-    public class ActiveSessionData
-    {
-        public string SessionId { get; set; }
-        public string CourseName { get; set; }
-        public string CourseCode { get; set; }
-        public DateTime StartTime { get; set; }
-        public DateTime EndTime { get; set; }
-        public int Duration { get; set; }
-        public string QrCodePayload { get; set; }
-        public string Theme { get; set; }
-        public bool UseTemporalKeyRefresh { get; set; }
-        public bool OfflineSyncEnabled { get; set; } = true;
-        public AdvancedSecurityFeatures SecurityFeatures { get; set; } = AdvancedSecurityFeatures.Default;
-        public string TemporalKey { get; set; } = string.Empty;
-    }
-
-    public class SessionData
-    {
-        public string SessionId { get; set; } = Guid.NewGuid().ToString("N");
-        public string CourseName { get; set; }
-        public string CourseCode { get; set; }
-        public DateTime StartTime { get; set; }
-        public DateTime Date { get; set; }
-        public int Duration { get; set; }
-        public string LectureId { get; set; }
-    }
+    
 }

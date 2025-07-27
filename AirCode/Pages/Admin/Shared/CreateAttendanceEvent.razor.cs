@@ -1,4 +1,5 @@
 using System.Text.Json;
+using AirCode.Domain.Enums;
 using AirCode.Models.Supabase;
 using AirCode.Services.SupaBase;
 using AirCode.Utilities.DataStructures;
@@ -15,7 +16,6 @@ using AirCode.Services.Attendance;
 using AirCode.Services.Courses;
 using AirCode.Services.Firebase;
 using AirCode.Domain.Entities;
-using SessionData = AirCode.Services.Attendance.SessionData;
 using AirCode.Components.SharedPrefabs.Others;
 using AirCode.Services.Auth;
 using AirCode.Components.Admin.Shared;
@@ -44,9 +44,9 @@ using AirCode.Components.Admin.Shared;
         private DateTime sessionEndTime;
         private System.Threading.Timer countdownTimer;
         private QRCodeData generatedQRCode;
-        private List<ActiveSessionData> allActiveSessions = new();
-        private List<ActiveSessionData> otherActiveSessions = new();
-        private ActiveSessionData currentActiveSession;
+        private List<SessionData> allActiveSessions = new();
+        private List<SessionData> otherActiveSessions = new();
+        private SessionData currentActiveSession;
 
         // Course selection
         private Course selectedCourse;
@@ -54,7 +54,7 @@ using AirCode.Components.Admin.Shared;
 
         // Floating QR code properties
         private bool showFloatingQR = false;
-        private FloatingQrCodeWindow.FloatingSessionData floatingSessionData;
+        private SessionData floatingSessionData;
         private bool useTemporalKeyRefresh = false;
         private bool allowOfflineSync = true;
         private AdvancedSecurityFeatures securityFeatures = AdvancedSecurityFeatures.Default;
@@ -78,7 +78,8 @@ public bool isCurrentUserCourseRep = false;
 public string currentUserMatricNumber = String.Empty;
 
 private bool showManualAttendancePopup = false;
-private SessionData? manualAttendanceSessionData;
+private PartialSessionData? manualAttendanceSessionData;
+
 
 
 protected override async Task OnInitializedAsync()
@@ -140,7 +141,7 @@ private async Task CheckForStoredSessionsAsync()
             .Select(ps => new SessionData
             {
                 SessionId = ps.SessionId,
-                CourseCode = ps.CourseId,
+                CourseCode = ps.CourseCode,
                 CourseName = ps.CourseName,
                 StartTime = ps.StartTime,
                 Duration = ps.Duration,
@@ -326,7 +327,7 @@ private async Task DeleteStoredSessionAsync(SessionData session)
     }
 }
 
-private async Task RestoreExistingSessionAsync(ActiveSessionData activeSession, SessionData sessionData)
+private async Task RestoreExistingSessionAsync(SessionData activeSession, SessionData sessionData)
 {
     sessionModel = sessionData;
     currentActiveSession = activeSession;
@@ -516,7 +517,7 @@ private async Task StartSessionAsync()
         StateHasChanged();
 
         sessionModel.StartTime = DateTime.UtcNow;
-        sessionModel.Date = DateTime.UtcNow.Date;
+        sessionModel.CreatedAt = DateTime.UtcNow.Date;
         sessionModel.SessionId = Guid.NewGuid().ToString("N");
         
         sessionEndTime = DateTime.UtcNow.AddMinutes(sessionModel.Duration);
@@ -560,7 +561,7 @@ private async Task StartSessionAsync()
         await CreateFirebaseAttendanceEvent();
 
         // Create active session data
-        currentActiveSession = new ActiveSessionData
+        currentActiveSession = new SessionData
         {
             SessionId = sessionModel.SessionId,
             CourseName = sessionModel.CourseName,
@@ -787,13 +788,13 @@ private bool IsWarningMessage(string message)
             }
         }
 
-        private void OpenFloatingQRForSession(ActiveSessionData session)
+        private void OpenFloatingQRForSession(SessionData session)
 {
-    floatingSessionData = new FloatingQrCodeWindow.FloatingSessionData
+    floatingSessionData = new SessionData
     {
         SessionId = session.SessionId,
         CourseName = session.CourseName,
-        CourseId = session.CourseCode,
+        CourseCode = session.CourseCode,
         StartTime = session.StartTime,
         EndTime = session.EndTime,
         Duration = session.Duration,
@@ -913,7 +914,7 @@ private void OpenManualAttendancePopup()
 {
     if (currentActiveSession != null && selectedCourse != null)
     {
-        manualAttendanceSessionData = new SessionData
+        manualAttendanceSessionData = new PartialSessionData
         {
             SessionId = currentActiveSession.SessionId,
             CourseCode = selectedCourse.CourseCode,

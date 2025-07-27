@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using AirCode.Models.EdgeFunction;
 using AirCode.Models.Supabase;
 using AirCode.Models.QRCode;
 using AirCode.Utilities.HelperScripts;
@@ -320,69 +321,4 @@ public async Task<AttendanceProcessingResult> ProcessAttendanceWithPayloadAsync(
         }
     }
     
-    // Response model for server time
-    public class ServerTimeResponse
-    {
-        public object Time { get; set; }
-    }
-    // Response Models remain the same
-    public class AttendanceProcessingResult
-    {
-        public bool Success { get; set; }
-        public string Message { get; set; } = string.Empty;
-        public string ErrorCode { get; set; } = string.Empty; // Add this property
-        public string ErrorDetails { get; set; } = string.Empty;
-        public QRCodePayloadData SessionData { get; set; }
-        public AttendanceRecord ProcessedAttendance { get; set; }
-
-        public override string ToString()
-        {
-            return JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
-        }
-    }
-
-    public class QRValidationResult
-    {
-        public bool IsValid { get; set; }
-        public string Message { get; set; } = string.Empty;
-        public QRCodePayloadData SessionData { get; set; }
-        public DateTime? ExpirationTime { get; set; }
-        public bool IsExpired { get; set; }
-        
-        public override string ToString()
-        {
-            return JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
-        }
-    }
-
-
-// Add response models to match Edge function structure
-    public class EdgeFunctionResponse
-    {
-        public bool Success { get; set; }
-        public string Message { get; set; } = string.Empty;
-        public string ErrorCode { get; set; } = string.Empty;
-        public DateTime Timestamp { get; set; }
-        public EdgeSessionData SessionData { get; set; }
-        public EdgeProcessedAttendance ProcessedAttendance { get; set; }
-    }
-
-    public class EdgeSessionData
-    {
-        public string SessionId { get; set; } = string.Empty;
-        public string CourseCode { get; set; } = string.Empty;
-        public DateTime StartTime { get; set; }
-        public DateTime EndTime { get; set; }
-    }
-
-    public class EdgeProcessedAttendance
-    {
-        public string MatricNumber { get; set; } = string.Empty;
-        public DateTime ScannedAt { get; set; }
-        public bool IsOnlineScan { get; set; }
-    }
-    public class CatResponse
-    {
-        public string ImageUrl { get; set; } = string.Empty;
-    }
 }

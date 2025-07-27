@@ -1,6 +1,8 @@
 using System.IO.Compression;
 using System.Text;
 using System.Text.Json;
+using AirCode.Domain.Enums;
+using AirCode.Models.EdgeFunction;
 using AirCode.Services.Cryptography;
 using AirCode.Models.QRCode;
 using AirCode.Models.Supabase;

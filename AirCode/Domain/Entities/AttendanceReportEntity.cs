@@ -15,10 +15,10 @@ namespace AirCode.Domain.Entities
         public LevelType CourseLevel { get; init; }
         public DateTime GeneratedAt { get; init; }
         public int TotalSessions { get; init; }
-        public int TotalStudentsEnrolled { get; init; }
-        public double AverageAttendancePercentage { get; init; }
-        public int StudentsWithPerfectAttendance { get; init; }
-        public int StudentsWithPoorAttendance { get; init; }
+        public int TotalStudentsEnrolled { get; set; }
+        public double AverageAttendancePercentage { get; set; }
+        public int StudentsWithPerfectAttendance { get; set; }
+        public int StudentsWithPoorAttendance { get; set; }
         public List<StudentAttendanceReport> StudentReports { get; init; } = new();
         
         // Security attributes
@@ -32,12 +32,12 @@ namespace AirCode.Domain.Entities
 
     public record StudentAttendanceReport
     {
-        public string MatricNumber { get; init; } = string.Empty;
-        public LevelType StudentLevel { get; init; }
-        public int TotalPresent { get; init; }
-        public int TotalAbsent { get; init; }
-        public double AttendancePercentage { get; init; }
-        public List<SessionAttendanceRecord> SessionAttendance { get; init; } = new();
+        public string MatricNumber { get; set; } = string.Empty;
+        public LevelType StudentLevel { get; set; }
+        public int TotalPresent { get; set; }
+        public int TotalAbsent { get; set; }
+        public double AttendancePercentage { get; set; }
+        public List<SessionAttendanceRecord> SessionAttendance { get; set; } = new();
 
         public override string ToString() => 
             MID_HelperFunctions.GetStructOrClassMemberValues(this);

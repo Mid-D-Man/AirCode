@@ -5,6 +5,7 @@ using AirCode.Services.Storage;
 using AirCode.Services.SupaBase;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
+using AirCode.Models.EdgeFunction;
 using AttendanceRecord = AirCode.Models.Supabase.AttendanceRecord;
 
 
@@ -204,7 +205,7 @@ namespace AirCode.Services.Attendance
         /// <summary>
         /// Admin method to create offline session records in Supabase when online
         /// </summary>
-        public async Task<bool> CreateOfflineSessionRecordAsync(ActiveSessionData sessionData)
+        public async Task<bool> CreateOfflineSessionRecordAsync(SessionData sessionData)
         {
             try
             {

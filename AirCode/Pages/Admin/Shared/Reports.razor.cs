@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Components;
 using System.Text.Json;
 using AirCode.Domain.Entities;
 using AirCode.Domain.Enums;
+using AirCode.Models.Firebase;
 using AirCode.Services.Courses;
 using AirCode.Services.Attendance;
 using Course = AirCode.Domain.Entities.Course;
@@ -349,57 +350,4 @@ namespace AirCode.Pages.Admin.Shared
         }
     }
 
-    // Firebase Data Models for Report Generation
-    public class FirebaseAttendanceEvent
-    {
-        public string SessionId { get; set; } = string.Empty;
-        public DateTime StartTime { get; set; }
-        public int Duration { get; set; }
-        public string Theme { get; set; } = string.Empty;
-        public Dictionary<string, FirebaseAttendanceRecord> AttendanceRecords { get; set; } = new();
-    }
-
-    public class FirebaseAttendanceRecord
-    {
-        public string MatricNumber { get; set; } = string.Empty;
-        public bool HasScannedAttendance { get; set; }
-        public DateTime? ScanTime { get; set; }
-        public bool IsOnlineScan { get; set; }
-        public string? DeviceGUID { get; set; }
-    }
-
-    // Existing Report Data Models
-    public class AttendanceReport
-    {
-        public string CourseCode { get; set; } = string.Empty;
-        public LevelType CourseLevel { get; set; }
-        public DateTime GeneratedAt { get; set; }
-        public int TotalSessions { get; set; }
-        public int TotalStudentsEnrolled { get; set; }
-        public double AverageAttendancePercentage { get; set; }
-        public int StudentsWithPerfectAttendance { get; set; }
-        public int StudentsWithPoorAttendance { get; set; }
-        public List<StudentAttendanceReport> StudentReports { get; set; } = new();
-    }
-
-    public class StudentAttendanceReport
-    {
-        public string MatricNumber { get; set; } = string.Empty;
-        public LevelType StudentLevel { get; set; }
-        public int TotalPresent { get; set; }
-        public int TotalAbsent { get; set; }
-        public double AttendancePercentage { get; set; }
-        public List<SessionAttendanceRecord> SessionAttendance { get; set; } = new();
-    }
-
-    public class SessionAttendanceRecord
-    {
-        public string SessionId { get; set; } = string.Empty;
-        public DateTime SessionDate { get; set; }
-        public int Duration { get; set; }
-        public bool IsPresent { get; set; }
-        public DateTime? ScanTime { get; set; }
-        public bool IsOnlineScan { get; set; }
-        public string? DeviceGUID { get; set; }
-    }
 }

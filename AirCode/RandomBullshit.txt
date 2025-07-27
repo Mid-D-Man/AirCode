@@ -497,7 +497,7 @@ private enum LoadingOperation
     /// <summary>
     /// Simplified session data for persistence
     /// </summary>
-    public class PersistentSessionData
+    public class SessionData
     {
         public string SessionId { get; set; }
         public string CourseId { get; set; }
@@ -514,7 +514,7 @@ private enum LoadingOperation
     }
 
     // Existing classes remain unchanged
-    public class ActiveSessionData
+    public class SessionData
     {
         public string SessionId { get; set; }
         public string CourseName { get; set; }

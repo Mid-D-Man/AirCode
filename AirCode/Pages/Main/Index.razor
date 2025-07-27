@@ -8,6 +8,8 @@
 @using AirCode.Utilities.HelperScripts
 @using Microsoft.AspNetCore.Components.Authorization
 @using AirCode.Components.SharedPrefabs.Spinner
+@using AirCode.Domain.Enums
+@using AirCode.Domain.ValueObjects
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
 @inject IOfflineCredentialsService OfflineCredentialService
@@ -18,7 +20,7 @@
 @implements IDisposable
 
 <BlobBackground />
-<NotificationComponent @ref="notificationComponent" Position="NotificationComponent.NotificationPosition.TopRight" />
+<NotificationComponent @ref="notificationComponent" Position="NotificationPosition.TopRight" />
 
 <div class="main-container">
     <AuthorizeView>

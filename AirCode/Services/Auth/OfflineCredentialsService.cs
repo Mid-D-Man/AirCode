@@ -3,6 +3,7 @@ using Microsoft.JSInterop;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.Logging;
 using System.Security.Claims;
+using AirCode.Domain.Entities;
 
 namespace AirCode.Services.Auth;
 

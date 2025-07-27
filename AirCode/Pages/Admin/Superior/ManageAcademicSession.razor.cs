@@ -8,6 +8,7 @@ using Microsoft.JSInterop;
 using Newtonsoft.Json;
 using System.ComponentModel;
 using AirCode.Components.SharedPrefabs.Cards;
+using AirCode.Models.Forms;
 
 namespace AirCode.Pages.Admin.Superior
 {
@@ -791,25 +792,5 @@ namespace AirCode.Pages.Admin.Superior
         }
         #endregion
 
-        #region Form Models and Enums
-        public class SessionFormModel
-        {
-            public short YearStart { get; set; }
-            public short YearEnd { get; set; }
-        }
-        
-        public class SemesterFormModel
-        {
-            public SemesterType Type { get; set; }
-            public DateTime StartDate { get; set; }
-            public DateTime EndDate { get; set; }
-        }
-        
-        public enum ModalType
-        {
-            CreateSession,
-            CreateSemester
-        }
-        #endregion
     }
 }

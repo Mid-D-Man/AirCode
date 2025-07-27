@@ -1,3 +1,4 @@
+using AirCode.Models.EdgeFunction;
 using AirCode.Models.QRCode;
 using AirCode.Models.Supabase;
 

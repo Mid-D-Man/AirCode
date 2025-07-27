@@ -29,7 +29,6 @@
 
     <ItemGroup>
       <Folder Include="Layout\" />
-      <Folder Include="Models\Firebase\" />
       <Folder Include="Models\QRCode\" />
     </ItemGroup>
 

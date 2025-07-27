@@ -4,6 +4,7 @@
 @layout SuperiorAdminLayout
 @using Microsoft.AspNetCore.Authorization
 @using AirCode.Layout.AdminLayout.Superior
+@using AirCode.Models.Admin
 @inject IJSRuntime JSRuntime
 
 <PageTitle>Superior Admin Dashboard</PageTitle>
@@ -314,28 +315,4 @@
     private async Task GenerateReports() => await JSRuntime.InvokeVoidAsync("location.assign", "/Admin/Reports");
     private async Task ViewAllActivities() => await JSRuntime.InvokeVoidAsync("location.assign", "/Admin/Activities");
 
-    // Data models
-    private class AcademicSessionSummary
-    {
-        public string Name { get; set; } = "";
-        public string Status { get; set; } = "";
-        public bool IsActive { get; set; }
-        public int StudentCount { get; set; }
-    }
-
-    private class SystemAlert
-    {
-        public string Title { get; set; } = "";
-        public string Severity { get; set; } = "";
-        public DateTime Timestamp { get; set; }
-    }
-
-    private class AdminActivity
-    {
-        public string Title { get; set; } = "";
-        public string Description { get; set; } = "";
-        public string Type { get; set; } = "";
-        public string User { get; set; } = "";
-        public DateTime Timestamp { get; set; }
-    }
 }

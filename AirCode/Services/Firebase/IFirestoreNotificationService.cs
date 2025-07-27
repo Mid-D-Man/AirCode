@@ -1,3 +1,5 @@
+using AirCode.Models.Firebase;
+
 namespace AirCode.Services.Firebase;
 
 public interface IFirestoreNotificationService

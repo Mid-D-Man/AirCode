@@ -1,5 +1,6 @@
 // Models/QRCodeModels.cs
 using System.Text.Json;
+using AirCode.Domain.Enums;
 using AttendanceRecord = AirCode.Models.Supabase.AttendanceRecord;
 namespace AirCode.Models.QRCode
 {
@@ -46,23 +47,5 @@ public class DecodedSessionData
     }
 }
 
-/// <summary>
-/// Advanced security features enumeration
-/// </summary>
-public enum AdvancedSecurityFeatures
-{
-    Default = 0,
-    DeviceGuidCheck = 1
-}
 
-    /// <summary>
-    /// Request payload for Supabase Edge Function
-    /// Contains unencrypted QR payload data and attendance record
-    /// </summary>
-    public class EdgeFunctionRequest
-    {
-        public QRCodePayloadData QrCodePayload { get; set; }
-        public AttendanceRecord AttendanceData { get; set; }
-        public string PayloadSignature { get; set; } = string.Empty; // HMAC signature for integrity
-    }
 }

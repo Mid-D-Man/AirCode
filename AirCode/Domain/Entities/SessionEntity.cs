@@ -76,4 +76,103 @@ namespace AirCode.Domain.Entities
         public DateTime LastLoginTime { get; set; }
         public DateTime UpdatedAt { get; set; }
     }
+     #region Result Models
+    public class SessionTransitionResult
+    {
+        public bool HasPendingTransitions { get; set; }
+        public List<SessionEndEvent> EndedSessions { get; set; } = new();
+        public List<SemesterEndEvent> EndedSemesters { get; set; } = new();
+        public List<SessionStartEvent> StartedSessions { get; set; } = new();
+        public List<SemesterStartEvent> StartedSemesters { get; set; } = new();
+        public List<string> Warnings { get; set; } = new();
+        public List<string> Errors { get; set; } = new();
+        public DateTime ProcessedAt { get; set; }
+        public string ProcessedBy { get; set; }
+    }
+
+    public class SessionOverlapResult
+    {
+        public bool HasOverlap { get; set; }
+        public AcademicSession OverlappingSession { get; set; }
+        public AcademicSession NewSession { get; set; }
+        public OverlapResolutionAction RecommendedAction { get; set; }
+        public string Resolution { get; set; }
+    }
+
+    public class SystemValidationResult
+    {
+        public bool IsValid { get; set; }
+        public List<string> Issues { get; set; } = new();
+        public List<string> Warnings { get; set; } = new();
+        public SystemHealthStatus HealthStatus { get; set; }
+    }
+
+    public class SessionHealthReport
+    {
+        public int TotalSessions { get; set; }
+        public int ActiveSessions { get; set; }
+        public int ArchivedSessions { get; set; }
+        public int PendingSessions { get; set; }
+        public List<SessionIssue> Issues { get; set; } = new();
+        public DateTime LastChecked { get; set; }
+        public SystemHealthStatus OverallHealth { get; set; }
+    }
+
+    public class SessionIssue
+    {
+        public string SessionId { get; set; }
+        public IssueType Type { get; set; }
+        public string Description { get; set; }
+        public IssueSeverity Severity { get; set; }
+        public DateTime DetectedAt { get; set; }
+    }
+    #endregion
+
+    #region Event Models
+    public class SessionEndEvent
+    {
+        public AcademicSession Session { get; set; }
+        public DateTime ActualEndDate { get; set; }
+        public DateTime ProcessedAt { get; set; }
+        public string ProcessedBy { get; set; }
+        public SessionEndReason Reason { get; set; }
+        public bool WasDelayed { get; set; }
+        public TimeSpan DelayDuration { get; set; }
+    }
+
+    public class SemesterEndEvent
+    {
+        public Semester Semester { get; set; }
+        public string SessionId { get; set; }
+        public DateTime ActualEndDate { get; set; }
+        public DateTime ProcessedAt { get; set; }
+        public string ProcessedBy { get; set; }
+        public SemesterEndReason Reason { get; set; }
+        public bool WasDelayed { get; set; }
+        public TimeSpan DelayDuration { get; set; }
+    }
+
+    public class SessionStartEvent
+    {
+        public AcademicSession Session { get; set; }
+        public DateTime ActualStartDate { get; set; }
+        public DateTime ProcessedAt { get; set; }
+        public string ProcessedBy { get; set; }
+        public SessionStartReason Reason { get; set; }
+        public bool WasDelayed { get; set; }
+        public TimeSpan DelayDuration { get; set; }
+    }
+
+    public class SemesterStartEvent
+    {
+        public Semester Semester { get; set; }
+        public string SessionId { get; set; }
+        public DateTime ActualStartDate { get; set; }
+        public DateTime ProcessedAt { get; set; }
+        public string ProcessedBy { get; set; }
+        public SemesterStartReason Reason { get; set; }
+        public bool WasDelayed { get; set; }
+        public TimeSpan DelayDuration { get; set; }
+    }
+    #endregion
 }

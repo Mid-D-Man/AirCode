@@ -1,3 +1,4 @@
+using AirCode.Models.Firebase;
 using AirCode.Utilities.HelperScripts;
 using AirCode.Services.Firebase;
 
@@ -313,13 +314,6 @@ public class DepartmentService : IDepartmentService
     }
 }
 
-// Helper class to match Firebase document structure
-public class DepartmentsContainer
-{
-    public List<Domain.Entities.Department> Departments { get; set; } = new();
-    public DateTime LastModified { get; set; }
-    public string ModifiedBy { get; set; } = string.Empty;
-}
 
 
 

@@ -43,4 +43,20 @@ namespace AirCode.Domain.Entities
         public bool CanViewAllAttendance() => Role == UserRole.SuperiorAdmin;
         public bool CanEditCourseInfo() => Role == UserRole.SuperiorAdmin || Role == UserRole.LecturerAdmin;
     }
+    
+    /// <summary>
+    /// Enhanced user credentials model with role-specific data
+    /// </summary>
+    public class OfflineUserCredentials
+    {
+        public string UserId { get; set; }
+        public string Role { get; set; }
+        public DateTime IssuedAt { get; set; }
+        public DateTime ExpiresAt { get; set; }
+        public string DeviceGuid { get; set; }
+    
+        // Role-specific properties
+        public string LecturerId { get; set; } // For LecturerAdmin role
+        public string MatricNumber { get; set; } // For Student/CourseRepAdmin roles
+    }
 }

@@ -1,6 +1,7 @@
 // ConnectivityService.cs
 using Microsoft.JSInterop;
 using System.Text.Json;
+using AirCode.Domain.ValueObjects;
 
 public class ConnectivityService : IAsyncDisposable
 {
@@ -164,26 +165,3 @@ public class ConnectivityService : IAsyncDisposable
     }
 }
 
-// Supporting classes
-public class ConnectivityStatus
-{
-    public bool IsOnline { get; set; }
-    public string NetworkQuality { get; set; } = "unknown";
-    public string ConnectionStability { get; set; } = "unknown";
-    public DateTime? LastOnlineTime { get; set; }
-}
-
-public class ConnectivityReport : ConnectivityStatus
-{
-    public bool HasConnection { get; set; }
-    public List<bool> ConnectionHistory { get; set; } = new();
-    public ConnectionInfo? ConnectionInfo { get; set; }
-}
-
-public class ConnectionInfo
-{
-    public string? EffectiveType { get; set; }
-    public double? Downlink { get; set; }
-    public int? Rtt { get; set; }
-    public bool SaveData { get; set; }
-}

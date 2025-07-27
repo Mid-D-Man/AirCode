@@ -1,6 +1,7 @@
 @using AirCode.Domain.Entities
 @using AirCode.Services.Courses
 @using AirCode.Components.SharedPrefabs.Cards
+@using AirCode.Domain.Enums
 @inject ICourseService CourseService
 
 <div class="course-management-container">
@@ -184,7 +185,7 @@
 </div>
 
 <!-- Notification Component -->
-<NotificationComponent @ref="NotificationRef" Position="NotificationComponent.NotificationPosition.TopRight" AutoDismissTime="4000" />
+<NotificationComponent @ref="NotificationRef" Position="NotificationPosition.TopRight" AutoDismissTime="4000" />
 
 @code {
     //course managment for lecturers

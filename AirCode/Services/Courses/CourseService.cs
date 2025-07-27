@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using AirCode.Domain.Entities;
 using AirCode.Domain.Enums;
 using AirCode.Domain.ValueObjects;
+using AirCode.Models.Firebase;
 using AirCode.Services.Firebase;
 using AirCode.Services.Storage;
 using AirCode.Utilities.HelperScripts;
@@ -1051,40 +1052,6 @@ private async Task<T> GetUserCoursesFromLocalStorageAsync<T>(string userId)
 #endregion
 
 
-
-public class StudentCourseFirestoreModel
-{
-    [JsonProperty("studentMatricNumber")]
-    public string StudentMatricNumber { get; set; }
-
-    [JsonProperty("studentCoursesRefs")]
-    public List<CourseRefrenceFirestoreModel> StudentCoursesRefs { get; set; }
-
-    [JsonProperty("lastModified")]
-    [JsonConverter(typeof(IsoDateTimeConverter))]
-    public DateTime LastModified { get; set; }
-
-    [JsonProperty("modifiedBy")]
-    public string ModifiedBy { get; set; }
-}
-
-public class CourseRefrenceFirestoreModel
-{
-    [JsonProperty("courseCode")]
-    public string CourseCode { get; set; }
-
-    [JsonProperty("courseEnrollmentStatus")]
-    [JsonConverter(typeof(StringEnumConverter))]
-    public CourseEnrollmentStatus CourseEnrollmentStatus { get; set; }
-
-    [JsonProperty("enrollmentDate")]
-    [JsonConverter(typeof(IsoDateTimeConverter))]
-    public DateTime EnrollmentDate { get; set; }
-
-    [JsonProperty("lastStatusChange")]
-    [JsonConverter(typeof(IsoDateTimeConverter))]
-    public DateTime LastStatusChange { get; set; }
-}
         
         #region Private Helper Methods
         
@@ -1185,53 +1152,5 @@ public class CourseRefrenceFirestoreModel
         }
     }
 
-    // Firestore model for serialization
-    public class CourseFirestoreModel
-    {
-        [JsonProperty("courseCode")]
-        public string CourseCode { get; set; }
-    
-        [JsonProperty("name")]
-        public string Name { get; set; }
-    
-        [JsonProperty("departmentId")]
-        public string DepartmentId { get; set; }
-    
-        [JsonProperty("semester")]
-        [JsonConverter(typeof(StringEnumConverter))]
-        public SemesterType Semester { get; set; }
-    
-        [JsonProperty("creditUnits")]
-        public byte CreditUnits { get; set; }
-    
-        [JsonProperty("schedule")]
-        public List<CourseScheduleFirestoreModel> Schedule { get; set; }
-    
-        [JsonProperty("lecturerIds")]
-        public List<string> LecturerIds { get; set; }
-    
-        [JsonProperty("lastModified")]
-        [JsonConverter(typeof(IsoDateTimeConverter))]
-        public DateTime LastModified { get; set; }
-    
-        [JsonProperty("modifiedBy")]
-        public string ModifiedBy { get; set; }
-    }
-
-    public class CourseScheduleFirestoreModel
-    {
-        [JsonProperty("day")]
-        [JsonConverter(typeof(StringEnumConverter))]
-        public DayOfWeek Day { get; set; }
-    
-        [JsonProperty("startTime")]
-        public string StartTime { get; set; }
-    
-        [JsonProperty("endTime")]
-        public string EndTime { get; set; }
-    
-        [JsonProperty("location")]
-        public string Location { get; set; }
-    }
    
 }

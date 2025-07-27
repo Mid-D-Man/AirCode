@@ -60,29 +60,4 @@ namespace AirCode.Domain.Entities
             MID_HelperFunctions.GetStructOrClassMemberValues(this);
     }
 
-    /// <summary>
-    /// Session data for active attendance sessions
-    /// </summary>
-    public record SessionData : ISecureEntity
-    {
-        public string SessionId { get; init; } = Guid.NewGuid().ToString("N");
-        public string CourseCode { get; init; } = string.Empty;
-        public string CourseName { get; init; } = string.Empty;
-        public DateTime StartTime { get; init; }
-        public DateTime EndTime { get; init; }
-        public int Duration { get; init; }
-        public string QrCodePayload { get; init; } = string.Empty;
-        public string Theme { get; init; } = string.Empty;
-        public bool UseTemporalKeyRefresh { get; init; }
-        public AdvancedSecurityFeatures SecurityFeatures { get; init; } = AdvancedSecurityFeatures.Default;
-        public string TemporalKey { get; init; } = string.Empty;
-        
-        // Security attributes
-        public string SecurityToken { get; init; }
-        public DateTime LastModified { get; init; }
-        public string ModifiedBy { get; init; }
-
-        public override string ToString() => 
-            MID_HelperFunctions.GetStructOrClassMemberValues(this);
-    }
 }

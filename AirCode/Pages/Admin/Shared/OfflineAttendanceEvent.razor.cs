@@ -8,10 +8,11 @@ using AirCode.Services.Cryptography;
 using AirCode.Services.Firebase;
 using AirCode.Components.SharedPrefabs.QrCode;
 using AirCode.Components.SharedPrefabs.Others;
+using AirCode.Domain.Enums;
+using AirCode.Models.Forms;
 using AirCode.Utilities.DataStructures;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
-using SessionData = AirCode.Services.Attendance.SessionData;
 using Course = AirCode.Domain.Entities.Course;
 
 namespace AirCode.Pages.Admin.Shared;
@@ -159,7 +160,7 @@ public partial class OfflineAttendanceEvent : ComponentBase, IDisposable
                 CourseName = selectedCourse.Name,
                 StartTime = DateTime.UtcNow,
                 Duration = sessionDuration,
-                Date = DateTime.UtcNow.Date
+                CreatedAt = DateTime.UtcNow.Date
             };
 
             sessionStartTime = DateTime.UtcNow;
@@ -632,12 +633,5 @@ public partial class OfflineAttendanceEvent : ComponentBase, IDisposable
         periodicSyncTimer?.Dispose();
     }
 
-    // Helper classes for configuration
-    private class OfflinePreferences
-    {
-        public int MaxStorageDays { get; set; } = 7;
-        public int SyncIntervalMinutes { get; set; } = 15;
-        public bool UseAdvancedEncryption { get; set; } = true;
-        public int SessionDuration { get; set; } = 60;
-    }
+    
 }

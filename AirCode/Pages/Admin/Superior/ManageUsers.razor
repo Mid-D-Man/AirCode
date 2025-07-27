@@ -1,12 +1,13 @@
 @page "/Admin/ManageUsers"
 @layout SuperiorAdminLayout
 @using AirCode.Components.SharedPrefabs.Cards
+@using AirCode.Domain.Enums
 @using AirCode.Layout.AdminLayout.Superior
 
 <div class="container">
     <!-- Notification component -->
     <NotificationComponent @ref="notificationComponent"
-                            Position="NotificationComponent.NotificationPosition.TopRight"
+                            Position="NotificationPosition.TopRight"
                             AutoDismissTime="5000"
                             ShowProgressBar="true"
                             ShowCloseButton="true"

@@ -1,3 +1,4 @@
+@using AirCode.Domain.Enums
 @using Blazored.Toast.Services
 @using Blazored.Toast.Configuration
 @inject IToastService ToastService
@@ -119,19 +120,4 @@
         ToastService.ClearAll();
     }
 
-    public enum NotificationType
-    {
-        Success,
-        Error,
-        Info,
-        Warning
-    }
-
-    public enum NotificationPosition
-    {
-        TopRight,
-        TopLeft,
-        BottomRight,
-        BottomLeft
-    }
 }

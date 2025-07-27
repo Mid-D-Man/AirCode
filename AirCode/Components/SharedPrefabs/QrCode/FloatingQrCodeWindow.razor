@@ -1,4 +1,5 @@
 @using AirCode.Components.SharedPrefabs.QrCode
+@using AirCode.Domain.Entities
 @using AirCode.Models.QRCode 
 @using AirCode.Utilities.DataStructures
 @using AirCode.Utilities.HelperScripts
@@ -36,7 +37,7 @@
                 </div>
                 <QRCodeCompo 
                     SessionId="@SessionData.SessionId"
-                    CourseCode="@SessionData.CourseId" 
+                    CourseCode="@SessionData.CourseCode" 
                     StartTime="@SessionData.StartTime"
                     Duration="@SessionData.Duration" 
                     Theme="@ConvertStringToTheme(SessionData.Theme)" 
@@ -49,7 +50,7 @@
 @code {
     //im having second thoughts about this
     [Parameter] public bool IsVisible { get; set; }
-    [Parameter] public FloatingSessionData SessionData { get; set; }
+    [Parameter] public SessionData SessionData { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
     
     private ElementReference windowElement;
@@ -316,20 +317,5 @@
         {
             await jsModule.DisposeAsync();
         }
-    }
-
-    public class FloatingSessionData
-    {
-        public string SessionId { get; set; }
-        public string CourseName { get; set; }
-        public string CourseId { get; set; }
-        public DateTime StartTime { get; set; }
-        public DateTime EndTime { get; set; }
-        public int Duration { get; set; }
-        public string QrCodePayload { get; set; }
-        public string Theme { get; set; }
-        public bool UseTemporalKeyRefresh { get; set; }
-        public AdvancedSecurityFeatures SecurityFeatures { get; set; } = AdvancedSecurityFeatures.Default;
-        public string TemporalKey { get; set; } = string.Empty;
     }
 }

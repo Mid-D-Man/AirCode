@@ -158,8 +158,6 @@ builder.Services.AddScoped<QRCodeDecoder>();
 builder.Services.AddSingleton<ConnectivityService>();
 // UI and visual component services
 builder.Services.AddScoped<ISvgIconService, SvgIconService>();
-builder.Services.AddPWAServices(builder.Configuration);
-
 // ============================================================================
 // External Service Integrations    
 // ============================================================================

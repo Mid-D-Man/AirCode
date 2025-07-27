@@ -5,6 +5,7 @@
 @using AirCode.Domain.Enums
 @using AirCode.Services.Courses
 @using AirCode.Components.Admin.Shared
+@using AirCode.Models.UI
 @layout SuperiorAdminLayout
 @attribute [Authorize(Policy = "StandardAdmin")]
 @inject ICourseService CourseService
@@ -285,21 +286,4 @@
         await JSRuntime.InvokeVoidAsync("window.location.href", url);
     }
 
-    private class ActivityItem
-    {
-        public string Type { get; set; } = "";
-        public string Title { get; set; } = "";
-        public string CourseCode { get; set; } = "";
-        public DateTime Time { get; set; }
-        public CourseEnrollmentStatus Status { get; set; }
-    }
-
-    private class ScheduleItem
-    {
-        public string CourseCode { get; set; } = "";
-        public string CourseName { get; set; } = "";
-        public TimeSpan StartTime { get; set; }
-        public TimeSpan EndTime { get; set; }
-        public string Location { get; set; } = "";
-    }
 }

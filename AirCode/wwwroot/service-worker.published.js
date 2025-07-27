@@ -13,7 +13,7 @@ const offlineAssetsExclude = [ /^service-worker\.js$/ ];
 
 // Cache for dynamic pages and routes
 const pagesCacheName = `aircode-pages-cache-${self.assetsManifest.version}`;
-const blazorRoutes = ['/', '/counter', '/fetchdata']; // Add your @page routes here
+const blazorRoutes = ['/', '/Admin/OfflineAttendanceEven', '/Client/OfflineScan']; //  @page routes go here for offline stuff
 
 self.addEventListener('install', event => {
     console.log('AirCode Service worker: Install');

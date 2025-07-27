@@ -10,7 +10,7 @@
 
 <!-- Added our notification component at the top -->
 <NotificationComponent @ref="notificationComponent"
-                        Position="NotificationComponent.NotificationPosition.TopRight"
+                        Position="NotificationPosition.TopRight"
                         AutoDismissTime="5000"
                         ShowProgressBar="true"
                         ShowCloseButton="true"
@@ -20,7 +20,7 @@
     <div class="page-header">
         <h2 class="text-secondary">Manage Academic Sessions</h2>
         <div class="actions">
-            <button class="btn-primary" @onclick="() => ShowModal(ManageAcademicSession.ModalType.CreateSession)">
+            <button class="btn-primary" @onclick="() => ShowModal(ModalType.CreateSession)">
                 <span class="icon">+</span> New Academic Session
             </button>
         </div>
@@ -77,7 +77,7 @@
                 }
                 @if (currentSession.Semesters.Count < 2)
                 {
-                    <div class="add-semester-card" @onclick="() => ShowModal(ManageAcademicSession.ModalType.CreateSemester)">
+                    <div class="add-semester-card" @onclick="() => ShowModal(ModalType.CreateSemester)">
                         <div class="add-icon">+</div>
                         <div>Add Semester</div>
                     </div>
@@ -141,7 +141,7 @@
                 }
                 @if (nextSession.Semesters.Count < 2)
                 {
-                    <div class="add-semester-card" @onclick="() => ShowModal(ManageAcademicSession.ModalType.CreateSemester, nextSession.SessionId)">
+                    <div class="add-semester-card" @onclick="() => ShowModal(ModalType.CreateSemester, nextSession.SessionId)">
                         <div class="add-icon">+</div>
                         <div>Add Semester</div>
                     </div>
@@ -152,7 +152,7 @@
     else if (currentSession != null)
     {
         <div class="create-next-session">
-            <button class="btn-primary" @onclick="() => ShowModal(ManageAcademicSession.ModalType.CreateSession)">
+            <button class="btn-primary" @onclick="() => ShowModal(ModalType.CreateSession)">
                 Create Next Academic Session
             </button>
             <p>Prepare for the upcoming academic year by creating the next session.</p>
@@ -168,7 +168,7 @@
                     <button class="close-btn" @onclick="CloseModal">×</button>
                 </div>
                 <div class="modal-body">
-                    @if (activeModal == ManageAcademicSession.ModalType.CreateSession)
+                    @if (activeModal == ModalType.CreateSession)
                     {
                         <div class="form-group">
                             <label for="yearStart">Start Year</label>
@@ -209,7 +209,7 @@
                             </div>
                         }
                     }
-                    else if (activeModal == ManageAcademicSession.ModalType.CreateSemester)
+                    else if (activeModal == ModalType.CreateSemester)
                     {
                         <div class="form-group">
                             <label for="semesterType">Semester Type</label>
@@ -246,7 +246,7 @@
                 <strong>Warning:</strong> No upcoming academic session has been configured. 
                 Please create a new session before the current one ends to ensure continuity.
             </div>
-            <button class="btn-primary" @onclick="() => ShowModal(ManageAcademicSession.ModalType.CreateSession)">
+            <button class="btn-primary" @onclick="() => ShowModal(ModalType.CreateSession)">
                 Create Session
             </button>
             <button class="close-warning" @onclick="DismissWarning">×</button>

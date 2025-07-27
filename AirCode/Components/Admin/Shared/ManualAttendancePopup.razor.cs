@@ -2,7 +2,8 @@ using Microsoft.AspNetCore.Components;
 using AirCode.Services.Attendance;
 using AirCode.Components.SharedPrefabs.Fields;
 using System.Text.RegularExpressions;
-using SessionData = AirCode.Services.Attendance.SessionData;
+using AirCode.Domain.Entities;
+using AirCode.Domain.ValueObjects;
 
 namespace AirCode.Components.Admin.Shared
 {
@@ -15,7 +16,7 @@ namespace AirCode.Components.Admin.Shared
         public bool IsVisible { get; set; } = false;
 
         [Parameter]
-        public AirCode.Services.Attendance.SessionData? SessionData { get; set; }
+        public PartialSessionData? SessionData { get; set; }
 
         [Parameter]
         public EventCallback OnClose { get; set; }
@@ -59,7 +60,7 @@ namespace AirCode.Components.Admin.Shared
             StateHasChanged();
         }
 
-        private async Task ValidateMatricNumber(FormField.ValidationEventArgs args)
+        private async Task ValidateMatricNumber(ValidationEventArgs args)
         {
             if (string.IsNullOrEmpty(args.Value))
                 return;
@@ -190,12 +191,4 @@ namespace AirCode.Components.Admin.Shared
         }
     }
 
-    public class SessionData
-    {
-        public string SessionId { get; set; } = string.Empty;
-        public string CourseCode { get; set; } = string.Empty;
-        public string CourseName { get; set; } = string.Empty;
-        public DateTime StartTime { get; set; }
-        public int Duration { get; set; }
-    }
 }
