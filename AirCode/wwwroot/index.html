@@ -55,6 +55,11 @@
     <a class="dismiss">🗙</a>
 </div>
 
+<!-- PWA Manager -->
+<script src="js/pwaManager.js"
+        onerror="console.warn('PWA Manager failed to load');">
+</script>
+
 <!-- Blazor Framework -->
 <script src="_framework/blazor.webassembly.js"
         onerror="console.error('Blazor framework failed to load');">
@@ -65,10 +70,7 @@
         onerror="console.warn('Auth service failed to load');">
 </script>
 
-<!-- PWA Manager -->
-<script src="js/pwaManager.js"
-        onerror="console.warn('PWA Manager failed to load');">
-</script>
+
 
 <!-- Utility Scripts -->
 <script src="js/connectivityServices.js" onerror="console.warn('Connectivity services failed')"></script>

@@ -5,6 +5,7 @@
     let deferredPrompt;
     let waitingServiceWorker = null;
     let blazorComponent = null;
+    let isInitialized = false;
 
     // Service Worker Registration
     function registerServiceWorker() {
@@ -15,12 +16,14 @@
 
                     registration.addEventListener('updatefound', () => {
                         const newWorker = registration.installing;
-                        newWorker.addEventListener('statechange', () => {
-                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                waitingServiceWorker = newWorker;
-                                notifyUpdateAvailable();
-                            }
-                        });
+                        if (newWorker) {
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    waitingServiceWorker = newWorker;
+                                    notifyUpdateAvailable();
+                                }
+                            });
+                        }
                     });
                 })
                 .catch(registrationError => {
@@ -60,7 +63,11 @@
 
         const updateConnectivity = () => {
             if (blazorComponent) {
-                blazorComponent.invokeMethodAsync('OnConnectivityChanged', navigator.onLine);
+                try {
+                    blazorComponent.invokeMethodAsync('OnConnectivityChanged', navigator.onLine);
+                } catch (error) {
+                    console.warn('Failed to notify connectivity change:', error);
+                }
             }
         };
 
@@ -68,7 +75,7 @@
         window.addEventListener('offline', updateConnectivity);
 
         // Initial check
-        updateConnectivity();
+        setTimeout(updateConnectivity, 100);
     }
 
     // Update handling
@@ -83,6 +90,7 @@
     // Install PWA
     async function installPWA() {
         if (!deferredPrompt) {
+            console.log('No install prompt available');
             return false;
         }
 
@@ -115,45 +123,72 @@
     // Notification functions
     function notifyInstallReady() {
         if (blazorComponent) {
-            blazorComponent.invokeMethodAsync('OnInstallPromptReady');
+            try {
+                blazorComponent.invokeMethodAsync('OnInstallPromptReady');
+            } catch (error) {
+                console.warn('Failed to notify install ready:', error);
+            }
         }
         window.dispatchEvent(new CustomEvent('pwa-install-ready'));
     }
 
     function notifyUpdateAvailable() {
         if (blazorComponent) {
-            blazorComponent.invokeMethodAsync('OnUpdateAvailable');
+            try {
+                blazorComponent.invokeMethodAsync('OnUpdateAvailable');
+            } catch (error) {
+                console.warn('Failed to notify update available:', error);
+            }
         }
         window.dispatchEvent(new CustomEvent('pwa-update-available'));
     }
 
     function notifyAppInstalled() {
         if (blazorComponent) {
-            blazorComponent.invokeMethodAsync('OnAppInstalled');
+            try {
+                blazorComponent.invokeMethodAsync('OnAppInstalled');
+            } catch (error) {
+                console.warn('Failed to notify app installed:', error);
+            }
         }
         window.dispatchEvent(new CustomEvent('pwa-app-installed'));
     }
 
-    // Global PWA object for Blazor interop
-    window.AirCodePWA = {
-        install: installPWA,
-        applyUpdate: applyUpdate,
-        isInstalled: isInstalled,
-        canInstall: canInstall,
-        hasUpdate: hasUpdate
-    };
+    // Initialize PWA Manager
+    function initializePWAManager() {
+        if (isInitialized) return;
 
-    // Setup connectivity monitoring function for Blazor
-    window.setupConnectivityMonitoring = setupConnectivityMonitoring;
+        // Create the global PWA object for Blazor interop
+        window.AirCodePWA = {
+            install: installPWA,
+            applyUpdate: applyUpdate,
+            isInstalled: isInstalled,
+            canInstall: canInstall,
+            hasUpdate: hasUpdate
+        };
 
-    // Initialize when DOM is ready
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => {
-            registerServiceWorker();
-            setupInstallPrompt();
-        });
-    } else {
+        // Setup connectivity monitoring function for Blazor
+        window.setupConnectivityMonitoring = setupConnectivityMonitoring;
+
+        // Register service worker and setup install prompt
         registerServiceWorker();
         setupInstallPrompt();
+
+        isInitialized = true;
+        console.log('AirCode PWA Manager initialized');
+
+        // Dispatch event to signal initialization complete
+        window.dispatchEvent(new CustomEvent('pwa-manager-ready'));
     }
+
+    // Initialize immediately if DOM is ready, otherwise wait
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializePWAManager);
+    } else {
+        // Use setTimeout to ensure this runs after other scripts
+        setTimeout(initializePWAManager, 0);
+    }
+
+    // Also expose initialization function for manual triggering if needed
+    window.initializeAirCodePWA = initializePWAManager;
 })();

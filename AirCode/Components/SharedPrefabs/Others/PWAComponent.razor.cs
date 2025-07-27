@@ -49,7 +49,12 @@ public partial class PWAComponent : ComponentBase, IAsyncDisposable
             
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender) await InitializePWA();
+        if (firstRender) 
+        {
+            // Add delay to ensure scripts are loaded
+            await Task.Delay(100);
+            await InitializePWA();
+        }
     }
 
     private async Task InitializePWA()
@@ -57,8 +62,41 @@ public partial class PWAComponent : ComponentBase, IAsyncDisposable
         try
         {
             _dotNetRef = DotNetObjectReference.Create(this);
-            _airCodePWA = await JSRuntime.InvokeAsync<IJSObjectReference>("window.AirCodePWA");
-         
+            
+            // Wait for PWA manager to be available with retry logic
+            var maxRetries = 10;
+            var retryCount = 0;
+            
+            while (retryCount < maxRetries)
+            {
+                try
+                {
+                    // Check if the PWA object exists and is properly initialized
+                    var pwaAvailable = await JSRuntime.InvokeAsync<bool>("eval", 
+                        "typeof window.AirCodePWA === 'object' && window.AirCodePWA !== null && typeof window.AirCodePWA.isInstalled === 'function'");
+                    
+                    if (pwaAvailable)
+                    {
+                        _airCodePWA = await JSRuntime.InvokeAsync<IJSObjectReference>("eval", "window.AirCodePWA");
+                        break;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[PWA Component] Retry {retryCount + 1}: {ex.Message}");
+                }
+                
+                retryCount++;
+                await Task.Delay(200); // Wait 200ms between retries
+            }
+            
+            if (_airCodePWA == null)
+            {
+                SetStatusWithTimeout("PWA not available - running in fallback mode");
+                Console.WriteLine("[PWA Component] PWA manager not available after retries");
+                return;
+            }
+            
             // Setup connectivity monitoring
             await JSRuntime.InvokeVoidAsync("setupConnectivityMonitoring", _dotNetRef);
             
@@ -77,10 +115,19 @@ public partial class PWAComponent : ComponentBase, IAsyncDisposable
     {
         if (_airCodePWA != null)
         {
-            _status.IsInstallable = await _airCodePWA.InvokeAsync<bool>("canInstall");
-            _status.IsInstalled = await _airCodePWA.InvokeAsync<bool>("isInstalled");
-            _status.UpdateAvailable = await _airCodePWA.InvokeAsync<bool>("hasUpdate");
-            _status.IsOnline = await JSRuntime.InvokeAsync<bool>("navigator.onLine");
+            try
+            {
+                _status.IsInstallable = await _airCodePWA.InvokeAsync<bool>("canInstall");
+                _status.IsInstalled = await _airCodePWA.InvokeAsync<bool>("isInstalled");
+                _status.UpdateAvailable = await _airCodePWA.InvokeAsync<bool>("hasUpdate");
+                _status.IsOnline = await JSRuntime.InvokeAsync<bool>("navigator.onLine");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[PWA Component] Status update error: {ex.Message}");
+                // Fallback to basic online status
+                _status.IsOnline = await JSRuntime.InvokeAsync<bool>("navigator.onLine");
+            }
         }
     }
 
@@ -89,8 +136,20 @@ public partial class PWAComponent : ComponentBase, IAsyncDisposable
     {
         if (_airCodePWA != null)
         {
-            var success = await _airCodePWA.InvokeAsync<bool>("install");
-            SetStatusWithTimeout(success ? "Installing..." : "Install cancelled");
+            try
+            {
+                var success = await _airCodePWA.InvokeAsync<bool>("install");
+                SetStatusWithTimeout(success ? "Installing..." : "Install cancelled");
+            }
+            catch (Exception ex)
+            {
+                SetStatusWithTimeout($"Install failed: {ex.Message}");
+                Console.WriteLine($"[PWA Component] Install error: {ex}");
+            }
+        }
+        else
+        {
+            SetStatusWithTimeout("PWA not available");
         }
     }
 
@@ -98,8 +157,20 @@ public partial class PWAComponent : ComponentBase, IAsyncDisposable
     {
         if (_airCodePWA != null)
         {
-            await _airCodePWA.InvokeVoidAsync("applyUpdate");
-            SetStatusWithTimeout("Updating...");
+            try
+            {
+                await _airCodePWA.InvokeVoidAsync("applyUpdate");
+                SetStatusWithTimeout("Updating...");
+            }
+            catch (Exception ex)
+            {
+                SetStatusWithTimeout($"Update failed: {ex.Message}");
+                Console.WriteLine($"[PWA Component] Update error: {ex}");
+            }
+        }
+        else
+        {
+            SetStatusWithTimeout("PWA not available");
         }
     }
 
