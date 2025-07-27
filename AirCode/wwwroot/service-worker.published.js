@@ -11,27 +11,26 @@ const offlineAssetsInclude = [
 ];
 const offlineAssetsExclude = [ /^service-worker\.js$/ ];
 
-// Cache for dynamic pages and routes
+// Cache for dynamic pages and routes - FIXED: Use consistent naming
 const pagesCacheName = `aircode-pages-cache-${self.assetsManifest.version}`;
-const blazorRoutes = ['/', '/Admin/OfflineAttendanceEven', '/Client/OfflineScan']; //  @page routes go here for offline stuff
+const blazorRoutes = ['/', '/Admin/OfflineAttendanceEven', '/Client/OfflineScan'];
 
 self.addEventListener('install', event => {
     console.log('AirCode Service worker: Install');
     event.waitUntil(onInstall(event));
-    self.skipWaiting(); // Force activation of new service worker
+    self.skipWaiting();
 });
 
 self.addEventListener('activate', event => {
     console.log('AirCode Service worker: Activate');
     event.waitUntil(onActivate(event));
-    self.clients.claim(); // Take control of all clients immediately
+    self.clients.claim();
 });
 
 self.addEventListener('fetch', event => {
     event.respondWith(onFetch(event));
 });
 
-// Listen for skip waiting message from client
 self.addEventListener('message', event => {
     if (event.data && event.data.type === 'SKIP_WAITING') {
         self.skipWaiting();
@@ -41,56 +40,103 @@ self.addEventListener('message', event => {
 async function onInstall(event) {
     console.info('AirCode Service worker: Installing and caching assets');
 
-    // Cache static assets from manifest
-    const assetsRequests = self.assetsManifest.assets
-        .filter(asset => offlineAssetsInclude.some(pattern => pattern.test(asset.url)))
-        .filter(asset => !offlineAssetsExclude.some(pattern => pattern.test(asset.url)))
-        .map(asset => new Request(asset.url, {
-            integrity: asset.hash,
-            cache: 'no-cache'
-        }));
+    try {
+        // Cache static assets from manifest
+        const assetsRequests = self.assetsManifest.assets
+            .filter(asset => offlineAssetsInclude.some(pattern => pattern.test(asset.url)))
+            .filter(asset => !offlineAssetsExclude.some(pattern => pattern.test(asset.url)))
+            .map(asset => new Request(asset.url, {
+                integrity: asset.hash,
+                cache: 'no-cache'
+            }));
 
-    const cache = await caches.open(cacheName);
-    await cache.addAll(assetsRequests);
+        const cache = await caches.open(cacheName);
 
-    // Cache Blazor routes for offline access
-    const pagesCache = await caches.open(pagesCacheName);
-    const indexRequest = new Request('./index.html', { cache: 'no-cache' });
-    await pagesCache.put('./index.html', await fetch(indexRequest));
-
-    // Cache routes as index.html for SPA routing
-    for (const route of blazorRoutes) {
-        if (route !== '/') {
-            await pagesCache.put(route, await fetch('./index.html'));
+        // FIXED: Add assets in smaller batches to prevent failures
+        const batchSize = 20;
+        for (let i = 0; i < assetsRequests.length; i += batchSize) {
+            const batch = assetsRequests.slice(i, i + batchSize);
+            try {
+                await cache.addAll(batch);
+                console.log(`AirCode: Cached batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(assetsRequests.length/batchSize)}`);
+            } catch (error) {
+                console.warn('AirCode: Failed to cache batch, trying individually:', error);
+                // Try adding individually if batch fails
+                for (const request of batch) {
+                    try {
+                        const response = await fetch(request);
+                        if (response.ok) {
+                            await cache.put(request, response);
+                        }
+                    } catch (individualError) {
+                        console.warn('AirCode: Failed to cache individual asset:', request.url);
+                    }
+                }
+            }
         }
-    }
 
-    console.info('AirCode Service worker: Assets cached successfully');
+        // FIXED: Ensure pages cache is properly set up
+        const pagesCache = await caches.open(pagesCacheName);
+
+        // Cache index.html with proper error handling
+        try {
+            const indexResponse = await fetch('./index.html', { cache: 'no-cache' });
+            if (indexResponse.ok) {
+                await pagesCache.put('./index.html', indexResponse.clone());
+                await pagesCache.put('/', indexResponse.clone()); // FIXED: Also cache root path
+                console.log('AirCode: Successfully cached index.html and root path');
+            }
+        } catch (error) {
+            console.error('AirCode: Failed to cache index.html:', error);
+        }
+
+        // Cache Blazor routes
+        for (const route of blazorRoutes) {
+            if (route !== '/') {
+                try {
+                    const routeResponse = await fetch('./index.html', { cache: 'no-cache' });
+                    if (routeResponse.ok) {
+                        await pagesCache.put(route, routeResponse.clone());
+                        console.log(`AirCode: Cached route: ${route}`);
+                    }
+                } catch (error) {
+                    console.warn(`AirCode: Failed to cache route ${route}:`, error);
+                }
+            }
+        }
+
+        console.info('AirCode Service worker: Assets cached successfully');
+    } catch (error) {
+        console.error('AirCode Service worker: Installation failed:', error);
+    }
 }
 
 async function onActivate(event) {
     console.info('AirCode Service worker: Activate - cleaning old caches');
 
-    // Delete old caches
-    const cacheKeys = await caches.keys();
-    await Promise.all(cacheKeys
-        .filter(key =>
-            (key.startsWith(cacheNamePrefix) && key !== cacheName) ||
-            (key.startsWith('aircode-pages-cache-') && key !== pagesCacheName)
-        )
-        .map(key => {
-            console.log('Deleting old AirCode cache:', key);
-            return caches.delete(key);
-        })
-    );
+    try {
+        const cacheKeys = await caches.keys();
+        await Promise.all(cacheKeys
+            .filter(key =>
+                (key.startsWith(cacheNamePrefix) && key !== cacheName) ||
+                (key.startsWith('aircode-pages-cache-') && key !== pagesCacheName)
+            )
+            .map(key => {
+                console.log('AirCode: Deleting old cache:', key);
+                return caches.delete(key);
+            })
+        );
 
-    // Notify clients about new version
-    const clients = await self.clients.matchAll();
-    clients.forEach(client => {
-        client.postMessage({ type: 'NEW_VERSION_AVAILABLE' });
-    });
+        // Notify clients about new version
+        const clients = await self.clients.matchAll();
+        clients.forEach(client => {
+            client.postMessage({ type: 'NEW_VERSION_AVAILABLE' });
+        });
 
-    console.info('AirCode Service worker: Activation complete');
+        console.info('AirCode Service worker: Activation complete');
+    } catch (error) {
+        console.error('AirCode Service worker: Activation failed:', error);
+    }
 }
 
 async function onFetch(event) {
@@ -122,7 +168,9 @@ async function handleNavigationRequest(request) {
 
     try {
         // Try network first for navigation
-        const networkResponse = await fetch(request);
+        const networkResponse = await fetch(request, {
+            cache: 'no-cache'
+        });
 
         // Cache successful responses
         if (networkResponse.ok) {
@@ -132,18 +180,36 @@ async function handleNavigationRequest(request) {
 
         return networkResponse;
     } catch (error) {
-        console.log('Network failed for navigation, serving from cache:', pathname);
+        console.log('AirCode: Network failed for navigation, serving from cache:', pathname);
 
-        // Fallback to cached page
+        // FIXED: Better fallback logic for pages cache
         const pagesCache = await caches.open(pagesCacheName);
+
+        // Try exact match first
         let cachedResponse = await pagesCache.match(request);
 
-        // If specific route not cached, serve index.html for SPA routing
+        // Try pathname match
+        if (!cachedResponse && pathname !== '/') {
+            cachedResponse = await pagesCache.match(pathname);
+        }
+
+        // Try root path
+        if (!cachedResponse) {
+            cachedResponse = await pagesCache.match('/');
+        }
+
+        // Finally try index.html
         if (!cachedResponse) {
             cachedResponse = await pagesCache.match('./index.html');
         }
 
-        return cachedResponse || new Response('Offline - Page not available', {
+        if (cachedResponse) {
+            console.log('AirCode: Serving cached page for:', pathname);
+            return cachedResponse;
+        }
+
+        console.error('AirCode: No cached page available for:', pathname);
+        return new Response('Offline - Page not available', {
             status: 503,
             statusText: 'Service Unavailable'
         });
@@ -170,7 +236,7 @@ async function handleAssetRequest(request) {
 
         return networkResponse;
     } catch (error) {
-        console.log('Asset request failed and not in cache:', request.url);
+        console.log('AirCode: Asset request failed and not in cache:', request.url);
         return new Response('Asset not available offline', {
             status: 503,
             statusText: 'Service Unavailable'
