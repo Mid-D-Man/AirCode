@@ -1,7 +1,7 @@
 Project Structure Documentation
-Generated: Sun Jul 27 12:33:02 UTC 2025
+Generated: Sun Jul 27 14:58:41 UTC 2025
 Repository: Mid-D-Man/AirCode
-Commit: 9af13d6f79faa7b4a04edb14ca1e70dc5c32ff77
+Commit: 7e8e4a5d8fd18c358768c961a8e1549122f4d6a6
 ==================================
 
 Source Files:
@@ -74,12 +74,12 @@ Components/SharedPrefabs/Spinner/LoadingSpinner.razor.css
 CustomAccountFactory.cs
 Domain/Entities/AttendanceRecordEntity.cs
 Domain/Entities/AttendanceReportEntity.cs
+Domain/Entities/AttendanceSessionEntitiy.cs
 Domain/Entities/CourseAttendanceStatsEntity.cs
 Domain/Entities/CourseEntity.cs
 Domain/Entities/DepartmentEntity.cs
 Domain/Entities/OfflineAttendanceRecordModel.cs
 Domain/Entities/ReportEntity.cs
-Domain/Entities/SessionAttendanceRecordEntity.cs
 Domain/Entities/SessionEntity.cs
 Domain/Entities/UserEntity.cs
 Domain/Enums/AttendanceEnums.cs
@@ -94,7 +94,6 @@ Domain/ValueObjects/PaginationData.cs
 Domain/ValueObjects/SystemData.cs
 Extensions/AuthExtensions.cs
 Extensions/BusinessHoursServiceExtensions.cs
-Extensions/PWAServiceExtensions.cs
 Extensions/ServiceExtensions.cs
 Extensions/Supabase.cs
 FutureImprovements.cs
@@ -109,6 +108,8 @@ Layout/ClientLayout/ClientNavMenu.razor.css
 Layout/Main/MainLayout.razor
 Layout/Main/MainLayout.razor.css
 Models/Admin/DashboardModels.cs
+Models/EdgeFunction/EdgeFunctionModels.cs
+Models/Firebase/FirebaseModels.cs
 Models/Forms/FormModels.cs
 Models/PWA/PWAModels.cs
 Models/QRCode/QRCodePayloadData.cs
@@ -173,9 +174,6 @@ Pages/Shared/PersonalCourseManagement.razor.cs
 Pages/Shared/PersonalCourseManagement.razor.css
 Pages/Shared/UnknownError.razor
 Pages/Shared/UnknownError.razor.css
-Pages/TestPages/Example.razor
-Pages/TestPages/Example.razor.cs
-Pages/TestPages/Example.razor.css
 Pages/TestPages/FirebaseTest.razor
 Pages/TestPages/FirebaseTest.razor.css
 Pages/TestPages/RandomStuffTest.razor
@@ -216,8 +214,6 @@ Services/Guards/BusinessHoursGuard.cs
 Services/Guards/IBusinessHoursGuard.cs
 Services/Guards/IRouteGuardService.cs
 Services/Guards/RouteGuardService.cs
-Services/PWA/IPWAService.cs
-Services/PWA/PWAService.cs
 Services/Permissions/IPermissionService.cs
 Services/Permissions/PermissionService.cs
 Services/Search/ISearchContextService.cs
@@ -325,10 +321,10 @@ Directory Structure:
 
 File Count Summary:
 ==================
-.cs       : 105 files
-.razor    : 65 files
+.cs       : 103 files
+.razor    : 64 files
 .csproj   : 1 files
 .json     : 12 files
-.css      : 75 files
+.css      : 74 files
 .js       : 46 files
 .html     : 3 files
