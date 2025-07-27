@@ -1,7 +1,7 @@
 Project Structure Documentation
-Generated: Sun Jul 27 03:11:05 UTC 2025
+Generated: Sun Jul 27 12:33:02 UTC 2025
 Repository: Mid-D-Man/AirCode
-Commit: 7fa86e2ab70a298626b8e79c712849a8420322a1
+Commit: 9af13d6f79faa7b4a04edb14ca1e70dc5c32ff77
 ==================================
 
 Source Files:
@@ -72,18 +72,26 @@ Components/SharedPrefabs/Scanner/BasicQRCodeScanner.razor.css
 Components/SharedPrefabs/Spinner/LoadingSpinner.razor
 Components/SharedPrefabs/Spinner/LoadingSpinner.razor.css
 CustomAccountFactory.cs
+Domain/Entities/AttendanceRecordEntity.cs
+Domain/Entities/AttendanceReportEntity.cs
+Domain/Entities/CourseAttendanceStatsEntity.cs
 Domain/Entities/CourseEntity.cs
 Domain/Entities/DepartmentEntity.cs
 Domain/Entities/OfflineAttendanceRecordModel.cs
 Domain/Entities/ReportEntity.cs
+Domain/Entities/SessionAttendanceRecordEntity.cs
 Domain/Entities/SessionEntity.cs
 Domain/Entities/UserEntity.cs
 Domain/Enums/AttendanceEnums.cs
 Domain/Enums/CourseEnums.cs
+Domain/Enums/SystemEnums.cs
 Domain/Enums/UserEnums.cs
+Domain/Expansion/MalevolentKitchen.cs
 Domain/Interfaces/ISecurityEntity.cs
+Domain/ValueObjects/AttendanceData.cs
 Domain/ValueObjects/CourseSchedule.cs
 Domain/ValueObjects/PaginationData.cs
+Domain/ValueObjects/SystemData.cs
 Extensions/AuthExtensions.cs
 Extensions/BusinessHoursServiceExtensions.cs
 Extensions/PWAServiceExtensions.cs
@@ -100,9 +108,14 @@ Layout/ClientLayout/ClientNavMenu.razor
 Layout/ClientLayout/ClientNavMenu.razor.css
 Layout/Main/MainLayout.razor
 Layout/Main/MainLayout.razor.css
+Models/Admin/DashboardModels.cs
+Models/Forms/FormModels.cs
+Models/PWA/PWAModels.cs
 Models/QRCode/QRCodePayloadData.cs
+Models/Search/SearchModels.cs
 Models/Supabase/SupabaseAttendanceSession.cs
 Models/Supabase/TestData.cs
+Models/UI/NavigationModels.cs
 Pages/Admin/Shared/CreateAttendanceEvent.razor
 Pages/Admin/Shared/CreateAttendanceEvent.razor.cs
 Pages/Admin/Shared/CreateAttendanceEvent.razor.css
@@ -312,7 +325,7 @@ Directory Structure:
 
 File Count Summary:
 ==================
-.cs       : 92 files
+.cs       : 105 files
 .razor    : 65 files
 .csproj   : 1 files
 .json     : 12 files
