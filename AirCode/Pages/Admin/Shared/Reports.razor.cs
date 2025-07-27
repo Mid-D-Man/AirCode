@@ -149,77 +149,177 @@ namespace AirCode.Pages.Admin.Shared
             }
         }
 
-        private List<FirebaseAttendanceEvent> ExtractAttendanceEvents(Dictionary<string, object> courseAttendanceData)
+       private List<FirebaseAttendanceEvent> ExtractAttendanceEvents(Dictionary<string, object> courseAttendanceData)
+{
+    var events = new List<FirebaseAttendanceEvent>();
+
+    foreach (var kvp in courseAttendanceData)
+    {
+        // Skip metadata fields, only process event fields
+        if (!kvp.Key.StartsWith("Event_")) continue;
+
+        try
         {
-            var events = new List<FirebaseAttendanceEvent>();
-
-            foreach (var kvp in courseAttendanceData)
+            // Handle different data types from Firebase
+            Dictionary<string, object> eventData = null;
+            
+            if (kvp.Value is JsonElement jsonElement)
             {
-                // Skip metadata fields, only process event fields
-                if (!kvp.Key.StartsWith("Event_")) continue;
-
-                try
+                // Convert JsonElement to Dictionary
+                eventData = JsonSerializer.Deserialize<Dictionary<string, object>>(jsonElement.GetRawText());
+            }
+            else if (kvp.Value is Dictionary<string, object> dict)
+            {
+                eventData = dict;
+            }
+            else
+            {
+                // Try to deserialize as JSON string
+                var jsonString = kvp.Value?.ToString();
+                if (!string.IsNullOrEmpty(jsonString))
                 {
-                    // Parse the event data from JsonElement
-                    if (kvp.Value is JsonElement eventElement)
-                    {
-                        var eventData = ParseFirebaseAttendanceEvent(eventElement);
-                        if (eventData != null)
-                        {
-                            events.Add(eventData);
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    // Log but continue processing other events
-                    Console.WriteLine($"Error parsing event {kvp.Key}: {ex.Message}");
+                    eventData = JsonSerializer.Deserialize<Dictionary<string, object>>(jsonString);
                 }
             }
 
-            return events.OrderBy(e => e.StartTime).ToList();
-        }
-
-        private FirebaseAttendanceEvent? ParseFirebaseAttendanceEvent(JsonElement eventElement)
-        {
-            try
+            if (eventData != null)
             {
-                var attendanceEvent = new FirebaseAttendanceEvent();
-
-                if (eventElement.TryGetProperty("SessionId", out var sessionId))
-                    attendanceEvent.SessionId = sessionId.GetString() ?? string.Empty;
-
-                if (eventElement.TryGetProperty("StartTime", out var startTime))
-                    attendanceEvent.StartTime = startTime.GetDateTime();
-
-                if (eventElement.TryGetProperty("Duration", out var duration))
-                    attendanceEvent.Duration = duration.GetInt32();
-
-                if (eventElement.TryGetProperty("Theme", out var theme))
-                    attendanceEvent.Theme = theme.GetString() ?? string.Empty;
-
-                // Parse attendance records
-                if (eventElement.TryGetProperty("AttendanceRecords", out var recordsElement))
+                var firebaseEvent = ParseFirebaseAttendanceEventFromDict(eventData);
+                if (firebaseEvent != null)
                 {
-                    attendanceEvent.AttendanceRecords = new Dictionary<string, FirebaseAttendanceRecord>();
-
-                    foreach (var recordProperty in recordsElement.EnumerateObject())
-                    {
-                        var record = ParseFirebaseAttendanceRecord(recordProperty.Value);
-                        if (record != null)
-                        {
-                            attendanceEvent.AttendanceRecords[recordProperty.Name] = record;
-                        }
-                    }
+                    events.Add(firebaseEvent);
                 }
-
-                return attendanceEvent;
-            }
-            catch
-            {
-                return null;
             }
         }
+        catch (Exception ex)
+        {
+            // Log but continue processing other events
+            Console.WriteLine($"Error parsing event {kvp.Key}: {ex.Message}");
+        }
+    }
+
+    return events.OrderBy(e => e.StartTime).ToList();
+}
+
+private FirebaseAttendanceEvent? ParseFirebaseAttendanceEventFromDict(Dictionary<string, object> eventData)
+{
+    try
+    {
+        var attendanceEvent = new FirebaseAttendanceEvent();
+
+        // Parse SessionId
+        if (eventData.TryGetValue("SessionId", out var sessionIdObj))
+            attendanceEvent.SessionId = sessionIdObj?.ToString() ?? string.Empty;
+
+        // Parse StartTime
+        if (eventData.TryGetValue("StartTime", out var startTimeObj))
+        {
+            if (DateTime.TryParse(startTimeObj?.ToString(), out var startTime))
+                attendanceEvent.StartTime = startTime;
+        }
+
+        // Parse Duration
+        if (eventData.TryGetValue("Duration", out var durationObj))
+        {
+            if (int.TryParse(durationObj?.ToString(), out var duration))
+                attendanceEvent.Duration = duration;
+        }
+
+        // Parse Theme
+        if (eventData.TryGetValue("Theme", out var themeObj))
+            attendanceEvent.Theme = themeObj?.ToString() ?? string.Empty;
+
+        // Parse AttendanceRecords
+        if (eventData.TryGetValue("AttendanceRecords", out var recordsObj))
+        {
+            attendanceEvent.AttendanceRecords = new Dictionary<string, FirebaseAttendanceRecord>();
+
+            if (recordsObj is JsonElement recordsElement)
+            {
+                foreach (var recordProperty in recordsElement.EnumerateObject())
+                {
+                    var record = ParseFirebaseAttendanceRecord(recordProperty.Value);
+                    if (record != null)
+                    {
+                        attendanceEvent.AttendanceRecords[recordProperty.Name] = record;
+                    }
+                }
+            }
+            else if (recordsObj is Dictionary<string, object> recordsDict)
+            {
+                foreach (var recordKvp in recordsDict)
+                {
+                    var record = ParseFirebaseAttendanceRecordFromObject(recordKvp.Value);
+                    if (record != null)
+                    {
+                        attendanceEvent.AttendanceRecords[recordKvp.Key] = record;
+                    }
+                }
+            }
+        }
+
+        return attendanceEvent;
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error parsing Firebase attendance event: {ex.Message}");
+        return null;
+    }
+}
+
+private FirebaseAttendanceRecord? ParseFirebaseAttendanceRecordFromObject(object recordObj)
+{
+    try
+    {
+        Dictionary<string, object> recordData = null;
+
+        if (recordObj is JsonElement jsonElement)
+        {
+            recordData = JsonSerializer.Deserialize<Dictionary<string, object>>(jsonElement.GetRawText());
+        }
+        else if (recordObj is Dictionary<string, object> dict)
+        {
+            recordData = dict;
+        }
+
+        if (recordData == null) return null;
+
+        var record = new FirebaseAttendanceRecord();
+
+        if (recordData.TryGetValue("MatricNumber", out var matricObj))
+            record.MatricNumber = matricObj?.ToString() ?? string.Empty;
+
+        if (recordData.TryGetValue("HasScannedAttendance", out var hasScannedObj))
+        {
+            if (bool.TryParse(hasScannedObj?.ToString(), out var hasScanned))
+                record.HasScannedAttendance = hasScanned;
+        }
+
+        if (recordData.TryGetValue("ScanTime", out var scanTimeObj) && scanTimeObj != null)
+        {
+            if (DateTime.TryParse(scanTimeObj.ToString(), out var scanTime))
+                record.ScanTime = scanTime;
+        }
+
+        if (recordData.TryGetValue("IsOnlineScan", out var isOnlineObj))
+        {
+            if (bool.TryParse(isOnlineObj?.ToString(), out var isOnline))
+                record.IsOnlineScan = isOnline;
+        }
+
+        if (recordData.TryGetValue("DeviceGUID", out var deviceObj))
+            record.DeviceGUID = deviceObj?.ToString();
+
+        return record;
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error parsing Firebase attendance record: {ex.Message}");
+        return null;
+    }
+}
+
+        
 
         private FirebaseAttendanceRecord? ParseFirebaseAttendanceRecord(JsonElement recordElement)
         {
