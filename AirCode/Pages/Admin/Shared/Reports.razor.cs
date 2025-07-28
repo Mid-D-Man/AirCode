@@ -5,6 +5,7 @@ using AirCode.Domain.Enums;
 using AirCode.Models.Firebase;
 using AirCode.Services.Courses;
 using AirCode.Services.Attendance;
+using AirCode.Services.Exports;
 using Course = AirCode.Domain.Entities.Course;
 
 namespace AirCode.Pages.Admin.Shared
@@ -13,6 +14,7 @@ namespace AirCode.Pages.Admin.Shared
     {
         [Inject] private ICourseService CourseService { get; set; } = default!;
         [Inject] private IFirestoreAttendanceService FirestoreAttendanceService { get; set; } = default!;
+        [Inject] private IPdfExportService PdfExportService { get; set; } = default!;
 
         // UI State
         private bool isLoading = false;
@@ -490,13 +492,22 @@ private FirebaseAttendanceRecord? ParseFirebaseAttendanceRecordFromObject(object
 
             try
             {
-                // For now, just copy to clipboard - PDF generation can be added later
-                await Task.CompletedTask; // Placeholder for future PDF export functionality
-                // TODO: Implement PDF generation using a WASM-compatible library
+                isLoading = true;
+                errorMessage = string.Empty;
+
+                var pdfBytes = await PdfExportService.GenerateAttendanceReportPdfAsync(currentReport);
+                var filename = $"Attendance_Report_{currentReport.CourseCode}_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
+        
+                await PdfExportService.DownloadPdfAsync(JSRuntime, pdfBytes, filename);
             }
             catch (Exception ex)
             {
-                errorMessage = $"Export failed: {ex.Message}";
+                errorMessage = $"PDF export failed: {ex.Message}";
+            }
+            finally
+            {
+                isLoading = false;
+                StateHasChanged();
             }
         }
     }

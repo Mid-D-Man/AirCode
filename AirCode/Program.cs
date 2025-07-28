@@ -19,6 +19,7 @@ using AirCode.Services.Permissions;
 using AirCode.Services.Search;
 using AirCode.Services.Storage;
 using AirCode.Services.Academic;
+using AirCode.Services.Exports;
 using AirCode.Services.Firebase;
 using AirCode.Services.VisualElements;
 using AirCode.Utilities.DataStructures;
@@ -158,6 +159,7 @@ builder.Services.AddScoped<QRCodeDecoder>();
 builder.Services.AddSingleton<ConnectivityService>();
 // UI and visual component services
 builder.Services.AddScoped<ISvgIconService, SvgIconService>();
+builder.Services.AddScoped<IPdfExportService, PdfExportService>();
 // ============================================================================
 // External Service Integrations    
 // ============================================================================
