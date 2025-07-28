@@ -1,7 +1,7 @@
 Project Structure Documentation
-Generated: Sun Jul 27 20:24:35 UTC 2025
+Generated: Mon Jul 28 02:12:59 UTC 2025
 Repository: Mid-D-Man/AirCode
-Commit: 4d4eb71269f792a3d007e5c9e0de062118d0c9c1
+Commit: 5cb6dc80fd09c9d168e1cce09558c749bd61b9c1
 ==================================
 
 Source Files:
@@ -206,6 +206,8 @@ Services/Cryptography/CryptographyService.cs
 Services/Cryptography/ICryptographyService.cs
 Services/Department/DepartmentService.cs
 Services/Department/IDepartmentService.cs
+Services/Exports/IPdfExportService.cs
+Services/Exports/PdfExportService.cs
 Services/Firebase/FirestoreNotificationService.cs
 Services/Firebase/FirestoreService.cs
 Services/Firebase/IFirestoreNotificationService.cs
@@ -321,7 +323,7 @@ Directory Structure:
 
 File Count Summary:
 ==================
-.cs       : 103 files
+.cs       : 105 files
 .razor    : 64 files
 .csproj   : 1 files
 .json     : 12 files
