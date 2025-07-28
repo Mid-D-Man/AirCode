@@ -1,5 +1,6 @@
 @page "/Client/OfflineScan"
 @inject IJSRuntime JSRuntime
+@using AirCode.Layout.FullScreen
 @using AirCode.Models.Supabase
 @using AirCode.Services.SupaBase
 @using ReactorBlazorQRCodeScanner
@@ -7,7 +8,7 @@
 @using AirCode.Services.Attendance
 @inject QRCodeDecoder QRDecoder
 @inject IOfflineSyncService OfflineSyncService
-
+@layout FullScreenLayout
 <div class="offline-scan-page">
     <div class="scan-header">
         <h3>Offline Attendance Scan</h3>

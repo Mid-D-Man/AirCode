@@ -140,15 +140,38 @@ window.PdfService = {
         doc.text(student.studentLevel.toString(), currentX + 7.5, yPos + 4, { align: 'center' });
         currentX += 15;
 
-        // Attendance marks
+        // Attendance marks - Enhanced visibility and three-state logic
+        doc.setFontSize(11); // Larger font for better visibility
         for (let i = 0; i < sessionCount && i < student.sessionAttendance.length; i++) {
             doc.rect(currentX, yPos, sessionWidth, rowHeight);
-            const isPresent = student.sessionAttendance[i].isPresent;
-            doc.setTextColor(isPresent ? 0 : 200, isPresent ? 150 : 0, 0);
-            doc.text(isPresent ? '✓' : '✗', currentX + sessionWidth/2, yPos + 4, { align: 'center' });
-            doc.setTextColor(0, 0, 0);
+
+            const session = student.sessionAttendance[i];
+            let mark, color;
+
+            if (session.hasRecord) {
+                // Student has an attendance record for this session
+                if (session.isPresent === true) {
+                    mark = '✓';
+                    color = [0, 128, 0]; // Dark green for present
+                } else {
+                    mark = '✗';
+                    color = [180, 0, 0]; // Dark red for absent
+                }
+            } else {
+                // No attendance record found - student registered but didn't scan
+                mark = '—'; // Em dash for unknown/no record
+                color = [100, 100, 100]; // Gray for unknown
+            }
+
+            doc.setTextColor(color[0], color[1], color[2]);
+            doc.setFont(undefined, 'bold'); // Make marks bold
+            doc.text(mark, currentX + sessionWidth/2, yPos + 4.2, { align: 'center' });
+            doc.setFont(undefined, 'normal'); // Reset font weight
+            doc.setTextColor(0, 0, 0); // Reset to black
             currentX += sessionWidth;
         }
+
+        doc.setFontSize(8); // Reset font size for summary columns
 
         // Summary columns
         [student.totalPresent, student.totalAbsent, student.attendancePercentage.toFixed(1) + '%'].forEach(value => {

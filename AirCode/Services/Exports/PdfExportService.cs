@@ -3,8 +3,6 @@ using AirCode.Domain.Entities;
 
 namespace AirCode.Services.Exports
 {
-   
-
     public class PdfExportService : IPdfExportService
     {
         private readonly IJSRuntime _jsRuntime;
@@ -51,7 +49,9 @@ namespace AirCode.Services.Exports
                     sessionAttendance = s.SessionAttendance.Select(sa => new
                     {
                         isPresent = sa.IsPresent,
-                        sessionDate = sa.SessionDate
+                        sessionDate = sa.SessionDate,
+                        hasRecord = sa.ScanTime.HasValue || sa.DeviceGUID != null, // Student has an attendance record
+                        scanTime = sa.ScanTime
                     }).ToArray()
                 }).ToArray()
             };

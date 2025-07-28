@@ -42,6 +42,9 @@ namespace AirCode.Pages.Admin.Shared
             {
                 isLoading = true;
                 errorMessage = string.Empty;
+                showReport = false; // Ensure we're in course loading state
+                StateHasChanged(); // Update UI to show "Loading Courses..."
+                
                 availableCourses = await CourseService.GetAllCoursesAsync();
                 FilterCoursesByLevel();
             }
@@ -62,6 +65,10 @@ namespace AirCode.Pages.Admin.Shared
             {
                 selectedLevel = level;
                 selectedCourseCode = string.Empty;
+                showReport = false; // Clear any existing report
+                currentReport = null;
+                reportJson = string.Empty;
+                errorMessage = string.Empty;
                 FilterCoursesByLevel();
                 StateHasChanged();
             }
@@ -78,6 +85,10 @@ namespace AirCode.Pages.Admin.Shared
         private void OnCourseChanged(ChangeEventArgs e)
         {
             selectedCourseCode = e.Value?.ToString() ?? string.Empty;
+            showReport = false; // Clear any existing report when course changes
+            currentReport = null;
+            reportJson = string.Empty;
+            errorMessage = string.Empty;
             StateHasChanged();
         }
 
@@ -404,88 +415,187 @@ private FirebaseAttendanceRecord? ParseFirebaseAttendanceRecordFromObject(object
             }
         }
 
-        private AttendanceReport GenerateAttendanceReport(List<StudentCourse> studentsInCourse, List<FirebaseAttendanceEvent> attendanceEvents)
+       private AttendanceReport GenerateAttendanceReport(List<StudentCourse> studentsInCourse, List<FirebaseAttendanceEvent> attendanceEvents)
+{
+    var report = new AttendanceReport
+    {
+        CourseCode = selectedCourseCode,
+        CourseLevel = selectedLevel,
+        GeneratedAt = DateTime.UtcNow,
+        TotalSessions = attendanceEvents.Count,
+        StudentReports = new List<StudentAttendanceReport>()
+    };
+
+    foreach (var studentCourse in studentsInCourse)
+    {
+        var studentReport = new StudentAttendanceReport
         {
-            var report = new AttendanceReport
+            MatricNumber = studentCourse.StudentMatricNumber,
+            StudentLevel = studentCourse.StudentLevel,
+            SessionAttendance = new List<SessionAttendanceRecord>(),
+            TotalPresent = 0,
+            TotalAbsent = 0,
+            AttendancePercentage = 0.0
+        };
+
+        // Check each attendance event for this student's attendance
+        foreach (var attendanceEvent in attendanceEvents)
+        {
+            // Try to find the student's record in this attendance event
+            var studentRecord = attendanceEvent.AttendanceRecords
+                .GetValueOrDefault(studentCourse.StudentMatricNumber);
+
+            bool isPresent = false;
+            bool hasRecord = studentRecord != null;
+
+            if (hasRecord)
             {
-                CourseCode = selectedCourseCode,
-                CourseLevel = selectedLevel,
-                GeneratedAt = DateTime.UtcNow,
-                TotalSessions = attendanceEvents.Count,
-                StudentReports = new List<StudentAttendanceReport>()
+                // Student has a record - check HasScannedAttendance
+                isPresent = studentRecord.HasScannedAttendance;
+                Console.WriteLine($"Student {studentCourse.StudentMatricNumber} - Session {attendanceEvent.SessionId}: HasScannedAttendance = {studentRecord.HasScannedAttendance}");
+            }
+            else
+            {
+                // Student registered for course but no attendance record for this session
+                Console.WriteLine($"Student {studentCourse.StudentMatricNumber} - Session {attendanceEvent.SessionId}: No record found");
+            }
+
+            var sessionRecord = new SessionAttendanceRecord
+            {
+                SessionId = attendanceEvent.SessionId,
+                SessionDate = attendanceEvent.StartTime,
+                Duration = attendanceEvent.Duration,
+                IsPresent = isPresent,
+                ScanTime = studentRecord?.ScanTime,
+                IsOnlineScan = studentRecord?.IsOnlineScan ?? false,
+                DeviceGUID = studentRecord?.DeviceGUID
             };
 
-            foreach (var studentCourse in studentsInCourse)
+            studentReport.SessionAttendance.Add(sessionRecord);
+
+            // Only count as present if student has a record AND HasScannedAttendance is true
+            if (hasRecord && isPresent)
             {
-                var studentReport = new StudentAttendanceReport
-                {
-                    MatricNumber = studentCourse.StudentMatricNumber,
-                    StudentLevel = studentCourse.StudentLevel,
-                    SessionAttendance = new List<SessionAttendanceRecord>(),
-                    TotalPresent = 0,
-                    TotalAbsent = 0,
-                    AttendancePercentage = 0.0
-                };
-
-                // Check each attendance event for this student's attendance
-                foreach (var attendanceEvent in attendanceEvents)
-                {
-                    var studentRecord = attendanceEvent.AttendanceRecords
-                        .GetValueOrDefault(studentCourse.StudentMatricNumber);
-
-                    var sessionRecord = new SessionAttendanceRecord
-                    {
-                        SessionId = attendanceEvent.SessionId,
-                        SessionDate = attendanceEvent.StartTime,
-                        Duration = attendanceEvent.Duration,
-                        IsPresent = studentRecord?.HasScannedAttendance ?? false,
-                        ScanTime = studentRecord?.ScanTime,
-                        IsOnlineScan = studentRecord?.IsOnlineScan ?? false,
-                        DeviceGUID = studentRecord?.DeviceGUID
-                    };
-
-                    studentReport.SessionAttendance.Add(sessionRecord);
-
-                    if (sessionRecord.IsPresent)
-                        studentReport.TotalPresent++;
-                    else
-                        studentReport.TotalAbsent++;
-                }
-
-                // Calculate attendance percentage
-                if (attendanceEvents.Count > 0)
-                {
-                    studentReport.AttendancePercentage = 
-                        Math.Round((double)studentReport.TotalPresent / attendanceEvents.Count * 100, 2);
-                }
-
-                report.StudentReports.Add(studentReport);
+                studentReport.TotalPresent++;
             }
-
-            // Calculate overall statistics
-            report.TotalStudentsEnrolled = studentsInCourse.Count;
-            if (report.StudentReports.Any())
+            else if (hasRecord) // Has record but not present = absent
             {
-                report.AverageAttendancePercentage = 
-                    Math.Round(report.StudentReports.Average(sr => sr.AttendancePercentage), 2);
-                report.StudentsWithPerfectAttendance = 
-                    report.StudentReports.Count(sr => sr.AttendancePercentage == 100.0);
-                report.StudentsWithPoorAttendance = 
-                    report.StudentReports.Count(sr => sr.AttendancePercentage < 75.0);
+                studentReport.TotalAbsent++;
             }
-
-            return report;
+            // If no record at all, don't count as present or absent (unknown status)
         }
 
-        private void ClearReport()
+        // Calculate attendance percentage based on sessions where student has records
+        var sessionsWithRecords = studentReport.SessionAttendance.Count(s => s.ScanTime.HasValue || s.IsPresent);
+        
+        if (sessionsWithRecords > 0)
         {
-            showReport = false;
-            reportJson = string.Empty;
-            currentReport = null;
-            errorMessage = string.Empty;
-            StateHasChanged();
+            studentReport.AttendancePercentage = 
+                Math.Round((double)studentReport.TotalPresent / sessionsWithRecords * 100, 2);
+        }
+        else if (attendanceEvents.Count > 0)
+        {
+            // If no records at all, calculate based on total sessions (will be 0%)
+            studentReport.AttendancePercentage = 0.0;
         }
 
+        report.StudentReports.Add(studentReport);
+    }
+
+    // Calculate overall statistics
+    report.TotalStudentsEnrolled = studentsInCourse.Count;
+    if (report.StudentReports.Any())
+    {
+        report.AverageAttendancePercentage = 
+            Math.Round(report.StudentReports.Average(sr => sr.AttendancePercentage), 2);
+        report.StudentsWithPerfectAttendance = 
+            report.StudentReports.Count(sr => sr.AttendancePercentage == 100.0);
+        report.StudentsWithPoorAttendance = 
+            report.StudentReports.Count(sr => sr.AttendancePercentage < 75.0);
+    }
+
+    return report;
+}
+
+       #region Helper Methods
+       private string GetLevelClass(LevelType level)
+       {
+           return level switch
+           {
+               LevelType.Level100 => "level-100",
+               LevelType.Level200 => "level-200", 
+               LevelType.Level300 => "level-300",
+               LevelType.Level400 => "level-400",
+               _ => "level-default"
+           };
+       }
+       private void ClearError()
+       {
+           errorMessage = string.Empty;
+           StateHasChanged();
+       }
+       private void ClearReport()
+       {
+           showReport = false;
+           reportJson = string.Empty;
+           currentReport = null;
+           errorMessage = string.Empty;
+           selectedCourseCode = string.Empty; // Reset course selection
+           StateHasChanged();
+       }
+       private string GetAttendancePerformanceClass(double percentage)
+       {
+           return percentage switch
+           {
+               >= 90 => "excellent",
+               >= 75 => "good", 
+               >= 50 => "poor",
+               _ => "critical"
+           };
+       }
+       // Method to get attendance status text
+       private string GetAttendanceStatusText(double percentage)
+       {
+           return percentage switch
+           {
+               >= 90 => "Excellent",
+               >= 75 => "Good",
+               >= 50 => "Poor", 
+               _ => "Critical"
+           };
+       }
+
+       // Method to get attendance status icon
+       private string GetAttendanceStatusIcon(double percentage)
+       {
+           return percentage switch
+           {
+               >= 90 => "bi-star-fill",
+               >= 75 => "bi-check-circle",
+               >= 50 => "bi-exclamation-triangle",
+               _ => "bi-x-octagon"
+           };
+       }
+
+       // Method to format percentage for display
+       private string FormatPercentage(double percentage)
+       {
+           return percentage.ToString("F1") + "%";
+       }
+
+       // Method to get summary card color class
+       private string GetSummaryCardClass(string cardType)
+       {
+           return cardType.ToLower() switch
+           {
+               "students" => "primary",
+               "sessions" => "info", 
+               "average" => "success",
+               "perfect" => "warning",
+               "poor" => "danger",
+               _ => "primary"
+           };
+       }
         private async Task ExportReportAsync()
         {
             if (currentReport == null) return;
@@ -493,6 +603,8 @@ private FirebaseAttendanceRecord? ParseFirebaseAttendanceRecordFromObject(object
             try 
             {
                 isLoading = true;
+                StateHasChanged(); // Show exporting state
+
                 var success = await PdfExportService.GenerateAttendanceReportPdfAsync(currentReport);
                 if (!success) errorMessage = "PDF export failed.";
             }
@@ -506,6 +618,8 @@ private FirebaseAttendanceRecord? ParseFirebaseAttendanceRecordFromObject(object
                 StateHasChanged();
             }
         }
+        
+        #endregion
     }
 
 }
