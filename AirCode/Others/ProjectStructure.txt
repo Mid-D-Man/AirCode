@@ -1,7 +1,7 @@
 Project Structure Documentation
-Generated: Mon Jul 28 04:26:21 UTC 2025
+Generated: Mon Jul 28 12:36:24 UTC 2025
 Repository: Mid-D-Man/AirCode
-Commit: 072af41021463b4704679f128bfbaf1f4aac1762
+Commit: 71993cfec5f62e8aef98a03885835a28ab2dd45f
 ==================================
 
 Source Files:
@@ -105,6 +105,8 @@ Layout/ClientLayout/ClientLayout.razor
 Layout/ClientLayout/ClientLayout.razor.css
 Layout/ClientLayout/ClientNavMenu.razor
 Layout/ClientLayout/ClientNavMenu.razor.css
+Layout/FullScreen/FullScreenLayout.razor
+Layout/FullScreen/FullScreenLayout.razor.css
 Layout/Main/MainLayout.razor
 Layout/Main/MainLayout.razor.css
 Models/Admin/DashboardModels.cs
@@ -325,9 +327,9 @@ Directory Structure:
 File Count Summary:
 ==================
 .cs       : 105 files
-.razor    : 64 files
+.razor    : 65 files
 .csproj   : 1 files
 .json     : 12 files
-.css      : 74 files
+.css      : 75 files
 .js       : 47 files
 .html     : 3 files
