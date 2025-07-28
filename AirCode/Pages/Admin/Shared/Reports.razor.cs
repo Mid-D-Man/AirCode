@@ -489,22 +489,18 @@ private FirebaseAttendanceRecord? ParseFirebaseAttendanceRecordFromObject(object
         private async Task ExportReportAsync()
         {
             if (currentReport == null) return;
-
-            try
+    
+            try 
             {
                 isLoading = true;
-                errorMessage = string.Empty;
-
-                var pdfBytes = await PdfExportService.GenerateAttendanceReportPdfAsync(currentReport);
-                var filename = $"Attendance_Report_{currentReport.CourseCode}_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
-        
-                await PdfExportService.DownloadPdfAsync(JSRuntime, pdfBytes, filename);
+                var success = await PdfExportService.GenerateAttendanceReportPdfAsync(currentReport);
+                if (!success) errorMessage = "PDF export failed.";
             }
-            catch (Exception ex)
+            catch (Exception ex) 
             {
-                errorMessage = $"PDF export failed: {ex.Message}";
+                errorMessage = $"Export failed: {ex.Message}";
             }
-            finally
+            finally 
             {
                 isLoading = false;
                 StateHasChanged();

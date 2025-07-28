@@ -5,6 +5,5 @@ namespace AirCode.Services.Exports;
 
 public interface IPdfExportService
 {
-    Task<byte[]> GenerateAttendanceReportPdfAsync(AttendanceReport report);
-    Task DownloadPdfAsync(IJSRuntime jsRuntime, byte[] pdfBytes, string filename);
+    Task<bool> GenerateAttendanceReportPdfAsync(AttendanceReport report, string schoolName = "Federal University of Technology Minna");
 }
