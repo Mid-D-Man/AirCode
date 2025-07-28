@@ -30,7 +30,7 @@ namespace AirCode.Pages.Admin.Shared
 
         // Report Data
         private AttendanceReport? currentReport;
-
+        private const string K_SchoolName = "AirForce Institute of Technology Kaduna";
         protected override async Task OnInitializedAsync()
         {
             await LoadCoursesAsync();
@@ -162,80 +162,54 @@ namespace AirCode.Pages.Admin.Shared
             }
         }
 
-    private List<FirebaseAttendanceEvent> ExtractAttendanceEvents(Dictionary<string, object> courseAttendanceData)
-{
-    var events = new List<FirebaseAttendanceEvent>();
-
-    Console.WriteLine($"Total fields in courseAttendanceData: {courseAttendanceData.Count}");
-    
-    foreach (var kvp in courseAttendanceData)
-    {
-        Console.WriteLine($"Processing field: {kvp.Key}, Type: {kvp.Value?.GetType().Name}");
-        
-        // Skip metadata fields, only process event fields
-        if (!kvp.Key.StartsWith("Event_")) 
-        {
-            Console.WriteLine($"Skipping non-event field: {kvp.Key}");
-            continue;
-        }
-
-        try
-        {
-            // Handle different data types from Firebase
-            Dictionary<string, object> eventData = null;
-            
-            if (kvp.Value is JsonElement jsonElement)
-            {
-                // Convert JsonElement to Dictionary
-                var rawJson = jsonElement.GetRawText();
-                Console.WriteLine($"JsonElement raw text for {kvp.Key}: {rawJson}");
-                eventData = JsonSerializer.Deserialize<Dictionary<string, object>>(rawJson);
-            }
-            else if (kvp.Value is Dictionary<string, object> dict)
-            {
-                eventData = dict;
-                Console.WriteLine($"Direct dictionary for {kvp.Key}, keys: {string.Join(", ", dict.Keys)}");
-            }
-            else
-            {
-                // Try to deserialize as JSON string
-                var jsonString = kvp.Value?.ToString();
-                Console.WriteLine($"Attempting JSON parse for {kvp.Key}: {jsonString}");
-                if (!string.IsNullOrEmpty(jsonString))
-                {
-                    eventData = JsonSerializer.Deserialize<Dictionary<string, object>>(jsonString);
-                }
-            }
-
-            if (eventData != null)
-            {
-                Console.WriteLine($"Successfully parsed event data for {kvp.Key}, keys: {string.Join(", ", eventData.Keys)}");
-                var firebaseEvent = ParseFirebaseAttendanceEventFromDict(eventData);
-                if (firebaseEvent != null)
-                {
-                    Console.WriteLine($"Successfully created FirebaseAttendanceEvent for {kvp.Key}");
-                    events.Add(firebaseEvent);
-                }
-                else
-                {
-                    Console.WriteLine($"Failed to create FirebaseAttendanceEvent for {kvp.Key}");
-                }
-            }
-            else
-            {
-                Console.WriteLine($"Failed to parse event data for {kvp.Key}");
-            }
-        }
-        catch (Exception ex)
-        {
-            // Log but continue processing other events
-            Console.WriteLine($"Error parsing event {kvp.Key}: {ex.Message}");
-        }
-    }
-
-    Console.WriteLine($"Total events extracted: {events.Count}");
-    return events.OrderBy(e => e.StartTime).ToList();
-}
+   private List<FirebaseAttendanceEvent> ExtractAttendanceEvents(Dictionary<string, object> courseAttendanceData)
+   {
+       var events = new List<FirebaseAttendanceEvent>();
+   
+       foreach (var kvp in courseAttendanceData)
+       {
+           if (!kvp.Key.StartsWith("Event_")) continue;
+   
+           try
+           {
+               Dictionary<string, object> eventData = null;
+               
+               if (kvp.Value is JsonElement jsonElement)
+               {
+                   var rawJson = jsonElement.GetRawText();
+                   eventData = JsonSerializer.Deserialize<Dictionary<string, object>>(rawJson);
+               }
+               else if (kvp.Value is Dictionary<string, object> dict)
+               {
+                   eventData = dict;
+               }
+               else
+               {
+                   var jsonString = kvp.Value?.ToString();
+                   if (!string.IsNullOrEmpty(jsonString))
+                   {
+                       eventData = JsonSerializer.Deserialize<Dictionary<string, object>>(jsonString);
+                   }
+               }
+   
+               if (eventData != null)
+               {
+                   var firebaseEvent = ParseFirebaseAttendanceEventFromDict(eventData);
+                   if (firebaseEvent != null)
+                   {
+                       events.Add(firebaseEvent);
+                   }
+               }
+           }
+           catch (Exception ex)
+           {
+               Console.WriteLine($"Error parsing event {kvp.Key}: {ex.Message}");
+           }
+       }
+   
+       // FIXED: Sequential ordering by StartTime (creation date)
+       return events.OrderBy(e => e.StartTime).ToList();
+   }
 
 private FirebaseAttendanceEvent? ParseFirebaseAttendanceEventFromDict(Dictionary<string, object> eventData)
 {
@@ -415,7 +389,7 @@ private FirebaseAttendanceRecord? ParseFirebaseAttendanceRecordFromObject(object
             }
         }
 
-       private AttendanceReport GenerateAttendanceReport(List<StudentCourse> studentsInCourse, List<FirebaseAttendanceEvent> attendanceEvents)
+      private AttendanceReport GenerateAttendanceReport(List<StudentCourse> studentsInCourse, List<FirebaseAttendanceEvent> attendanceEvents)
 {
     var report = new AttendanceReport
     {
@@ -438,27 +412,14 @@ private FirebaseAttendanceRecord? ParseFirebaseAttendanceRecordFromObject(object
             AttendancePercentage = 0.0
         };
 
-        // Check each attendance event for this student's attendance
+        // Process attendance events in sequential order
         foreach (var attendanceEvent in attendanceEvents)
         {
-            // Try to find the student's record in this attendance event
             var studentRecord = attendanceEvent.AttendanceRecords
                 .GetValueOrDefault(studentCourse.StudentMatricNumber);
 
-            bool isPresent = false;
+            bool isPresent = studentRecord?.HasScannedAttendance ?? false;
             bool hasRecord = studentRecord != null;
-
-            if (hasRecord)
-            {
-                // Student has a record - check HasScannedAttendance
-                isPresent = studentRecord.HasScannedAttendance;
-                Console.WriteLine($"Student {studentCourse.StudentMatricNumber} - Session {attendanceEvent.SessionId}: HasScannedAttendance = {studentRecord.HasScannedAttendance}");
-            }
-            else
-            {
-                // Student registered for course but no attendance record for this session
-                Console.WriteLine($"Student {studentCourse.StudentMatricNumber} - Session {attendanceEvent.SessionId}: No record found");
-            }
 
             var sessionRecord = new SessionAttendanceRecord
             {
@@ -473,30 +434,31 @@ private FirebaseAttendanceRecord? ParseFirebaseAttendanceRecordFromObject(object
 
             studentReport.SessionAttendance.Add(sessionRecord);
 
-            // Only count as present if student has a record AND HasScannedAttendance is true
-            if (hasRecord && isPresent)
+            // FIXED: Proper attendance counting
+            if (hasRecord)
             {
-                studentReport.TotalPresent++;
+                if (isPresent)
+                {
+                    studentReport.TotalPresent++;
+                }
+                else
+                {
+                    studentReport.TotalAbsent++;
+                }
             }
-            else if (hasRecord) // Has record but not present = absent
+            else
             {
+                // No record = counted as absent for enrolled students
                 studentReport.TotalAbsent++;
             }
-            // If no record at all, don't count as present or absent (unknown status)
         }
 
-        // Calculate attendance percentage based on sessions where student has records
-        var sessionsWithRecords = studentReport.SessionAttendance.Count(s => s.ScanTime.HasValue || s.IsPresent);
-        
-        if (sessionsWithRecords > 0)
+        // FIXED: Calculate percentage based on total sessions
+        var totalSessionsForCalculation = attendanceEvents.Count;
+        if (totalSessionsForCalculation > 0)
         {
             studentReport.AttendancePercentage = 
-                Math.Round((double)studentReport.TotalPresent / sessionsWithRecords * 100, 2);
-        }
-        else if (attendanceEvents.Count > 0)
-        {
-            // If no records at all, calculate based on total sessions (will be 0%)
-            studentReport.AttendancePercentage = 0.0;
+                Math.Round((double)studentReport.TotalPresent / totalSessionsForCalculation * 100, 2);
         }
 
         report.StudentReports.Add(studentReport);
@@ -605,7 +567,7 @@ private FirebaseAttendanceRecord? ParseFirebaseAttendanceRecordFromObject(object
                 isLoading = true;
                 StateHasChanged(); // Show exporting state
 
-                var success = await PdfExportService.GenerateAttendanceReportPdfAsync(currentReport);
+                var success = await PdfExportService.GenerateAttendanceReportPdfAsync(currentReport,K_SchoolName);
                 if (!success) errorMessage = "PDF export failed.";
             }
             catch (Exception ex) 

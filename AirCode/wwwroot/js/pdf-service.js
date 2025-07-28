@@ -10,8 +10,11 @@ window.PdfService = {
             let yPos = margin;
             let pageNum = 1;
 
+            // Use correct school name
+            const correctedSchoolName = "AirForce Institute of Technology Kaduna";
+
             // Header
-            this._addHeader(doc, schoolName, reportData, pageWidth, yPos);
+            this._addHeader(doc, correctedSchoolName, reportData, pageWidth, yPos);
             yPos += 25;
 
             // Summary
@@ -140,8 +143,8 @@ window.PdfService = {
         doc.text(student.studentLevel.toString(), currentX + 7.5, yPos + 4, { align: 'center' });
         currentX += 15;
 
-        // Attendance marks - Enhanced visibility and three-state logic
-        doc.setFontSize(11); // Larger font for better visibility
+        // FIXED: Enhanced attendance marks with increased size and better symbols
+        doc.setFontSize(14); // Increased from 11 to 14 for better visibility
         for (let i = 0; i < sessionCount && i < student.sessionAttendance.length; i++) {
             doc.rect(currentX, yPos, sessionWidth, rowHeight);
 
@@ -149,24 +152,22 @@ window.PdfService = {
             let mark, color;
 
             if (session.hasRecord) {
-                // Student has an attendance record for this session
                 if (session.isPresent === true) {
-                    mark = '✓';
-                    color = [0, 128, 0]; // Dark green for present
+                    mark = '^'; // Using ^ for present (more reliable than checkmark)
+                    color = [0, 128, 0]; // Dark green
                 } else {
-                    mark = '✗';
-                    color = [180, 0, 0]; // Dark red for absent
+                    mark = 'X'; // Using capital X for absent
+                    color = [180, 0, 0]; // Dark red
                 }
             } else {
-                // No attendance record found - student registered but didn't scan
-                mark = '—'; // Em dash for unknown/no record
-                color = [100, 100, 100]; // Gray for unknown
+                mark = '-'; // Dash for no record
+                color = [100, 100, 100]; // Gray
             }
 
             doc.setTextColor(color[0], color[1], color[2]);
-            doc.setFont(undefined, 'bold'); // Make marks bold
-            doc.text(mark, currentX + sessionWidth/2, yPos + 4.2, { align: 'center' });
-            doc.setFont(undefined, 'normal'); // Reset font weight
+            doc.setFont(undefined, 'bold');
+            doc.text(mark, currentX + sessionWidth/2, yPos + 4.5, { align: 'center' });
+            doc.setFont(undefined, 'normal');
             doc.setTextColor(0, 0, 0); // Reset to black
             currentX += sessionWidth;
         }

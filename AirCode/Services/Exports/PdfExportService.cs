@@ -6,7 +6,7 @@ namespace AirCode.Services.Exports
     public class PdfExportService : IPdfExportService
     {
         private readonly IJSRuntime _jsRuntime;
-
+      
         public PdfExportService(IJSRuntime jsRuntime)
         {
             _jsRuntime = jsRuntime;
@@ -16,6 +16,7 @@ namespace AirCode.Services.Exports
         {
             try
             {
+              
                 var fileName = $"Attendance_Report_{report.CourseCode}_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
                 var reportData = MapToReportData(report);
                 
