@@ -767,7 +767,7 @@ body.dark-mode .floating-qr-icon:hover {
 }
     .manual-attendance-icon {
         position: fixed;
-        bottom: 120px;
+        bottom: 30px;
         right: 30px;
         width: 60px;
         height: 60px;
@@ -971,8 +971,8 @@ body.dark-mode .floating-qr-icon:hover {
     }
 
      .manual-attendance-icon {
-            bottom: 140px;
-            right: 20px;
+         bottom: 30px;
+         right: 20px;
             width: 50px;
             height: 50px;
         }
@@ -1136,6 +1136,12 @@ body.dark-mode .floating-qr-icon:hover {
         font-size: 0.65rem;
         padding: 1px 4px;
     }
+    .manual-attendance-icon {
+        bottom: 20px;
+        right: 20px;
+        width: 50px;
+        height: 50px;
+    }
 }
 
 /* Landscape mobile adjustments */
@@ -1168,6 +1174,12 @@ body.dark-mode .floating-qr-icon:hover {
     .session-status-indicators {
         padding: var(--spacing-sm);
         gap: var(--spacing-sm);
+    }
+    .manual-attendance-icon {
+        bottom: 15px;
+        right: 15px;
+        width: 45px;
+        height: 45px;
     }
 }
 

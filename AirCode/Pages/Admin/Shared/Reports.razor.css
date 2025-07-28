@@ -181,37 +181,66 @@
     min-height: 2.5rem;
 }
 
+/* Light Mode Button Colors - High Contrast */
 .btn-outline-secondary {
     background: var(--bg-secondary);
-    color: var(--text-primary);
-    border-color: var(--border);
+    color: var(--primary-700);
+    border-color: var(--primary-500);
 }
 
 .btn-outline-secondary:hover:not(:disabled) {
-    background: var(--bg-tertiary);
-    border-color: var(--text-secondary);
+    background: var(--primary-500);
+    color: #ffffff;
+    border-color: var(--primary-500);
 }
 
 .btn-success {
     background: var(--success);
-    color: var(--button-text);
+    color: #ffffff;
     border-color: var(--success);
 }
 
 .btn-success:hover:not(:disabled) {
     background: #16a34a;
+    color: #ffffff;
     transform: translateY(-1px);
 }
 
 .btn-outline-primary {
     background: var(--bg-secondary);
-    color: var(--button-primary);
-    border-color: var(--button-primary);
+    color: var(--primary-700);
+    border-color: var(--primary-500);
 }
 
 .btn-outline-primary:hover:not(:disabled) {
-    background: var(--button-primary);
-    color: var(--button-text);
+    background: var(--primary-500);
+    color: #ffffff;
+    border-color: var(--primary-500);
+}
+
+/* Dark Mode Button Overrides */
+body.dark-mode .btn-outline-secondary {
+    background: var(--dark-bg-secondary);
+    color: var(--gold-300);
+    border-color: var(--gold-500);
+}
+
+body.dark-mode .btn-outline-secondary:hover:not(:disabled) {
+    background: var(--gold-500);
+    color: var(--dark-bg-primary);
+    border-color: var(--gold-500);
+}
+
+body.dark-mode .btn-outline-primary {
+    background: var(--dark-bg-secondary);
+    color: var(--gold-300);
+    border-color: var(--gold-500);
+}
+
+body.dark-mode .btn-outline-primary:hover:not(:disabled) {
+    background: var(--gold-500);
+    color: var(--dark-bg-primary);
+    border-color: var(--gold-500);
 }
 
 .btn-close {
@@ -403,29 +432,46 @@
     flex-shrink: 0;
 }
 
+/* Light Mode Status Icons */
 .summary-card.primary .card-icon {
-    background: var(--button-primary);
-    color: var(--button-text);
+    background: var(--primary-500);
+    color: #ffffff;
 }
 
 .summary-card.info .card-icon {
-    background: var(--info);
-    color: var(--button-text);
+    background: var(--secondary-500);
+    color: #ffffff;
 }
 
 .summary-card.success .card-icon {
     background: var(--success);
-    color: var(--button-text);
+    color: #ffffff;
 }
 
 .summary-card.warning .card-icon {
     background: var(--warning);
-    color: var(--button-text);
+    color: var(--dark-bg-primary);
 }
 
 .summary-card.danger .card-icon {
     background: var(--error);
-    color: var(--button-text);
+    color: #ffffff;
+}
+
+/* Dark Mode Status Icons */
+body.dark-mode .summary-card.primary .card-icon {
+    background: var(--gold-500);
+    color: var(--dark-bg-primary);
+}
+
+body.dark-mode .summary-card.info .card-icon {
+    background: var(--green-500);
+    color: var(--dark-bg-primary);
+}
+
+body.dark-mode .summary-card.warning .card-icon {
+    background: var(--gold-400);
+    color: var(--dark-bg-primary);
 }
 
 .card-content {
@@ -544,7 +590,7 @@
     font-weight: 600;
 }
 
-/* Badge Styles */
+/* Badge Styles - Light Mode */
 .level-badge {
     display: inline-flex;
     align-items: center;
@@ -557,23 +603,34 @@
 }
 
 .level-badge.level-100 {
-    background: var(--info);
-    color: var(--button-text);
+    background: var(--secondary-500);
+    color: #ffffff;
 }
 
 .level-badge.level-200 {
     background: var(--success);
-    color: var(--button-text);
+    color: #ffffff;
 }
 
 .level-badge.level-300 {
     background: var(--warning);
-    color: var(--button-text);
+    color: var(--dark-bg-primary);
 }
 
 .level-badge.level-400 {
     background: var(--error);
-    color: var(--button-text);
+    color: #ffffff;
+}
+
+/* Dark Mode Level Badges */
+body.dark-mode .level-badge.level-100 {
+    background: var(--green-500);
+    color: var(--dark-bg-primary);
+}
+
+body.dark-mode .level-badge.level-300 {
+    background: var(--gold-400);
+    color: var(--dark-bg-primary);
 }
 
 .attendance-badge {
@@ -589,12 +646,12 @@
 
 .attendance-badge.present {
     background: var(--success);
-    color: var(--button-text);
+    color: #ffffff;
 }
 
 .attendance-badge.absent {
     background: var(--error);
-    color: var(--button-text);
+    color: #ffffff;
 }
 
 .percentage-badge {
@@ -610,22 +667,28 @@
 
 .percentage-badge.excellent {
     background: var(--success);
-    color: var(--button-text);
+    color: #ffffff;
 }
 
 .percentage-badge.good {
     background: var(--warning);
-    color: var(--button-text);
+    color: var(--dark-bg-primary);
 }
 
 .percentage-badge.poor {
     background: var(--error);
-    color: var(--button-text);
+    color: #ffffff;
 }
 
 .percentage-badge.critical {
     background: var(--text-primary);
     color: var(--bg-primary);
+}
+
+/* Dark Mode Percentage Badges */
+body.dark-mode .percentage-badge.good {
+    background: var(--gold-400);
+    color: var(--dark-bg-primary);
 }
 
 .status-badge {
@@ -641,22 +704,28 @@
 
 .status-badge.excellent {
     background: var(--success);
-    color: var(--button-text);
+    color: #ffffff;
 }
 
 .status-badge.good {
     background: var(--warning);
-    color: var(--button-text);
+    color: var(--dark-bg-primary);
 }
 
 .status-badge.poor {
     background: var(--error);
-    color: var(--button-text);
+    color: #ffffff;
 }
 
 .status-badge.critical {
     background: var(--text-primary);
     color: var(--bg-primary);
+}
+
+/* Dark Mode Status Badges */
+body.dark-mode .status-badge.good {
+    background: var(--gold-400);
+    color: var(--dark-bg-primary);
 }
 
 /* JSON Section */
