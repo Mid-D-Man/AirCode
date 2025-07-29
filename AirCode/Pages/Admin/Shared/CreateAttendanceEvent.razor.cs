@@ -52,9 +52,7 @@ using AirCode.Components.Admin.Shared;
         private Course selectedCourse;
         private bool showCourseSelection = false;
 
-        // Floating QR code properties
-        private bool showFloatingQR = false;
-        private SessionData floatingSessionData;
+      
         private bool useTemporalKeyRefresh = false;
         private bool allowOfflineSync = true;
         private AdvancedSecurityFeatures securityFeatures = AdvancedSecurityFeatures.Default;
@@ -780,39 +778,7 @@ private bool IsWarningMessage(string message)
             StateHasChanged();
         }
 
-        private void OpenFloatingQR()
-        {
-            if (isSessionStarted && currentActiveSession != null)
-            {
-                OpenFloatingQRForSession(currentActiveSession);
-            }
-        }
-
-        private void OpenFloatingQRForSession(SessionData session)
-{
-    floatingSessionData = new SessionData
-    {
-        SessionId = session.SessionId,
-        CourseName = session.CourseName,
-        CourseCode = session.CourseCode,
-        StartTime = session.StartTime,
-        EndTime = session.EndTime,
-        Duration = session.Duration,
-        QrCodePayload = session.QrCodePayload,
-        Theme = session.Theme,
-        UseTemporalKeyRefresh = session.UseTemporalKeyRefresh,
-        SecurityFeatures = session.SecurityFeatures,
-        TemporalKey = session.TemporalKey // Add this if FloatingSessionData supports it
-    };
-    showFloatingQR = true;
-}
-
-        private void CloseFloatingQR()
-        {
-            showFloatingQR = false;
-            floatingSessionData = null;
-        }
-
+        
         private QRCodeTheme ConvertStringToTheme(string theme)
         {
             return theme switch
