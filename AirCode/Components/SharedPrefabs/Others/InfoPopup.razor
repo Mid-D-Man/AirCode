@@ -1,8 +1,8 @@
 @* InfoPopup.razor  *@
 @if (IsVisible)
 {
-    <div class="info-popup-overlay" @onclick="OnOverlayClick">
-        <div class="info-popup" @onclick:stopPropagation="true">
+<div class="global-backdrop" @onclick="OnOverlayClick">
+    <div class="global-modal info-popup" @onclick:stopPropagation="true">
             <div class="info-popup-header">
                 <h4>@GetInfoTitle()</h4>
                 <button class="close-btn" @onclick="OnClose">
