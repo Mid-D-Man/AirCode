@@ -5,9 +5,9 @@
 @using AirCode.Services.Attendance
 
 @if (IsVisible)
-{  
-    
-    <div class="manual-attendance-backdrop" @onclick="HandleBackdropClick">
+{
+
+    <div class="global-backdrop" @onclick="HandleBackdropClick">
         <div class="manual-attendance-popup" @onclick:stopPropagation="true">
             <div class="popup-header">
                 <h3>Manual Attendance Sign</h3>

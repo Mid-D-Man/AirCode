@@ -1,18 +1,6 @@
-.manual-attendance-backdrop {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background-color: rgba(0, 0, 0, 0.6);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-    backdrop-filter: blur(3px);
-    padding: 20px;
-    box-sizing: border-box;
-}
+/* ManualAttendancePopup.razor.css - Uses Global Backdrop */
+
+/* Remove .manual-attendance-backdrop - now uses .global-backdrop from app.css */
 
 .manual-attendance-popup {
     background: white;
@@ -207,13 +195,11 @@
 
 /* Responsive optimizations */
 @media (max-width: 640px) {
-    .manual-attendance-backdrop {
-        padding: 16px;
-    }
-
     .manual-attendance-popup {
         max-width: none;
         border-radius: 12px;
+        margin: 16px;
+        width: calc(100% - 32px);
     }
 
     .popup-header,
