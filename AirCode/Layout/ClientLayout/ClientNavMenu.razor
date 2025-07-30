@@ -56,7 +56,7 @@
         currentPage = path switch
         {
             var p when p.Contains("Stats") => "stats",
-            var p when p.Contains("Courses") => "settings",
+            var p when p.Contains("Courses") => "courses",
             _ => "scan"
         };
     }
@@ -182,7 +182,7 @@
             case "stats":
                 NavigationManager.NavigateTo("Client/Stats");
                 break;
-            case "settings":
+            case "courses":
                 NavigationManager.NavigateTo("Client/Courses");
                 break;
             case "scan":
