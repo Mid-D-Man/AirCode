@@ -12,7 +12,9 @@ using AirCode.Utilities.HelperScripts;
 using AirCode.Utilities.DataStructures;
 using AirCode.Domain.Entities;
 using AirCode.Domain.ValueObjects;
+using AirCode.Domain.Enums;
 using AirCode.Models.QRCode;
+using Course = AirCode.Domain.Entities.CourseEntity;
 namespace AirCode.Pages.Admin.Shared
 {
     public partial class CreateAttendanceEvent : ComponentBase, IAsyncDisposable
@@ -21,7 +23,7 @@ namespace AirCode.Pages.Admin.Shared
         
         [Inject] protected SessionStateService SessionStateService { get; set; }
         [Inject] protected AttendanceSessionService AttendanceSessionService { get; set; }
-        [Inject] protected FirebaseAttendanceService FirebaseAttendanceService { get; set; }
+       [Inject] protected IFirestoreAttendanceService FirestoreAttendanceService { get; set; }
         [Inject] protected QRCodeDecoder QRCodeDecoder { get; set; }
         
         #endregion
@@ -54,7 +56,7 @@ namespace AirCode.Pages.Admin.Shared
         private Timer temporalKeyUpdateTimer;
         
         private List<SessionData> allActiveSessions = new List<SessionData>();
-        private SecurityFeatures securityFeatures;
+        private SystemEnums.SecurityFeatures securityFeatures;
         private int temporalKeyRefreshInterval = 5; // minutes
         
         #endregion
