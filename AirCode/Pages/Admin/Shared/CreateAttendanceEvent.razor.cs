@@ -4,12 +4,24 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components;
 using System.Threading;
+using AirCode.Models.Supabase;
+using AirCode.Services;
+using AirCode.Utilities.HelperScripts;
+using AirCode.Models;
+using AirCode.Components.QRCode;
 
 namespace AirCode.Pages.Admin.Shared
 {
     public partial class CreateAttendanceEvent : ComponentBase, IAsyncDisposable
     {
-        #region Fields and Properties
+        #region Service Dependencies (Inject these in the razor file)
+        
+        [Inject] protected SessionStateService SessionStateService { get; set; }
+        [Inject] protected AttendanceSessionService AttendanceSessionService { get; set; }
+        [Inject] protected FirebaseAttendanceService FirebaseAttendanceService { get; set; }
+        [Inject] protected QRCodeDecoder QRCodeDecoder { get; set; }
+        
+        #endregion
         
         private bool isRestoringSession = false;
         private bool isSearchingForSessions = false;
@@ -169,15 +181,19 @@ namespace AirCode.Pages.Admin.Shared
                     StartTime = sessionModel.StartTime,
                     Duration = sessionModel.Duration,
                     ExpirationTime = sessionEndTime,
-                    OfflineRecords = "[]",
+                    AttendanceRecords = "[]",
                     AllowOfflineConnectionAndSync = allowOfflineSync,
-                    SecurityFeatures = (int)securityFeatures
+                    SecurityFeatures = (int)securityFeatures,
+                    TemporalKey = temporalKey,
+                    UseTemporalKeyRefresh = useTemporalKeyRefresh,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
                 };
 
                 // Save to Supabase
                 var savedSession = await AttendanceSessionService.CreateSessionAsync(attendanceSession);
 
-                // CRITICAL FIX: Create offline session entry when offline sync is enabled
+                // Create offline session entry when offline sync is enabled
                 if (allowOfflineSync)
                 {
                     var offlineSession = new SupabaseOfflineAttendanceSession
@@ -187,11 +203,10 @@ namespace AirCode.Pages.Admin.Shared
                         StartTime = sessionModel.StartTime,
                         Duration = sessionModel.Duration,
                         ExpirationTime = sessionEndTime,
-                        AttendanceRecords = "[]",
-                        UseTemporalKeyRefresh = useTemporalKeyRefresh,
+                        OfflineRecords = "[]",
+                        AllowOfflineSync = allowOfflineSync,
                         SecurityFeatures = (int)securityFeatures,
-                        TemporalKey = temporalKey,
-                        SyncStatus = 0, // or appropriate initial status
+                        SyncStatus = 0,
                         CreatedAt = DateTime.UtcNow
                     };
 
