@@ -89,41 +89,133 @@ private PartialSessionData? manualAttendanceSessionData;
 
 
 protected override async Task OnInitializedAsync()
+
+
 {
+
     sessionModel.Duration = 30;
 
 
+
+
+
+
     try
+
     {
+
         isSearchingForSessions = true;
-        
+
+
+
         restorationMessage = "Searching for existing sessions...";
+
         StateHasChanged();
 
 
+
+
+
+
         // Initialize SessionStateService with persistence recovery
+
         await SessionStateService.InitializeAsync();
-        
+
+
+
         // Clean up expired sessions first
+
         await SessionStateService.CleanupExpiredSessionsAsync();
-        
+
+
+
         RefreshSessionLists();
-        
+
+
+
         // Check for stored sessions - NO AUTOMATIC RESTORATION
+
         await CheckForStoredSessionsAsync();
+
+
+
+
 
 
         SessionStateService.StateChanged += OnStateChanged;
 
 
-        countdownTimer = new System.Threading.Timer(
-            async _ => await InvokeAsync(async () => {
-                await SessionStateService.CleanupExpiredSessionsAsync();
-                RefreshSessionLists();
-ed while cleaning up sessions");
-    }
-}
 
+
+
+
+        countdownTimer = new System.Threading.Timer(
+
+            async _ => await InvokeAsync(async () => {
+
+                await SessionStateService.CleanupExpiredSessionsAsync();
+
+                RefreshSessionLists();
+
+
+                StateHasChanged();
+
+
+            }),
+
+
+            null,
+
+
+            TimeSpan.Zero,
+
+
+            TimeSpan.FromSeconds(1)
+
+
+        );
+
+
+        string currentRole = await AuthService.GetUserRoleAsync();
+
+
+        if(currentRole == "courserepadmin")isCurrentUserCourseRep = true;
+
+
+    }
+
+
+    catch (Exception ex)
+
+
+    {
+
+
+        Console.WriteLine($"Error during initialization: {ex.Message}");
+
+
+        restorationMessage = "Error occurred while checking for existing sessions";
+
+
+    }
+
+
+    finally
+
+
+    {
+
+
+        isSearchingForSessions = false;
+
+
+        StateHasChanged();
+
+
+    }
+
+
+}
 private async Task ClearRestorationStateAsync(string finalMessage = "")
 {
     // Reset all restoration-related state
