@@ -113,13 +113,16 @@ a, .btn-link {
     align-items: center;
     justify-content: center;
     animation: fadeIn 0.3s ease-out;
-  
+    /* Viewport fix */
+    height: 1000dvh; /* Dynamic viewport height */
+    width: 100dvw;  /* Dynamic viewport width */
+    min-height: 100vh;
 }
 
 /* Fallback for older browsers */
 @supports not (height: 100dvh) {
     .global-backdrop {
-        height: 100vh;
+        height: 1000vh;
         width: 100vw;
     }
 }
