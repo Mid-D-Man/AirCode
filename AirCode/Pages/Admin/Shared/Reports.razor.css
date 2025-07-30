@@ -1,11 +1,11 @@
-/* Reports CSS - Optimized & Theme-Aware */
+/* Reports CSS - Optimized & Theme-Aware with Fixed Text Colors */
 
 /* Base Container */
 .reports-container {
     min-height: 100vh;
     padding: 1.5rem;
     background: var(--bg-primary);
-    color: var(--text-primary);
+    color: var(--text-adaptive-primary); /* Fixed: Use adaptive text */
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
 }
 
@@ -16,7 +16,7 @@
 
 .header-content {
     background: var(--bg-secondary);
-    color: var(--text-primary);
+    color: var(--text-adaptive-primary); /* Fixed: Use adaptive text */
     padding: 2rem;
     border-radius: 12px;
     box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
@@ -26,7 +26,7 @@
 .page-title {
     font-size: 2rem;
     font-weight: 700;
-    color: var(--text-primary);
+    color: var(--text-adaptive-primary); /* Fixed: Use adaptive text */
     margin: 0 0 0.5rem 0;
     display: flex;
     align-items: center;
@@ -39,7 +39,7 @@
 
 .page-description {
     font-size: 1rem;
-    color: var(--text-secondary);
+    color: var(--text-adaptive-secondary); /* Fixed: Use adaptive text */
     margin: 0;
     line-height: 1.6;
 }
@@ -63,7 +63,7 @@
 .filter-title {
     font-size: 1.25rem;
     font-weight: 600;
-    color: var(--nav-text);
+    color: var(--nav-text); /* Fixed: Use nav-text for nav background */
     margin: 0;
     display: flex;
     align-items: center;
@@ -71,6 +71,7 @@
 
 .filter-title i {
     margin-right: 0.5rem;
+    color: var(--nav-text); /* Fixed: Use nav-text for nav background */
 }
 
 .filter-content {
@@ -97,7 +98,7 @@
 .form-label {
     font-size: 0.875rem;
     font-weight: 600;
-    color: var(--text-primary);
+    color: var(--text-adaptive-primary); /* Fixed: Use adaptive text */
     margin-bottom: 0.5rem;
     display: flex;
     align-items: center;
@@ -114,7 +115,7 @@
     border-radius: 8px;
     font-size: 1rem;
     background: var(--bg-secondary);
-    color: var(--text-primary);
+    color: var(--text-adaptive-primary); /* Fixed: Use adaptive text */
     transition: all 0.2s;
 }
 
@@ -127,12 +128,12 @@
 .form-select:disabled {
     background-color: var(--bg-tertiary);
     border-color: var(--border);
-    color: var(--text-tertiary);
+    color: var(--text-adaptive-disabled); /* Fixed: Use adaptive disabled text */
     cursor: not-allowed;
 }
 
 .help-text {
-    color: var(--text-tertiary);
+    color: var(--text-adaptive-muted); /* Fixed: Use adaptive muted text */
     font-size: 0.8rem;
     margin-top: 0.25rem;
     font-style: italic;
@@ -157,7 +158,7 @@
 .btn-generate {
     width: 100%;
     background: var(--button-primary);
-    color: var(--button-text);
+    color: var(--button-text); /* Fixed: Use button-text variable */
     border-color: var(--button-primary);
     font-size: 1.1rem;
     padding: 1rem 2rem;
@@ -166,6 +167,7 @@
 .btn-generate:hover:not(:disabled) {
     background: var(--button-primary-hover);
     border-color: var(--button-primary-hover);
+    color: var(--button-text); /* Fixed: Maintain button text on hover */
     transform: translateY(-2px);
 }
 
@@ -173,6 +175,7 @@
     opacity: 0.6;
     cursor: not-allowed;
     transform: none;
+    color: var(--button-text); /* Fixed: Maintain button text when disabled */
 }
 
 .btn-action {
@@ -181,72 +184,72 @@
     min-height: 2.5rem;
 }
 
-/* Light Mode Button Colors - High Contrast */
+/* Button Colors with Proper Text Contrast */
 .btn-outline-secondary {
     background: var(--bg-secondary);
-    color: var(--primary-700);
+    color: var(--text-adaptive-primary); /* Fixed: Use adaptive text */
     border-color: var(--primary-500);
 }
 
 .btn-outline-secondary:hover:not(:disabled) {
     background: var(--primary-500);
-    color: #ffffff;
+    color: var(--text-on-primary); /* Fixed: Use contrasting text on primary bg */
     border-color: var(--primary-500);
 }
 
 .btn-success {
     background: var(--success);
-    color: #ffffff;
+    color: var(--text-on-success); /* Fixed: Use contrasting text on success bg */
     border-color: var(--success);
 }
 
 .btn-success:hover:not(:disabled) {
     background: #16a34a;
-    color: #ffffff;
+    color: var(--text-on-success); /* Fixed: Maintain contrast on hover */
     transform: translateY(-1px);
 }
 
 .btn-outline-primary {
     background: var(--bg-secondary);
-    color: var(--primary-700);
+    color: var(--text-adaptive-primary); /* Fixed: Use adaptive text */
     border-color: var(--primary-500);
 }
 
 .btn-outline-primary:hover:not(:disabled) {
     background: var(--primary-500);
-    color: #ffffff;
+    color: var(--text-on-primary); /* Fixed: Use contrasting text on primary bg */
     border-color: var(--primary-500);
 }
 
-/* Dark Mode Button Overrides */
+/* Dark Mode Button Overrides with Proper Text */
 body.dark-mode .btn-outline-secondary {
     background: var(--dark-bg-secondary);
-    color: var(--gold-300);
+    color: var(--text-light-primary); /* Fixed: Light text on dark bg */
     border-color: var(--gold-500);
 }
 
 body.dark-mode .btn-outline-secondary:hover:not(:disabled) {
     background: var(--gold-500);
-    color: var(--dark-bg-primary);
+    color: var(--text-on-gold); /* Fixed: Dark text on gold bg */
     border-color: var(--gold-500);
 }
 
 body.dark-mode .btn-outline-primary {
     background: var(--dark-bg-secondary);
-    color: var(--gold-300);
+    color: var(--text-light-primary); /* Fixed: Light text on dark bg */
     border-color: var(--gold-500);
 }
 
 body.dark-mode .btn-outline-primary:hover:not(:disabled) {
     background: var(--gold-500);
-    color: var(--dark-bg-primary);
+    color: var(--text-on-gold); /* Fixed: Dark text on gold bg */
     border-color: var(--gold-500);
 }
 
 .btn-close {
     background: none;
     border: none;
-    color: var(--text-tertiary);
+    color: var(--text-adaptive-tertiary); /* Fixed: Use adaptive text */
     cursor: pointer;
     padding: 0.25rem;
     font-size: 1.25rem;
@@ -254,7 +257,7 @@ body.dark-mode .btn-outline-primary:hover:not(:disabled) {
 }
 
 .btn-close:hover {
-    color: var(--text-primary);
+    color: var(--text-adaptive-primary); /* Fixed: Use adaptive text */
 }
 
 /* Alert Styles */
@@ -267,7 +270,7 @@ body.dark-mode .btn-outline-primary:hover:not(:disabled) {
 .alert-danger {
     background: var(--bg-secondary);
     border-color: var(--error);
-    color: var(--text-primary);
+    color: var(--text-adaptive-primary); /* Fixed: Use adaptive text */
 }
 
 .alert-content {
@@ -287,6 +290,7 @@ body.dark-mode .btn-outline-primary:hover:not(:disabled) {
 .alert-body {
     flex: 1;
     line-height: 1.5;
+    color: var(--text-adaptive-primary); /* Fixed: Use adaptive text */
 }
 
 /* Loading Section */
@@ -306,13 +310,13 @@ body.dark-mode .btn-outline-primary:hover:not(:disabled) {
 }
 
 .loading-text h4 {
-    color: var(--text-primary);
+    color: var(--text-adaptive-primary); /* Fixed: Use adaptive text */
     font-weight: 600;
     margin-bottom: 0.5rem;
 }
 
 .loading-text p {
-    color: var(--text-secondary);
+    color: var(--text-adaptive-secondary); /* Fixed: Use adaptive text */
     margin: 0;
 }
 
@@ -329,7 +333,7 @@ body.dark-mode .btn-outline-primary:hover:not(:disabled) {
 /* Report Header */
 .report-header {
     background: var(--nav-background);
-    color: var(--nav-text);
+    color: var(--nav-text); /* Fixed: Use nav-text for nav background */
     padding: 2rem;
     display: flex;
     flex-direction: column;
@@ -342,10 +346,12 @@ body.dark-mode .btn-outline-primary:hover:not(:disabled) {
     margin: 0;
     display: flex;
     align-items: center;
+    color: var(--nav-text); /* Fixed: Use nav-text */
 }
 
 .report-title i {
     margin-right: 0.5rem;
+    color: var(--nav-text); /* Fixed: Use nav-text */
 }
 
 .report-subtitle {
@@ -358,12 +364,12 @@ body.dark-mode .btn-outline-primary:hover:not(:disabled) {
 .course-code {
     font-size: 1.1rem;
     font-weight: 600;
-    color: var(--nav-text);
+    color: var(--nav-text); /* Fixed: Use nav-text */
 }
 
 .level-badge,
 .generated-time {
-    color: var(--nav-text);
+    color: var(--nav-text); /* Fixed: Use nav-text */
     opacity: 0.8;
 }
 
@@ -387,7 +393,7 @@ body.dark-mode .btn-outline-primary:hover:not(:disabled) {
 .summary-header h3 {
     font-size: 1.25rem;
     font-weight: 600;
-    color: var(--text-primary);
+    color: var(--text-adaptive-primary); /* Fixed: Use adaptive text */
     margin: 0;
     display: flex;
     align-items: center;
@@ -432,46 +438,46 @@ body.dark-mode .btn-outline-primary:hover:not(:disabled) {
     flex-shrink: 0;
 }
 
-/* Light Mode Status Icons */
+/* Status Icons with Proper Contrast */
 .summary-card.primary .card-icon {
     background: var(--primary-500);
-    color: #ffffff;
+    color: var(--text-on-primary); /* Fixed: Use contrasting text */
 }
 
 .summary-card.info .card-icon {
     background: var(--secondary-500);
-    color: #ffffff;
+    color: var(--text-on-primary); /* Fixed: Use contrasting text */
 }
 
 .summary-card.success .card-icon {
     background: var(--success);
-    color: #ffffff;
+    color: var(--text-on-success); /* Fixed: Use contrasting text */
 }
 
 .summary-card.warning .card-icon {
     background: var(--warning);
-    color: var(--dark-bg-primary);
+    color: var(--text-on-warning); /* Fixed: Use contrasting text */
 }
 
 .summary-card.danger .card-icon {
     background: var(--error);
-    color: #ffffff;
+    color: var(--text-on-error); /* Fixed: Use contrasting text */
 }
 
 /* Dark Mode Status Icons */
 body.dark-mode .summary-card.primary .card-icon {
     background: var(--gold-500);
-    color: var(--dark-bg-primary);
+    color: var(--text-on-gold); /* Fixed: Use contrasting text */
 }
 
 body.dark-mode .summary-card.info .card-icon {
     background: var(--green-500);
-    color: var(--dark-bg-primary);
+    color: var(--text-on-green); /* Fixed: Use contrasting text */
 }
 
 body.dark-mode .summary-card.warning .card-icon {
     background: var(--gold-400);
-    color: var(--dark-bg-primary);
+    color: var(--text-on-gold); /* Fixed: Use contrasting text */
 }
 
 .card-content {
@@ -481,14 +487,14 @@ body.dark-mode .summary-card.warning .card-icon {
 .summary-value {
     font-size: 2rem;
     font-weight: 700;
-    color: var(--text-primary);
+    color: var(--text-adaptive-primary); /* Fixed: Use adaptive text */
     line-height: 1;
     margin-bottom: 0.25rem;
 }
 
 .summary-label {
     font-size: 0.8rem;
-    color: var(--text-secondary);
+    color: var(--text-adaptive-secondary); /* Fixed: Use adaptive text */
     font-weight: 500;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -511,7 +517,7 @@ body.dark-mode .summary-card.warning .card-icon {
 .details-header h3 {
     font-size: 1.25rem;
     font-weight: 600;
-    color: var(--text-primary);
+    color: var(--text-adaptive-primary); /* Fixed: Use adaptive text */
     margin: 0;
     display: flex;
     align-items: center;
@@ -524,7 +530,7 @@ body.dark-mode .summary-card.warning .card-icon {
 
 .table-info {
     font-size: 0.875rem;
-    color: var(--text-secondary);
+    color: var(--text-adaptive-secondary); /* Fixed: Use adaptive text */
     background: var(--bg-tertiary);
     padding: 0.5rem 1rem;
     border-radius: 8px;
@@ -559,7 +565,7 @@ body.dark-mode .summary-card.warning .card-icon {
     font-size: 0.8rem;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: var(--nav-text);
+    color: var(--nav-text); /* Fixed: Use nav-text for table header */
     border: none;
     white-space: nowrap;
 }
@@ -582,15 +588,15 @@ body.dark-mode .summary-card.warning .card-icon {
     padding: 1rem 0.75rem;
     vertical-align: middle;
     border: none;
-    color: var(--text-primary);
+    color: var(--text-adaptive-primary); /* Fixed: Use adaptive text */
 }
 
 .matric-cell strong {
-    color: var(--text-primary);
+    color: var(--text-adaptive-primary); /* Fixed: Use adaptive text */
     font-weight: 600;
 }
 
-/* Badge Styles - Light Mode */
+/* Badge Styles with Proper Contrast */
 .level-badge {
     display: inline-flex;
     align-items: center;
@@ -604,33 +610,33 @@ body.dark-mode .summary-card.warning .card-icon {
 
 .level-badge.level-100 {
     background: var(--secondary-500);
-    color: #ffffff;
+    color: var(--text-on-primary); /* Fixed: Use contrasting text */
 }
 
 .level-badge.level-200 {
     background: var(--success);
-    color: #ffffff;
+    color: var(--text-on-success); /* Fixed: Use contrasting text */
 }
 
 .level-badge.level-300 {
     background: var(--warning);
-    color: var(--dark-bg-primary);
+    color: var(--text-on-warning); /* Fixed: Use contrasting text */
 }
 
 .level-badge.level-400 {
     background: var(--error);
-    color: #ffffff;
+    color: var(--text-on-error); /* Fixed: Use contrasting text */
 }
 
 /* Dark Mode Level Badges */
 body.dark-mode .level-badge.level-100 {
     background: var(--green-500);
-    color: var(--dark-bg-primary);
+    color: var(--text-on-green); /* Fixed: Use contrasting text */
 }
 
 body.dark-mode .level-badge.level-300 {
     background: var(--gold-400);
-    color: var(--dark-bg-primary);
+    color: var(--text-on-gold); /* Fixed: Use contrasting text */
 }
 
 .attendance-badge {
@@ -646,12 +652,12 @@ body.dark-mode .level-badge.level-300 {
 
 .attendance-badge.present {
     background: var(--success);
-    color: #ffffff;
+    color: var(--text-on-success); /* Fixed: Use contrasting text */
 }
 
 .attendance-badge.absent {
     background: var(--error);
-    color: #ffffff;
+    color: var(--text-on-error); /* Fixed: Use contrasting text */
 }
 
 .percentage-badge {
@@ -667,28 +673,28 @@ body.dark-mode .level-badge.level-300 {
 
 .percentage-badge.excellent {
     background: var(--success);
-    color: #ffffff;
+    color: var(--text-on-success); /* Fixed: Use contrasting text */
 }
 
 .percentage-badge.good {
     background: var(--warning);
-    color: var(--dark-bg-primary);
+    color: var(--text-on-warning); /* Fixed: Use contrasting text */
 }
 
 .percentage-badge.poor {
     background: var(--error);
-    color: #ffffff;
+    color: var(--text-on-error); /* Fixed: Use contrasting text */
 }
 
 .percentage-badge.critical {
-    background: var(--text-primary);
-    color: var(--bg-primary);
+    background: var(--text-adaptive-primary);
+    color: var(--bg-primary); /* Fixed: Inverse colors */
 }
 
 /* Dark Mode Percentage Badges */
 body.dark-mode .percentage-badge.good {
     background: var(--gold-400);
-    color: var(--dark-bg-primary);
+    color: var(--text-on-gold); /* Fixed: Use contrasting text */
 }
 
 .status-badge {
@@ -704,28 +710,28 @@ body.dark-mode .percentage-badge.good {
 
 .status-badge.excellent {
     background: var(--success);
-    color: #ffffff;
+    color: var(--text-on-success); /* Fixed: Use contrasting text */
 }
 
 .status-badge.good {
     background: var(--warning);
-    color: var(--dark-bg-primary);
+    color: var(--text-on-warning); /* Fixed: Use contrasting text */
 }
 
 .status-badge.poor {
     background: var(--error);
-    color: #ffffff;
+    color: var(--text-on-error); /* Fixed: Use contrasting text */
 }
 
 .status-badge.critical {
-    background: var(--text-primary);
-    color: var(--bg-primary);
+    background: var(--text-adaptive-primary);
+    color: var(--bg-primary); /* Fixed: Inverse colors */
 }
 
 /* Dark Mode Status Badges */
 body.dark-mode .status-badge.good {
     background: var(--gold-400);
-    color: var(--dark-bg-primary);
+    color: var(--text-on-gold); /* Fixed: Use contrasting text */
 }
 
 /* JSON Section */
@@ -745,7 +751,7 @@ body.dark-mode .status-badge.good {
 .json-header h3 {
     font-size: 1.25rem;
     font-weight: 600;
-    color: var(--text-primary);
+    color: var(--text-adaptive-primary); /* Fixed: Use adaptive text */
     margin: 0;
     display: flex;
     align-items: center;
@@ -766,7 +772,7 @@ body.dark-mode .status-badge.good {
 
 .json-content {
     background: var(--bg-secondary);
-    color: var(--text-primary);
+    color: var(--text-adaptive-primary); /* Fixed: Use adaptive text */
     padding: 1.5rem;
     margin: 0;
     overflow-x: auto;
@@ -777,7 +783,7 @@ body.dark-mode .status-badge.good {
     word-wrap: break-word;
 }
 
-/* Responsive Design */
+/* Responsive Design - Text Colors Maintained */
 @media (max-width: 480px) {
     .reports-container {
         padding: 1rem;
@@ -1000,6 +1006,7 @@ body.dark-mode .status-badge.good {
     .reports-container {
         background: white;
         padding: 0;
+        color: black; /* Fixed: Force black text for print */
     }
 
     .filter-section,
@@ -1009,7 +1016,7 @@ body.dark-mode .status-badge.good {
 
     .report-header {
         background: white;
-        color: black;
+        color: black; /* Fixed: Force black text for print */
         border-bottom: 2px solid black;
     }
 
@@ -1038,6 +1045,43 @@ body.dark-mode .status-badge.good {
     outline-offset: 2px;
 }
 
+/* Spinner Colors */
+.spinner-border {
+    color: var(--button-text); /* Fixed: Use button text color for spinners */
+}
+
+.loading-spinner {
+    color: var(--button-primary);
+}
+
+/* Button Text Visibility Fix */
+.btn span,
+.btn-generate span,
+.btn-action span {
+    color: inherit; /* Fixed: Ensure spans inherit button text color */
+}
+
+/* Icon Colors in Buttons */
+.btn i,
+.btn-generate i,
+.btn-action i {
+    color: inherit; /* Fixed: Ensure icons inherit button text color */
+}
+
+/* Ensure all button content is visible */
+.btn *,
+.btn-generate *,
+.btn-action * {
+    color: inherit !important; /* Fixed: Force all button content to inherit color */
+}
+
+/* Override any conflicting Bootstrap or other styles */
+.btn .spinner-border,
+.btn-generate .spinner-border {
+    color: currentColor; /* Fixed: Spinner inherits button color */
+    border-color: currentColor transparent currentColor transparent;
+}
+
 /* Utility Classes */
 .text-center { text-align: center; }
 .me-1 { margin-right: 0.25rem; }
@@ -1052,4 +1096,4 @@ body.dark-mode .status-badge.good {
     clip: rect(0, 0, 0, 0);
     white-space: nowrap;
     border: 0;
-}
+    }
