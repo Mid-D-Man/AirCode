@@ -81,6 +81,39 @@
     /* Component Specific */
     --cube-side: 2.75rem;
     --cube-side-half: calc(var(--cube-side) / 2);
+
+    /* ===== ENHANCED TEXT COLORS WITH CONTRAST GUIDELINES ===== */
+    
+    /* Light Text Colors - For use on DARK backgrounds */
+    --text-light-primary: #ffffff;          /* Pure white - highest contrast on dark */
+    --text-light-secondary: #f8fafc;        /* Slightly off-white - softer on dark */
+    --text-light-tertiary: #e2e8f0;         /* Light gray - reduced emphasis on dark */
+    --text-light-muted: #cbd5e1;            /* Muted light - subtle text on dark */
+    --text-light-disabled: #94a3b8;         /* Disabled state on dark backgrounds */
+
+    /* Dark Text Colors - For use on LIGHT backgrounds */
+    --text-dark-primary: #0f172a;           /* Near black - highest contrast on light */
+    --text-dark-secondary: #1e293b;         /* Dark slate - strong contrast on light */
+    --text-dark-tertiary: #334155;          /* Medium dark - reduced emphasis on light */
+    --text-dark-muted: #64748b;             /* Muted dark - subtle text on light */
+    --text-dark-disabled: #94a3b8;          /* Disabled state on light backgrounds */
+
+    /* Contrasting Text Colors - For colored backgrounds */
+    --text-on-primary: #ffffff;             /* White text on primary blue backgrounds */
+    --text-on-secondary: #0f172a;           /* Dark text on secondary light blue */
+    --text-on-gold: #0f172a;                /* Dark text on gold backgrounds */
+    --text-on-green: #ffffff;               /* White text on green backgrounds */
+    --text-on-success: #ffffff;             /* White text on success green */
+    --text-on-error: #ffffff;               /* White text on error red */
+    --text-on-warning: #0f172a;             /* Dark text on warning yellow/orange */
+    --text-on-info: #ffffff;                /* White text on info blue */
+
+    /* Adaptive Text Colors - Auto-switch based on background */
+    --text-adaptive-primary: var(--text-dark-primary);    /* Switches in themes */
+    --text-adaptive-secondary: var(--text-dark-secondary);
+    --text-adaptive-tertiary: var(--text-dark-tertiary);
+    --text-adaptive-muted: var(--text-dark-muted);
+    --text-adaptive-disabled: var(--text-dark-disabled);
 }
 
 /* Light Mode Theme */
@@ -90,10 +123,17 @@ body {
     --bg-secondary: var(--light-bg-secondary);
     --bg-tertiary: var(--light-bg-tertiary);
 
-    /* Text Colors - Dark text for light backgrounds */
+    /* Standard Text Colors - Dark text for light backgrounds */
     --text-primary: var(--light-text-primary);
     --text-secondary: var(--light-text-secondary);
     --text-tertiary: var(--light-text-tertiary);
+
+    /* Adaptive Text Colors - Use dark text in light mode */
+    --text-adaptive-primary: var(--text-dark-primary);
+    --text-adaptive-secondary: var(--text-dark-secondary);
+    --text-adaptive-tertiary: var(--text-dark-tertiary);
+    --text-adaptive-muted: var(--text-dark-muted);
+    --text-adaptive-disabled: var(--text-dark-disabled);
 
     /* Border Colors */
     --border: var(--light-border);
@@ -102,14 +142,14 @@ body {
     --nav-background: var(--primary-500);
     --nav-hover: var(--primary-600);
     --nav-active: var(--primary-700);
-    --nav-text: #ffffff;
+    --nav-text: var(--text-on-primary);      /* White text on dark blue nav */
 
     /* Button Colors - Cobalt Blue */
     --button-primary: var(--primary-500);
     --button-primary-hover: var(--primary-600);
     --button-secondary: var(--secondary-500);
     --button-secondary-hover: var(--secondary-600);
-    --button-text: #ffffff;
+    --button-text: var(--text-on-primary);   /* White text on buttons */
 
     /* Icon Colors */
     --icon-primary: var(--primary-500);
@@ -142,10 +182,17 @@ body.dark-mode {
     --bg-secondary: var(--dark-bg-secondary) !important;
     --bg-tertiary: var(--dark-bg-tertiary);
 
-    /* Text Colors - Light text for dark backgrounds */
+    /* Standard Text Colors - Light text for dark backgrounds */
     --text-primary: var(--dark-text-primary);
     --text-secondary: var(--dark-text-secondary);
     --text-tertiary: var(--dark-text-tertiary);
+
+    /* Adaptive Text Colors - Use light text in dark mode */
+    --text-adaptive-primary: var(--text-light-primary);
+    --text-adaptive-secondary: var(--text-light-secondary);
+    --text-adaptive-tertiary: var(--text-light-tertiary);
+    --text-adaptive-muted: var(--text-light-muted);
+    --text-adaptive-disabled: var(--text-light-disabled);
 
     /* Border Colors */
     --border: var(--dark-border);
@@ -154,14 +201,14 @@ body.dark-mode {
     --nav-background: var(--gold-800);
     --nav-hover: var(--gold-700);
     --nav-active: var(--gold-900);
-    --nav-text: var(--dark-text-primary);
+    --nav-text: var(--text-light-primary);   /* Light text on dark gold nav */
 
     /* Button Colors - Gold/Orange Primary for dark mode */
     --button-primary: var(--gold-500);
     --button-primary-hover: var(--gold-400);
     --button-secondary: var(--green-600);
     --button-secondary-hover: var(--green-500);
-    --button-text: var(--dark-bg-primary);
+    --button-text: var(--text-on-gold);      /* Dark text on gold buttons */
 
     /* Icon Colors */
     --icon-primary: var(--gold-400);
@@ -180,43 +227,161 @@ body.dark-mode {
     --hover-facebook-blue: var(--gold-400);
 }
 
-/* Helper classes to directly apply theme variables */
-.bg-primary {
-    background-color: var(--bg-primary) !important;
+/* ===== TEXT CONTRAST UTILITY CLASSES ===== */
+
+/* Light text classes - Use on DARK backgrounds */
+.text-light-primary {
+    color: var(--text-light-primary) !important;
+}
+.text-light-secondary {
+    color: var(--text-light-secondary) !important;
+}
+.text-light-tertiary {
+    color: var(--text-light-tertiary) !important;
+}
+.text-light-muted {
+    color: var(--text-light-muted) !important;
+}
+.text-light-disabled {
+    color: var(--text-light-disabled) !important;
 }
 
-.bg-secondary {
-    background-color: var(--bg-secondary) !important;
+/* Dark text classes - Use on LIGHT backgrounds */
+.text-dark-primary {
+    color: var(--text-dark-primary) !important;
+}
+.text-dark-secondary {
+    color: var(--text-dark-secondary) !important;
+}
+.text-dark-tertiary {
+    color: var(--text-dark-tertiary) !important;
+}
+.text-dark-muted {
+    color: var(--text-dark-muted) !important;
+}
+.text-dark-disabled {
+    color: var(--text-dark-disabled) !important;
 }
 
-.bg-tertiary {
-    background-color: var(--bg-tertiary) !important;
+/* Contrasting text classes - Use on COLORED backgrounds */
+.text-on-primary {
+    color: var(--text-on-primary) !important;
+}
+.text-on-secondary {
+    color: var(--text-on-secondary) !important;
+}
+.text-on-gold {
+    color: var(--text-on-gold) !important;
+}
+.text-on-green {
+    color: var(--text-on-green) !important;
+}
+.text-on-success {
+    color: var(--text-on-success) !important;
+}
+.text-on-error {
+    color: var(--text-on-error) !important;
+}
+.text-on-warning {
+    color: var(--text-on-warning) !important;
+}
+.text-on-info {
+    color: var(--text-on-info) !important;
 }
 
+/* Adaptive text classes - Auto-switch based on theme */
+.text-adaptive-primary {
+    color: var(--text-adaptive-primary) !important;
+}
+.text-adaptive-secondary {
+    color: var(--text-adaptive-secondary) !important;
+}
+.text-adaptive-tertiary {
+    color: var(--text-adaptive-tertiary) !important;
+}
+.text-adaptive-muted {
+    color: var(--text-adaptive-muted) !important;
+}
+.text-adaptive-disabled {
+    color: var(--text-adaptive-disabled) !important;
+}
+
+/* Legacy text utility classes */
 .text-primary {
     color: var(--text-primary) !important;
 }
-
 .text-secondary {
     color: var(--text-secondary) !important;
 }
-
 .text-tertiary {
     color: var(--text-tertiary) !important;
+}
+
+/* Background utility classes */
+.bg-primary {
+    background-color: var(--bg-primary) !important;
+}
+.bg-secondary {
+    background-color: var(--bg-secondary) !important;
+}
+.bg-tertiary {
+    background-color: var(--bg-tertiary) !important;
 }
 
 .border-theme {
     border-color: var(--border) !important;
 }
 
-/* Force theme colors for specific elements */
+/* ===== COMPONENT CONTRAST GUIDELINES ===== */
+
+/* 
+Usage Guidelines:
+
+1. DARK MODE + DARK BACKGROUND → Use light text:
+   .bg-primary (dark) + .text-light-primary
+   .bg-secondary (dark) + .text-light-secondary
+
+2. DARK MODE + LIGHT CONTAINER → Use dark text:
+   .bg-light + .text-dark-primary
+   Card with white background + .text-dark-secondary
+
+3. LIGHT MODE + LIGHT BACKGROUND → Use dark text:
+   .bg-primary (light) + .text-dark-primary
+   .bg-secondary (light) + .text-dark-secondary
+
+4. LIGHT MODE + DARK BACKGROUND → Use light text:
+   .bg-dark + .text-light-primary
+   Navigation bars + .text-on-primary
+
+5. COLORED BACKGROUNDS → Use specific contrast text:
+   .bg-primary-500 + .text-on-primary
+   .bg-gold-500 + .text-on-gold
+   .bg-success + .text-on-success
+
+6. ADAPTIVE (AUTO-SWITCHING) → Use adaptive classes:
+   Any background + .text-adaptive-primary (switches automatically)
+*/
+
+/* Force theme colors for specific elements with proper contrast */
 .card, .panel, .sidebar, .content-box {
     background-color: var(--bg-secondary);
-    color: var(--text-primary);
+    color: var(--text-adaptive-primary);     /* Auto-switches based on theme */
     border-color: var(--border);
 }
 
-/* Ensure proper theme inheritance */
+/* Dark containers in any theme should use light text */
+.dark-container, .nav-dark, .header-dark {
+    background-color: var(--dark-bg-secondary);
+    color: var(--text-light-primary) !important;
+}
+
+/* Light containers in any theme should use dark text */
+.light-container, .modal-light, .card-light {
+    background-color: var(--light-bg-secondary);
+    color: var(--text-dark-primary) !important;
+}
+
+/* Ensure proper theme inheritance with smooth transitions */
 * {
     transition: background-color 0.3s, color 0.3s, border-color 0.3s;
     }
