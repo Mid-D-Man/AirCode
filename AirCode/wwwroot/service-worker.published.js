@@ -11,9 +11,20 @@ const offlineAssetsInclude = [
 ];
 const offlineAssetsExclude = [ /^service-worker\.js$/ ];
 
-// Cache for dynamic pages and routes - FIXED: Use consistent naming
+// Cache for dynamic pages and routes
 const pagesCacheName = `aircode-pages-cache-${self.assetsManifest.version}`;
-const blazorRoutes = ['/', '/Admin/OfflineAttendanceEven', '/Client/OfflineScan'];
+const blazorRoutes = ['/', '/Admin/OfflineAttendanceEvent', '/Client/OfflineScan'];
+
+// IMPORTANT: URLs that should bypass service worker completely
+const bypassPatterns = [
+    /_framework\/blazor\.webassembly\.js/,
+    /_framework\/dotnet\./,
+    /_framework\/.*\.wasm$/,
+    /\/_framework\/.*\.dll$/,
+    /\/_framework\/.*\.pdb$/,
+    /\/api\//,  // API calls
+    /\/_blazor\//,  // SignalR hub connections
+];
 
 self.addEventListener('install', event => {
     console.log('AirCode Service worker: Install');
@@ -28,6 +39,11 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
+    // CRITICAL: Let certain requests bypass service worker entirely
+    if (shouldBypassServiceWorker(event.request)) {
+        return; // Don't call event.respondWith, let the request go through normally
+    }
+    
     event.respondWith(onFetch(event));
 });
 
@@ -36,6 +52,23 @@ self.addEventListener('message', event => {
         self.skipWaiting();
     }
 });
+
+function shouldBypassServiceWorker(request) {
+    const url = new URL(request.url);
+    
+    // Bypass non-GET requests
+    if (request.method !== 'GET') {
+        return true;
+    }
+    
+    // Bypass requests to other origins
+    if (url.origin !== location.origin) {
+        return true;
+    }
+    
+    // Bypass critical Blazor framework requests
+    return bypassPatterns.some(pattern => pattern.test(url.pathname));
+}
 
 async function onInstall(event) {
     console.info('AirCode Service worker: Installing and caching assets');
@@ -52,56 +85,55 @@ async function onInstall(event) {
 
         const cache = await caches.open(cacheName);
 
-        // FIXED: Add assets in smaller batches to prevent failures
-        const batchSize = 20;
+        // Add assets in smaller batches with better error handling
+        const batchSize = 10; // Reduced batch size
         for (let i = 0; i < assetsRequests.length; i += batchSize) {
             const batch = assetsRequests.slice(i, i + batchSize);
             try {
-                await cache.addAll(batch);
-                console.log(`AirCode: Cached batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(assetsRequests.length/batchSize)}`);
-            } catch (error) {
-                console.warn('AirCode: Failed to cache batch, trying individually:', error);
-                // Try adding individually if batch fails
-                for (const request of batch) {
+                await Promise.allSettled(batch.map(async (request) => {
                     try {
-                        const response = await fetch(request);
+                        const response = await fetch(request.clone(), {
+                            cache: 'no-cache',
+                            signal: AbortSignal.timeout(10000) // 10 second timeout
+                        });
                         if (response.ok) {
                             await cache.put(request, response);
                         }
-                    } catch (individualError) {
-                        console.warn('AirCode: Failed to cache individual asset:', request.url);
+                    } catch (error) {
+                        console.warn('AirCode: Failed to cache asset:', request.url, error.message);
                     }
-                }
+                }));
+                
+                console.log(`AirCode: Processed batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(assetsRequests.length/batchSize)}`);
+            } catch (error) {
+                console.warn('AirCode: Batch processing error:', error);
             }
         }
 
-        // FIXED: Ensure pages cache is properly set up
+        // Cache pages with timeout
         const pagesCache = await caches.open(pagesCacheName);
 
-        // Cache index.html with proper error handling
         try {
-            const indexResponse = await fetch('./index.html', { cache: 'no-cache' });
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
+            
+            const indexResponse = await fetch('./index.html', { 
+                cache: 'no-cache',
+                signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+            
             if (indexResponse.ok) {
                 await pagesCache.put('./index.html', indexResponse.clone());
-                await pagesCache.put('/', indexResponse.clone()); // FIXED: Also cache root path
+                await pagesCache.put('/', indexResponse.clone());
                 console.log('AirCode: Successfully cached index.html and root path');
             }
         } catch (error) {
-            console.error('AirCode: Failed to cache index.html:', error);
-        }
-
-        // Cache Blazor routes
-        for (const route of blazorRoutes) {
-            if (route !== '/') {
-                try {
-                    const routeResponse = await fetch('./index.html', { cache: 'no-cache' });
-                    if (routeResponse.ok) {
-                        await pagesCache.put(route, routeResponse.clone());
-                        console.log(`AirCode: Cached route: ${route}`);
-                    }
-                } catch (error) {
-                    console.warn(`AirCode: Failed to cache route ${route}:`, error);
-                }
+            if (error.name === 'AbortError') {
+                console.warn('AirCode: Index.html caching timed out');
+            } else {
+                console.error('AirCode: Failed to cache index.html:', error);
             }
         }
 
@@ -127,12 +159,6 @@ async function onActivate(event) {
             })
         );
 
-        // Notify clients about new version
-        const clients = await self.clients.matchAll();
-        clients.forEach(client => {
-            client.postMessage({ type: 'NEW_VERSION_AVAILABLE' });
-        });
-
         console.info('AirCode Service worker: Activation complete');
     } catch (error) {
         console.error('AirCode Service worker: Activation failed:', error);
@@ -142,16 +168,6 @@ async function onActivate(event) {
 async function onFetch(event) {
     const request = event.request;
     const url = new URL(request.url);
-
-    // Skip non-GET requests
-    if (request.method !== 'GET') {
-        return fetch(request);
-    }
-
-    // Skip requests to other origins
-    if (url.origin !== location.origin) {
-        return fetch(request);
-    }
 
     // Handle navigation requests (page loads)
     if (request.mode === 'navigate') {
@@ -167,22 +183,34 @@ async function handleNavigationRequest(request) {
     const pathname = url.pathname;
 
     try {
-        // Try network first for navigation
+        // Try network first with timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+        
         const networkResponse = await fetch(request, {
-            cache: 'no-cache'
+            cache: 'no-cache',
+            signal: controller.signal
         });
+        
+        clearTimeout(timeoutId);
 
         // Cache successful responses
         if (networkResponse.ok) {
             const pagesCache = await caches.open(pagesCacheName);
-            pagesCache.put(request, networkResponse.clone());
+            pagesCache.put(request, networkResponse.clone()).catch(error => {
+                console.warn('AirCode: Failed to cache navigation response:', error);
+            });
         }
 
         return networkResponse;
     } catch (error) {
-        console.log('AirCode: Network failed for navigation, serving from cache:', pathname);
+        if (error.name === 'AbortError') {
+            console.log('AirCode: Navigation request timed out, serving from cache:', pathname);
+        } else {
+            console.log('AirCode: Network failed for navigation, serving from cache:', pathname, error.message);
+        }
 
-        // FIXED: Better fallback logic for pages cache
+        // Fallback to cache
         const pagesCache = await caches.open(pagesCacheName);
 
         // Try exact match first
@@ -226,17 +254,31 @@ async function handleAssetRequest(request) {
     }
 
     try {
-        // Try network for uncached assets
-        const networkResponse = await fetch(request);
+        // Try network for uncached assets with timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        
+        const networkResponse = await fetch(request, {
+            signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
 
         // Cache successful responses if they match our patterns
         if (networkResponse.ok && shouldCacheAsset(request.url)) {
-            cache.put(request, networkResponse.clone());
+            cache.put(request, networkResponse.clone()).catch(error => {
+                console.warn('AirCode: Failed to cache asset:', error);
+            });
         }
 
         return networkResponse;
     } catch (error) {
-        console.log('AirCode: Asset request failed and not in cache:', request.url);
+        if (error.name === 'AbortError') {
+            console.log('AirCode: Asset request timed out and not in cache:', request.url);
+        } else {
+            console.log('AirCode: Asset request failed and not in cache:', request.url, error.message);
+        }
+        
         return new Response('Asset not available offline', {
             status: 503,
             statusText: 'Service Unavailable'
@@ -247,4 +289,4 @@ async function handleAssetRequest(request) {
 function shouldCacheAsset(url) {
     return offlineAssetsInclude.some(pattern => pattern.test(url)) &&
         !offlineAssetsExclude.some(pattern => pattern.test(url));
-}
+                }
