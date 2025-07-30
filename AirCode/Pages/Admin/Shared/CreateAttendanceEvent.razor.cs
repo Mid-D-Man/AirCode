@@ -440,7 +440,7 @@ private async Task StartSessionAsync()
                 UseTemporalKeyRefresh = useTemporalKeyRefresh,
                 SecurityFeatures = (int)securityFeatures,
                 TemporalKey = temporalKey,
-                SyncStatus = "pending", // or appropriate initial status
+                SyncStatus = 0, // or appropriate initial status
                 CreatedAt = DateTime.UtcNow
             };
 
