@@ -113,9 +113,7 @@ a, .btn-link {
     align-items: center;
     justify-content: center;
     animation: fadeIn 0.3s ease-out;
-    /* Viewport fix */
-    height: 100dvh; /* Dynamic viewport height */
-    width: 100dvw;  /* Dynamic viewport width */
+  
 }
 
 /* Fallback for older browsers */
