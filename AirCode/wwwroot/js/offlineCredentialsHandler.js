@@ -1,275 +1,342 @@
-// File: wwwroot/js/offlineCredentialsHandler.js
-// Enhanced offline credentials handler for AirCode app
-// Now includes lecturer ID and matric number support
-// Enhanced offline credentials handler for AirCode app
-// recent changes made => Simplified device fingerprinting - stable and consistent
-// Added automatic expiration checking and cleanup
-// File: wwwroot/js/offlineCredentialsHandler.js
-// Streamlined offline credentials handler for AirCode app
-// Optimized for essential functionality with reduced storage overhead
+// Enhanced offline credentials handler - optimized for reliability
+window.offlineCredentialsHandler = (() => {
+    'use strict';
 
-window.offlineCredentialsHandler = {
-    // Simplified storage keys - only store what's essential
-    STORAGE_KEYS: {
+    const STORAGE_KEYS = {
         CREDENTIALS: "AirCode_offline_credentials",
-        AUTH_KEY: "aircode_auth_key",
+        AUTH_KEY: "aircode_auth_key", 
         AUTH_IV: "aircode_auth_iv",
-        DEVICE_GUID: "AirCode_device_guid" // Only persistent identifier needed
-    },
-//#region Device FingerPrint
+        DEVICE_GUID: "AirCode_device_guid"
+    };
 
-    // Client sends GUID only
-    getOrCreateDeviceGuid: function() {
-        let guid = localStorage.getItem(this.STORAGE_KEYS.DEVICE_GUID);
-        if (!guid) {
-            guid = Date.now().toString(16).slice(-8) + Math.random().toString(16).slice(2,10);
-            localStorage.setItem(this.STORAGE_KEYS.DEVICE_GUID, guid);
-        }
-        return guid;
-    },
-    // Simplified device fingerprint using only GUID
-    createDeviceFingerprint: function() {
-        return this.getOrCreateDeviceGuid();
-    },
-
-    //#endregion
-    // Check if credentials exist and are valid (not expired)
-    areCredentialsValid: async function() {
-        try {
-            const encryptedCredentials = localStorage.getItem(this.STORAGE_KEYS.CREDENTIALS);
-            const key = localStorage.getItem(this.STORAGE_KEYS.AUTH_KEY);
-            const iv = localStorage.getItem(this.STORAGE_KEYS.AUTH_IV);
-
-            if (!encryptedCredentials || !key || !iv) {
-                return false;
+    // Immediate device GUID initialization
+    let deviceGuid = null;
+    
+    const initializeDeviceGuid = () => {
+        if (!deviceGuid) {
+            deviceGuid = localStorage.getItem(STORAGE_KEYS.DEVICE_GUID);
+            if (!deviceGuid) {
+                deviceGuid = `${Date.now().toString(16).slice(-8)}${Math.random().toString(16).slice(2,10)}`;
+                localStorage.setItem(STORAGE_KEYS.DEVICE_GUID, deviceGuid);
+                console.log('[OfflineCredentials] Device GUID created:', deviceGuid);
             }
+        }
+        return deviceGuid;
+    };
 
-            // Decrypt and check expiration
-            const decryptedStr = await window.cryptographyHandler.decryptData(
-                encryptedCredentials, key, iv
-            );
-            const credentials = JSON.parse(decryptedStr);
+    // Initialize immediately
+    initializeDeviceGuid();
 
-            // Check expiration
-            const expiresAt = new Date(credentials.expiresAt);
-            const now = new Date();
+    const logDebug = (message, data = null) => {
+        console.log(`[OfflineCredentials] ${message}`, data || '');
+    };
 
-            if (expiresAt < now) {
-                console.log('[OfflineCredentials] Credentials expired, cleaning up');
+    const logError = (message, error = null) => {
+        console.error(`[OfflineCredentials] ${message}`, error || '');
+    };
+
+    return {
+        // Public methods
+        getOrCreateDeviceGuid() {
+            return initializeDeviceGuid();
+        },
+
+        createDeviceFingerprint() {
+            return this.getOrCreateDeviceGuid();
+        },
+
+        async areCredentialsValid() {
+            try {
+                const encryptedCredentials = localStorage.getItem(STORAGE_KEYS.CREDENTIALS);
+                const key = localStorage.getItem(STORAGE_KEYS.AUTH_KEY);
+                const iv = localStorage.getItem(STORAGE_KEYS.AUTH_IV);
+
+                if (!encryptedCredentials || !key || !iv) {
+                    logDebug('Missing credential components');
+                    return false;
+                }
+
+                // Verify cryptography handler exists
+                if (!window.cryptographyHandler?.decryptData) {
+                    logError('Cryptography handler not available');
+                    return false;
+                }
+
+                const decryptedStr = await window.cryptographyHandler.decryptData(
+                    encryptedCredentials, key, iv
+                );
+                
+                if (!decryptedStr) {
+                    logError('Decryption failed');
+                    this.clearCredentials();
+                    return false;
+                }
+
+                const credentials = JSON.parse(decryptedStr);
+                const expiresAt = new Date(credentials.expiresAt);
+                const now = new Date();
+
+                if (expiresAt < now) {
+                    logDebug('Credentials expired, cleaning up');
+                    this.clearCredentials();
+                    return false;
+                }
+
+                return true;
+
+            } catch (error) {
+                logError('Validation error:', error);
                 this.clearCredentials();
                 return false;
             }
+        },
 
-            return true;
+        async storeCredentials(userId, role, key, iv, expirationHours = 12, additionalData = {}) {
+            try {
+                logDebug(`Storing credentials for: ${userId}, role: ${role}, expiry: ${expirationHours}h`);
 
-        } catch (error) {
-            console.error('[OfflineCredentials] Validation error:', error);
-            this.clearCredentials();
-            return false;
-        }
-    },
+                // Input validation
+                if (!userId?.trim() || !role?.trim() || !key?.trim() || !iv?.trim()) {
+                    throw new Error('Missing required parameters');
+                }
 
-    // Simplified credential storage
-    storeCredentials: async function(userId, role, key, iv, expirationHours = 12, additionalData = {}) {
-        try {
-            console.log('[OfflineCredentials] Storing credentials for:', userId);
+                // Verify cryptography handler
+                if (!window.cryptographyHandler?.encryptData || !window.cryptographyHandler?.signData) {
+                    throw new Error('Cryptography handler not available');
+                }
 
-            // Input validation
-            if (!userId || !role || !key || !iv) {
-                throw new Error('Missing required parameters');
-            }
+                // Create expiration timestamp
+                const expirationDate = new Date();
+                expirationDate.setHours(expirationDate.getHours() + expirationHours);
 
-            // Create expiration timestamp
-            const expirationDate = new Date();
-            expirationDate.setHours(expirationDate.getHours() + expirationHours);
+                const currentDeviceGuid = this.getOrCreateDeviceGuid();
+                
+                // Build credential object
+                const credentials = {
+                    userId: userId.trim(),
+                    role: role.toLowerCase().trim(),
+                    deviceGuid: currentDeviceGuid,
+                    issuedAt: new Date().toISOString(),
+                    expiresAt: expirationDate.toISOString()
+                };
 
-            // Build minimal credential object
-            const credentials = {
-                userId: userId,
-                role: role.toLowerCase(),
-                deviceGuid: this.getOrCreateDeviceGuid(),
-                issuedAt: new Date().toISOString(),
-                expiresAt: expirationDate.toISOString()
-            };
+                // Add role-specific data
+                const normalizedRole = role.toLowerCase().trim();
+                if (normalizedRole === 'lectureradmin' && additionalData?.lecturerId?.trim()) {
+                    credentials.lecturerId = additionalData.lecturerId.trim();
+                    logDebug('Added lecturer ID');
+                }
+                
+                if (['student', 'courserepadmin'].includes(normalizedRole) && additionalData?.matricNumber?.trim()) {
+                    credentials.matricNumber = additionalData.matricNumber.trim();
+                    logDebug('Added matric number');
+                }
 
-            // Add role-specific data only when provided
-            if (role.toLowerCase() === 'lectureradmin' && additionalData.lecturerId) {
-                credentials.lecturerId = additionalData.lecturerId;
-            }
-            if (['student', 'courserepadmin'].includes(role.toLowerCase()) && additionalData.matricNumber) {
-                credentials.matricNumber = additionalData.matricNumber;
-            }
+                // Create signature
+                const credentialsStr = JSON.stringify(credentials);
+                const signature = await window.cryptographyHandler.signData(
+                    credentialsStr, currentDeviceGuid
+                );
 
-            // Create signature for integrity
-            const credentialsStr = JSON.stringify(credentials);
-            const signature = await window.cryptographyHandler.signData(
-                credentialsStr,
-                credentials.deviceGuid
-            );
+                if (!signature) {
+                    throw new Error('Failed to create signature');
+                }
 
-            const signedCredentials = { ...credentials, signature };
+                const signedCredentials = { ...credentials, signature };
 
-            // Encrypt credentials
-            const encryptedCredentials = await window.cryptographyHandler.encryptData(
-                JSON.stringify(signedCredentials),
-                key,
-                iv
-            );
+                // Encrypt credentials
+                const encryptedCredentials = await window.cryptographyHandler.encryptData(
+                    JSON.stringify(signedCredentials), key, iv
+                );
 
-            // Store encrypted data
-            localStorage.setItem(this.STORAGE_KEYS.CREDENTIALS, encryptedCredentials);
-            localStorage.setItem(this.STORAGE_KEYS.AUTH_KEY, key);
-            localStorage.setItem(this.STORAGE_KEYS.AUTH_IV, iv);
+                if (!encryptedCredentials) {
+                    throw new Error('Encryption failed');
+                }
 
-            console.log('[OfflineCredentials] Credentials stored successfully');
-            return true;
+                // Atomic storage operation
+                localStorage.setItem(STORAGE_KEYS.CREDENTIALS, encryptedCredentials);
+                localStorage.setItem(STORAGE_KEYS.AUTH_KEY, key);
+                localStorage.setItem(STORAGE_KEYS.AUTH_IV, iv);
 
-        } catch (error) {
-            console.error('[OfflineCredentials] Storage failed:', error);
-            this.clearCredentials();
-            return false;
-        }
-    },
+                logDebug('Credentials stored successfully');
+                
+                // Immediate validation
+                const isValid = await this.areCredentialsValid();
+                if (!isValid) {
+                    throw new Error('Stored credentials failed validation');
+                }
 
-    // Retrieve and validate credentials
-    getCredentials: async function() {
-        try {
-            // Check validity first (handles expiration cleanup)
-            if (!await this.areCredentialsValid()) {
-                return null;
-            }
+                return true;
 
-            const encryptedCredentials = localStorage.getItem(this.STORAGE_KEYS.CREDENTIALS);
-            const key = localStorage.getItem(this.STORAGE_KEYS.AUTH_KEY);
-            const iv = localStorage.getItem(this.STORAGE_KEYS.AUTH_IV);
-
-            // Decrypt credentials
-            const decryptedStr = await window.cryptographyHandler.decryptData(
-                encryptedCredentials, key, iv
-            );
-            const signedCredentials = JSON.parse(decryptedStr);
-
-            // Verify signature integrity
-            const { signature, ...credentialsWithoutSignature } = signedCredentials;
-            const credentialsStr = JSON.stringify(credentialsWithoutSignature);
-
-            const isValidSignature = await window.cryptographyHandler.verifyHmac(
-                credentialsStr,
-                signature,
-                signedCredentials.deviceGuid
-            );
-
-            if (!isValidSignature) {
-                console.warn('[OfflineCredentials] Invalid signature');
+            } catch (error) {
+                logError('Storage failed:', error);
                 this.clearCredentials();
-                return null;
+                return false;
             }
+        },
 
-            return JSON.stringify(credentialsWithoutSignature);
+        async getCredentials() {
+            try {
+                if (!await this.areCredentialsValid()) {
+                    return null;
+                }
 
-        } catch (error) {
-            console.error('[OfflineCredentials] Retrieval failed:', error);
-            this.clearCredentials();
-            return null;
-        }
-    },
+                const encryptedCredentials = localStorage.getItem(STORAGE_KEYS.CREDENTIALS);
+                const key = localStorage.getItem(STORAGE_KEYS.AUTH_KEY);
+                const iv = localStorage.getItem(STORAGE_KEYS.AUTH_IV);
 
-    // Simplified getter methods
-    getUserRole: async function() {
-        const credentials = await this.getCredentials();
-        return credentials ? JSON.parse(credentials).role : null;
-    },
+                const decryptedStr = await window.cryptographyHandler.decryptData(
+                    encryptedCredentials, key, iv
+                );
+                
+                const signedCredentials = JSON.parse(decryptedStr);
+                const { signature, ...credentialsWithoutSignature } = signedCredentials;
 
-    getUserId: async function() {
-        const credentials = await this.getCredentials();
-        return credentials ? JSON.parse(credentials).userId : null;
-    },
+                // Verify signature integrity
+                if (window.cryptographyHandler.verifyHmac) {
+                    const credentialsStr = JSON.stringify(credentialsWithoutSignature);
+                    const isValidSignature = await window.cryptographyHandler.verifyHmac(
+                        credentialsStr, signature, signedCredentials.deviceGuid
+                    );
 
-    getLecturerId: async function() {
-        const credentials = await this.getCredentials();
-        if (!credentials) return null;
-
-        const parsed = JSON.parse(credentials);
-        return parsed.role === 'lectureradmin' ? parsed.lecturerId || null : null;
-    },
-
-    getMatricNumber: async function() {
-        const credentials = await this.getCredentials();
-        if (!credentials) return null;
-
-        const parsed = JSON.parse(credentials);
-        const allowedRoles = ['student', 'courserepadmin'];
-        return allowedRoles.includes(parsed.role) ? parsed.matricNumber || null : null;
-    },
-
-    getDeviceGuid: function() {
-        return this.getOrCreateDeviceGuid();
-    },
-
-    // Authentication status check
-    isAuthenticated: async function() {
-        return await this.areCredentialsValid();
-    },
-
-    // Clear all credential data
-    clearCredentials: function() {
-        console.log('[OfflineCredentials] Clearing credentials');
-
-        localStorage.removeItem(this.STORAGE_KEYS.CREDENTIALS);
-        localStorage.removeItem(this.STORAGE_KEYS.AUTH_KEY);
-        localStorage.removeItem(this.STORAGE_KEYS.AUTH_IV);
-        // Note: DEVICE_GUID persists across sessions
-
-        return true;
-    },
-
-    // Debug status information
-    getCredentialStatus: async function() {
-        try {
-            const hasCredentials = localStorage.getItem(this.STORAGE_KEYS.CREDENTIALS) !== null;
-            const hasKey = localStorage.getItem(this.STORAGE_KEYS.AUTH_KEY) !== null;
-            const hasIv = localStorage.getItem(this.STORAGE_KEYS.AUTH_IV) !== null;
-            const deviceGuid = this.getDeviceGuid();
-
-            let credentialInfo = null;
-            let isValid = false;
-
-            if (hasCredentials && hasKey && hasIv) {
-                isValid = await this.areCredentialsValid();
-                if (isValid) {
-                    const credentials = await this.getCredentials();
-                    if (credentials) {
-                        const parsed = JSON.parse(credentials);
-                        credentialInfo = {
-                            userId: parsed.userId,
-                            role: parsed.role,
-                            expiresAt: parsed.expiresAt,
-                            lecturerId: parsed.lecturerId || null,
-                            matricNumber: parsed.matricNumber || null
-                        };
+                    if (!isValidSignature) {
+                        logError('Invalid signature detected');
+                        this.clearCredentials();
+                        return null;
                     }
                 }
+
+                return JSON.stringify(credentialsWithoutSignature);
+
+            } catch (error) {
+                logError('Retrieval failed:', error);
+                this.clearCredentials();
+                return null;
             }
+        },
 
-            return {
-                hasCredentials,
-                hasKey,
-                hasIv,
-                isValid,
-                deviceGuid,
-                credentialInfo
-            };
+        async getUserRole() {
+            try {
+                const credentials = await this.getCredentials();
+                return credentials ? JSON.parse(credentials).role : null;
+            } catch (error) {
+                logError('Get user role failed:', error);
+                return null;
+            }
+        },
 
-        } catch (error) {
-            console.error('[OfflineCredentials] Status check failed:', error);
-            return {
-                hasCredentials: false,
-                hasKey: false,
-                hasIv: false,
-                isValid: false,
-                deviceGuid: this.getDeviceGuid(),
-                error: error.message
-            };
+        async getUserId() {
+            try {
+                const credentials = await this.getCredentials();
+                return credentials ? JSON.parse(credentials).userId : null;
+            } catch (error) {
+                logError('Get user ID failed:', error);
+                return null;
+            }
+        },
+
+        async getLecturerId() {
+            try {
+                const credentials = await this.getCredentials();
+                if (!credentials) return null;
+
+                const parsed = JSON.parse(credentials);
+                return parsed.role === 'lectureradmin' ? (parsed.lecturerId || null) : null;
+            } catch (error) {
+                logError('Get lecturer ID failed:', error);
+                return null;
+            }
+        },
+
+        async getMatricNumber() {
+            try {
+                const credentials = await this.getCredentials();
+                if (!credentials) return null;
+
+                const parsed = JSON.parse(credentials);
+                const allowedRoles = ['student', 'courserepadmin'];
+                return allowedRoles.includes(parsed.role) ? (parsed.matricNumber || null) : null;
+            } catch (error) {
+                logError('Get matric number failed:', error);
+                return null;
+            }
+        },
+
+        getDeviceGuid() {
+            return this.getOrCreateDeviceGuid();
+        },
+
+        async isAuthenticated() {
+            return await this.areCredentialsValid();
+        },
+
+        clearCredentials() {
+            logDebug('Clearing credentials');
+            
+            localStorage.removeItem(STORAGE_KEYS.CREDENTIALS);
+            localStorage.removeItem(STORAGE_KEYS.AUTH_KEY);
+            localStorage.removeItem(STORAGE_KEYS.AUTH_IV);
+            // Device GUID persists
+
+            return true;
+        },
+
+        async getCredentialStatus() {
+            try {
+                const hasCredentials = localStorage.getItem(STORAGE_KEYS.CREDENTIALS) !== null;
+                const hasKey = localStorage.getItem(STORAGE_KEYS.AUTH_KEY) !== null;
+                const hasIv = localStorage.getItem(STORAGE_KEYS.AUTH_IV) !== null;
+                const currentDeviceGuid = this.getDeviceGuid();
+
+                let credentialInfo = null;
+                let isValid = false;
+
+                if (hasCredentials && hasKey && hasIv) {
+                    isValid = await this.areCredentialsValid();
+                    if (isValid) {
+                        const credentials = await this.getCredentials();
+                        if (credentials) {
+                            const parsed = JSON.parse(credentials);
+                            credentialInfo = {
+                                userId: parsed.userId,
+                                role: parsed.role,
+                                expiresAt: parsed.expiresAt,
+                                lecturerId: parsed.lecturerId || null,
+                                matricNumber: parsed.matricNumber || null
+                            };
+                        }
+                    }
+                }
+
+                return {
+                    hasCredentials,
+                    hasKey,
+                    hasIv,
+                    isValid,
+                    deviceGuid: currentDeviceGuid,
+                    credentialInfo,
+                    cryptographyHandlerAvailable: !!window.cryptographyHandler,
+                    timestamp: new Date().toISOString()
+                };
+
+            } catch (error) {
+                logError('Status check failed:', error);
+                return {
+                    hasCredentials: false,
+                    hasKey: false,
+                    hasIv: false,
+                    isValid: false,
+                    deviceGuid: this.getDeviceGuid(),
+                    error: error.message,
+                    timestamp: new Date().toISOString()
+                };
+            }
         }
-    }
-};
+    };
+})();
+
+// Immediate initialization verification
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('[OfflineCredentials] Handler initialized, Device GUID:', 
+        window.offlineCredentialsHandler.getDeviceGuid());
+});
