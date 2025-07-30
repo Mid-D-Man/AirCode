@@ -1,426 +1,3 @@
-
-using System.Text.Json;
-using AirCode.Domain.Enums;
-using AirCode.Models.Supabase;
-using AirCode.Services.SupaBase;
-using AirCode.Utilities.DataStructures;
-using AirCode.Utilities.HelperScripts;
-using Microsoft.AspNetCore.Components;
-using AttendanceRecord = AirCode.Models.Supabase.AttendanceRecord;
-using AirCode.Models.QRCode;
-namespace AirCode.Pages.Admin.Shared;
-using Microsoft.AspNetCore.Components;
-using Microsoft.JSInterop;
-using AirCode.Components.SharedPrefabs.QrCode;
-using AirCode.Services;
-using AirCode.Services.Attendance;
-using AirCode.Services.Courses;
-using AirCode.Services.Firebase;
-using AirCode.Domain.Entities;
-using AirCode.Components.SharedPrefabs.Others;
-using AirCode.Services.Auth;
-using AirCode.Components.Admin.Shared;
-    public partial class CreateAttendanceEvent : ComponentBase, IDisposable
-    {
-        /// <summary>
-        /// so apparently we need to add better comments for project, so yeah lest run that hell even use
-        /// ai to add comments instead
-        /// </summary>
-        
-        [Inject] private IJSRuntime JS { get; set; }
-        [Inject] private QRCodeDecoder QRCodeDecoder { get; set; }
-        [Inject] private SessionStateService SessionStateService { get; set; }
-        [Inject] private ICourseService CourseService { get; set; }
-        [Inject] private IFirestoreService FirestoreService { get; set; }
-        [Inject] private ISupabaseEdgeFunctionService EdgeService { get; set; }
-        [Inject] private IAttendanceSessionService AttendanceSessionService { get; set; }
-        [Inject] private IAuthService AuthService {get;set;} 
-        [Inject] private IFirestoreAttendanceService FirebaseAttendanceService { get; set; }
-        
-        private SessionData sessionModel = new();
-        private bool isSessionStarted = false;
-        private bool isCreatingSession = false;
-        private string qrCodePayload = string.Empty;
-        private string selectedTheme = "Standard";
-        private DateTime sessionEndTime;
-        private System.Threading.Timer countdownTimer;
-        private QRCodeData generatedQRCode;
-        private List<SessionData> allActiveSessions = new();
-        private List<SessionData> otherActiveSessions = new();
-        private SessionData currentActiveSession;
-
-
-        // Course selection
-        private Course selectedCourse;
-        private bool showCourseSelection = false;
-
-
-      
-        private bool useTemporalKeyRefresh = false;
-        private bool allowOfflineSync = true;
-        private AdvancedSecurityFeatures securityFeatures = AdvancedSecurityFeatures.Default;
-        
-        private System.Threading.Timer temporalKeyUpdateTimer;
-        private int temporalKeyRefreshInterval = 5; // Default to 5 minutes
-        private bool showInfoPopup = false;
-        private InfoPopup.InfoType currentInfoType;
-private bool isEndingSession = false;
-private bool isSessionEnded = false;
-
-
-// Session restoration and loading states
-private bool isRestoringSession = false;
-private bool isSearchingForSessions = false;
-private bool hasExistingSessions = false;
-private string restorationMessage = string.Empty;
-private List<SessionData> storedSessions = new();
-private bool showSessionRestoreDialog = false;
-private SessionData selectedStoredSession;
-public bool isCurrentUserCourseRep = false;
-public string currentUserMatricNumber = String.Empty;
-
-
-private bool showManualAttendancePopup = false;
-private PartialSessionData? manualAttendanceSessionData;
-
-
-
-
-
-
-protected override async Task OnInitializedAsync()
-
-
-{
-
-    sessionModel.Duration = 30;
-
-
-
-
-
-
-    try
-
-    {
-
-        isSearchingForSessions = true;
-
-
-
-        restorationMessage = "Searching for existing sessions...";
-
-        StateHasChanged();
-
-
-
-
-
-
-        // Initialize SessionStateService with persistence recovery
-
-        await SessionStateService.InitializeAsync();
-
-
-
-        // Clean up expired sessions first
-
-        await SessionStateService.CleanupExpiredSessionsAsync();
-
-
-
-        RefreshSessionLists();
-
-
-
-        // Check for stored sessions - NO AUTOMATIC RESTORATION
-
-        await CheckForStoredSessionsAsync();
-
-
-
-
-
-
-        SessionStateService.StateChanged += OnStateChanged;
-
-
-
-
-
-
-        countdownTimer = new System.Threading.Timer(
-
-            async _ => await InvokeAsync(async () => {
-
-                await SessionStateService.CleanupExpiredSessionsAsync();
-
-                RefreshSessionLists();
-
-
-                StateHasChanged();
-
-
-            }),
-
-
-            null,
-
-
-            TimeSpan.Zero,
-
-
-            TimeSpan.FromSeconds(1)
-
-
-        );
-
-
-        string currentRole = await AuthService.GetUserRoleAsync();
-
-
-        if(currentRole == "courserepadmin")isCurrentUserCourseRep = true;
-
-
-    }
-
-
-    catch (Exception ex)
-
-
-    {
-
-
-        Console.WriteLine($"Error during initialization: {ex.Message}");
-
-
-        restorationMessage = "Error occurred while checking for existing sessions";
-
-
-    }
-
-
-    finally
-
-
-    {
-
-
-        isSearchingForSessions = false;
-
-
-        StateHasChanged();
-
-
-    }
-
-
-}
-private async Task ClearRestorationStateAsync(string finalMessage = "")
-{
-    // Reset all restoration-related state
-    isRestoringSession = false;
-    selectedStoredSession = null;
-    showSessionRestoreDialog = false;
-    
-    // Set final message if provided
-    if (!string.IsNullOrEmpty(finalMessage))
-    {
-        restorationMessage = finalMessage;
-        StateHasChanged();
-        
-        // Clear message after 3 seconds
-        await Task.Delay(3000);
-        restorationMessage = string.Empty;
-    }
-    else
-    {
-        restorationMessage = string.Empty;
-    }
-    
-    StateHasChanged();
-}
-
-private async Task DismissSessionRestoreDialogAsync()
-{
-    // Simply close dialog without any cleanup operations
-    showSessionRestoreDialog = false;
-    selectedStoredSession = null;
-    restorationMessage = string.Empty;
-    StateHasChanged();
-}
-
-private void SelectStoredSession(SessionData session)
-{
-    selectedStoredSession = session;
-    StateHasChanged(); // Ensure UI updates to show selection
-}
-
-private async Task DeleteStoredSessionAsync(SessionData session)
-{
-    try
-    {
-        // Remove from storage
-        await SessionStateService.RemoveStoredSessionAsync(session.SessionId);
-        
-        // Remove from active sessions if present
-        var activeSession = allActiveSessions.FirstOrDefault(s => s.SessionId == session.SessionId);
-        if (activeSession != null)
-        {
-            SessionStateService.RemoveActiveSession(activeSession.SessionId);
-        }
-        
-        // Update local state
-        storedSessions.Remove(session);
-        hasExistingSessions = storedSessions.Any();
-        
-        // Close dialog if no more sessions
-        if (!hasExistingSessions)
-        {
-            showSessionRestoreDialog = false;
-            restorationMessage = "All stored sessions removed";
-            
-            // Clear message after delay
-            _ = Task.Delay(3000).ContinueWith(_ => 
-            {
-                restorationMessage = string.Empty;
-                InvokeAsync(StateHasChanged);
-            });
-        }
-        
-        // Refresh session lists
-        RefreshSessionLists();
-        StateHasChanged();
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"Error deleting stored session: {ex.Message}");
-        restorationMessage = "Error occurred while deleting session";
-        StateHasChanged();
-    }
-}
-
-private async Task RestoreExistingSessionAsync(SessionData activeSession, SessionData sessionData)
-{
-    sessionModel = sessionData;
-    currentActiveSession = activeSession;
-    isSessionStarted = true;
-    qrCodePayload = activeSession.QrCodePayload;
-    selectedTheme = activeSession.Theme;
-    sessionEndTime = activeSession.EndTime;
-
-    // Restore temporal key settings if available
-    useTemporalKeyRefresh = activeSession.UseTemporalKeyRefresh;
-    securityFeatures = activeSession.SecurityFeatures;
-
-    // Restore selected course
-    if (!string.IsNullOrEmpty(sessionData.CourseCode))
-    {
-        selectedCourse = await CourseService.GetCourseByIdAsync(sessionData.CourseCode);
-    }
-
-    // Restart temporal key timer if it was enabled
-    if (useTemporalKeyRefresh)
-    {
-        StartTemporalKeyUpdateTimer();
-    }
-
-    StateHasChanged();
-}
-        private void ShowInfoPopup(InfoPopup.InfoType infoType)
-        {
-            currentInfoType = infoType;
-            showInfoPopup = true;
-        }
-
-        private void CloseInfoPopup()
-        {
-            showInfoPopup = false;
-        }
-        private string GetCountdownClass()
-        {
-            if (!isSessionStarted) return "normal";
-    
-            var timeRemaining = GetTimeRemainingInSeconds();
-    
-            if (timeRemaining <= 60) // Last minute - critical
-                return "critical";
-            else if (timeRemaining <= 300) // Last 5 minutes - warning
-                return "warning";
-            else
-                return "normal";
-        }
-
-        private bool IsCountdownCritical()
-        {
-            return GetTimeRemainingInSeconds() <= 60;
-        }
-
-        private int GetTimeRemainingInSeconds()
-        {
-            if (currentActiveSession == null) return 0;
-    
-            var endTime = currentActiveSession.StartTime.AddMinutes(currentActiveSession.Duration);
-            var remaining = endTime - DateTime.Now;
-    
-            return Math.Max(0, (int)remaining.TotalSeconds);
-        }
-    
-
-        private string GetSecurityFeatureDescription(AdvancedSecurityFeatures feature)
-        {
-            return feature switch
-            {
-                AdvancedSecurityFeatures.Default => "Standard security with basic validation",
-                AdvancedSecurityFeatures.DeviceGuidCheck => "Enhanced security with device-specific verification to prevent unauthorized access",
-                _ => "Unknown security feature"
-            };
-        }
-
-        private string GetSecurityLevelName(AdvancedSecurityFeatures feature)
-        {
-            return feature switch
-            {
-                AdvancedSecurityFeatures.Default => "Standard",
-                AdvancedSecurityFeatures.DeviceGuidCheck => "Enhanced",
-                _ => "Unknown"
-            };
-        }
-
-        private void RefreshSessionLists()
-        {
-            allActiveSessions = SessionStateService.GetActiveSessions();
-
-            if (isSessionStarted && currentActiveSession != null)
-            {
-                otherActiveSessions = allActiveSessions
-                    .Where(s => s.SessionId != currentActiveSession.SessionId)
-                    .ToList();
-            }
-            else
-            {
-                otherActiveSessions = allActiveSessions.ToList();
-            }
-        }
-private async Task CheckForExistingSessionAsync()
-{
-    try
-    {
-        var existingSession = SessionStateService.GetCurrentSession("default");
-        if (existingSession != null)
-        {
-            isRestoringSession = true;
-            restorationMessage = "Restoring active session...";
-            StateHasChanged();
-
-            var activeSession = allActiveSessions.FirstOrDefault(s =>
-                s.CourseCode == existingSession.CourseCode &&
-                DateTime.UtcNow < s.EndTime);
-
-            if (activeSession != null)
-            {
-                await RestoreExistingSessionAsync(activeSession, existingSession);
-                restorationMessage = "Active session restored";
             }
             else
             {
@@ -441,6 +18,8 @@ private async Task CheckForExistingSessionAsync()
 }
 
 
+
+
         private void OnStateChanged()
         {
             InvokeAsync(() => {
@@ -449,15 +28,18 @@ private async Task CheckForExistingSessionAsync()
             });
         }
 
+
         private void ShowCourseSelection()
         {
             showCourseSelection = true;
         }
 
+
         private void HideCourseSelection()
         {
             showCourseSelection = false;
         }
+
 
         private void HandleCourseSelected(Course course)
         {
@@ -471,11 +53,13 @@ private async Task StartSessionAsync()
 {
     if (selectedCourse == null) return;
 
+
     // Prevent starting if we're in the middle of restoration
     if (isRestoringSession || isSearchingForSessions)
     {
         return;
     }
+
 
     // Check if there's already an active session for this course
     if (allActiveSessions.Any(s => s.CourseCode == selectedCourse.CourseCode))
@@ -484,10 +68,12 @@ private async Task StartSessionAsync()
         return;
     }
 
+
     try
     {
         isCreatingSession = true;
         StateHasChanged();
+
 
         sessionModel.StartTime = DateTime.UtcNow;
         sessionModel.CreatedAt = DateTime.UtcNow.Date;
@@ -495,10 +81,12 @@ private async Task StartSessionAsync()
         
         sessionEndTime = DateTime.UtcNow.AddMinutes(sessionModel.Duration);
 
+
         // Generate temporal key if enabled
         string temporalKey = useTemporalKeyRefresh ? 
             GenerateTemporalKey(sessionModel.SessionId, sessionModel.StartTime) : 
             string.Empty;
+
 
         // Create Supabase attendance session
         var attendanceSession = new SupabaseAttendanceSession
@@ -508,15 +96,14 @@ private async Task StartSessionAsync()
             StartTime = sessionModel.StartTime,
             Duration = sessionModel.Duration,
             ExpirationTime = sessionEndTime,
-            AttendanceRecords = "[]",
-            UseTemporalKeyRefresh = useTemporalKeyRefresh,
-            AllowOfflineConnectionAndSync = allowOfflineSync,
-            SecurityFeatures = (int)securityFeatures,
-            TemporalKey = temporalKey
-        };
+              OfflineRecords = ]",
+                         AllowOfflineConnectionAndSync = allowOfflineSync,
+              SecurityFeatures = (int)securityFeatures                    };
+
 
         // Save to Supabase
         var savedSession = await AttendanceSessionService.CreateSessionAsync(attendanceSession);
+
 
         // CRITICAL FIX: Create offline session entry when offline sync is enabled
         if (allowOfflineSync)
@@ -536,6 +123,7 @@ private async Task StartSessionAsync()
                 CreatedAt = DateTime.UtcNow
             };
 
+
             await AttendanceSessionService.CreateOfflineSessionAsync(offlineSession);
         }
         
@@ -551,36 +139,15 @@ private async Task StartSessionAsync()
             temporalKey
         );
 
+
         // Create Firebase attendance event document (keep existing functionality)
         await CreateFirebaseAttendanceEvent();
+
 
         // Create active session data
         currentActiveSession = new SessionData
         {
-            SessionId = sessionModel.SessionId,
-            CourseName = sessionModel.CourseName,
-            CourseCode = sessionModel.CourseCode,
-            StartTime = sessionModel.StartTime,
-            EndTime = sessionEndTime,
-            Duration = sessionModel.Duration,
-            QrCodePayload = qrCodePayload,
-            Theme = selectedTheme,
-            UseTemporalKeyRefresh = useTemporalKeyRefresh,
-            SecurityFeatures = securityFeatures,
-            TemporalKey = temporalKey
-        };
-        
-        // Add to active sessions with persistence
-        await SessionStateService.AddActiveSessionAsync(currentActiveSession);
-        await SessionStateService.UpdateCurrentSessionAsync("default", sessionModel);
-
-        // Start temporal key update timer if enabled
-        if (useTemporalKeyRefresh)
-        {
-            StartTemporalKeyUpdateTimer();
-        }
-
-        if (isCurrentUserCourseRep && !string.IsNullOrEmpty(currentUserMatricNumber))
+if (isCurrentUserCourseRep && !string.IsNullOrEmpty(currentUserMatricNumber))
         {
             await AutoSignCourseRepAsync();
         }
