@@ -1,3 +1,4 @@
+
 using System.Text.Json;
 using AirCode.Domain.Enums;
 using AirCode.Models.Supabase;
@@ -48,9 +49,11 @@ using AirCode.Components.Admin.Shared;
         private List<SessionData> otherActiveSessions = new();
         private SessionData currentActiveSession;
 
+
         // Course selection
         private Course selectedCourse;
         private bool showCourseSelection = false;
+
 
       
         private bool useTemporalKeyRefresh = false;
@@ -64,6 +67,7 @@ using AirCode.Components.Admin.Shared;
 private bool isEndingSession = false;
 private bool isSessionEnded = false;
 
+
 // Session restoration and loading states
 private bool isRestoringSession = false;
 private bool isSearchingForSessions = false;
@@ -75,8 +79,12 @@ private SessionData selectedStoredSession;
 public bool isCurrentUserCourseRep = false;
 public string currentUserMatricNumber = String.Empty;
 
+
 private bool showManualAttendancePopup = false;
 private PartialSessionData? manualAttendanceSessionData;
+
+
+
 
 
 
@@ -84,12 +92,14 @@ protected override async Task OnInitializedAsync()
 {
     sessionModel.Duration = 30;
 
+
     try
     {
         isSearchingForSessions = true;
         
         restorationMessage = "Searching for existing sessions...";
         StateHasChanged();
+
 
         // Initialize SessionStateService with persistence recovery
         await SessionStateService.InitializeAsync();
@@ -102,142 +112,15 @@ protected override async Task OnInitializedAsync()
         // Check for stored sessions - NO AUTOMATIC RESTORATION
         await CheckForStoredSessionsAsync();
 
+
         SessionStateService.StateChanged += OnStateChanged;
+
 
         countdownTimer = new System.Threading.Timer(
             async _ => await InvokeAsync(async () => {
                 await SessionStateService.CleanupExpiredSessionsAsync();
                 RefreshSessionLists();
-                StateHasChanged();
-            }),
-            null,
-            TimeSpan.Zero,
-            TimeSpan.FromSeconds(1)
-        );
-        string currentRole = await AuthService.GetUserRoleAsync();
-        if(currentRole == "courserepadmin")isCurrentUserCourseRep = true;
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"Error during initialization: {ex.Message}");
-        restorationMessage = "Error occurred while checking for existing sessions";
-    }
-    finally
-    {
-        isSearchingForSessions = false;
-        StateHasChanged();
-    }
-}
-private async Task CheckForStoredSessionsAsync()
-{
-    try
-    {
-        // Get all stored sessions that haven't been restored yet
-        var persistentSessions = await SessionStateService.GetStoredSessionsAsync();
-        storedSessions = persistentSessions
-            .Where(s => s.StartTime.AddMinutes(s.Duration) > DateTime.UtcNow)
-            .Select(ps => new SessionData
-            {
-                SessionId = ps.SessionId,
-                CourseCode = ps.CourseCode,
-                CourseName = ps.CourseName,
-                StartTime = ps.StartTime,
-                Duration = ps.Duration,
-            })
-            .ToList();
-
-        hasExistingSessions = storedSessions.Any();
-
-        if (hasExistingSessions && !isSessionStarted)
-        {
-            restorationMessage = $"Found {storedSessions.Count} stored session(s) available for restoration";
-            showSessionRestoreDialog = true;
-        }
-        else
-        {
-            // Clear any lingering restoration messages
-            restorationMessage = string.Empty;
-        }
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"Error checking for stored sessions: {ex.Message}");
-        restorationMessage = "Error occurred while checking for stored sessions";
-    }
-}
-
-
-private async Task RestoreSelectedSessionAsync()
-{
-    if (selectedStoredSession == null) return;
-
-    try
-    {
-        isRestoringSession = true;
-        restorationMessage = "Restoring selected session...";
-        showSessionRestoreDialog = false; // Close dialog immediately
-        StateHasChanged();
-
-        // Find corresponding active session
-        var activeSession = allActiveSessions.FirstOrDefault(s =>
-            s.SessionId == selectedStoredSession.SessionId);
-
-        if (activeSession != null)
-        {
-            await RestoreExistingSessionAsync(activeSession, selectedStoredSession);
-            
-            // Clear restoration state completely
-            await ClearRestorationStateAsync("Session restored successfully");
-        }
-        else
-        {
-            // Session might have expired or been removed
-            await SessionStateService.RemoveStoredSessionAsync(selectedStoredSession.SessionId);
-            await ClearRestorationStateAsync("Session no longer available - removed from storage");
-        }
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"Error restoring session: {ex.Message}");
-        await ClearRestorationStateAsync("Failed to restore session");
-    }
-}
-
-private async Task AbandonStoredSessionsAsync()
-{
-    try
-    {
-        isRestoringSession = true;
-        restorationMessage = "Cleaning up stored sessions...";
-        showSessionRestoreDialog = false; // Close dialog immediately
-        StateHasChanged();
-
-        // Remove all stored sessions (equivalent to EndSession cleanup)
-        foreach (var session in storedSessions.ToList())
-        {
-            await SessionStateService.RemoveStoredSessionAsync(session.SessionId);
-            
-            // Also remove from active sessions if present
-            var activeSession = allActiveSessions.FirstOrDefault(s => s.SessionId == session.SessionId);
-            if (activeSession != null)
-            {
-                SessionStateService.RemoveActiveSession(activeSession.SessionId);
-            }
-        }
-
-        // Clear local state
-        storedSessions.Clear();
-        hasExistingSessions = false;
-        
-        await ClearRestorationStateAsync("Previous sessions cleaned up - ready for new session");
-        
-        // Refresh the session lists
-        RefreshSessionLists();
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"Error abandoning stored sessions: {ex.Message}");
-        await ClearRestorationStateAsync("Error occurred while cleaning up sessions");
+ed while cleaning up sessions");
     }
 }
 
@@ -542,6 +425,27 @@ private async Task StartSessionAsync()
 
         // Save to Supabase
         var savedSession = await AttendanceSessionService.CreateSessionAsync(attendanceSession);
+
+        // CRITICAL FIX: Create offline session entry when offline sync is enabled
+        if (allowOfflineSync)
+        {
+            var offlineSession = new SupabaseOfflineAttendanceSession
+            {
+                SessionId = sessionModel.SessionId,
+                CourseCode = sessionModel.CourseCode,
+                StartTime = sessionModel.StartTime,
+                Duration = sessionModel.Duration,
+                ExpirationTime = sessionEndTime,
+                AttendanceRecords = "[]",
+                UseTemporalKeyRefresh = useTemporalKeyRefresh,
+                SecurityFeatures = (int)securityFeatures,
+                TemporalKey = temporalKey,
+                SyncStatus = "pending", // or appropriate initial status
+                CreatedAt = DateTime.UtcNow
+            };
+
+            await AttendanceSessionService.CreateOfflineSessionAsync(offlineSession);
+        }
         
         // Generate QR code payload with temporal key
         qrCodePayload = await QRCodeDecoder.EncodeSessionDataAsync(
@@ -583,10 +487,12 @@ private async Task StartSessionAsync()
         {
             StartTemporalKeyUpdateTimer();
         }
-if (isCurrentUserCourseRep && !string.IsNullOrEmpty(currentUserMatricNumber))
+
+        if (isCurrentUserCourseRep && !string.IsNullOrEmpty(currentUserMatricNumber))
         {
             await AutoSignCourseRepAsync();
         }
+        
         isSessionStarted = true;
         RefreshSessionLists();
         
