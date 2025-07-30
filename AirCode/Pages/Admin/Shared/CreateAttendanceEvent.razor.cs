@@ -22,7 +22,7 @@ namespace AirCode.Pages.Admin.Shared
         [Inject] protected QRCodeDecoder QRCodeDecoder { get; set; }
         
         #endregion
-        
+        #region Variables and what not
         private bool isRestoringSession = false;
         private bool isSearchingForSessions = false;
         private bool isCreatingSession = false;
