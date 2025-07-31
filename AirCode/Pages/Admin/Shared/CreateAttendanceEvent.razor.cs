@@ -49,7 +49,7 @@ namespace AirCode.Pages.Admin.Shared
         private string currentUserMatricNumber = string.Empty;
         
         private Course selectedCourse;
-        private SessionModel sessionModel = new SessionModel();
+        private SessionData sessionModel = new SessionData();
         private SessionData currentActiveSession;
         private PartialSessionData manualAttendanceSessionData;
         private QRCodeData generatedQRCode;
