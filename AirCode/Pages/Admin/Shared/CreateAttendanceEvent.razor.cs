@@ -1,4 +1,6 @@
 
+
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -57,13 +59,17 @@ namespace AirCode.Pages.Admin.Shared
         private Timer temporalKeyUpdateTimer;
         
         private List<SessionData> allActiveSessions = new List<SessionData>();
-        private SecurityFeatures securityFeatures;
+        private AdvancedSecurityFeatures securityFeatures;
         private int temporalKeyRefreshInterval = 5; // minutes
         
         #endregion
 
 
+
+
         #region Lifecycle Methods
+
+
 
 
         protected override async Task OnInitializedAsync()
@@ -71,6 +77,8 @@ namespace AirCode.Pages.Admin.Shared
             SessionStateService.StateChanged += OnStateChanged;
             await CheckForExistingSessionAsync();
         }
+
+
 
 
         public async ValueTask DisposeAsync()
@@ -87,6 +95,8 @@ namespace AirCode.Pages.Admin.Shared
         }
 
 
+
+
         public void Dispose()
         {
             countdownTimer?.Dispose();
@@ -95,10 +105,16 @@ namespace AirCode.Pages.Admin.Shared
         }
 
 
+
+
         #endregion
 
 
+
+
         #region Session Management
+
+
 
 
         private async Task CheckForExistingSessionAsync()
