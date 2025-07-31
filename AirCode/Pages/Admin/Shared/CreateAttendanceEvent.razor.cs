@@ -16,6 +16,7 @@ using AirCode.Domain.Enums;
 using AirCode.Models.QRCode;
 using Course = AirCode.Domain.Entities.Course;
 using AirCode.Components.SharedPrefabs.Others;
+
 namespace AirCode.Pages.Admin.Shared
 {
     public partial class CreateAttendanceEvent : ComponentBase, IAsyncDisposable
@@ -66,6 +67,7 @@ namespace AirCode.Pages.Admin.Shared
         
         private List<SessionData> allActiveSessions = new List<SessionData>();
         private List<SessionData> storedSessions = new();
+        private List<ActiveSessionData> otherActiveSessions = new();
         private AdvancedSecurityFeatures securityFeatures;
         private int temporalKeyRefreshInterval = 5; // minutes
         
@@ -244,7 +246,7 @@ namespace AirCode.Pages.Admin.Shared
                 sessionEndTime = activeSession.StartTime.AddMinutes(activeSession.Duration);
                 
                 // Update selected course if we can find it
-                selectedCourse = new Course { CourseCode = activeSession.CourseCode, Name = activeSession.CourseName };
+                selectedCourse = CreateCourseInstance(activeSession.CourseCode, activeSession.CourseName);
                 
                 // Regenerate QR code payload
                 string temporalKey = useTemporalKeyRefresh ? activeSession.TemporalKey ?? string.Empty : string.Empty;
@@ -603,7 +605,24 @@ namespace AirCode.Pages.Admin.Shared
         private async Task<Course> GetCourseByCodeAsync(string courseCode)
         {
             // Implement course retrieval logic
-            return await Task.FromResult(new Course { CourseCode = courseCode });
+            return await Task.FromResult(CreateCourseInstance(courseCode, ""));
+        }
+
+        private Course CreateCourseInstance(string courseCode, string name)
+        {
+            // Create Course with all required parameters
+            return new Course(
+                courseCode: courseCode,
+                name: name,
+                description: "Default description",
+                level: LevelType.Undergraduate, // Adjust as needed
+                semester: SemesterType.First, // Adjust as needed
+                credits: 3, // Default credits
+                schedule: new CourseSchedule(), // Create appropriate schedule
+                prerequisites: new List<string>(),
+                lastModified: DateTime.UtcNow,
+                additionalParam: "" // Add appropriate value
+            );
         }
 
         #endregion
@@ -894,6 +913,41 @@ namespace AirCode.Pages.Admin.Shared
             return $"{remaining.Hours:00}:{remaining.Minutes:00}:{remaining.Seconds:00}";
         }
 
+        private string GetCountdownClass()
+        {
+            if (!isSessionStarted) return "normal";
+            var timeRemaining = GetTimeRemainingInSeconds();
+            if (timeRemaining <= 60) // Last minute - critical
+                return "critical";
+            else if (timeRemaining <= 300) // Last 5 minutes - warning
+                return "warning";
+            else
+                return "normal";
+        }
+
+        private bool IsCountdownCritical()
+        {
+            return GetTimeRemainingInSeconds() <= 60;
+        }
+
+        private int GetTimeRemainingInSeconds()
+        {
+            if (currentActiveSession == null) return 0;
+            var endTime = currentActiveSession.StartTime.AddMinutes(currentActiveSession.Duration);
+            var remaining = endTime - DateTime.Now;
+            return Math.Max(0, (int)remaining.TotalSeconds);
+        }
+
+        private string GetSecurityFeatureDescription(AdvancedSecurityFeatures feature)
+        {
+            return feature switch
+            {
+                AdvancedSecurityFeatures.Default => "Standard security with basic validation",
+                AdvancedSecurityFeatures.DeviceGuidCheck => "Enhanced security with device-specific verification to prevent unauthorized access",
+                _ => "Unknown security feature"
+            };
+        }
+
         private string GetStatusMessageClass(string message)
         {
             if (IsErrorMessage(message))
@@ -942,6 +996,203 @@ namespace AirCode.Pages.Admin.Shared
         private void CloseInfoPopup()
         {
             showInfoPopup = false;
+        }
+
+        #endregion
+
+        #region Additional Helper Methods
+
+        private string GetSessionStatusText()
+        {
+            if (isCreatingSession) return "Creating session...";
+            if (isEndingSession) return "Ending session...";
+            if (isRestoringSession) return "Restoring session...";
+            if (isSessionStarted) return "Session active";
+            return "Ready to start";
+        }
+
+        private string GetSessionStatusClass()
+        {
+            if (isCreatingSession || isEndingSession || isRestoringSession) return "processing";
+            if (isSessionStarted) return "active";
+            return "ready";
+        }
+
+        private bool CanStartSession()
+        {
+            return selectedCourse != null && 
+                   !isSessionStarted && 
+                   !isCreatingSession && 
+                   !isRestoringSession && 
+                   !isSearchingForSessions;
+        }
+
+        private bool CanEndSession()
+        {
+            return isSessionStarted && 
+                   !isEndingSession && 
+                   !isCreatingSession && 
+                   currentActiveSession != null;
+        }
+
+        private string GetFormattedStartTime()
+        {
+            if (currentActiveSession == null) return "--:--";
+            return currentActiveSession.StartTime.ToString("HH:mm");
+        }
+
+        private string GetFormattedEndTime()
+        {
+            if (currentActiveSession == null) return "--:--";
+            var endTime = currentActiveSession.StartTime.AddMinutes(currentActiveSession.Duration);
+            return endTime.ToString("HH:mm");
+        }
+
+        private string GetSessionDurationText()
+        {
+            if (currentActiveSession == null) return "-- min";
+            return $"{currentActiveSession.Duration} min";
+        }
+
+        private double GetSessionProgress()
+        {
+            if (!isSessionStarted || currentActiveSession == null) return 0;
+            
+            var totalDuration = currentActiveSession.Duration * 60; // Convert to seconds
+            var elapsed = (DateTime.UtcNow - currentActiveSession.StartTime).TotalSeconds;
+            var progress = Math.Min(100, Math.Max(0, (elapsed / totalDuration) * 100));
+            
+            return progress;
+        }
+
+        private bool IsSessionExpiringSoon()
+        {
+            return GetTimeRemainingInSeconds() <= 300; // 5 minutes
+        }
+
+        private bool IsSessionExpired()
+        {
+            return GetTimeRemainingInSeconds() <= 0;
+        }
+
+        private string GetOfflineSyncStatusText()
+        {
+            return allowOfflineSync ? "Enabled" : "Disabled";
+        }
+
+        private string GetTemporalKeyStatusText()
+        {
+            return useTemporalKeyRefresh ? $"Enabled ({temporalKeyRefreshInterval} min)" : "Disabled";
+        }
+
+        private string GetSecurityFeaturesText()
+        {
+            return securityFeatures.ToString().Replace("_", " ");
+        }
+
+        private async Task ValidateSessionStateAsync()
+        {
+            if (isSessionStarted && currentActiveSession != null)
+            {
+                // Check if session has expired
+                var endTime = currentActiveSession.StartTime.AddMinutes(currentActiveSession.Duration);
+                if (DateTime.UtcNow > endTime)
+                {
+                    // Auto-end expired session
+                    await EndSession();
+                    restorationMessage = "Session automatically ended due to expiration";
+                    StateHasChanged();
+                }
+            }
+        }
+
+        private void UpdateCountdownDisplay()
+        {
+            if (isSessionStarted)
+            {
+                StateHasChanged(); // Force UI update for countdown
+            }
+        }
+
+        private async Task HandleEmergencySessionCleanup()
+        {
+            try
+            {
+                // Emergency cleanup - remove all sessions
+                if (currentActiveSession != null)
+                {
+                    SessionStateService.RemoveActiveSession(currentActiveSession.SessionId);
+                    await SessionStateService.RemoveStoredSessionAsync(currentActiveSession.SessionId);
+                }
+
+                // Clear all stored sessions
+                foreach (var session in storedSessions.ToList())
+                {
+                    await SessionStateService.RemoveStoredSessionAsync(session.SessionId);
+                }
+
+                // Reset component state
+                ResetAllState();
+                
+                restorationMessage = "Emergency cleanup completed - all sessions removed";
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error during emergency cleanup: {ex.Message}");
+                restorationMessage = "Error occurred during emergency cleanup";
+                StateHasChanged();
+            }
+        }
+
+        private void ResetAllState()
+        {
+            // Reset all component state to initial values
+            isRestoringSession = false;
+            isSearchingForSessions = false;
+            hasExistingSessions = false;
+            isCreatingSession = false;
+            isEndingSession = false;
+            isSessionStarted = false;
+            isSessionEnded = false;
+            showCourseSelection = false;
+            showManualAttendancePopup = false;
+            showSessionRestoreDialog = false;
+            showInfoPopup = false;
+            
+            restorationMessage = string.Empty;
+            qrCodePayload = string.Empty;
+            
+            selectedCourse = null;
+            currentActiveSession = null;
+            selectedStoredSession = null;
+            manualAttendanceSessionData = null;
+            generatedQRCode = null;
+            
+            sessionModel = new SessionData();
+            allActiveSessions.Clear();
+            storedSessions.Clear();
+            otherActiveSessions.Clear();
+            
+            // Dispose timers
+            countdownTimer?.Dispose();
+            temporalKeyUpdateTimer?.Dispose();
+            countdownTimer = null;
+            temporalKeyUpdateTimer = null;
+        }
+
+        private bool HasPendingOperations()
+        {
+            return isCreatingSession || isEndingSession || isRestoringSession || isSearchingForSessions;
+        }
+
+        private string GetPendingOperationText()
+        {
+            if (isCreatingSession) return "Creating session, please wait...";
+            if (isEndingSession) return "Ending session, please wait...";
+            if (isRestoringSession) return "Restoring session, please wait...";
+            if (isSearchingForSessions) return "Searching for sessions, please wait...";
+            return string.Empty;
         }
 
         #endregion
