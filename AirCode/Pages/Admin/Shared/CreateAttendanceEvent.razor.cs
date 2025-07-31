@@ -1,4 +1,10 @@
 
+
+
+
+
+
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,6 +25,12 @@ using Course = AirCode.Domain.Entities.Course;
 using AirCode.Components.SharedPrefabs.Others;
 
 
+
+
+
+
+
+
 namespace AirCode.Pages.Admin.Shared
 {
     public partial class CreateAttendanceEvent : ComponentBase, IAsyncDisposable
@@ -26,7 +38,7 @@ namespace AirCode.Pages.Admin.Shared
         #region Service Dependencies (Inject these in the razor file)
         
         [Inject] protected SessionStateService SessionStateService { get; set; }
-        [Inject] protected AttendanceSessionService AttendanceSessionService { get; set; }
+        [Inject] protected AttendanceSessionService IAttendanceSessionService { get; set; }
         [Inject] protected IFirestoreAttendanceService FirebaseAttendanceService { get; set; }
         [Inject] protected QRCodeDecoder QRCodeDecoder { get; set; }
         
@@ -76,7 +88,19 @@ namespace AirCode.Pages.Admin.Shared
         #endregion
 
 
+
+
+
+
+
+
         #region Lifecycle Methods
+
+
+
+
+
+
 
 
         protected override async Task OnInitializedAsync()
@@ -85,6 +109,12 @@ namespace AirCode.Pages.Admin.Shared
             await CheckForExistingSessionAsync();
             await CheckForStoredSessionsAsync();
         }
+
+
+
+
+
+
 
 
         public async ValueTask DisposeAsync()
@@ -97,22 +127,7 @@ namespace AirCode.Pages.Admin.Shared
             if (currentActiveSession != null)
             {
                 await SessionStateService.RemoveActiveSessionAsync(currentActiveSession.SessionId);
-            }
-        }
-
-
-        public void Dispose()
-        {
-            countdownTimer?.Dispose();
-            temporalKeyUpdateTimer?.Dispose();
-            SessionStateService.StateChanged -= OnStateChanged;
-        }
-
-
-        #endregion
-
-
-        #region Session Management
+            }Session Management
 
 
         private async Task CheckForExistingSessionAsync()
