@@ -1,10 +1,12 @@
-/* Enhanced Mobile-First Responsive Design for ClientStats */
+/* Enhanced Mobile-First Responsive Design for ClientStats with Proper Color Contrast */
 
 /* Mobile Touch Optimization */
 @media (max-width: 768px) {
     .client-stats-page {
         padding: var(--spacing-sm);
         gap: var(--spacing-md);
+        background-color: var(--bg-primary);
+        color: var(--text-adaptive-primary);
     }
 
     /* Enhanced Stats Summary for Mobile */
@@ -18,31 +20,63 @@
         gap: var(--spacing-sm);
         min-height: 80px;
         touch-action: manipulation;
+        background-color: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        transition: all 0.2s ease;
+    }
+
+    .summary-card:hover {
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        transform: translateY(-1px);
     }
 
     .card-icon {
         width: 36px;
         height: 36px;
         font-size: 1.1rem;
+        color: var(--icon-primary);
+        background-color: var(--primary-50);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Dark mode icon background */
+    body.dark-mode .card-icon {
+        background-color: var(--gold-900);
+        color: var(--gold-400);
     }
 
     .card-content h3 {
         font-size: 1.5rem;
         line-height: 1.1;
+        color: var(--text-adaptive-primary);
+        font-weight: 700;
+        margin: 0;
     }
 
     .card-content p {
         font-size: 0.8rem;
+        color: var(--text-adaptive-secondary);
+        margin: 0;
+        font-weight: 500;
     }
 
     .card-content small {
         font-size: 0.75rem;
+        color: var(--text-adaptive-muted);
+        font-weight: 400;
     }
 
     /* Optimized Course Section */
     .courses-section {
         padding: var(--spacing-sm);
         border-radius: 8px;
+        background-color: var(--bg-secondary);
+        border: 1px solid var(--border);
     }
 
     .section-header {
@@ -55,6 +89,8 @@
     .section-header h3 {
         font-size: 1.25rem;
         margin: 0;
+        color: var(--text-adaptive-primary);
+        font-weight: 600;
     }
 
     /* Mobile-First Course Filters */
@@ -72,8 +108,21 @@
         border-radius: 8px;
         border: 2px solid var(--border);
         background: var(--bg-primary);
-        color: var(--text-primary);
+        color: var(--text-adaptive-primary);
         touch-action: manipulation;
+        transition: all 0.2s ease;
+    }
+
+    .filter-select:focus {
+        outline: none;
+        border-color: var(--primary-500);
+        box-shadow: 0 0 0 3px rgba(var(--primary-500), 0.1);
+    }
+
+    /* Dark mode filter select */
+    body.dark-mode .filter-select:focus {
+        border-color: var(--gold-500);
+        box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
     }
 
     /* Enhanced Course Cards */
@@ -85,15 +134,30 @@
 
     .course-stats-card {
         padding: var(--spacing-md);
-        border-radius: 8px;
+        border-radius: 12px;
         touch-action: manipulation;
         min-height: 160px;
         cursor: pointer;
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        transition: all 0.2s ease;
+        background-color: var(--bg-tertiary);
+        border: 1px solid var(--border);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    .course-stats-card:hover {
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+        transform: translateY(-2px);
+        border-color: var(--primary-300);
     }
 
     .course-stats-card:active {
         transform: scale(0.98);
+    }
+
+    /* Dark mode course card hover */
+    body.dark-mode .course-stats-card:hover {
+        border-color: var(--gold-400);
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
     }
 
     .course-header {
@@ -107,11 +171,23 @@
         font-size: 1.1rem;
         line-height: 1.2;
         margin-bottom: var(--spacing-xs);
+        color: var(--text-adaptive-primary);
+        font-weight: 600;
     }
 
     .course-code {
         font-size: 0.85rem;
-        opacity: 0.8;
+        color: var(--text-adaptive-muted);
+        font-weight: 500;
+        background-color: var(--primary-50);
+        padding: 2px 8px;
+        border-radius: 4px;
+    }
+
+    /* Dark mode course code */
+    body.dark-mode .course-code {
+        background-color: var(--gold-900);
+        color: var(--gold-300);
     }
 
     .course-badges {
@@ -120,12 +196,40 @@
         flex-wrap: wrap;
     }
 
-    .carry-over-badge,
+    .carry-over-badge {
+        font-size: 0.7rem;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-weight: 600;
+        background-color: var(--warning);
+        color: var(--text-on-warning);
+    }
+
     .attendance-badge {
         font-size: 0.7rem;
         padding: 4px 8px;
         border-radius: 12px;
         font-weight: 600;
+    }
+
+    .attendance-badge.excellent {
+        background-color: var(--success);
+        color: var(--text-on-success);
+    }
+
+    .attendance-badge.good {
+        background-color: var(--info);
+        color: var(--text-on-info);
+    }
+
+    .attendance-badge.average {
+        background-color: var(--warning);
+        color: var(--text-on-warning);
+    }
+
+    .attendance-badge.poor {
+        background-color: var(--error);
+        color: var(--text-on-error);
     }
 
     /* Mobile Course Info Grid */
@@ -146,14 +250,14 @@
         font-size: 0.7rem;
         text-transform: uppercase;
         font-weight: 600;
-        color: var(--text-secondary);
+        color: var(--text-adaptive-muted);
         letter-spacing: 0.5px;
     }
 
     .info-value {
         font-size: 0.85rem;
-        font-weight: 500;
-        color: var(--text-primary);
+        font-weight: 600;
+        color: var(--text-adaptive-primary);
     }
 
     /* Enhanced Progress Visualization */
@@ -165,16 +269,32 @@
 
     .progress-bar {
         flex: 1;
-        height: 6px;
+        height: 8px;
         background: var(--border);
-        border-radius: 3px;
+        border-radius: 4px;
         overflow: hidden;
     }
 
     .progress {
         height: 100%;
-        border-radius: 3px;
+        border-radius: 4px;
         transition: width 0.4s ease;
+    }
+
+    .progress.excellent {
+        background: linear-gradient(90deg, var(--success), #16a34a);
+    }
+
+    .progress.good {
+        background: linear-gradient(90deg, var(--info), #2563eb);
+    }
+
+    .progress.average {
+        background: linear-gradient(90deg, var(--warning), #d97706);
+    }
+
+    .progress.poor {
+        background: linear-gradient(90deg, var(--error), #dc2626);
     }
 
     .stat-value {
@@ -182,6 +302,7 @@
         font-weight: 600;
         min-width: 35px;
         text-align: right;
+        color: var(--text-adaptive-primary);
     }
 
     /* Quick Stats Mobile Layout */
@@ -199,17 +320,20 @@
         display: flex;
         flex-direction: column;
         gap: 2px;
+        padding: var(--spacing-xs);
+        border-radius: 6px;
+        background-color: var(--bg-primary);
     }
 
     .quick-stat-value {
         font-size: 1.1rem;
         font-weight: 700;
-        color: var(--text-primary);
+        color: var(--text-adaptive-primary);
     }
 
     .quick-stat-label {
         font-size: 0.7rem;
-        color: var(--text-secondary);
+        color: var(--text-adaptive-muted);
         text-transform: uppercase;
         font-weight: 500;
         letter-spacing: 0.5px;
@@ -253,11 +377,13 @@
         margin: 0;
         line-height: 1.2;
         word-break: break-word;
+        color: var(--text-adaptive-primary);
+        font-weight: 600;
     }
 
     .course-code-large {
         font-size: 0.85rem;
-        color: var(--text-secondary);
+        color: var(--text-adaptive-secondary);
         font-weight: 500;
     }
 
@@ -270,17 +396,18 @@
         justify-content: center;
         background: transparent;
         border: none;
-        color: var(--text-secondary);
+        color: var(--text-adaptive-secondary);
         font-size: 1.25rem;
         cursor: pointer;
         touch-action: manipulation;
         flex-shrink: 0;
+        transition: all 0.2s ease;
     }
 
     .close-btn:hover,
     .close-btn:focus {
         background: var(--bg-tertiary);
-        color: var(--text-primary);
+        color: var(--text-adaptive-primary);
     }
 
     .modal-content {
@@ -290,20 +417,23 @@
         display: flex;
         flex-direction: column;
         gap: var(--spacing-lg);
+        background: var(--bg-primary);
     }
 
     /* Course Info Panel Mobile */
     .course-info-panel {
         background: var(--bg-secondary);
-        border-radius: 8px;
+        border-radius: 12px;
         padding: var(--spacing-md);
         border: 1px solid var(--border);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     }
 
     .info-section h4 {
         font-size: 1.1rem;
         margin-bottom: var(--spacing-md);
-        color: var(--text-primary);
+        color: var(--text-adaptive-primary);
+        font-weight: 600;
     }
 
     .info-grid {
@@ -324,29 +454,32 @@
         border-bottom: none;
     }
 
-    .info-label {
+    .info-grid .info-label {
         font-size: 0.85rem;
-        color: var(--text-secondary);
+        color: var(--text-adaptive-secondary);
         font-weight: 500;
     }
 
-    .info-value {
+    .info-grid .info-value {
         font-size: 0.9rem;
-        color: var(--text-primary);
+        color: var(--text-adaptive-primary);
         font-weight: 600;
     }
 
     /* Attendance Summary Mobile */
     .attendance-summary {
         background: var(--bg-tertiary);
-        border-radius: 8px;
+        border-radius: 12px;
         padding: var(--spacing-md);
         margin-top: var(--spacing-md);
+        border: 1px solid var(--border);
     }
 
     .attendance-summary h4 {
         font-size: 1.1rem;
         margin-bottom: var(--spacing-md);
+        color: var(--text-adaptive-primary);
+        font-weight: 600;
     }
 
     .summary-stats {
@@ -371,26 +504,27 @@
         justify-content: center;
         border: 4px solid currentColor;
         position: relative;
+        transition: all 0.3s ease;
     }
 
     .stat-circle.excellent {
         color: var(--success);
-        background: rgba(var(--success), 0.1);
+        background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(34, 197, 94, 0.2));
     }
 
     .stat-circle.good {
         color: var(--info);
-        background: rgba(var(--info), 0.1);
+        background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(59, 130, 246, 0.2));
     }
 
     .stat-circle.average {
         color: var(--warning);
-        background: rgba(var(--warning), 0.1);
+        background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(245, 158, 11, 0.2));
     }
 
     .stat-circle.poor {
         color: var(--error);
-        background: rgba(var(--error), 0.1);
+        background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.2));
     }
 
     .stat-percentage {
@@ -401,8 +535,9 @@
 
     .stat-description {
         font-size: 0.9rem;
-        color: var(--text-secondary);
+        color: var(--text-adaptive-secondary);
         text-align: center;
+        font-weight: 500;
     }
 
     .summary-details {
@@ -420,21 +555,23 @@
 
     .detail-label {
         font-size: 0.85rem;
-        color: var(--text-secondary);
+        color: var(--text-adaptive-secondary);
+        font-weight: 500;
     }
 
     .detail-value {
         font-size: 0.9rem;
-        color: var(--text-primary);
+        color: var(--text-adaptive-primary);
         font-weight: 600;
     }
 
     /* Attendance Records Panel Mobile */
     .attendance-records-panel {
         background: var(--bg-secondary);
-        border-radius: 8px;
+        border-radius: 12px;
         padding: var(--spacing-md);
         border: 1px solid var(--border);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     }
 
     .records-header {
@@ -447,6 +584,8 @@
     .records-header h4 {
         font-size: 1.1rem;
         margin: 0;
+        color: var(--text-adaptive-primary);
+        font-weight: 600;
     }
 
     .records-filters {
@@ -475,10 +614,16 @@
         gap: var(--spacing-sm);
         align-items: center;
         padding: var(--spacing-sm);
-        border-radius: 6px;
+        border-radius: 8px;
         border-left: 4px solid transparent;
         background: var(--bg-tertiary);
-        transition: transform 0.2s ease;
+        transition: all 0.2s ease;
+        border: 1px solid var(--border);
+    }
+
+    .attendance-record:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 
     .attendance-record:active {
@@ -487,12 +632,12 @@
 
     .attendance-record.present {
         border-left-color: var(--success);
-        background: rgba(var(--success), 0.05);
+        background: linear-gradient(90deg, rgba(34, 197, 94, 0.05), var(--bg-tertiary));
     }
 
     .attendance-record.absent {
         border-left-color: var(--error);
-        background: rgba(var(--error), 0.05);
+        background: linear-gradient(90deg, rgba(239, 68, 68, 0.05), var(--bg-tertiary));
     }
 
     .record-date {
@@ -506,13 +651,13 @@
     .date-main {
         font-size: 0.85rem;
         font-weight: 600;
-        color: var(--text-primary);
+        color: var(--text-adaptive-primary);
         line-height: 1;
     }
 
     .date-year {
         font-size: 0.7rem;
-        color: var(--text-secondary);
+        color: var(--text-adaptive-muted);
         line-height: 1;
     }
 
@@ -537,19 +682,20 @@
 
     .status-text {
         font-size: 0.85rem;
-        font-weight: 500;
+        font-weight: 600;
     }
 
     .record-time {
         font-size: 0.8rem;
-        color: var(--text-secondary);
+        color: var(--text-adaptive-secondary);
         text-align: right;
+        font-weight: 500;
     }
 
     .record-by {
         grid-column: 1 / -1;
         font-size: 0.75rem;
-        color: var(--text-secondary);
+        color: var(--text-adaptive-muted);
         margin-top: var(--spacing-xs);
         padding-top: var(--spacing-xs);
         border-top: 1px solid var(--border);
@@ -561,28 +707,30 @@
         text-align: center;
         padding: var(--spacing-xl);
         background: var(--bg-tertiary);
-        border-radius: 8px;
+        border-radius: 12px;
         margin: var(--spacing-md) 0;
+        border: 1px solid var(--border);
     }
 
     .no-courses-icon,
     .no-records-icon {
         font-size: 2rem;
-        color: var(--text-secondary);
+        color: var(--text-adaptive-muted);
         margin-bottom: var(--spacing-md);
     }
 
     .no-courses h4,
     .no-records h5 {
         font-size: 1.1rem;
-        color: var(--text-primary);
+        color: var(--text-adaptive-primary);
         margin-bottom: var(--spacing-sm);
+        font-weight: 600;
     }
 
     .no-courses p,
     .no-records p {
         font-size: 0.9rem;
-        color: var(--text-secondary);
+        color: var(--text-adaptive-secondary);
         margin-bottom: var(--spacing-md);
     }
 
@@ -594,16 +742,19 @@
         padding: var(--spacing-sm) var(--spacing-lg);
         border-radius: 8px;
         font-size: 0.9rem;
-        font-weight: 500;
+        font-weight: 600;
         cursor: pointer;
         touch-action: manipulation;
         min-height: 44px;
         transition: all 0.2s ease;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 
     .clear-filters-btn:hover,
     .load-more-btn:hover {
         background: var(--button-primary-hover);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
     }
 
     .clear-filters-btn:active,
@@ -675,9 +826,20 @@
 @media (max-width: 768px) {
     .course-stats-card:focus,
     .filter-select:focus,
-    .close-btn:focus {
+    .close-btn:focus,
+    .clear-filters-btn:focus,
+    .load-more-btn:focus {
         outline: 2px solid var(--primary-500);
         outline-offset: 2px;
+    }
+
+    /* Dark mode focus states */
+    body.dark-mode .course-stats-card:focus,
+    body.dark-mode .filter-select:focus,
+    body.dark-mode .close-btn:focus,
+    body.dark-mode .clear-filters-btn:focus,
+    body.dark-mode .load-more-btn:focus {
+        outline-color: var(--gold-500);
     }
 
     /* Improved touch targets */
@@ -688,5 +850,45 @@
     .load-more-btn {
         min-height: 44px;
         min-width: 44px;
+    }
+
+    /* High contrast mode support */
+    @media (prefers-contrast: high) {
+        .summary-card,
+        .course-stats-card,
+        .course-info-panel,
+        .attendance-records-panel {
+            border-width: 2px;
+        }
+
+        .progress-bar {
+            border: 1px solid var(--text-adaptive-primary);
+        }
+
+        .stat-circle {
+            border-width: 3px;
+        }
+    }
+
+    /* Reduced motion support */
+    @media (prefers-reduced-motion: reduce) {
+        .summary-card,
+        .course-stats-card,
+        .attendance-record,
+        .clear-filters-btn,
+        .load-more-btn,
+        .close-btn,
+        .progress,
+        .stat-circle {
+            transition: none;
+        }
+
+        .course-stats-card:hover,
+        .summary-card:hover,
+        .attendance-record:hover,
+        .clear-filters-btn:hover,
+        .load-more-btn:hover {
+            transform: none;
+        }
     }
         }
