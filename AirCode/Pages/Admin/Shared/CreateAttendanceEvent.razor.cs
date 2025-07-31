@@ -1,3 +1,4 @@
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,7 +15,7 @@ using AirCode.Domain.Entities;
 using AirCode.Domain.ValueObjects;
 using AirCode.Domain.Enums;
 using AirCode.Models.QRCode;
-using Course = AirCode.Domain.Entities.CourseEntity;
+using Course = AirCode.Domain.Entities.Course;
 namespace AirCode.Pages.Admin.Shared
 {
     public partial class CreateAttendanceEvent : ComponentBase, IAsyncDisposable
@@ -56,18 +57,21 @@ namespace AirCode.Pages.Admin.Shared
         private Timer temporalKeyUpdateTimer;
         
         private List<SessionData> allActiveSessions = new List<SessionData>();
-        private SystemEnums.SecurityFeatures securityFeatures;
+        private SecurityFeatures securityFeatures;
         private int temporalKeyRefreshInterval = 5; // minutes
         
         #endregion
 
+
         #region Lifecycle Methods
+
 
         protected override async Task OnInitializedAsync()
         {
             SessionStateService.StateChanged += OnStateChanged;
             await CheckForExistingSessionAsync();
         }
+
 
         public async ValueTask DisposeAsync()
         {
@@ -82,6 +86,7 @@ namespace AirCode.Pages.Admin.Shared
             }
         }
 
+
         public void Dispose()
         {
             countdownTimer?.Dispose();
@@ -89,9 +94,12 @@ namespace AirCode.Pages.Admin.Shared
             SessionStateService.StateChanged -= OnStateChanged;
         }
 
+
         #endregion
 
+
         #region Session Management
+
 
         private async Task CheckForExistingSessionAsync()
         {
@@ -108,12 +116,7 @@ namespace AirCode.Pages.Admin.Shared
                         // Restore session state
                         currentActiveSession = existingSession;
                         isSessionStarted = true;
-                        sessionEndTime = existingSession.ExpirationTime;
-                        
-                        // Find and restore selected course
-                        selectedCourse = await GetCourseByCodeAsync(existingSession.CourseCode);
-                        
-                        sessionModel.SessionId = existingSession.SessionId;
+              sessionModel.SessionId = existingSession.SessionId;
                         sessionModel.CourseCode = existingSession.CourseCode;
                         sessionModel.CourseName = existingSession.CourseName;
                         sessionModel.StartTime = existingSession.StartTime;
