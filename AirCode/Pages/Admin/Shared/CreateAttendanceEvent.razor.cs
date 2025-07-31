@@ -26,7 +26,7 @@ namespace AirCode.Pages.Admin.Shared
         
         [Inject] protected SessionStateService SessionStateService { get; set; }
         [Inject] protected AttendanceSessionService AttendanceSessionService { get; set; }
-       [Inject] protected IFirestoreAttendanceService FirestoreAttendanceService { get; set; }
+       [Inject] protected IFirestoreAttendanceService FirebaseAttendanceService { get; set; }
         [Inject] protected QRCodeDecoder QRCodeDecoder { get; set; }
         
         #endregion
