@@ -1,10 +1,12 @@
-/* ManageCourses.razor.css */
+/* ManageCourses.razor.css - Responsive & Text Color Optimized */
 
 /* Main page layout and containers */
 .page-container {
     padding: var(--spacing-lg);
     min-height: 100vh;
     transition: all 0.3s ease;
+    background: var(--bg-primary);
+    color: var(--text-adaptive-primary);
 }
 
 .page-header {
@@ -19,6 +21,7 @@
 .page-header h1 {
     margin: 0;
     font-size: 1.75rem;
+    color: var(--text-adaptive-primary);
 }
 
 /* Filter section styles */
@@ -28,28 +31,36 @@
     margin-bottom: var(--spacing-xl);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
     border: 1px solid var(--border);
+    background: var(--bg-secondary);
 }
 
 .filter-container {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: var(--spacing-md);
-    align-items: flex-end;
+    align-items: end;
 }
 
 .filter-item {
-    flex: 1;
-    min-width: 200px;
+    display: flex;
+    flex-direction: column;
 }
 
 .filter-item label {
     display: block;
     margin-bottom: var(--spacing-xs);
     font-weight: 500;
-    color: var(--text-secondary);
+    color: var(--text-adaptive-secondary);
 }
 
-/* Course card grid - Desktop */
+.filter-item input,
+.filter-item select {
+    background: var(--bg-secondary);
+    color: var(--text-adaptive-primary);
+    border: 1px solid var(--border);
+}
+
+/* Course card grid - Responsive */
 .card-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
@@ -62,7 +73,7 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
     border: 1px solid var(--border);
-    background-color: var(--bg-secondary);
+    background: var(--bg-secondary);
 }
 
 .course-card:hover {
@@ -76,14 +87,15 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background-color: var(--primary-700);
-    color: white;
+    background: var(--nav-background);
+    color: var(--text-on-primary);
 }
 
 .course-title {
     margin: 0;
     font-size: 1.25rem;
     font-weight: 600;
+    color: var(--text-on-primary);
 }
 
 .course-code {
@@ -92,21 +104,26 @@
     background-color: rgba(255, 255, 255, 0.2);
     border-radius: 4px;
     font-size: 0.875rem;
+    color: var(--text-on-primary);
 }
 
 .course-info {
     padding: var(--spacing-md);
     border-bottom: 1px solid var(--border);
+    background: var(--bg-secondary);
+    color: var(--text-adaptive-primary);
 }
 
 .course-info p {
     margin: var(--spacing-xs) 0;
+    color: var(--text-adaptive-secondary);
 }
 
 .course-schedule,
 .course-lecturers {
     padding: var(--spacing-md);
     border-bottom: 1px solid var(--border);
+    background: var(--bg-secondary);
 }
 
 .course-schedule h4,
@@ -114,7 +131,7 @@
     margin-top: 0;
     margin-bottom: var(--spacing-sm);
     font-size: 1rem;
-    color: var(--text-secondary);
+    color: var(--text-adaptive-secondary);
 }
 
 .course-schedule ul,
@@ -127,6 +144,7 @@
 .course-lecturers li {
     margin-bottom: var(--spacing-xs);
     font-size: 0.9rem;
+    color: var(--text-adaptive-tertiary);
 }
 
 .course-actions {
@@ -134,6 +152,7 @@
     display: flex;
     justify-content: flex-end;
     gap: var(--spacing-md);
+    background: var(--bg-secondary);
 }
 
 /* Modal styles */
@@ -157,7 +176,7 @@
     max-width: 800px;
     max-height: 90vh;
     overflow-y: auto;
-    background-color: var(--bg-secondary);
+    background: var(--bg-secondary);
     border-radius: 8px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
     z-index: 101;
@@ -171,21 +190,22 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background-color: var(--primary-700);
-    color: white;
+    background: var(--nav-background);
+    color: var(--text-on-primary);
     border-radius: 8px 8px 0 0;
 }
 
 .modal-header h2 {
     margin: 0;
     font-size: 1.5rem;
+    color: var(--text-on-primary);
 }
 
 .close-btn {
     background: none;
     border: none;
     font-size: 1.5rem;
-    color: white;
+    color: var(--text-on-primary);
     cursor: pointer;
     padding: 0 var(--spacing-sm);
 }
@@ -193,6 +213,8 @@
 .modal-body {
     padding: var(--spacing-md);
     overflow-y: auto;
+    background: var(--bg-secondary);
+    color: var(--text-adaptive-primary);
 }
 
 .modal-footer {
@@ -202,11 +224,24 @@
     justify-content: flex-end;
     gap: var(--spacing-md);
     margin-top: var(--spacing-md);
+    background: var(--bg-secondary);
 }
 
 /* Form styling */
 .form-group {
     margin-bottom: var(--spacing-md);
+}
+
+.form-group label {
+    color: var(--text-adaptive-secondary);
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    background: var(--bg-secondary);
+    color: var(--text-adaptive-primary);
+    border: 1px solid var(--border);
 }
 
 .form-row {
@@ -235,7 +270,8 @@
     border: 1px solid var(--border);
     border-radius: 4px;
     margin-bottom: var(--spacing-md);
-    background-color: var(--bg-tertiary);
+    background: var(--bg-tertiary);
+    color: var(--text-adaptive-primary);
 }
 
 /* Loading spinner */
@@ -267,6 +303,7 @@
     padding: var(--spacing-xxl);
     border-radius: 8px;
     border: 1px dashed var(--border);
+    color: var(--text-adaptive-tertiary);
 }
 
 /* Validation styles */
@@ -290,13 +327,15 @@
     align-items: center;
     gap: var(--spacing-xs);
     margin-bottom: var(--spacing-md);
+    flex-wrap: wrap;
+    justify-content: center;
 }
 
 .pagination-btn {
     padding: var(--spacing-sm) var(--spacing-md);
     border: 1px solid var(--border);
-    background-color: var(--bg-secondary);
-    color: var(--text-primary);
+    background: var(--bg-secondary);
+    color: var(--text-adaptive-primary);
     border-radius: 4px;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -307,25 +346,25 @@
 }
 
 .pagination-btn:hover:not(:disabled) {
-    background-color: var(--primary-100);
+    background: var(--primary-100);
     border-color: var(--primary-300);
 }
 
 .pagination-btn.active {
-    background-color: var(--primary-600);
-    color: white;
-    border-color: var(--primary-600);
+    background: var(--button-primary);
+    color: var(--text-on-primary);
+    border-color: var(--button-primary);
 }
 
 .pagination-btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
-    background-color: var(--bg-tertiary);
+    background: var(--bg-tertiary);
 }
 
 .pagination-info {
     font-size: 0.875rem;
-    color: var(--text-secondary);
+    color: var(--text-adaptive-secondary);
     text-align: center;
 }
 
@@ -336,7 +375,7 @@
     padding: var(--spacing-md);
     border: 1px solid var(--border);
     border-radius: 4px;
-    background-color: var(--bg-tertiary);
+    background: var(--bg-tertiary);
 }
 
 .lecturer-list {
@@ -351,9 +390,10 @@
     align-items: center;
     padding: var(--spacing-sm);
     margin-bottom: var(--spacing-xs);
-    background-color: var(--bg-secondary);
+    background: var(--bg-secondary);
     border-radius: 4px;
     border: 1px solid var(--border);
+    color: var(--text-adaptive-primary);
 }
 
 .schedule-list {
@@ -366,30 +406,13 @@
     align-items: center;
     padding: var(--spacing-sm) var(--spacing-md);
     margin-bottom: var(--spacing-xs);
-    background-color: var(--bg-secondary);
+    background: var(--bg-secondary);
     border-radius: 4px;
     border: 1px solid var(--border);
+    color: var(--text-adaptive-primary);
 }
 
-/* Style adjustments for dark mode compatibility */
-.dark-mode .course-card {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-}
-
-.dark-mode .course-card:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-}
-
-.dark-mode .schedule-item {
-    background-color: var(--dark-bg-tertiary);
-}
-
-.dark-mode .spinner {
-    border-color: var(--primary-900);
-    border-top-color: var(--primary-300);
-}
-
-/* RESPONSIVE DESIGN - Mobile Optimizations */
+/* RESPONSIVE DESIGN - Mobile First Approach */
 
 /* Large tablets and small desktops */
 @media (max-width: 1024px) {
@@ -400,6 +423,10 @@
     .card-grid {
         grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
         gap: var(--spacing-md);
+    }
+
+    .filter-container {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     }
 }
 
@@ -422,13 +449,8 @@
     }
 
     .filter-container {
-        flex-direction: column;
+        grid-template-columns: 1fr;
         gap: var(--spacing-sm);
-    }
-
-    .filter-item {
-        width: 100%;
-        min-width: auto;
     }
     
     .filter-section {
@@ -443,15 +465,15 @@
     }
 
     .course-card {
-        display: flex;
-        flex-direction: row;
+        display: grid;
+        grid-template-columns: 200px 1fr auto;
+        grid-template-areas: "header info actions";
         min-height: 120px;
         border-radius: 6px;
     }
 
     .course-header {
-        writing-mode: horizontal-tb;
-        flex: 0 0 200px;
+        grid-area: header;
         display: flex;
         flex-direction: column;
         justify-content: center;
@@ -472,7 +494,7 @@
     }
 
     .course-info {
-        flex: 1;
+        grid-area: info;
         padding: var(--spacing-sm);
         border-bottom: none;
         display: flex;
@@ -492,12 +514,13 @@
     }
 
     .course-actions {
-        flex: 0 0 auto;
+        grid-area: actions;
         flex-direction: column;
         padding: var(--spacing-sm);
         gap: var(--spacing-xs);
         border-left: 1px solid var(--border);
         justify-content: center;
+        min-width: 80px;
     }
 
     .form-row {
@@ -522,6 +545,15 @@
     .modal-body {
         padding: var(--spacing-sm);
     }
+
+    .pagination {
+        gap: 4px;
+    }
+
+    .pagination-btn {
+        min-width: 36px;
+        padding: var(--spacing-xs) var(--spacing-sm);
+    }
 }
 
 /* Mobile phones */
@@ -539,14 +571,17 @@
         margin-bottom: var(--spacing-sm);
     }
 
-    /* Mobile card layout - even more compact */
+    /* Mobile card layout - stack vertically */
     .course-card {
-        min-height: 100px;
+        display: flex;
+        flex-direction: column;
+        min-height: auto;
         border-radius: 4px;
     }
 
     .course-header {
-        flex: 0 0 140px;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
         padding: var(--spacing-xs);
     }
 
@@ -576,13 +611,17 @@
 
     .course-actions {
         padding: var(--spacing-xs);
-        min-width: 80px;
+        border-left: none;
+        border-top: 1px solid var(--border);
+        flex-direction: row;
+        justify-content: center;
+        min-width: auto;
     }
 
     .pagination {
         flex-wrap: wrap;
         justify-content: center;
-        gap: 4px;
+        gap: 2px;
     }
 
     .pagination-btn {
@@ -620,14 +659,17 @@
     .modal-footer button {
         width: 100%;
     }
+
+    .lecturer-list li,
+    .schedule-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--spacing-xs);
+    }
 }
 
 /* Extra small screens */
 @media (max-width: 320px) {
-    .course-header {
-        flex: 0 0 120px;
-    }
-    
     .course-title {
         font-size: 0.9rem;
     }
@@ -640,39 +682,24 @@
         font-size: 0.8rem;
     }
     
-    .course-actions {
-        min-width: 70px;
+    .pagination-btn {
+        min-width: 28px;
+        padding: 2px 4px;
     }
 }
 
-/* Adjustments for collapsed navigation menu */
-@media (min-width: 769px) {
-    .nav-menu.collapsed ~ .main-content .page-container {
-        margin-left: 0;
-        width: 100%;
-    }
+/* Dark mode specific adjustments */
+body.dark-mode .course-card {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
-@media (max-width: 768px) {
-    .nav-menu.collapsed ~ .main-content .page-container {
-        margin-left: calc(60px + 0.5rem);
-        width: calc(100% - 60px - 1rem);
-    }
+body.dark-mode .course-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
-@media (max-width: 480px) {
-    .nav-menu.collapsed ~ .main-content .page-container {
-        margin-left: calc(50px + 0.25rem);
-        width: calc(100% - 50px - 0.5rem);
-    }
-}
-
-/* High DPI displays */
-@media (min-resolution: 192dpi), (min-resolution: 2dppx) {
-    .course-card {
-        -webkit-font-smoothing: antialiased;
-        -moz-osx-font-smoothing: grayscale;
-    }
+body.dark-mode .spinner {
+    border-color: var(--primary-900);
+    border-top-color: var(--primary-300);
 }
 
 /* Reduced motion preferences */
@@ -692,4 +719,4 @@
 .pagination-btn:focus-visible {
     outline: 2px solid var(--button-primary);
     outline-offset: 2px;
-}
+    }
