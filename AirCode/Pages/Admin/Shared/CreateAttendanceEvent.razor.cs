@@ -45,6 +45,7 @@ namespace AirCode.Pages.Admin.Shared
         private bool useTemporalKeyRefresh = false;
         private bool isCurrentUserCourseRep = false;
         private bool showSessionRestoreDialog = false;
+        private bool showInfoPopup = false;
         
         private string restorationMessage = string.Empty;
         private string qrCodePayload = string.Empty;
@@ -55,6 +56,7 @@ namespace AirCode.Pages.Admin.Shared
         private SessionData sessionModel = new SessionData();
         private SessionData currentActiveSession;
         private SessionData selectedStoredSession;
+        private InfoPopup.InfoType currentInfoType;
         private PartialSessionData manualAttendanceSessionData;
         private QRCodeData generatedQRCode;
         
