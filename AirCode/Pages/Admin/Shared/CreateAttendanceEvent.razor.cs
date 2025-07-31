@@ -38,7 +38,7 @@ namespace AirCode.Pages.Admin.Shared
         #region Service Dependencies (Inject these in the razor file)
         
         [Inject] protected SessionStateService SessionStateService { get; set; }
-        [Inject] protected AttendanceSessionService IAttendanceSessionService { get; set; }
+        [Inject] protected IAttendanceSessionService AttendanceSessionService { get; set; }
         [Inject] protected IFirestoreAttendanceService FirebaseAttendanceService { get; set; }
         [Inject] protected QRCodeDecoder QRCodeDecoder { get; set; }
         
