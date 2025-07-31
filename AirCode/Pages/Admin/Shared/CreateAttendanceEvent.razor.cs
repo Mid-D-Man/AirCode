@@ -117,18 +117,75 @@ namespace AirCode.Pages.Admin.Shared
 
 
 
-        public async ValueTask DisposeAsync()
-        {
-            countdownTimer?.Dispose();
-            temporalKeyUpdateTimer?.Dispose();
-            SessionStateService.StateChanged -= OnStateChanged;
-            
-            // Clean up any remaining sessions on app shutdown
-            if (currentActiveSession != null)
-            {
-                await SessionStateService.RemoveActiveSessionAsync(currentActiveSession.SessionId);
-            }Session Management
+        
 
+        public async ValueTask DisposeAsync()
+
+        {
+
+            countdownTimer?.Dispose();
+
+            temporalKeyUpdateTimer?.Dispose();
+
+            SessionStateService.StateChanged -= OnStateChanged;
+
+
+
+            // Clean up any remaining sessions on app shutdown
+
+            if (currentActiveSession != null)
+
+            {
+
+                await SessionStateService.RemoveActiveSessionAsync(currentActiveSession.SessionId);
+
+
+            }
+
+
+        }
+
+
+
+
+
+
+
+
+        public void Dispose()
+
+
+        {
+
+
+            countdownTimer?.Dispose();
+
+
+            temporalKeyUpdateTimer?.Dispose();
+
+
+            SessionStateService.StateChanged -= OnStateChanged;
+
+
+        }
+
+
+
+
+
+
+
+
+        #endregion
+
+
+
+
+
+
+
+
+        #region Session Management
 
         private async Task CheckForExistingSessionAsync()
         {
