@@ -164,7 +164,7 @@ namespace AirCode.Pages.Admin.Shared
                     .Select(ps => new SessionData
                     {
                         SessionId = ps.SessionId,
-                        CourseId = ps.CourseId,
+                        CourseCode = ps.CourseCode,
                         CourseName = ps.CourseName,
                         StartTime = ps.StartTime,
                         Duration = ps.Duration,
@@ -266,7 +266,7 @@ namespace AirCode.Pages.Admin.Shared
                 }
 
                 // Set as current session
-                SessionStateService.SetCurrentSession("default", activeSession);
+                await SessionStateService.UpdateCurrentSessionAsync("default", activeSession);
             }
             catch (Exception ex)
             {
@@ -931,6 +931,17 @@ namespace AirCode.Pages.Admin.Shared
             // etc.
     
             Console.WriteLine("Session ended - processing final data...");
+        }
+
+        private void ShowInfoPopup(InfoPopup.InfoType infoType)
+        {
+            currentInfoType = infoType;
+            showInfoPopup = true;
+        }
+
+        private void CloseInfoPopup()
+        {
+            showInfoPopup = false;
         }
 
         #endregion
