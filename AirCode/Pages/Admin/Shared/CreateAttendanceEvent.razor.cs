@@ -15,7 +15,7 @@ using AirCode.Domain.ValueObjects;
 using AirCode.Domain.Enums;
 using AirCode.Models.QRCode;
 using Course = AirCode.Domain.Entities.Course;
-
+using AirCode.Components.SharedPrefabs.Others;
 namespace AirCode.Pages.Admin.Shared
 {
     public partial class CreateAttendanceEvent : ComponentBase, IAsyncDisposable
