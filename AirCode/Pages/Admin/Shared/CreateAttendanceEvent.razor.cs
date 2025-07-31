@@ -620,18 +620,18 @@ namespace AirCode.Pages.Admin.Shared
         private Course CreateCourseInstance(string courseCode, string name)
         {
             // Create Course with all required parameters
-            return new Course(
-                courseCode: courseCode,
-                name: name,
-                description: "Default description",
-                level: LevelType.Undergraduate, // Adjust as needed
-                semester: SemesterType.First, // Adjust as needed
-                credits: 3, // Default credits
-                schedule: new CourseSchedule(), // Create appropriate schedule
-                prerequisites: new List<string>(),
-                lastModified: DateTime.UtcNow,
-                additionalParam: "" // Add appropriate value
-            );
+      return new Course(
+        courseCode: courseCode,
+        name: name,
+        departmentId: string.Empty, // Add appropriate department ID
+        level: LevelType.Level100, // Use correct enum value
+        semester: SemesterType.FirstSemester, // Use correct enum value
+        creditUnits: 3, // byte type for credit units
+        schedule: new CourseSchedule(), // Create appropriate schedule
+        lecturerIds: new List<string>(), // List of lecturer IDs
+        lastModified: DateTime.UtcNow,
+        modifiedBy: "System"
+    );
         }
 
         #endregion
