@@ -1,3 +1,4 @@
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,6 +17,7 @@ using AirCode.Domain.Enums;
 using AirCode.Models.QRCode;
 using Course = AirCode.Domain.Entities.Course;
 using AirCode.Components.SharedPrefabs.Others;
+
 
 namespace AirCode.Pages.Admin.Shared
 {
@@ -67,13 +69,15 @@ namespace AirCode.Pages.Admin.Shared
         
         private List<SessionData> allActiveSessions = new List<SessionData>();
         private List<SessionData> storedSessions = new();
-        private List<ActiveSessionData> otherActiveSessions = new();
+        private List<SessionData> otherActiveSessions = new();
         private AdvancedSecurityFeatures securityFeatures;
         private int temporalKeyRefreshInterval = 5; // minutes
         
         #endregion
 
+
         #region Lifecycle Methods
+
 
         protected override async Task OnInitializedAsync()
         {
@@ -81,6 +85,7 @@ namespace AirCode.Pages.Admin.Shared
             await CheckForExistingSessionAsync();
             await CheckForStoredSessionsAsync();
         }
+
 
         public async ValueTask DisposeAsync()
         {
@@ -95,6 +100,7 @@ namespace AirCode.Pages.Admin.Shared
             }
         }
 
+
         public void Dispose()
         {
             countdownTimer?.Dispose();
@@ -102,9 +108,12 @@ namespace AirCode.Pages.Admin.Shared
             SessionStateService.StateChanged -= OnStateChanged;
         }
 
+
         #endregion
 
+
         #region Session Management
+
 
         private async Task CheckForExistingSessionAsync()
         {
