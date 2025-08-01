@@ -302,22 +302,16 @@
                         {
                             <div class="attendance-record @(record.IsPresent ? "present" : "absent")">
                                 <div class="record-date">
-                                    <span class="date-main">@record.Date.ToString("MMM dd")</span>
-                                    <span class="date-year">@record.Date.ToString("yyyy")</span>
+                                    <span class="date-main">@record.SessionDate.ToString("MMM dd")</span>
+                                    <span class="date-year">@record.SessionDate.ToString("yyyy")</span>
                                 </div>
                                 <div class="record-status">
                                     <i class="oi @(record.IsPresent ? "oi-check" : "oi-x")"></i>
                                     <span class="status-text">@(record.IsPresent ? "Present" : "Absent")</span>
                                 </div>
                                 <div class="record-time">
-                                    <span>@record.RecordedAt.ToString("HH:mm")</span>
+                                    <span>@record.ScanTime.ToString()</span>
                                 </div>
-                                @if (!string.IsNullOrEmpty(record.RecordedBy))
-                                {
-                                    <div class="record-by">
-                                        <span>By: @record.RecordedBy</span>
-                                    </div>
-                                }
                             </div>
                         }
                         
