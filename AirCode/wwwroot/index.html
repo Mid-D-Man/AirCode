@@ -4,13 +4,14 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  
+
     <!-- Content Security Policy -->
     <meta http-equiv="Content-Security-Policy" content="
 default-src 'self' https:;
 script-src 'self' 'unsafe-eval' 'unsafe-inline' 
     https://cdnjs.cloudflare.com 
     https://www.gstatic.com
+    https://firestore.googleapis.com
     'sha384-qZvrmS2ekKPF2mSznTQsxqPgnpkI4DNhusia2dLGOHFaGUQ1eF1N6LUjBZ5jTWnEgpzqQZzMjgzKFYlF5K6cG3Q==';
 style-src 'self' 'unsafe-inline' 
     https://fonts.googleapis.com;
@@ -35,7 +36,7 @@ base-uri 'self'
     <!-- Additional security headers -->
     <meta http-equiv="X-Content-Type-Options" content="nosniff">
     <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
-    
+
     <title>AirCode</title>
     <base href="/AirCode/" />
 
@@ -87,6 +88,46 @@ base-uri 'self'
     <a class="dismiss">🗙</a>
 </div>
 
+<!-- Firebase SDK with error handling - MOVED BEFORE BLAZOR -->
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"
+        onerror="console.warn('Firebase app failed to load')">
+</script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"
+        onerror="console.warn('Firebase firestore failed to load')">
+</script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"
+        onerror="console.warn('Firebase database failed to load')">
+</script>
+
+<!-- could use this // Replace hardcoded config with:
+window.getFirebaseConfig = () => {
+  return window.firebaseConfig || {};
+}; -->
+<!-- Firebase Configuration with error handling -->
+<script>
+    try {
+        const firebaseConfig = {
+            apiKey: "AIzaSyAM9mrDb2-eFgtMsMm7eJzt6GHIBCHEeGw",
+            authDomain: "aircode-4d07c.firebaseapp.com",
+            projectId: "aircode-4d07c",
+            storageBucket: "aircode-4d07c.firebasestorage.app",
+            messagingSenderId: "1041427366169",
+            appId: "1:1041427366169:web:6b7c84fefdcbe64edc4588",
+            measurementId: "G-PLN2D6PVVX",
+            databaseURL: "https://aircode-4d07c-default-rtdb.firebaseio.com/"
+        };
+
+        if (typeof firebase !== 'undefined') {
+            firebase.initializeApp(firebaseConfig);
+            console.log('Firebase initialized successfully');
+        } else {
+            console.warn('Firebase SDK not loaded');
+        }
+    } catch (error) {
+        console.error('Firebase initialization failed:', error);
+    }
+</script>
+
 <!-- PWA Manager -->
 <script src="js/pwaManager.js"
         onerror="console.warn('PWA Manager failed to load');">
@@ -102,31 +143,29 @@ base-uri 'self'
         onerror="console.warn('Auth service failed to load');">
 </script>
 
-
-
 <!-- Utility Scripts -->
 <script src="js/connectivityServices.js" onerror="console.warn('Connectivity services failed')"></script>
 <script src="js/debug.js" onerror="console.warn('Debug utilities failed')"></script>
 <script src="js/themeSwitcher.js" onerror="console.warn('Theme switcher failed')"></script>
-    <script src="js/validateKeyAndIV.js" onerror="console.warn('Validation utilities failed')"></script>
+<script src="js/validateKeyAndIV.js" onerror="console.warn('Validation utilities failed')"></script>
 <script src="js/cryptographyHandler.js" onerror="console.warn('Crypto handler failed')"></script>
 <script src="js/site.js" onerror="console.warn('Site utilities failed')"></script>
-    <script src="js/offlineCredentialsHandler.js" onerror="console.warn('Offline credentials handler failed')"></script>
+<script src="js/offlineCredentialsHandler.js" onerror="console.warn('Offline credentials handler failed')"></script>
 <script src="js/cameraUtil.js" onerror="console.warn('Camera utilities failed')"></script>
 <script src="js/firestoreModule.js" onerror="console.warn('Firestore module failed')"></script>
 <script src="js/firestoreNotificationModule.js" onerror="console.warn('FirestoreNotification module failed')"></script>
 <script src="js/qrCodeModule.js" onerror="console.warn('QR code module failed')"></script>
 <script src="js/gpuPerformance.js" onerror="console.warn('GPU performance failed')"></script>
 <script src="js/search-helpers.js" onerror="console.warn('Search helpers failed')"></script>
-
 <script src="js/PwaDiagnostics.js" onerror="console.warn('Diagnostics utilities failed')"></script>
 
-<<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"
-         integrity="sha512-qZvrmS2ekKPF2mSznTQsxqPgnpkI4DNhusia2dLGOHFaGUQ1eF1N6LUjBZ5jTWnEgpzqQZzMjgzKFYlF5K6cG3Q=="
-         crossorigin="anonymous"
-         onerror="console.warn('Failed to load pdf service')">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"
+        integrity="sha512-qZvrmS2ekKPF2mSznTQsxqPgnpkI4DNhusia2dLGOHFaGUQ1eF1N6LUjBZ5jTWnEgpzqQZzMjgzKFYlF5K6cG3Q=="
+        crossorigin="anonymous"
+        onerror="console.warn('Failed to load pdf service')">
 </script>
 <script src="js/pdf-service.js" onerror="console.warn('Failed to load pdf service')"></script>
+
 <!-- Camera utility functions -->
 <script>
     window.getCameraStream = async (constraints) => {
@@ -183,43 +222,5 @@ base-uri 'self'
     });
 </script>
 
-<!-- Firebase SDK with error handling -->
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"
-        onerror="console.warn('Firebase app failed to load')">
-</script>
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"
-        onerror="console.warn('Firebase firestore failed to load')">
-</script>
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"
-        onerror="console.warn('Firebase database failed to load')">
-</script>
-<!-- could use this // Replace hardcoded config with:
-window.getFirebaseConfig = () => {
-  return window.firebaseConfig || {};
-}; -->
-<!-- Firebase Configuration with error handling -->
-<script>
-    try {
-        const firebaseConfig = {
-            apiKey: "AIzaSyAM9mrDb2-eFgtMsMm7eJzt6GHIBCHEeGw",
-            authDomain: "aircode-4d07c.firebaseapp.com",
-            projectId: "aircode-4d07c",
-            storageBucket: "aircode-4d07c.firebasestorage.app",
-            messagingSenderId: "1041427366169",
-            appId: "1:1041427366169:web:6b7c84fefdcbe64edc4588",
-            measurementId: "G-PLN2D6PVVX",
-            databaseURL: "https://aircode-4d07c-default-rtdb.firebaseio.com/"
-        };
-
-        if (typeof firebase !== 'undefined') {
-            firebase.initializeApp(firebaseConfig);
-            console.log('Firebase initialized successfully');
-        } else {
-            console.warn('Firebase SDK not loaded');
-        }
-    } catch (error) {
-        console.error('Firebase initialization failed:', error);
-    }
-</script>
 </body>
 </html>
