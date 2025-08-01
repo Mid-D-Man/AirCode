@@ -7,25 +7,26 @@
   
     <!-- Content Security Policy -->
     <meta http-equiv="Content-Security-Policy" content="
-    default-src 'self' https:;
-    script-src 'self' 'unsafe-eval' 'unsafe-inline' 
-        https://cdnjs.cloudflare.com 
-        https://www.gstatic.com;
-    style-src 'self' 'unsafe-inline' 
-        https://fonts.googleapis.com;
-    font-src 'self' 
-        https://fonts.gstatic.com;
-    img-src 'self' data: https:;
-    connect-src 'self' 
-        https://firestore.googleapis.com 
-        https://firebase.googleapis.com
-        https://*.supabase.co
-        https://*.supabase.io
-        https://functions.supabase.co
-        https://*.auth0.com;
-    frame-ancestors 'none';
-    form-action 'self';
-    base-uri 'self'
+default-src 'self' https:;
+script-src 'self' 'unsafe-eval' 'unsafe-inline' 
+    https://cdnjs.cloudflare.com 
+    https://www.gstatic.com
+    'sha384-qZvrmS2ekKPF2mSznTQsxqPgnpkI4DNhusia2dLGOHFaGUQ1eF1N6LUjBZ5jTWnEgpzqQZzMjgzKFYlF5K6cG3Q==';
+style-src 'self' 'unsafe-inline' 
+    https://fonts.googleapis.com;
+font-src 'self' 
+    https://fonts.gstatic.com;
+img-src 'self' data: https:;
+connect-src 'self' 
+    https://firestore.googleapis.com 
+    https://firebase.googleapis.com
+    https://*.supabase.co
+    https://*.supabase.io
+    https://functions.supabase.co
+    https://*.auth0.com;
+frame-ancestors 'none';
+form-action 'self';
+base-uri 'self'
 ">
 
     <!-- X-Frame-Options for clickjacking protection -->
@@ -120,7 +121,11 @@
 
 <script src="js/PwaDiagnostics.js" onerror="console.warn('Diagnostics utilities failed')"></script>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"
+         integrity="sha512-qZvrmS2ekKPF2mSznTQsxqPgnpkI4DNhusia2dLGOHFaGUQ1eF1N6LUjBZ5jTWnEgpzqQZzMjgzKFYlF5K6cG3Q=="
+         crossorigin="anonymous"
+         onerror="console.warn('Failed to load pdf service')">
+</script>
 <script src="js/pdf-service.js" onerror="console.warn('Failed to load pdf service')"></script>
 <!-- Camera utility functions -->
 <script>
@@ -188,7 +193,10 @@
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"
         onerror="console.warn('Firebase database failed to load')">
 </script>
-
+<!-- could use this // Replace hardcoded config with:
+window.getFirebaseConfig = () => {
+  return window.firebaseConfig || {};
+}; -->
 <!-- Firebase Configuration with error handling -->
 <script>
     try {

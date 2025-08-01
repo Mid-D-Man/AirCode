@@ -9,6 +9,7 @@ using Blazored.Toast;
 // AirCode Application Services
 using AirCode;
 using AirCode.Extensions;
+using AirCode.Models.Firebase;
 using AirCode.Services.Attendance;
 using AirCode.Services.Auth;
 using AirCode.Services.Courses;
@@ -24,6 +25,7 @@ using AirCode.Services.Firebase;
 using AirCode.Services.VisualElements;
 using AirCode.Utilities.DataStructures;
 using AirCode.Utilities.HelperScripts;
+using Microsoft.Extensions.Options;
 using Microsoft.JSInterop;
 
 // ============================================================================
@@ -188,7 +190,19 @@ builder.Services.AddScoped<Supabase.Client>(provider =>
     
     return new Supabase.Client(supabaseUrl, supabaseKey, options);
 });
+// Firebase config from appsettings.json -whould fix the github sec issue
+builder.Services.Configure<FirebaseOptions>(options =>
+{
+    var firebaseSection = builder.Configuration.GetSection("Firebase");
+    firebaseSection.Bind(options);
+});
 
+// Usage in services:
+builder.Services.AddScoped(provider =>
+{
+    var config = provider.GetRequiredService<IConfiguration>();
+    return config.GetSection("Firebase").Get<FirebaseOptions>();
+});
 // ============================================================================
 // Application Startup - Build AFTER all service registrations
 // ============================================================================
