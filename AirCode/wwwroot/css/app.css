@@ -116,7 +116,7 @@ a, .btn-link {
     animation: fadeIn 0.3s ease-out;
 
     /* Force full viewport coverage */
-    height: 1000vh !important;
+    height: 100vh !important;
     width: 100vw !important;
     min-height: 100vh;
 
@@ -132,7 +132,7 @@ a, .btn-link {
 /* Fallback for dynamic viewport units */
 @supports (height: 100dvh) {
     .global-backdrop {
-        height: 1000dvh !important;
+        height: 100dvh !important;
         width: 100dvw !important;
     }
 }
@@ -140,7 +140,7 @@ a, .btn-link {
 /* Ensure backdrop covers entire screen on mobile */
 @media (max-width: 768px) {
     .global-backdrop {
-        height: 1000vh !important;
+        height: 100vh !important;
         width: 100vw !important;
         position: fixed !important;
         top: 0 !important;

@@ -404,6 +404,12 @@
             }
         </div>
     }
+
+    <!-- Info Popup Component  -->
+    <InfoPopup
+        IsVisible="showInfoPopup"
+        CurrentInfoType="currentInfoType"
+        OnClose="CloseInfoPopup" />
 </div>
 
 <!-- Course Selection Modal -->
@@ -415,11 +421,6 @@
 <!-- Got rif of this one cause i dont like it anymore Floating QR Code Component -->
 
 
-<!-- Info Popup Component -->
-<InfoPopup 
-    IsVisible="showInfoPopup" 
-    CurrentInfoType="currentInfoType" 
-    OnClose="CloseInfoPopup" />
 <!-- Manual Attendance Popup -->
 <ManualAttendancePopup 
     IsVisible="showManualAttendancePopup" 

@@ -8,7 +8,7 @@ window.offlineCredentialsHandler = (() => {
         AUTH_IV: "aircode_auth_iv",
         DEVICE_GUID: "AirCode_device_guid"
     };
-
+ 
     // Immediate device GUID initialization
     let deviceGuid = null;
     
@@ -18,7 +18,7 @@ window.offlineCredentialsHandler = (() => {
             if (!deviceGuid) {
                 deviceGuid = `${Date.now().toString(16).slice(-8)}${Math.random().toString(16).slice(2,10)}`;
                 localStorage.setItem(STORAGE_KEYS.DEVICE_GUID, deviceGuid);
-                console.log('[OfflineCredentials] Device GUID created:', deviceGuid);
+                console.log('[OfflineCredentials] Device GUID created -> ', deviceGuid);
             }
         }
         return deviceGuid;
