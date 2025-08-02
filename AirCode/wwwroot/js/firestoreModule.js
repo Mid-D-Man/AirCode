@@ -6,55 +6,69 @@ window.firestoreModule = (function () {
     let isInitialized = false;
     let isOffline = false;
     let manuallyDisconnected = false;
+    let initializationPromise = null;
 
-    // Initialize Firestore with better error handling
-    async function initializeFirestore() {
-        try {
-            if (!firebase || !firebase.firestore) {
-                console.error("Firebase or Firestore is not loaded");
-                return false;
+    function waitForFirebase() {
+        return new Promise((resolve, reject) => {
+            if (typeof firebase !== 'undefined' && firebase.firestore) {
+                resolve();
+                return;
             }
 
-            // Configure settings BEFORE getting instance
-            if (!isInitialized) {
-                db = firebase.firestore();
+            let attempts = 0;
+            const maxAttempts = 50; // 5 seconds max wait
+            const checkInterval = setInterval(() => {
+                attempts++;
+                if (typeof firebase !== 'undefined' && firebase.firestore) {
+                    clearInterval(checkInterval);
+                    resolve();
+                } else if (attempts >= maxAttempts) {
+                    clearInterval(checkInterval);
+                    reject(new Error('Firebase SDK failed to load within timeout'));
+                }
+            }, 100);
+        });
+    }
+    // Initialize Firestore with better error handling
+    async function initializeFirestore() {
+        if (initializationPromise) {
+            return initializationPromise;
+        }
 
-                // Only set settings on first initialization
+        initializationPromise = (async () => {
+            try {
+                // Wait for Firebase SDK
+                await waitForFirebase();
+
+                if (isInitialized) {
+                    return true;
+                }
+
+                db = firebase.firestore();
                 db.settings({
                     ignoreUndefinedProperties: true,
                     timestampsInSnapshots: true
                 });
 
-                // Enable persistence only once
-                try {
-                    //we disabled presistence as no encrypion is used and we cant set which and which collections
-                    //we allow to be saved which is a security risk or something like that 
-                   // await db.enablePersistence({ synchronizeTabs: true });
-                } catch (err) {
-                    if (err.code === 'failed-precondition') {
-                        console.warn("Persistence failed: Multiple tabs open");
-                    } else if (err.code === 'unimplemented') {
-                        console.warn("Persistence not supported in this browser");
+                // Connection monitoring
+                firebase.database().ref(".info/connected").on("value", (snapshot) => {
+                    if (!manuallyDisconnected) {
+                        isOffline = !snapshot.val();
+                        console.log("Connection state:", isOffline ? "Offline" : "Online");
                     }
-                }
+                });
 
                 isInitialized = true;
+                console.log("Firestore initialized successfully");
+                return true;
+            } catch (error) {
+                console.error("Error initializing Firestore:", error);
+                initializationPromise = null; // Reset for retry
+                return false;
             }
+        })();
 
-            // Connection monitoring (can be called multiple times)
-            firebase.database().ref(".info/connected").on("value", (snapshot) => {
-                if (!manuallyDisconnected) {
-                    isOffline = !snapshot.val();
-                    console.log("Connection state:", isOffline ? "Offline" : "Online");
-                }
-            });
-
-            console.log("Firestore initialized successfully");
-            return true;
-        } catch (error) {
-            console.error("Error initializing Firestore:", error);
-            return false;
-        }
+        return initializationPromise;
     }
 
     // Set connection state manually
@@ -86,7 +100,8 @@ window.firestoreModule = (function () {
     // Get a document by ID
     async function getDocument(collection, id) {
         try {
-            if (!isInitialized) await initializeFirestore();
+            const initialized = await initializeFirestore();
+            if (!initialized) throw new Error('Firestore not initialized');
 
             const docRef = db.collection(collection).doc(id);
             const doc = await docRef.get();
@@ -106,6 +121,7 @@ window.firestoreModule = (function () {
             return null;
         }
     }
+
 
     // Add a new document
     async function addDocument(collection, jsonData, customId = null) {
