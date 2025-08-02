@@ -190,19 +190,6 @@ builder.Services.AddScoped<Supabase.Client>(provider =>
     
     return new Supabase.Client(supabaseUrl, supabaseKey, options);
 });
-// Firebase config from appsettings.json -whould fix the github sec issue
-builder.Services.Configure<FirebaseOptions>(options =>
-{
-    var firebaseSection = builder.Configuration.GetSection("Firebase");
-    firebaseSection.Bind(options);
-});
-
-// Usage in services:
-builder.Services.AddScoped(provider =>
-{
-    var config = provider.GetRequiredService<IConfiguration>();
-    return config.GetSection("Firebase").Get<FirebaseOptions>();
-});
 // ============================================================================
 // Application Startup - Build AFTER all service registrations
 // ============================================================================
