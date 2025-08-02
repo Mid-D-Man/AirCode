@@ -6,12 +6,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 
     <!-- Content Security Policy -->
+   
     <meta http-equiv="Content-Security-Policy" content="
 default-src 'self' https:;
 script-src 'self' 'unsafe-eval' 'unsafe-inline' 
     https://cdnjs.cloudflare.com 
     https://www.gstatic.com
     https://firestore.googleapis.com
+    https://firebase.googleapis.com
+    https://www.gstatic.com/firebasejs/
     'sha256-ikYjnxfvRq8cHHofHduXS2q72U6dGDdnK8fbkM0kka4='
     'sha256-hIaygNnub+mRjv73eUzvB51px8WpuQTf2pJhOAEJwsw='
     'sha256-xjDUUP6xAS8JS/GwpgzY3fF/0EBpfwUgR5SQKeyC3zI='
@@ -25,6 +28,9 @@ img-src 'self' data: https:;
 connect-src 'self' 
     https://firestore.googleapis.com 
     https://firebase.googleapis.com
+    https://aircode-4d07c-default-rtdb.firebaseio.com
+    https://aircode-4d07c.firebaseapp.com
+    https://*.googleapis.com
     https://*.supabase.co
     https://*.supabase.io
     https://functions.supabase.co
