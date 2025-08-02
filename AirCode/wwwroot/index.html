@@ -5,52 +5,47 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 
-    <!-- Content Security Policy -->
-   
-    <meta http-equiv="Content-Security-Policy-Report-Only" content="
-default-src 'self' https:;
-script-src 'self' 'unsafe-eval' 'unsafe-inline' 
-    https://cdnjs.cloudflare.com 
-    https://www.gstatic.com
-    https://firestore.googleapis.com
-    https://firebase.googleapis.com
-    https://www.gstatic.com/firebasejs/
-    'sha256-ikYjnxfvRq8cHHofHduXS2q72U6dGDdnK8fbkM0kka4='
-    'sha256-hIaygNnub+mRjv73eUzvB51px8WpuQTf2pJhOAEJwsw='
-    'sha256-xjDUUP6xAS8JS/GwpgzY3fF/0EBpfwUgR5SQKeyC3zI='
-    'sha256-W4YKtHuzd9bcx+Nyyp21kFMlDwYutcAz7YtU919dnKs='
-    'unsafe-hashes';
-style-src 'self' 'unsafe-inline' 
-    https://fonts.googleapis.com;
-font-src 'self' 
-    https://fonts.gstatic.com;
-img-src 'self' data: https:;
-connect-src 'self' 
-    https://firestore.googleapis.com 
-    https://firebase.googleapis.com
-    https://aircode-4d07c-default-rtdb.firebaseio.com
-    https://aircode-4d07c.firebaseapp.com
-    https://*.googleapis.com
-    https://*.supabase.co
-    https://*.supabase.io
-    https://functions.supabase.co
-    https://*.auth0.com;
-frame-ancestors 'none';
-form-action 'self';
-base-uri 'self'
-">
+    <!-- Simplified working CSP for Blazor WASM with external services -->
+    <meta http-equiv="Content-Security-Policy" content="
+        default-src 'self';
+        script-src 'self' 'unsafe-eval' 'unsafe-inline' 
+            https://cdnjs.cloudflare.com 
+            https://www.gstatic.com 
+            https://firebase.googleapis.com 
+            https://www.gstatic.com/firebasejs/ 
+            https://*.auth0.com 
+            https://*.supabase.co 
+            https://*.supabase.io;
+        style-src 'self' 'unsafe-inline' 
+            https://fonts.googleapis.com;
+        font-src 'self' 
+            https://fonts.gstatic.com;
+        img-src 'self' data: https:;
+        connect-src 'self' 
+            https://firestore.googleapis.com 
+            https://firebase.googleapis.com
+            https://aircode-4d07c-default-rtdb.firebaseio.com
+            https://aircode-4d07c.firebaseapp.com
+            https://*.googleapis.com
+            https://*.supabase.co
+            https://*.supabase.io
+            https://functions.supabase.co
+            https://*.auth0.com
+            wss: ws:;
+        object-src 'none';
+        base-uri 'self';
+        form-action 'self';
+    ">
 
-    <!-- X-Frame-Options for clickjacking protection -->
+    <!-- Security headers via meta tags -->
     <meta http-equiv="X-Frame-Options" content="DENY">
-
-    <!-- Additional security headers -->
     <meta http-equiv="X-Content-Type-Options" content="nosniff">
     <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
 
     <title>AirCode</title>
     <base href="/AirCode/" />
 
-    <!-- SPA routing for github just incase  -->
+    <!-- SPA routing for github -->
     <script>
         (function(l) {
             if (l.search[1] === '/' ) {
@@ -60,7 +55,7 @@ base-uri 'self'
         }(window.location))
     </script>
 
-    <!-- CSS with fallback -->
+    <!-- CSS -->
     <link href="css/bootstrap/bootstrap.min.css" rel="stylesheet" />
     <link href="css/app.css" rel="stylesheet" />
     <link href="css/colors.css" rel="stylesheet" />
@@ -98,85 +93,62 @@ base-uri 'self'
     <a class="dismiss">🗙</a>
 </div>
 
-<!-- Firebase SDK with error handling - MOVED BEFORE BLAZOR -->
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"
-        onerror="console.warn('Firebase app failed to load')">
-</script>
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"
-        onerror="console.warn('Firebase firestore failed to load')">
-</script>
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"
-        onerror="console.warn('Firebase database failed to load')">
-</script>
+<!-- Firebase SDK - Load synchronously before app -->
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
 
-<!-- could use this // Replace hardcoded config with:
-window.getFirebaseConfig = () => {
-  return window.firebaseConfig || {};
-}; -->
-<!-- Firebase Configuration with error handling -->
+<!-- Firebase Configuration -->
 <script>
-    try {
-        const firebaseConfig = {
-            apiKey: "AIzaSyAM9mrDb2-eFgtMsMm7eJzt6GHIBCHEeGw",
-            authDomain: "aircode-4d07c.firebaseapp.com",
-            projectId: "aircode-4d07c",
-            storageBucket: "aircode-4d07c.firebasestorage.app",
-            messagingSenderId: "1041427366169",
-            appId: "1:1041427366169:web:6b7c84fefdcbe64edc4588",
-            measurementId: "G-PLN2D6PVVX",
-            databaseURL: "https://aircode-4d07c-default-rtdb.firebaseio.com/"
-        };
+    const firebaseConfig = {
+        apiKey: "AIzaSyAM9mrDb2-eFgtMsMm7eJzt6GHIBCHEeGw",
+        authDomain: "aircode-4d07c.firebaseapp.com",
+        projectId: "aircode-4d07c",
+        storageBucket: "aircode-4d07c.firebasestorage.app",
+        messagingSenderId: "1041427366169",
+        appId: "1:1041427366169:web:6b7c84fefdcbe64edc4588",
+        measurementId: "G-PLN2D6PVVX",
+        databaseURL: "https://aircode-4d07c-default-rtdb.firebaseio.com/"
+    };
 
-        if (typeof firebase !== 'undefined') {
-            firebase.initializeApp(firebaseConfig);
-            console.log('Firebase initialized successfully');
-        } else {
-            console.warn('Firebase SDK not loaded');
-        }
-    } catch (error) {
-        console.error('Firebase initialization failed:', error);
+    if (typeof firebase !== 'undefined') {
+        firebase.initializeApp(firebaseConfig);
+        console.log('Firebase initialized successfully');
+    } else {
+        console.warn('Firebase SDK not loaded');
     }
 </script>
 
-<!-- PWA Manager -->
-<script src="js/pwaManager.js"
-        onerror="console.warn('PWA Manager failed to load');">
-</script>
-
 <!-- Blazor Framework -->
-<script src="_framework/blazor.webassembly.js"
-        onerror="console.error('Blazor framework failed to load');">
-</script>
+<script src="_framework/blazor.webassembly.js"></script>
 
 <!-- Authentication Service -->
-<script src="_content/Microsoft.AspNetCore.Components.WebAssembly.Authentication/AuthenticationService.js"
-        onerror="console.warn('Auth service failed to load');">
-</script>
+<script src="_content/Microsoft.AspNetCore.Components.WebAssembly.Authentication/AuthenticationService.js"></script>
 
-<!-- Utility Scripts -->
-<script src="js/connectivityServices.js" onerror="console.warn('Connectivity services failed')"></script>
-<script src="js/debug.js" onerror="console.warn('Debug utilities failed')"></script>
-<script src="js/themeSwitcher.js" onerror="console.warn('Theme switcher failed')"></script>
-<script src="js/validateKeyAndIV.js" onerror="console.warn('Validation utilities failed')"></script>
-<script src="js/cryptographyHandler.js" onerror="console.warn('Crypto handler failed')"></script>
-<script src="js/site.js" onerror="console.warn('Site utilities failed')"></script>
-<script src="js/offlineCredentialsHandler.js" onerror="console.warn('Offline credentials handler failed')"></script>
-<script src="js/cameraUtil.js" onerror="console.warn('Camera utilities failed')"></script>
-<script src="js/firestoreModule.js" onerror="console.warn('Firestore module failed')"></script>
-<script src="js/firestoreNotificationModule.js" onerror="console.warn('FirestoreNotification module failed')"></script>
-<script src="js/qrCodeModule.js" onerror="console.warn('QR code module failed')"></script>
-<script src="js/gpuPerformance.js" onerror="console.warn('GPU performance failed')"></script>
-<script src="js/search-helpers.js" onerror="console.warn('Search helpers failed')"></script>
-<script src="js/PwaDiagnostics.js" onerror="console.warn('Diagnostics utilities failed')"></script>
+<!-- App Scripts -->
+<script src="js/pwaManager.js"></script>
+<script src="js/connectivityServices.js"></script>
+<script src="js/debug.js"></script>
+<script src="js/themeSwitcher.js"></script>
+<script src="js/validateKeyAndIV.js"></script>
+<script src="js/cryptographyHandler.js"></script>
+<script src="js/site.js"></script>
+<script src="js/offlineCredentialsHandler.js"></script>
+<script src="js/cameraUtil.js"></script>
+<script src="js/firestoreModule.js"></script>
+<script src="js/firestoreNotificationModule.js"></script>
+<script src="js/qrCodeModule.js"></script>
+<script src="js/gpuPerformance.js"></script>
+<script src="js/search-helpers.js"></script>
+<script src="js/PwaDiagnostics.js"></script>
 
+<!-- PDF Library -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"
         integrity="sha512-qZvrmS2ekKPF2mSznTQsxqPgnpkI4DNTlrdUmTzrDgektczlKNRRhy5X5AAOnx5S09ydFYWWNSfcEqDTTHgtNA=="
-        crossorigin="anonymous"
-        onerror="console.warn('Failed to load pdf service')">
-</script>
-<script src="js/pdf-service.js" onerror="console.warn('Failed to load pdf service')"></script>
+        crossorigin="anonymous"></script>
+<script src="js/pdf-service.js"></script>
 
-<!-- Camera utility functions -->
+<!-- Camera utilities -->
 <script>
     window.getCameraStream = async (constraints) => {
         try {
@@ -203,12 +175,11 @@ window.getFirebaseConfig = () => {
     };
 </script>
 
-<!-- Error handling for Blazor -->
+<!-- Error handling -->
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         const errorUI = document.getElementById('blazor-error-ui');
 
-        // Show error UI on unhandled errors
         window.addEventListener('error', (e) => {
             console.error('Global error:', e.error);
             errorUI.style.display = 'block';
@@ -219,12 +190,10 @@ window.getFirebaseConfig = () => {
             errorUI.style.display = 'block';
         });
 
-        // Dismiss error UI
         errorUI.querySelector('.dismiss').addEventListener('click', () => {
             errorUI.style.display = 'none';
         });
 
-        // Reload functionality
         errorUI.querySelector('.reload').addEventListener('click', (e) => {
             e.preventDefault();
             window.location.reload();
