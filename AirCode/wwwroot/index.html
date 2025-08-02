@@ -5,7 +5,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 
-    <!-- Simplified working CSP for Blazor WASM with external services -->
+    <!-- Fixed CSP for Blazor WASM with Firebase, Auth0, and Supabase -->
     <meta http-equiv="Content-Security-Policy" content="
         default-src 'self';
         script-src 'self' 'unsafe-eval' 'unsafe-inline' 
@@ -32,9 +32,13 @@
             https://functions.supabase.co
             https://*.auth0.com
             wss: ws:;
+        frame-src 'self'
+            https://*.auth0.com
+            https://*.supabase.co
+            https://*.supabase.io;
         object-src 'none';
         base-uri 'self';
-        form-action 'self';
+        form-action 'self' https://*.auth0.com;
     ">
 
     <!-- Security headers via meta tags -->
