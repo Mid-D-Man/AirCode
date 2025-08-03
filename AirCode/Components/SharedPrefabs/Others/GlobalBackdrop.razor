@@ -1,0 +1,29 @@
+@namespace AirCode.Components.SharedPrefabs.Others
+@using AirCode.Services.VisualElements
+@inject IBackdropService BackdropService
+@implements IDisposable
+
+@* GlobalBackdrop.razor *@
+@if (BackdropService.IsVisible)
+{
+    <div class="global-backdrop-portal" @onclick="HandleBackdropClick">
+        <!-- Backdrop only - no content wrapper -->
+    </div>
+}
+
+@code {
+    protected override void OnInitialized()
+    {
+        BackdropService.OnStateChanged += StateHasChanged;
+    }
+
+    private void HandleBackdropClick()
+    {
+        BackdropService.Hide();
+    }
+
+    public void Dispose()
+    {
+        BackdropService.OnStateChanged -= StateHasChanged;
+    }
+}

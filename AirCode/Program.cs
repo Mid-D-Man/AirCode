@@ -162,6 +162,7 @@ builder.Services.AddSingleton<ConnectivityService>();
 // UI and visual component services
 builder.Services.AddScoped<ISvgIconService, SvgIconService>();
 builder.Services.AddScoped<IPdfExportService, PdfExportService>();
+builder.Services.AddScoped<IBackdropService, BackdropService>();
 // ============================================================================
 // External Service Integrations    
 // ============================================================================
