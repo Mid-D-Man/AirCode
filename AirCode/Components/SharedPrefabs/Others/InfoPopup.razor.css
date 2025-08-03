@@ -1,4 +1,4 @@
-/* InfoPopup.razor.css - Fixed overlay positioning */
+/* InfoPopup.razor.css - Using GlobalBackdrop */
 .info-popup-overlay {
     position: fixed !important;
     top: 0 !important;
@@ -7,13 +7,17 @@
     bottom: 0 !important;
     width: 100vw !important;
     height: 100vh !important;
-    z-index: 10000 !important; /* Above backdrop */
+    z-index: 9999 !important;
+
+    background-color: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
 
     display: flex;
     align-items: center;
     justify-content: center;
 
-    /* Override any parent container constraints */
+    animation: fadeIn 0.3s ease-out;
+
     margin: 0 !important;
     padding: 0 !important;
     transform: none !important;
@@ -77,6 +81,11 @@
     white-space: pre-line;
 }
 
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
 @keyframes slideUp {
     from {
         opacity: 0;
@@ -88,7 +97,6 @@
     }
 }
 
-/* Mobile optimization */
 @media (max-width: 768px) {
     .info-popup-modal {
         width: 95%;

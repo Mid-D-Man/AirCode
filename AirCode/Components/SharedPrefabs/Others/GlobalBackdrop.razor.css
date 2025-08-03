@@ -1,13 +1,13 @@
-/* GlobalBackdrop.razor.css - Container-scoped positioning */
-.global-backdrop-portal {
-    position: absolute !important; /* Changed from fixed */
+/* GlobalBackdrop.razor.css - Content-Bottom Fill */
+.content-bottom .global-backdrop-portal {
+    position: absolute !important;
     top: 0 !important;
     left: 0 !important;
     right: 0 !important;
     bottom: 0 !important;
     width: 100% !important;
     height: 100% !important;
-    z-index: 8999 !important; /* Below InfoPopup */
+    z-index: 8999 !important;
 
     background-color: rgba(0, 0, 0, 0.5);
     backdrop-filter: blur(4px);
@@ -18,49 +18,28 @@
 
     animation: fadeIn 0.3s ease-out;
 
-    /* Override any parent container constraints */
     margin: 0 !important;
     padding: 0 !important;
     transform: none !important;
-    overflow: hidden;
 }
 
-.global-backdrop-content {
-    position: relative;
-    max-width: 90%;
-    max-height: 90%;
-    overflow-y: auto;
-    animation: slideUp 0.3s ease-out;
-}
+/* Default positioning for other contexts */
+.global-backdrop-portal {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    z-index: 8999 !important;
 
-/* Layout-specific positioning */
-.superior-admin-layout .main-content {
-    position: relative; /* Establishes positioning context */
-}
+    background-color: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
 
-.client-layout .content-bottom {
-    position: relative; /* Establishes positioning context */
-}
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
-/* Animation keyframes */
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-    to {
-        opacity: 1;
-    }
+    animation: fadeIn 0.3s ease-out;
 }
-
-@keyframes slideUp {
-    from {
-        opacity: 0;
-        transform: translateY(30px) scale(0.95);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-    }
-}
-
-/* Remove layout-specific overrides - no longer needed */

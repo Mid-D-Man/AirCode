@@ -3,7 +3,7 @@
 @inject IBackdropService BackdropService
 @implements IDisposable
 
-@* InfoPopup.razor - Standalone with backdrop service *@
+@* InfoPopup.razor - Using GlobalBackdrop component *@
 @if (IsVisible)
 {
     <div class="info-popup-overlay" @onclick="OnOverlayClick">
@@ -21,18 +21,12 @@
     </div>
 }
 
+<GlobalBackdrop />
+
 @code {
     [Parameter] public bool IsVisible { get; set; }
     [Parameter] public InfoType CurrentInfoType { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
-
-    protected override void OnParametersSet()
-    {
-        if (IsVisible)
-            BackdropService.Show();
-        else
-            BackdropService.Hide();
-    }
 
     private async Task OnOverlayClick()
     {
@@ -74,6 +68,14 @@
             
             _ => "No information available."
         };
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (IsVisible)
+            BackdropService.Show();
+        else
+            BackdropService.Hide();
     }
 
     public void Dispose()
