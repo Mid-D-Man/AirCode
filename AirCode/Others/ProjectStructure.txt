@@ -1,7 +1,7 @@
 Project Structure Documentation
-Generated: Sat Aug  2 11:51:25 UTC 2025
+Generated: Sun Aug  3 10:22:24 UTC 2025
 Repository: Mid-D-Man/AirCode
-Commit: db8a3037bca3740a329c2405115d5c16f19905f9
+Commit: e1a6bd52473efcc0476ed646ddd7134625692455
 ==================================
 
 Source Files:
@@ -55,6 +55,8 @@ Components/SharedPrefabs/Others/CourseSelectionComponent.razor
 Components/SharedPrefabs/Others/CourseSelectionComponent.razor.css
 Components/SharedPrefabs/Others/DynamicSearch.razor
 Components/SharedPrefabs/Others/DynamicSearch.razor.css
+Components/SharedPrefabs/Others/GlobalBackdrop.razor
+Components/SharedPrefabs/Others/GlobalBackdrop.razor.css
 Components/SharedPrefabs/Others/InfoPopup.razor
 Components/SharedPrefabs/Others/InfoPopup.razor.css
 Components/SharedPrefabs/Others/PWAComponent.razor
@@ -233,6 +235,7 @@ Services/SupaBase/SupabaseDatabase.cs
 Services/SupaBase/SupabaseEdgeFunctionService.cs
 Services/Time/IServerTimeService.cs
 Services/Time/ServerTimeService.cs
+Services/VisualElements/BackdropService.cs
 Services/VisualElements/ISvgIconService.cs
 Services/VisualElements/SvgIconService.cs
 Utilities/DataStructures/NavItem.cs
@@ -326,10 +329,10 @@ Directory Structure:
 
 File Count Summary:
 ==================
-.cs       : 105 files
-.razor    : 65 files
+.cs       : 106 files
+.razor    : 66 files
 .csproj   : 1 files
 .json     : 12 files
-.css      : 75 files
+.css      : 76 files
 .js       : 47 files
 .html     : 3 files
