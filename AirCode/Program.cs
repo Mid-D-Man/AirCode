@@ -139,6 +139,7 @@ builder.Services.AddScoped<ICryptographyService, CryptographyService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IOfflineCredentialsService, OfflineCredentialsService>();
 builder.Services.AddScoped<IOfflineSyncService, OfflineSyncService>();
+builder.Services.AddScoped<IOfflineAttendanceClientService, OfflineAttendanceClientService>();
 builder.Services.AddScoped<IBlazorAppLocalStorageService, BlazorAppLocalStorageService>();
 
 // ============================================================================
