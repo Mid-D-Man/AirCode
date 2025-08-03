@@ -241,7 +241,7 @@
                             @foreach (var courseStats in FilteredCourseStats)
                             {
                                 <div class="course-stats-card @(courseStats.IsCarryOver ? "carry-over" : "")" 
-                                     @onclick="() => ViewCourseDetails(courseStats.CourseCode)">
+                                     @onclick="">
                                     <div class="course-header">
                                         <div class="course-title">
                                             <h4>@courseStats.CourseName</h4>
@@ -310,17 +310,6 @@
                     }
                 </div>
             </div>
-        </div>
-    </div>
-}
-
-<!-- Individual Course Details Modal (if needed) currently not realy needed -->
-@if (ShowCourseModal && SelectedCourseDetails != null)
-{
-    <GlobalBackdrop />
-    <div class="stats-modal">
-        <div class="modal-container">
-            <!-- Keep existing course details modal content -->
         </div>
     </div>
 }

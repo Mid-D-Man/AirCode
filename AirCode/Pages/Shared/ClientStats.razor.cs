@@ -33,14 +33,10 @@ namespace AirCode.Pages.Shared
         protected Dictionary<string, List<FirebaseAttendanceEvent>> CourseAttendanceEvents { get; set; } = new();
         #endregion
 
-        #region Enhanced Modal Properties
-        protected bool ShowCourseModal { get; set; } = false;
+        #region Modal Properties - Fixed
         protected bool ShowOverallStatsModal { get; set; } = false;
         protected bool ShowCourseStatsModal { get; set; } = false;
-        protected Course? SelectedCourseDetails { get; set; }
-        protected CourseAttendanceStats? SelectedCourseStats { get; set; }
-        protected List<SessionAttendanceRecord> SelectedCourseAttendanceRecords { get; set; } = new();
-        protected List<SessionAttendanceRecord> FilteredAttendanceRecords { get; set; } = new();
+        // Removed problematic ShowCourseModal and related properties
         #endregion
 
         #region Enhanced UI State and Loading
@@ -50,11 +46,9 @@ namespace AirCode.Pages.Shared
         protected int LoadingProgress { get; set; } = 0;
         #endregion
 
-        #region Filtering Properties
+        #region Filtering Properties - Fixed
         protected string SelectedSemesterFilter { get; set; } = "";
         protected string SelectedStatusFilter { get; set; } = "";
-        protected string SelectedMonthFilter { get; set; } = "";
-        protected string SelectedAttendanceFilter { get; set; } = "";
         #endregion
 
         #region Enhanced Computed Properties for Overall Stats
@@ -94,7 +88,7 @@ namespace AirCode.Pages.Shared
                 LoadingMessage = "Fetching student information...";
                 LoadingProgress = 20;
                 StateHasChanged();
-                await Task.Delay(300); // Simulate loading time for better UX
+                await Task.Delay(200); // Reduced delay for better UX
 
                 StudentCourseData = await CourseService.GetStudentCoursesByMatricAsync(CurrentStudentMatric);
                 
@@ -108,7 +102,7 @@ namespace AirCode.Pages.Shared
                 LoadingMessage = "Loading course enrollment...";
                 LoadingProgress = 40;
                 StateHasChanged();
-                await Task.Delay(300);
+                await Task.Delay(200);
 
                 await LoadEnrolledCoursesAsync();
 
@@ -116,7 +110,7 @@ namespace AirCode.Pages.Shared
                 LoadingMessage = "Fetching attendance records...";
                 LoadingProgress = 65;
                 StateHasChanged();
-                await Task.Delay(300);
+                await Task.Delay(200);
 
                 await LoadAttendanceDataAsync();
 
@@ -124,7 +118,7 @@ namespace AirCode.Pages.Shared
                 LoadingMessage = "Calculating attendance statistics...";
                 LoadingProgress = 85;
                 StateHasChanged();
-                await Task.Delay(300);
+                await Task.Delay(200);
 
                 await CalculateAttendanceStatisticsAsync();
 
@@ -132,7 +126,7 @@ namespace AirCode.Pages.Shared
                 LoadingMessage = "Finalizing statistics...";
                 LoadingProgress = 100;
                 StateHasChanged();
-                await Task.Delay(200);
+                await Task.Delay(100);
 
                 // Initialize filtered data
                 FilterCourses();
@@ -229,12 +223,11 @@ namespace AirCode.Pages.Shared
         }
         #endregion
 
-        #region Enhanced Modal Management
+        #region Fixed Modal Management
         protected void ShowOverallStats()
         {
             ShowOverallStatsModal = true;
             ShowCourseStatsModal = false;
-            ShowCourseModal = false;
             StateHasChanged();
         }
 
@@ -242,7 +235,6 @@ namespace AirCode.Pages.Shared
         {
             ShowCourseStatsModal = true;
             ShowOverallStatsModal = false;
-            ShowCourseModal = false;
             FilterCourses(); // Ensure filtered data is up to date
             StateHasChanged();
         }
@@ -259,46 +251,8 @@ namespace AirCode.Pages.Shared
             StateHasChanged();
         }
 
-        protected async Task ViewCourseDetails(string courseCode)
-        {
-            try
-            {
-                SelectedCourseDetails = await CourseService.GetCourseByIdAsync(courseCode);
-                SelectedCourseStats = CourseAttendanceStats.FirstOrDefault(c => c.CourseCode == courseCode);
-                
-                if (CourseAttendanceEvents.TryGetValue(courseCode, out var attendanceEvents))
-                {
-                    SelectedCourseAttendanceRecords = GenerateSessionAttendanceRecords(attendanceEvents);
-                }
-                else
-                {
-                    SelectedCourseAttendanceRecords = new List<SessionAttendanceRecord>();
-                }
-                
-                FilteredAttendanceRecords = SelectedCourseAttendanceRecords.ToList();
-                
-                ShowCourseModal = true;
-                ShowCourseStatsModal = false;
-                StateHasChanged();
-            }
-            catch (Exception ex)
-            {
-                ErrorMessage = $"Error loading course details: {ex.Message}";
-                Logger?.LogError(ex, "Error loading course details for {CourseCode}", courseCode);
-            }
-        }
-
-        protected void CloseCourseModal()
-        {
-            ShowCourseModal = false;
-            SelectedCourseDetails = null;
-            SelectedCourseStats = null;
-            SelectedCourseAttendanceRecords.Clear();
-            FilteredAttendanceRecords.Clear();
-            SelectedMonthFilter = "";
-            SelectedAttendanceFilter = "";
-            StateHasChanged();
-        }
+        // REMOVED: ViewCourseDetails method that was causing issues
+        // Individual course details functionality can be implemented later if needed
         #endregion
 
         #region Enhanced Keyboard Navigation
@@ -329,7 +283,6 @@ namespace AirCode.Pages.Shared
             {
                 CloseOverallStats();
                 CloseCourseStats();
-                CloseCourseModal();
             }
         }
         #endregion
@@ -569,37 +522,9 @@ namespace AirCode.Pages.Shared
 
             return consecutiveCount;
         }
-
-        private List<SessionAttendanceRecord> GenerateSessionAttendanceRecords(List<FirebaseAttendanceEvent> attendanceEvents)
-        {
-            var records = new List<SessionAttendanceRecord>();
-
-            foreach (var attendanceEvent in attendanceEvents)
-            {
-                var studentRecord = attendanceEvent.AttendanceRecords
-                    .GetValueOrDefault(CurrentStudentMatric);
-
-                bool isPresent = studentRecord?.HasScannedAttendance == true;
-
-                var sessionRecord = new SessionAttendanceRecord
-                {
-                    SessionId = attendanceEvent.SessionId,
-                    SessionDate = attendanceEvent.StartTime,
-                    Duration = attendanceEvent.Duration,
-                    IsPresent = isPresent,
-                    ScanTime = studentRecord?.ScanTime,
-                    IsOnlineScan = studentRecord?.IsOnlineScan ?? false,
-                    DeviceGUID = studentRecord?.DeviceGUID
-                };
-
-                records.Add(sessionRecord);
-            }
-
-            return records.OrderByDescending(r => r.SessionDate).ToList();
-        }
         #endregion
 
-        #region Enhanced Filtering Methods
+        #region Fixed Filtering Methods
         protected void FilterCourses()
         {
             if (CourseAttendanceStats == null || !CourseAttendanceStats.Any())
@@ -610,11 +535,13 @@ namespace AirCode.Pages.Shared
 
             var filtered = CourseAttendanceStats.AsEnumerable();
 
+            // Fixed semester filter logic
             if (!string.IsNullOrEmpty(SelectedSemesterFilter))
             {
-                filtered = filtered.Where(c => c.Semester.ToString().Equals(SelectedSemesterFilter, StringComparison.OrdinalIgnoreCase) == true);
+                filtered = filtered.Where(c => c.Semester.ToString().Equals(SelectedSemesterFilter, StringComparison.OrdinalIgnoreCase));
             }
 
+            // Fixed status filter logic
             if (!string.IsNullOrEmpty(SelectedStatusFilter))
             {
                 if (SelectedStatusFilter.Equals("Carryover", StringComparison.OrdinalIgnoreCase))
@@ -637,40 +564,9 @@ namespace AirCode.Pages.Shared
             SelectedStatusFilter = "";
             FilterCourses();
         }
-
-        protected void FilterAttendanceRecords()
-        {
-            FilteredAttendanceRecords = SelectedCourseAttendanceRecords.Where(record =>
-            {
-                var matchesMonth = string.IsNullOrEmpty(SelectedMonthFilter) ||
-                                 record.SessionDate.ToString("yyyy-MM") == SelectedMonthFilter;
-
-                var matchesAttendance = string.IsNullOrEmpty(SelectedAttendanceFilter) ||
-                                      (SelectedAttendanceFilter == "Present" && record.IsPresent) ||
-                                      (SelectedAttendanceFilter == "Absent" && !record.IsPresent);
-
-                return matchesMonth && matchesAttendance;
-            }).ToList();
-
-            StateHasChanged();
-        }
-
-        protected Dictionary<string, string> GetAvailableMonths()
-        {
-            return SelectedCourseAttendanceRecords
-                .Select(r => r.SessionDate)
-                .GroupBy(d => d.ToString("yyyy-MM"))
-                .OrderByDescending(g => g.Key)
-                .ToDictionary(g => g.Key, g => DateTime.ParseExact(g.Key, "yyyy-MM", null).ToString("MMMM yyyy"));
-        }
         #endregion
 
         #region Enhanced Helper and Utility Methods
-        protected void LoadMoreRecords()
-        {
-            // Implementation for pagination if needed
-        }
-
         protected string GetAttendanceClass(double percentage)
         {
             return percentage switch

@@ -1,0 +1,385 @@
+/* Scan Pages Responsive Utilities - Mobile-First Optimization */
+
+/* Base performance optimizations for all scan pages */
+:root {
+    /* Scanner-specific variables */
+    --scan-frame-size-mobile: min(75vw, 75vh);
+    --scan-frame-size-tablet: min(65vw, 65vh);
+    --scan-frame-size-desktop: min(50vw, 60vh);
+    --scan-frame-max-size: 400px;
+
+    /* Animation performance */
+    --scan-animation-duration: 2.2s;
+    --scan-easing: cubic-bezier(0.45, 0.05, 0.55, 0.95);
+
+    /* Safe area variables */
+    --safe-area-top: max(env(safe-area-inset-top), 1rem);
+    --safe-area-bottom: max(env(safe-area-inset-bottom), 1rem);
+    --safe-area-left: max(env(safe-area-inset-left), 1rem);
+    --safe-area-right: max(env(safe-area-inset-right), 1rem);
+}
+
+/* Global performance optimizations for scan pages */
+.scan-attendance-page *,
+.offline-scan-page * {
+    box-sizing: border-box;
+}
+
+/* Hardware acceleration for animation elements */
+.scan-line,
+.spinner,
+.spinner-small,
+.scan-frame::before,
+.scan-frame::after,
+.corner {
+    transform: translateZ(0);
+    will-change: transform;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+}
+
+/* Optimized video rendering for mobile */
+@media (max-width: 767px) {
+    .qr-scanner-container video {
+        transform: translate(-50%, -50%) scale(1.1) !important;
+        filter: contrast(1.1) brightness(1.05);
+    }
+}
+
+/* Breakpoint-specific optimizations */
+
+/* Extra Small Devices - Mobile Portrait (320px - 480px) */
+@media (max-width: 480px) {
+    :root {
+        --scan-frame-size: var(--scan-frame-size-mobile);
+        --scan-frame-max: 280px;
+    }
+
+    /* Optimize for smaller screens */
+    .scan-frame {
+        width: var(--scan-frame-size);
+        height: var(--scan-frame-size);
+        max-width: var(--scan-frame-max);
+        max-height: var(--scan-frame-max);
+    }
+
+    /* Reduce animation complexity on mobile */
+    .scan-line {
+        animation-duration: 2s;
+        animation-timing-function: ease-in-out;
+    }
+
+    /* Optimize touch targets */
+    .control-btn,
+    .continue-btn,
+    .sync-btn {
+        min-height: 44px;
+        min-width: 120px;
+    }
+
+    /* Typography optimizations */
+    .scan-header h3 {
+        font-size: clamp(1.1rem, 4vw, 1.3rem);
+    }
+
+    .scan-header p {
+        font-size: clamp(0.8rem, 3vw, 0.85rem);
+    }
+}
+
+/* Small Devices - Mobile Landscape (481px - 767px) */
+@media (min-width: 481px) and (max-width: 767px) {
+    :root {
+        --scan-frame-size: var(--scan-frame-size-tablet);
+        --scan-frame-max: 320px;
+    }
+
+    .scan-frame {
+        width: var(--scan-frame-size);
+        height: var(--scan-frame-size);
+        max-width: var(--scan-frame-max);
+        max-height: var(--scan-frame-max);
+    }
+
+    /* Adjust for landscape orientation */
+    .offline-scan-page {
+        padding: 0.5rem;
+    }
+
+    .scan-header {
+        padding: var(--safe-area-top) 1rem 1rem;
+    }
+}
+
+/* Medium Devices - Tablets (768px - 1024px) */
+@media (min-width: 768px) and (max-width: 1024px) {
+    :root {
+        --scan-frame-size: var(--scan-frame-size-desktop);
+        --scan-frame-max: 360px;
+    }
+
+    .scan-frame {
+        width: var(--scan-frame-size);
+        height: var(--scan-frame-size);
+        max-width: var(--scan-frame-max);
+        max-height: var(--scan-frame-max);
+    }
+
+    /* Enhanced animations for tablets */
+    .scan-line {
+        animation-duration: var(--scan-animation-duration);
+        animation-timing-function: var(--scan-easing);
+    }
+
+    /* Larger touch targets for tablets */
+    .control-btn,
+    .continue-btn,
+    .sync-btn {
+        min-height: 48px;
+        padding: 0.75rem 1.5rem;
+    }
+}
+
+/* Large Devices - Desktop (1025px+) */
+@media (min-width: 1025px) {
+    :root {
+        --scan-frame-size: var(--scan-frame-size-desktop);
+        --scan-frame-max: var(--scan-frame-max-size);
+    }
+
+    .scan-frame {
+        width: var(--scan-frame-size);
+        height: var(--scan-frame-size);
+        max-width: var(--scan-frame-max);
+        max-height: var(--scan-frame-max);
+    }
+
+    /* Full animation capabilities for desktop */
+    .scan-line {
+        animation-duration: var(--scan-animation-duration);
+        animation-timing-function: var(--scan-easing);
+    }
+
+    /* Enhanced hover effects for desktop */
+    .control-btn:hover,
+    .continue-btn:hover,
+    .sync-btn:hover:not(:disabled) {
+        transform: translateY(-2px);
+    }
+}
+
+/* Orientation-specific optimizations */
+@media (orientation: landscape) and (max-height: 500px) {
+    /* Optimize for short landscape screens */
+    .scan-header {
+        padding: 0.5rem 1rem;
+    }
+
+    .scan-header h3 {
+        font-size: 1.2rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .scan-header p {
+        font-size: 0.8rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .scan-frame {
+        width: min(40vw, 60vh);
+        height: min(40vw, 60vh);
+    }
+
+    .scan-controls {
+        bottom: 10px;
+    }
+}
+
+/* High-density display optimizations */
+@media (min-resolution: 192dpi), (min-resolution: 2dppx) {
+    .corner,
+    .scan-frame::before,
+    .scan-frame::after {
+        border-width: 1.5px;
+    }
+
+    .scan-line {
+        height: 1.5px;
+    }
+}
+
+/* Reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+    .scan-line {
+        animation: none;
+        opacity: 0.6;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+
+    .scan-frame::before,
+    .scan-frame::after {
+        animation: none;
+    }
+
+    .corner {
+        animation: none;
+    }
+
+    .spinner,
+    .spinner-small {
+        animation: spin 2s linear infinite;
+    }
+
+    /* Keep essential animations but reduce complexity */
+    * {
+        transition-duration: 0.1s !important;
+    }
+}
+
+/* Battery optimization for mobile devices */
+@media (max-width: 767px) {
+    /* Reduce animation frequency on mobile to save battery */
+    .scan-line {
+        animation-iteration-count: infinite;
+        animation-play-state: running;
+    }
+
+    /* Pause complex animations when not in focus */
+    .scan-container:not(:focus-within) .scan-line {
+        animation-play-state: paused;
+    }
+}
+
+/* Network-aware optimizations */
+@media (prefers-reduced-motion: reduce) {
+    /* Disable decorative animations on slow connections */
+    .scan-frame::before,
+    .scan-frame::after {
+        animation: none;
+    }
+
+    /* Reduce backdrop-filter usage */
+    .processing-overlay,
+    .result-overlay {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+    }
+}
+
+/* Focus and accessibility improvements */
+.control-btn:focus-visible,
+.continue-btn:focus-visible,
+.sync-btn:focus-visible {
+    outline: 2px solid var(--primary-300);
+    outline-offset: 2px;
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+    /* Remove hover effects on touch devices */
+    .control-btn:hover,
+    .continue-btn:hover,
+    .sync-btn:hover {
+        transform: none;
+    }
+
+    /* Enhance active states for touch */
+    .control-btn:active,
+    .continue-btn:active,
+    .sync-btn:active {
+        transform: scale(0.98);
+        transition: transform 0.1s;
+    }
+
+    /* Larger touch targets */
+    .control-btn,
+    .continue-btn,
+    .sync-btn {
+        min-height: 48px;
+        padding: 0.75rem 1.25rem;
+    }
+}
+
+/* Container query support for modern browsers */
+@supports (container-type: inline-size) {
+    .scan-container {
+        container-type: inline-size;
+    }
+
+    @container (max-width: 300px) {
+        .scan-frame {
+            width: 85%;
+            height: 85%;
+        }
+
+        .corner {
+            width: 16px;
+            height: 16px;
+        }
+    }
+}
+
+/* Progressive enhancement for CSS Grid */
+@supports (display: grid) {
+    .status-info {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 0.6rem;
+    }
+
+    @media (min-width: 768px) {
+        .status-info {
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        }
+    }
+}
+
+/* Print styles for scan pages */
+@media print {
+    .scan-attendance-page,
+    .offline-scan-page {
+        display: none;
+    }
+}
+
+/* Utility classes for responsive behavior */
+.scan-mobile-only {
+    display: block;
+}
+
+.scan-tablet-up {
+    display: none;
+}
+
+@media (min-width: 768px) {
+    .scan-mobile-only {
+        display: none;
+    }
+
+    .scan-tablet-up {
+        display: block;
+    }
+}
+
+/* Performance monitoring utility */
+@media (prefers-reduced-motion: no-preference) {
+    .scan-performance-monitor {
+        will-change: transform, opacity;
+    }
+}
+
+/* Color scheme adaptations */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --scan-overlay-bg: rgba(0, 0, 0, 0.9);
+        --scan-frame-color: #66BB6A;
+    }
+}
+
+@media (prefers-color-scheme: light) {
+    :root {
+        --scan-overlay-bg: rgba(0, 0, 0, 0.8);
+        --scan-frame-color: #4CAF50;
+    }
+}
