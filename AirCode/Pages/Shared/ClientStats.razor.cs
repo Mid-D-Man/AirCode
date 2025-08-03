@@ -524,7 +524,12 @@ namespace AirCode.Pages.Shared
         }
         #endregion
 
-        #region Fixed Filtering Methods
+        #region  Filtering Methods
+        internal void HandleCourseStatsClick(CourseAttendanceStats courseStats)
+        {
+            // Handle the click event for the course stats card
+            Console.WriteLine($"Clicked on course: {courseStats.CourseName}");
+        }
         protected void FilterCourses()
         {
             if (CourseAttendanceStats == null || !CourseAttendanceStats.Any())

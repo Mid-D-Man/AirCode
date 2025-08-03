@@ -241,7 +241,7 @@
                             @foreach (var courseStats in FilteredCourseStats)
                             {
                                 <div class="course-stats-card @(courseStats.IsCarryOver ? "carry-over" : "")" 
-                                     @onclick="">
+                                     @onclick="() => HandleCourseStatsClick(courseStats)">
                                     <div class="course-header">
                                         <div class="course-title">
                                             <h4>@courseStats.CourseName</h4>
