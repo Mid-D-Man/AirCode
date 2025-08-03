@@ -76,7 +76,7 @@ namespace AirCode.Models.EdgeFunction
         public string MatricNumber { get; set; } = string.Empty;
         public DateTime ScannedAt { get; set; }
         public bool IsOnlineScan { get; set; }
-
+        
         public override string ToString() => 
             MID_HelperFunctions.GetStructOrClassMemberValues(this);
     }

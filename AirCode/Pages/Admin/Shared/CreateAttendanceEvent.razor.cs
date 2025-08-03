@@ -35,7 +35,7 @@ namespace AirCode.Pages.Admin.Shared
 {
     public partial class CreateAttendanceEvent : ComponentBase, IAsyncDisposable
     {
-        #region Service Dependencies (Inject these in the razor file)
+        #region Service Dependencies 
         
         [Inject] protected SessionStateService SessionStateService { get; set; }
         [Inject] protected IAttendanceSessionService AttendanceSessionService { get; set; }
@@ -56,7 +56,7 @@ namespace AirCode.Pages.Admin.Shared
         private bool isSessionEnded = false;
         private bool showCourseSelection = false;
         private bool showManualAttendancePopup = false;
-        private bool allowOfflineSync = false;
+        private bool allowOfflineSync = true;
         private bool useTemporalKeyRefresh = false;
         private bool isCurrentUserCourseRep = false;
         private bool showSessionRestoreDialog = false;

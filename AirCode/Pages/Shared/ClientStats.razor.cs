@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
+using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using AirCode.Domain.Entities;
 using AirCode.Domain.Enums;
@@ -14,6 +16,7 @@ namespace AirCode.Pages.Shared
         [Inject] protected ICourseService CourseService { get; set; } = default!;
         [Inject] protected IFirestoreAttendanceService FirestoreAttendanceService { get; set; } = default!;
         [Inject] protected NavigationManager Navigation { get; set; } = default!;
+        [Inject] protected ILogger<ClientStatsBase>? Logger { get; set; }
         #endregion
 
         #region Parameters and Student Identity
@@ -30,17 +33,21 @@ namespace AirCode.Pages.Shared
         protected Dictionary<string, List<FirebaseAttendanceEvent>> CourseAttendanceEvents { get; set; } = new();
         #endregion
 
-        #region Modal Properties
+        #region Enhanced Modal Properties
         protected bool ShowCourseModal { get; set; } = false;
+        protected bool ShowOverallStatsModal { get; set; } = false;
+        protected bool ShowCourseStatsModal { get; set; } = false;
         protected Course? SelectedCourseDetails { get; set; }
         protected CourseAttendanceStats? SelectedCourseStats { get; set; }
         protected List<SessionAttendanceRecord> SelectedCourseAttendanceRecords { get; set; } = new();
         protected List<SessionAttendanceRecord> FilteredAttendanceRecords { get; set; } = new();
         #endregion
 
-        #region UI State and Loading
+        #region Enhanced UI State and Loading
         protected bool IsLoading { get; set; } = true;
         protected string ErrorMessage { get; set; } = string.Empty;
+        protected string LoadingMessage { get; set; } = "Loading your statistics...";
+        protected int LoadingProgress { get; set; } = 0;
         #endregion
 
         #region Filtering Properties
@@ -50,7 +57,7 @@ namespace AirCode.Pages.Shared
         protected string SelectedAttendanceFilter { get; set; } = "";
         #endregion
 
-        #region Computed Properties for Overall Stats
+        #region Enhanced Computed Properties for Overall Stats
         protected int TotalEnrolledCourses => CourseAttendanceStats?.Count(c => !c.IsCarryOver) ?? 0;
         protected int TotalCarryOverCourses => CourseAttendanceStats?.Count(c => c.IsCarryOver) ?? 0;
         protected int TotalCreditUnits => CourseAttendanceStats?.Where(c => !c.IsCarryOver).Sum(c => c.CreditUnits) ?? 0;
@@ -60,25 +67,35 @@ namespace AirCode.Pages.Shared
         protected double OverallAttendanceRate => TotalClasses > 0 
             ? Math.Round((double)TotalClassesAttended / TotalClasses * 100, 1) 
             : 0;
+        
+        // Additional computed properties
+        protected int GetTotalCombinedCreditUnits() => TotalCreditUnits + CarryOverCreditUnits;
+        protected int TotalCoursesCount => TotalEnrolledCourses + TotalCarryOverCourses;
         #endregion
 
         #region Component Lifecycle
         protected override async Task OnInitializedAsync()
         {
-            await LoadDataAsync();
+            await LoadDataWithProgress();
         }
         #endregion
 
-        #region Data Loading Methods
-        protected async Task LoadDataAsync()
+        #region Enhanced Data Loading Methods
+        protected async Task LoadDataWithProgress()
         {
+            IsLoading = true;
+            LoadingProgress = 0;
+            ErrorMessage = string.Empty;
+            StateHasChanged();
+
             try
             {
-                IsLoading = true;
-                ErrorMessage = string.Empty;
+                // Step 1: Load student information
+                LoadingMessage = "Fetching student information...";
+                LoadingProgress = 20;
                 StateHasChanged();
+                await Task.Delay(300); // Simulate loading time for better UX
 
-                // Load student course data
                 StudentCourseData = await CourseService.GetStudentCoursesByMatricAsync(CurrentStudentMatric);
                 
                 if (StudentCourseData == null)
@@ -87,27 +104,55 @@ namespace AirCode.Pages.Shared
                     return;
                 }
 
-                // Load course details for enrolled courses
+                // Step 2: Load course enrollment data
+                LoadingMessage = "Loading course enrollment...";
+                LoadingProgress = 40;
+                StateHasChanged();
+                await Task.Delay(300);
+
                 await LoadEnrolledCoursesAsync();
-                
-                // Load attendance data for all enrolled courses
+
+                // Step 3: Load attendance data
+                LoadingMessage = "Fetching attendance records...";
+                LoadingProgress = 65;
+                StateHasChanged();
+                await Task.Delay(300);
+
                 await LoadAttendanceDataAsync();
-                
-                // Calculate attendance statistics
+
+                // Step 4: Calculate statistics
+                LoadingMessage = "Calculating attendance statistics...";
+                LoadingProgress = 85;
+                StateHasChanged();
+                await Task.Delay(300);
+
                 await CalculateAttendanceStatisticsAsync();
+
+                // Step 5: Finalize
+                LoadingMessage = "Finalizing statistics...";
+                LoadingProgress = 100;
+                StateHasChanged();
+                await Task.Delay(200);
 
                 // Initialize filtered data
                 FilterCourses();
             }
             catch (Exception ex)
             {
-                ErrorMessage = $"Error loading data: {ex.Message}";
+                ErrorMessage = $"Failed to load statistics: {ex.Message}";
+                Logger?.LogError(ex, "Error loading client statistics for student {MatricNumber}", CurrentStudentMatric);
             }
             finally
             {
                 IsLoading = false;
                 StateHasChanged();
             }
+        }
+
+        protected async Task LoadDataAsync()
+        {
+            ErrorMessage = string.Empty;
+            await LoadDataWithProgress();
         }
 
         private async Task LoadEnrolledCoursesAsync()
@@ -128,7 +173,7 @@ namespace AirCode.Pages.Shared
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"Error loading course {courseRef.CourseCode}: {ex.Message}");
+                        Logger?.LogWarning(ex, "Error loading course {CourseCode}", courseRef.CourseCode);
                     }
                 }
             }
@@ -155,7 +200,7 @@ namespace AirCode.Pages.Shared
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Error loading attendance data for course {course.CourseCode}: {ex.Message}");
+                    Logger?.LogWarning(ex, "Error loading attendance data for course {CourseCode}", course.CourseCode);
                 }
             }
         }
@@ -171,10 +216,7 @@ namespace AirCode.Pages.Shared
                 
                 if (courseRef == null) continue;
 
-                // Get attendance events for this course
                 var attendanceEvents = CourseAttendanceEvents.GetValueOrDefault(course.CourseCode, new List<FirebaseAttendanceEvent>());
-                
-                // Calculate student-specific attendance
                 var attendanceStats = CalculateStudentAttendanceForCourse(course, courseRef, attendanceEvents);
                 
                 if (attendanceStats != null)
@@ -187,7 +229,112 @@ namespace AirCode.Pages.Shared
         }
         #endregion
 
-        #region Attendance Calculation Methods
+        #region Enhanced Modal Management
+        protected void ShowOverallStats()
+        {
+            ShowOverallStatsModal = true;
+            ShowCourseStatsModal = false;
+            ShowCourseModal = false;
+            StateHasChanged();
+        }
+
+        protected void ShowCourseStats()
+        {
+            ShowCourseStatsModal = true;
+            ShowOverallStatsModal = false;
+            ShowCourseModal = false;
+            FilterCourses(); // Ensure filtered data is up to date
+            StateHasChanged();
+        }
+
+        protected void CloseOverallStats()
+        {
+            ShowOverallStatsModal = false;
+            StateHasChanged();
+        }
+
+        protected void CloseCourseStats()
+        {
+            ShowCourseStatsModal = false;
+            StateHasChanged();
+        }
+
+        protected async Task ViewCourseDetails(string courseCode)
+        {
+            try
+            {
+                SelectedCourseDetails = await CourseService.GetCourseByIdAsync(courseCode);
+                SelectedCourseStats = CourseAttendanceStats.FirstOrDefault(c => c.CourseCode == courseCode);
+                
+                if (CourseAttendanceEvents.TryGetValue(courseCode, out var attendanceEvents))
+                {
+                    SelectedCourseAttendanceRecords = GenerateSessionAttendanceRecords(attendanceEvents);
+                }
+                else
+                {
+                    SelectedCourseAttendanceRecords = new List<SessionAttendanceRecord>();
+                }
+                
+                FilteredAttendanceRecords = SelectedCourseAttendanceRecords.ToList();
+                
+                ShowCourseModal = true;
+                ShowCourseStatsModal = false;
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                ErrorMessage = $"Error loading course details: {ex.Message}";
+                Logger?.LogError(ex, "Error loading course details for {CourseCode}", courseCode);
+            }
+        }
+
+        protected void CloseCourseModal()
+        {
+            ShowCourseModal = false;
+            SelectedCourseDetails = null;
+            SelectedCourseStats = null;
+            SelectedCourseAttendanceRecords.Clear();
+            FilteredAttendanceRecords.Clear();
+            SelectedMonthFilter = "";
+            SelectedAttendanceFilter = "";
+            StateHasChanged();
+        }
+        #endregion
+
+        #region Enhanced Keyboard Navigation
+        protected async Task HandleKeyPress(KeyboardEventArgs e, string action)
+        {
+            if (e.Key == "Enter" || e.Key == " ")
+            {
+                switch (action)
+                {
+                    case "overall-stats":
+                        ShowOverallStats();
+                        break;
+                    case "course-stats":
+                        ShowCourseStats();
+                        break;
+                    case "close-overall":
+                        CloseOverallStats();
+                        break;
+                    case "close-course":
+                        CloseCourseStats();
+                        break;
+                    case "retry":
+                        await LoadDataAsync();
+                        break;
+                }
+            }
+            else if (e.Key == "Escape")
+            {
+                CloseOverallStats();
+                CloseCourseStats();
+                CloseCourseModal();
+            }
+        }
+        #endregion
+
+        #region Attendance Calculation Methods (Existing)
         private List<FirebaseAttendanceEvent> ExtractAttendanceEvents(Dictionary<string, object> courseAttendanceData)
         {
             var events = new List<FirebaseAttendanceEvent>();
@@ -222,7 +369,7 @@ namespace AirCode.Pages.Shared
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Error parsing event {kvp.Key}: {ex.Message}");
+                    Logger?.LogWarning(ex, "Error parsing event {EventKey}", kvp.Key);
                 }
             }
 
@@ -274,7 +421,7 @@ namespace AirCode.Pages.Shared
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error parsing Firebase attendance event: {ex.Message}");
+                Logger?.LogWarning(ex, "Error parsing Firebase attendance event");
                 return null;
             }
         }
@@ -331,7 +478,7 @@ namespace AirCode.Pages.Shared
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error parsing Firebase attendance record: {ex.Message}");
+                Logger?.LogWarning(ex, "Error parsing Firebase attendance record");
                 return null;
             }
         }
@@ -352,8 +499,6 @@ namespace AirCode.Pages.Shared
                 var studentRecord = attendanceEvent.AttendanceRecords
                     .GetValueOrDefault(CurrentStudentMatric);
 
-                // Present: HasScannedAttendance == true
-                // Absent: No record OR HasScannedAttendance == false
                 bool isPresent = studentRecord?.HasScannedAttendance == true;
 
                 var sessionRecord = new SessionAttendanceRecord
@@ -375,15 +520,12 @@ namespace AirCode.Pages.Shared
                     totalAbsent++;
             }
 
-            // Calculate attendance percentage
             var attendancePercentage = attendanceEvents.Count > 0 
                 ? Math.Round((double)totalPresent / attendanceEvents.Count * 100, 2)
                 : 0.0;
 
-            // Calculate consecutive absences (from most recent sessions)
             var consecutiveAbsences = CalculateConsecutiveAbsences(studentAttendanceRecords);
             
-            // Find last attendance date
             var lastAttendanceDate = studentAttendanceRecords
                 .Where(r => r.IsPresent)
                 .OrderByDescending(r => r.SessionDate)
@@ -413,7 +555,6 @@ namespace AirCode.Pages.Shared
 
             var consecutiveCount = 0;
 
-            // Start from the most recent record and count consecutive absences
             foreach (var record in records.OrderByDescending(r => r.SessionDate))
             {
                 if (!record.IsPresent)
@@ -422,41 +563,11 @@ namespace AirCode.Pages.Shared
                 }
                 else
                 {
-                    break; // Stop at first present record when going backwards
+                    break;
                 }
             }
 
             return consecutiveCount;
-        }
-        #endregion
-
-        #region Modal and Navigation Methods
-        protected async Task ViewCourseDetails(string courseCode)
-        {
-            try
-            {
-                SelectedCourseDetails = await CourseService.GetCourseByIdAsync(courseCode);
-                SelectedCourseStats = CourseAttendanceStats.FirstOrDefault(c => c.CourseCode == courseCode);
-                
-                // Generate attendance records for the selected course
-                if (CourseAttendanceEvents.TryGetValue(courseCode, out var attendanceEvents))
-                {
-                    SelectedCourseAttendanceRecords = GenerateSessionAttendanceRecords(attendanceEvents);
-                }
-                else
-                {
-                    SelectedCourseAttendanceRecords = new List<SessionAttendanceRecord>();
-                }
-                
-                FilteredAttendanceRecords = SelectedCourseAttendanceRecords.ToList();
-                
-                ShowCourseModal = true;
-                StateHasChanged();
-            }
-            catch (Exception ex)
-            {
-                ErrorMessage = $"Error loading course details: {ex.Message}";
-            }
         }
 
         private List<SessionAttendanceRecord> GenerateSessionAttendanceRecords(List<FirebaseAttendanceEvent> attendanceEvents)
@@ -486,35 +597,37 @@ namespace AirCode.Pages.Shared
 
             return records.OrderByDescending(r => r.SessionDate).ToList();
         }
-
-        protected void CloseCourseModal()
-        {
-            ShowCourseModal = false;
-            SelectedCourseDetails = null;
-            SelectedCourseStats = null;
-            SelectedCourseAttendanceRecords.Clear();
-            FilteredAttendanceRecords.Clear();
-            SelectedMonthFilter = "";
-            SelectedAttendanceFilter = "";
-            StateHasChanged();
-        }
         #endregion
 
-        #region Filtering Methods
+        #region Enhanced Filtering Methods
         protected void FilterCourses()
         {
-            FilteredCourseStats = CourseAttendanceStats.Where(course =>
+            if (CourseAttendanceStats == null || !CourseAttendanceStats.Any())
             {
-                var matchesSemester = string.IsNullOrEmpty(SelectedSemesterFilter) ||
-                                    course.Semester.ToString() == SelectedSemesterFilter;
+                FilteredCourseStats = new List<CourseAttendanceStats>();
+                return;
+            }
 
-                var matchesStatus = string.IsNullOrEmpty(SelectedStatusFilter) ||
-                                  (SelectedStatusFilter == "Enrolled" && !course.IsCarryOver) ||
-                                  (SelectedStatusFilter == "Carryover" && course.IsCarryOver);
+            var filtered = CourseAttendanceStats.AsEnumerable();
 
-                return matchesSemester && matchesStatus;
-            }).ToList();
+            if (!string.IsNullOrEmpty(SelectedSemesterFilter))
+            {
+                filtered = filtered.Where(c => c.Semester.ToString().Equals(SelectedSemesterFilter, StringComparison.OrdinalIgnoreCase) == true);
+            }
 
+            if (!string.IsNullOrEmpty(SelectedStatusFilter))
+            {
+                if (SelectedStatusFilter.Equals("Carryover", StringComparison.OrdinalIgnoreCase))
+                {
+                    filtered = filtered.Where(c => c.IsCarryOver);
+                }
+                else if (SelectedStatusFilter.Equals("Enrolled", StringComparison.OrdinalIgnoreCase))
+                {
+                    filtered = filtered.Where(c => !c.IsCarryOver);
+                }
+            }
+
+            FilteredCourseStats = filtered.OrderBy(c => c.CourseName).ToList();
             StateHasChanged();
         }
 
@@ -552,20 +665,20 @@ namespace AirCode.Pages.Shared
         }
         #endregion
 
-        #region Helper and Utility Methods
+        #region Enhanced Helper and Utility Methods
         protected void LoadMoreRecords()
         {
-            // This would load more records if implementing pagination
-            // For now, just show all records
+            // Implementation for pagination if needed
         }
 
         protected string GetAttendanceClass(double percentage)
         {
             return percentage switch
             {
-                >= 85 => "excellent",
-                >= 75 => "good",
-                >= 65 => "average",
+                >= 90 => "excellent",
+                >= 80 => "good",
+                >= 70 => "average",
+                >= 60 => "below-average",
                 _ => "poor"
             };
         }
@@ -574,9 +687,10 @@ namespace AirCode.Pages.Shared
         {
             return percentage switch
             {
-                >= 85 => "Excellent",
-                >= 75 => "Good",
-                >= 65 => "Average",
+                >= 90 => "Excellent",
+                >= 80 => "Good",
+                >= 70 => "Average",
+                >= 60 => "Below Average",
                 _ => "Poor"
             };
         }
@@ -595,15 +709,45 @@ namespace AirCode.Pages.Shared
             };
         }
 
-        protected string GetAttendancePerformanceClass(double percentage)
+        protected string GetAttendanceColor(double percentage)
         {
             return percentage switch
             {
-                >= 90 => "excellent",
-                >= 75 => "good", 
-                >= 50 => "poor",
-                _ => "critical"
+                >= 90 => "var(--success)",
+                >= 80 => "var(--info)",
+                >= 70 => "var(--warning)",
+                _ => "var(--error)"
             };
+        }
+
+        protected string GetAttendanceRisk(double attendanceRate, int consecutiveAbsences)
+        {
+            if (attendanceRate < 60 || consecutiveAbsences >= 3)
+                return "high";
+            else if (attendanceRate < 75 || consecutiveAbsences >= 2)
+                return "medium";
+            else
+                return "low";
+        }
+
+        protected string GetAttendanceMessage(double overallRate)
+        {
+            return overallRate switch
+            {
+                >= 95 => "Outstanding attendance! Keep up the excellent work!",
+                >= 90 => "Excellent attendance! You're doing great!",
+                >= 80 => "Good attendance! Stay consistent!",
+                >= 70 => "Fair attendance. Try to improve consistency.",
+                >= 60 => "Attendance needs improvement. Consider attending more classes.",
+                _ => "Poor attendance. Please prioritize attending classes regularly."
+            };
+        }
+
+        protected string GetAttendanceTrend(string courseCode)
+        {
+            // Placeholder for attendance trend analysis
+            // You can implement this based on historical data comparison
+            return "stable"; // "improving", "declining", or "stable"
         }
 
         protected void ClearError()

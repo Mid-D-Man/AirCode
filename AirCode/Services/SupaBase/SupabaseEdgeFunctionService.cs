@@ -16,7 +16,11 @@ namespace AirCode.Services.SupaBase
         private readonly string _supabaseKey;
         private readonly JsonSerializerOptions _jsonOptions;
         private readonly QRCodeDecoder _qrCodeDecoder;
-private const string K_OfflineAttendanceEdgeCaseName = "process-offline-attendance";
+        
+        // Edge function names
+        private const string OnlineAttendanceFunctionName = "process-attendance-data";
+        private const string OfflineAttendanceFunctionName = "process-offline-attendance";
+
         public SupabaseEdgeFunctionService(
             HttpClient httpClient, 
             IConfiguration configuration,
@@ -35,96 +39,113 @@ private const string K_OfflineAttendanceEdgeCaseName = "process-offline-attendan
         }
 
         /// <summary>
-        /// Process attendance with unencrypted payload structure
+        /// Process attendance with unencrypted payload structure (online mode)
         /// </summary>
-       /// <summary>
-/// Process attendance with unencrypted payload structure
-/// </summary>
-public async Task<AttendanceProcessingResult> ProcessAttendanceWithPayloadAsync(EdgeFunctionRequest request)
-{
-    try
-    {
-        Console.WriteLine($"Sending edge function request: {JsonSerializer.Serialize(request, _jsonOptions)}");
-
-        var response = await SendEdgeFunctionRequestAsync("process-attendance-data", request);
-        
-        var responseContent = await response.Content.ReadAsStringAsync();
-        Console.WriteLine($"Response Status: {response.StatusCode}");
-        Console.WriteLine($"Response Content: {responseContent}");
-        
-        // Parse the response regardless of status code
-        EdgeFunctionResponse edgeResponse;
-        try
+        public async Task<AttendanceProcessingResult> ProcessAttendanceWithPayloadAsync(EdgeFunctionRequest request)
         {
-            edgeResponse = JsonSerializer.Deserialize<EdgeFunctionResponse>(responseContent, _jsonOptions);
-        }
-        catch (JsonException)
-        {
-            return new AttendanceProcessingResult
-            {
-                Success = false,
-                Message = "Invalid response format from server",
-                ErrorDetails = responseContent
-            };
+            return await ProcessAttendanceInternalAsync(request, OnlineAttendanceFunctionName, "online");
         }
 
-        if (response.IsSuccessStatusCode && edgeResponse?.Success == true)
+        /// <summary>
+        /// Process offline attendance record through offline edge function
+        /// </summary>
+        public async Task<AttendanceProcessingResult> ProcessOfflineAttendanceAsync(EdgeFunctionRequest request)
         {
-            // Success case
-            return new AttendanceProcessingResult
-            {
-                Success = true,
-                Message = edgeResponse.Message,
-                SessionData = edgeResponse.SessionData != null ? new QRCodePayloadData
-                {
-                    SessionId = edgeResponse.SessionData.SessionId,
-                    CourseCode = edgeResponse.SessionData.CourseCode,
-                    StartTime = edgeResponse.SessionData.StartTime,
-                    EndTime = edgeResponse.SessionData.EndTime
-                } : null,
-                ProcessedAttendance = edgeResponse.ProcessedAttendance != null ? new AttendanceRecord
-                {
-                    MatricNumber = edgeResponse.ProcessedAttendance.MatricNumber,
-                    ScanTime = edgeResponse.ProcessedAttendance.ScannedAt,
-                    IsOnlineScan = edgeResponse.ProcessedAttendance.IsOnlineScan
-                } : null
-            };
+            return await ProcessAttendanceInternalAsync(request, OfflineAttendanceFunctionName, "offline");
         }
-        else
+
+        /// <summary>
+        /// Internal method to handle both online and offline attendance processing
+        /// </summary>
+        private async Task<AttendanceProcessingResult> ProcessAttendanceInternalAsync(
+            EdgeFunctionRequest request, 
+            string functionName, 
+            string mode)
         {
-            // Error case - return the specific error message from Edge function
-            return new AttendanceProcessingResult
+            try
             {
-                Success = false,
-                Message = edgeResponse?.Message ?? "Unknown error occurred",
-                ErrorCode = edgeResponse?.ErrorCode ?? "UNKNOWN_ERROR",
-                ErrorDetails = $"HTTP {response.StatusCode}: {responseContent}"
-            };
+                Console.WriteLine($"Sending {mode} edge function request: {JsonSerializer.Serialize(request, _jsonOptions)}");
+
+                var response = await SendEdgeFunctionRequestAsync(functionName, request);
+                
+                var responseContent = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"{mode} Response Status: {response.StatusCode}");
+                Console.WriteLine($"{mode} Response Content: {responseContent}");
+                
+                // Parse the response regardless of status code
+                EdgeFunctionResponse edgeResponse;
+                try
+                {
+                    edgeResponse = JsonSerializer.Deserialize<EdgeFunctionResponse>(responseContent, _jsonOptions);
+                }
+                catch (JsonException)
+                {
+                    return new AttendanceProcessingResult
+                    {
+                        Success = false,
+                        Message = "Invalid response format from server",
+                        ErrorDetails = responseContent
+                    };
+                }
+
+                if (response.IsSuccessStatusCode && edgeResponse?.Success == true)
+                {
+                    // Success case
+                    return new AttendanceProcessingResult
+                    {
+                        Success = true,
+                        Message = edgeResponse.Message,
+                        SessionData = edgeResponse.SessionData != null ? new QRCodePayloadData
+                        {
+                            SessionId = edgeResponse.SessionData.SessionId,
+                            CourseCode = edgeResponse.SessionData.CourseCode,
+                            StartTime = edgeResponse.SessionData.StartTime,
+                            EndTime = edgeResponse.SessionData.EndTime
+                        } : null,
+                        ProcessedAttendance = edgeResponse.ProcessedAttendance != null ? new AttendanceRecord
+                        {
+                            MatricNumber = edgeResponse.ProcessedAttendance.MatricNumber,
+                            ScanTime = edgeResponse.ProcessedAttendance.ScannedAt,
+                            IsOnlineScan = !edgeResponse.ProcessedAttendance.IsOnlineScan 
+                        } : null
+                    };
+                }
+                else
+                {
+                    // Error case - return the specific error message from Edge function
+                    return new AttendanceProcessingResult
+                    {
+                        Success = false,
+                        Message = edgeResponse?.Message ?? "Unknown error occurred",
+                        ErrorCode = edgeResponse?.ErrorCode ?? "UNKNOWN_ERROR",
+                        ErrorDetails = $"HTTP {response.StatusCode}: {responseContent}"
+                    };
+                }
+            }
+            catch (HttpRequestException ex)
+            {
+                Console.WriteLine($"HTTP Request Exception in {mode} mode: {ex}");
+                return new AttendanceProcessingResult
+                {
+                    Success = false,
+                    Message = "Network connection failed. Please check your internet connection.",
+                    ErrorCode = "NETWORK_ERROR",
+                    ErrorDetails = ex.ToString()
+                };
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"General Exception in {mode} mode: {ex}");
+                return new AttendanceProcessingResult
+                {
+                    Success = false,
+                    Message = $"An unexpected error occurred: {ex.Message}",
+                    ErrorCode = "PROCESSING_ERROR",
+                    ErrorDetails = ex.ToString()
+                };
+            }
         }
-    }
-    catch (HttpRequestException ex)
-    {
-        Console.WriteLine($"HTTP Request Exception: {ex}");
-        return new AttendanceProcessingResult
-        {
-            Success = false,
-            Message = "Network connection failed. Please check your internet connection.",
-            ErrorCode = "NETWORK_ERROR",
-            ErrorDetails = ex.ToString()
-        };
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"General Exception: {ex}");
-        return new AttendanceProcessingResult
-        {
-            Success = false,
-            Message = $"An unexpected error occurred: {ex.Message}",
-            ErrorCode = "PROCESSING_ERROR",
-            ErrorDetails = ex.ToString()
-        };
-    }
-}
+
         /// <summary>
         /// Validate QR code payload data with signature verification
         /// </summary>
@@ -164,6 +185,36 @@ public async Task<AttendanceProcessingResult> ProcessAttendanceWithPayloadAsync(
                     IsValid = false,
                     Message = $"Validation error: {ex.Message}"
                 };
+            }
+        }
+
+        /// <summary>
+        /// Check if offline session exists for given session ID
+        /// </summary>
+        public async Task<bool> CheckOfflineSessionExistsAsync(string sessionId)
+        {
+            try
+            {
+                var checkRequest = new
+                {
+                    sessionId = sessionId,
+                    checkOnly = true
+                };
+
+                var response = await SendEdgeFunctionRequestAsync("check-offline-session", checkRequest);
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    var result = await response.Content.ReadFromJsonAsync<Dictionary<string, object>>(_jsonOptions);
+                    return result?.ContainsKey("exists") == true && (bool)result["exists"];
+                }
+
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error checking offline session: {ex.Message}");
+                return false;
             }
         }
 
@@ -273,6 +324,7 @@ public async Task<AttendanceProcessingResult> ProcessAttendanceWithPayloadAsync(
                 return $"Error getting cat image: {ex.Message}";
             }
         }
+
         /// <summary>
         /// Get server time from Supabase edge function
         /// </summary>
@@ -298,6 +350,7 @@ public async Task<AttendanceProcessingResult> ProcessAttendanceWithPayloadAsync(
                 return DateTime.UtcNow.ToString("O");
             }
         }
+
         private async Task<HttpResponseMessage> SendEdgeFunctionRequestAsync(
             string functionName, 
             object payload = null, 
@@ -320,5 +373,5 @@ public async Task<AttendanceProcessingResult> ProcessAttendanceWithPayloadAsync(
             return await _httpClient.SendAsync(request);
         }
     }
-    
+
 }

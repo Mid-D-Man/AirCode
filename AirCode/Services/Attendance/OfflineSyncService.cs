@@ -7,15 +7,12 @@ using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using AirCode.Models.EdgeFunction;
 using AttendanceRecord = AirCode.Models.Supabase.AttendanceRecord;
-
-
+using AirCode.Utilities.HelperScripts;
 
 namespace AirCode.Services.Attendance
 {
     /// <summary>
-    /// offline sync service for offline handling, needs a bit of work regarding movement to firebase though
-    /// so make the firestore attendance service first then use it here and handle after propper sync, when session about to start
-    /// cheack for offline_attendance_records if they exist and for a the course code we attendancing move it there then delete the row
+    /// Enhanced offline sync service for handling client-side offline attendance
     /// </summary>
     public class OfflineSyncService : IOfflineSyncService
     {
@@ -26,6 +23,8 @@ namespace AirCode.Services.Attendance
         
         private const string OFFLINE_RECORDS_KEY = "offline_attendance_records";
         private const string OFFLINE_SESSIONS_KEY = "offline_session_data";
+        private const string MATRIC_NUMBER_KEY = "current_matric_number";
+        private const string DEVICE_GUID_KEY = "device_guid";
         private const int MAX_RETRY_COUNT = 3;
         private const int SYNC_RETRY_DELAY_MS = 2000;
 
@@ -41,8 +40,69 @@ namespace AirCode.Services.Attendance
             _logger = logger;
         }
 
-        #region Public Interface Methods
+        #region Client-Side Offline Attendance Methods
 
+        /// <summary>
+        /// Store offline attendance record when client scans QR code offline
+        /// </summary>
+        public async Task<bool> StoreOfflineAttendanceAsync(string encryptedQRPayload, string deviceId = null)
+        {
+            try
+            {
+                // Get or generate device GUID
+                deviceId ??= await GetOrCreateDeviceGuidAsync();
+                var matricNumber = await GetStoredMatricNumberAsync();
+                
+                if (string.IsNullOrEmpty(matricNumber))
+                {
+                    _logger.LogError("No matric number stored for offline attendance");
+                    return false;
+                }
+
+                var offlineRecord = new OfflineAttendanceRecordModel
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    EncryptedQrPayload = encryptedQRPayload,
+                    MatricNumber = matricNumber,
+                    DeviceGuid = deviceId,
+                    ScannedAt = DateTime.UtcNow,
+                    RecordedAt = DateTime.UtcNow,
+                    Status = SyncStatus.Pending,
+                    SyncStatus = SyncStatus.Pending,
+                    RetryCount = 0,
+                    SyncAttempts = 0
+                };
+
+                // Check for duplicates before storing
+                var existingRecords = await GetPendingOfflineRecordsAsync();
+                var duplicate = existingRecords.FirstOrDefault(r => 
+                    r.EncryptedQrPayload == encryptedQRPayload && 
+                    r.MatricNumber == matricNumber &&
+                    r.Status != SyncStatus.Failed);
+
+                if (duplicate != null)
+                {
+                    _logger.LogWarning("Duplicate offline attendance record detected, skipping storage");
+                    return false;
+                }
+
+                existingRecords.Add(offlineRecord);
+                await _localStorage.SetItemAsync(OFFLINE_RECORDS_KEY, existingRecords);
+                
+                _logger.LogInformation("Stored offline attendance record: {RecordId} for student: {MatricNumber}", 
+                    offlineRecord.Id, matricNumber);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to store offline attendance record");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Sync pending offline records when connection is restored
+        /// </summary>
         public async Task<bool> SyncPendingRecordsAsync()
         {
             try
@@ -57,24 +117,78 @@ namespace AirCode.Services.Attendance
                 }
 
                 var syncResults = new List<SyncResult>();
+                var recordsToRemove = new List<string>();
                 
-                foreach (var record in pendingRecords)
+                foreach (var record in pendingRecords.Where(r => r.Status == SyncStatus.Pending || r.Status == SyncStatus.Failed))
                 {
-                    var result = await ProcessOfflineAttendanceAsync(record);
-                    syncResults.Add(result);
-                    
-                    // Update record status based on sync result
-                    await UpdateOfflineRecordStatusAsync(record, result);
+                    try
+                    {
+                        var result = await ProcessOfflineAttendanceAsync(record);
+                        syncResults.Add(result);
+                        
+                        // Update record status based on sync result
+                        if (result.Success)
+                        {
+                            record.Status = SyncStatus.Synced;
+                            record.SyncStatus = SyncStatus.Synced;
+                            recordsToRemove.Add(record.Id);
+                            _logger.LogInformation("Successfully synced offline record: {RecordId}", record.Id);
+                        }
+                        else
+                        {
+                            record.RetryCount++;
+                            record.SyncAttempts++;
+                            record.ErrorDetails = result.ErrorMessage;
+                            
+                            // Check if we should delete the record (expired session)
+                            if (result.ErrorCode == "SESSION_EXPIRED")
+                            {
+                                recordsToRemove.Add(record.Id);
+                                _logger.LogWarning("Removing expired offline record: {RecordId}", record.Id);
+                            }
+                            else if (record.RetryCount >= MAX_RETRY_COUNT)
+                            {
+                                record.Status = SyncStatus.Failed;
+                                record.SyncStatus = SyncStatus.Failed;
+                                _logger.LogError("Offline record failed after max retries: {RecordId}", record.Id);
+                            }
+                            else
+                            {
+                                record.Status = SyncStatus.Pending;
+                                _logger.LogWarning("Offline record sync failed, will retry: {RecordId}. Error: {Error}", 
+                                    record.Id, result.Message);
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Exception while processing offline record: {RecordId}", record.Id);
+                        record.RetryCount++;
+                        record.ErrorDetails = ex.Message;
+                        if (record.RetryCount >= MAX_RETRY_COUNT)
+                        {
+                            record.Status = SyncStatus.Failed;
+                        }
+                    }
                 }
 
-                // Clean up successfully synced records
-                await CleanupSyncedRecordsAsync();
+                // Remove successfully synced and expired records
+                if (recordsToRemove.Any())
+                {
+                    var updatedRecords = pendingRecords.Where(r => !recordsToRemove.Contains(r.Id)).ToList();
+                    await _localStorage.SetItemAsync(OFFLINE_RECORDS_KEY, updatedRecords);
+                }
+                else
+                {
+                    // Update existing records with new status
+                    await _localStorage.SetItemAsync(OFFLINE_RECORDS_KEY, pendingRecords);
+                }
                 
                 var successfulSyncs = syncResults.Count(r => r.Success);
                 _logger.LogInformation("Sync completed: {Successful}/{Total} records synced successfully", 
                     successfulSyncs, syncResults.Count);
                 
-                return syncResults.All(r => r.Success);
+                return successfulSyncs > 0 || !pendingRecords.Any(r => r.Status == SyncStatus.Pending);
             }
             catch (Exception ex)
             {
@@ -83,45 +197,52 @@ namespace AirCode.Services.Attendance
             }
         }
 
+        /// <summary>
+        /// Process individual offline attendance record through edge function
+        /// </summary>
         public async Task<SyncResult> ProcessOfflineAttendanceAsync(OfflineAttendanceRecordModel record)
         {
             try
             {
                 _logger.LogDebug("Processing offline attendance record: {RecordId}", record.Id);
                 
-                // Check if corresponding offline session exists in Supabase
-                var offlineSession = await GetOfflineSessionFromSupabaseAsync(record.EncryptedQrPayload);
-                if (offlineSession == null)
+                // Decode QR payload to get session details
+                var qrPayloadData = await DecodeQRPayloadAsync(record.EncryptedQrPayload);
+                if (qrPayloadData == null)
                 {
                     return new SyncResult
                     {
                         Success = false,
-                        Message = "No matching offline session found in database. Session may not be created yet.",
-                        ErrorCode = "SESSION_NOT_FOUND",
+                        Message = "Failed to decode QR payload",
+                        ErrorCode = "INVALID_QR_PAYLOAD",
                         RetryAttempt = record.RetryCount
                     };
                 }
 
-                // Create attendance record from offline data
-                var attendanceRecord = new AttendanceRecord
+                // Create attendance data for edge function
+                var attendanceData = new
                 {
-                    MatricNumber = await GetMatricNumberFromDeviceAsync(record.DeviceId),
-                    HasScannedAttendance = true,
-                    IsOnlineScan = false,
-                    ScanTime = record.ScannedAt,
-                    DeviceGUID = record.DeviceId
+                    MatricNumber = record.MatricNumber,
+                    DeviceGUID = record.DeviceGuid,
+                    ScannedAt = record.ScannedAt
                 };
 
-                // Create edge function request
-                var edgeRequest = await CreateOfflineEdgeFunctionRequestAsync(record.EncryptedQrPayload, attendanceRecord);
-                
-                // Process through edge function
-                var result = await _edgeService.ProcessAttendanceWithPayloadAsync(edgeRequest);
+                // Create edge function request for offline processing
+                var edgeRequest = new EdgeFunctionRequest
+                {
+                    QrCodePayload = qrPayloadData,
+                    AttendanceData = attendanceData
+                };
+
+                // Call the offline attendance edge function
+                var result = await CallOfflineAttendanceEdgeFunctionAsync(edgeRequest);
                 
                 return new SyncResult
                 {
                     Success = result.Success,
                     Message = result.Message,
+                    ErrorMessage = result.Success ? string.Empty : result.Message,
+                    ErrorCode = result.ErrorCode ?? string.Empty,
                     Data = result,
                     RetryAttempt = record.RetryCount,
                     ProcessedAt = DateTime.UtcNow
@@ -134,11 +255,243 @@ namespace AirCode.Services.Attendance
                 {
                     Success = false,
                     Message = ex.Message,
+                    ErrorMessage = ex.Message,
                     ErrorCode = "PROCESSING_ERROR",
                     RetryAttempt = record.RetryCount
                 };
             }
         }
+
+        /// <summary>
+        /// Check if user has pending offline attendance records
+        /// </summary>
+        public async Task<bool> HasPendingOfflineRecordsAsync()
+        {
+            try
+            {
+                var records = await GetPendingOfflineRecordsAsync();
+                return records.Any(r => r.Status == SyncStatus.Pending || r.Status == SyncStatus.Failed);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to check pending offline records");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Get count of pending offline records
+        /// </summary>
+        public async Task<int> GetPendingOfflineRecordsCountAsync()
+        {
+            try
+            {
+                var records = await GetPendingOfflineRecordsAsync();
+                return records.Count(r => r.Status == SyncStatus.Pending || r.Status == SyncStatus.Failed);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to get pending offline records count");
+                return 0;
+            }
+        }
+
+        /// <summary>
+        /// Clear all offline records (use with caution)
+        /// </summary>
+        public async Task<bool> ClearAllOfflineRecordsAsync()
+        {
+            try
+            {
+                await _localStorage.RemoveItemAsync(OFFLINE_RECORDS_KEY);
+                _logger.LogInformation("Cleared all offline attendance records");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to clear offline records");
+                return false;
+            }
+        }
+
+        #endregion
+
+        #region Helper Methods
+
+        private async Task<List<OfflineAttendanceRecordModel>> GetPendingOfflineRecordsAsync()
+        {
+            try
+            {
+                return await _localStorage.GetItemAsync<List<OfflineAttendanceRecordModel>>(OFFLINE_RECORDS_KEY) 
+                       ?? new List<OfflineAttendanceRecordModel>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to get pending offline records");
+                return new List<OfflineAttendanceRecordModel>();
+            }
+        }
+
+        private async Task<string> GetOrCreateDeviceGuidAsync()
+        {
+            try
+            {
+                var deviceGuid = await _localStorage.GetItemAsync<string>(DEVICE_GUID_KEY);
+                if (string.IsNullOrEmpty(deviceGuid))
+                {
+                    deviceGuid = Guid.NewGuid().ToString();
+                    await _localStorage.SetItemAsync(DEVICE_GUID_KEY, deviceGuid);
+                    _logger.LogInformation("Generated new device GUID: {DeviceGuid}", deviceGuid);
+                }
+                return deviceGuid;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to get or create device GUID");
+                return Guid.NewGuid().ToString(); // Fallback
+            }
+        }
+
+        private async Task<string> GetStoredMatricNumberAsync()
+        {
+            try
+            {
+                return await _localStorage.GetItemAsync<string>(MATRIC_NUMBER_KEY) ?? string.Empty;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to get stored matric number");
+                return string.Empty;
+            }
+        }
+
+        /// <summary>
+        /// Store matric number for offline use
+        /// </summary>
+        public async Task<bool> StoreMatricNumberAsync(string matricNumber)
+        {
+            try
+            {
+                await _localStorage.SetItemAsync(MATRIC_NUMBER_KEY, matricNumber);
+                _logger.LogInformation("Stored matric number for offline use");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to store matric number");
+                return false;
+            }
+        }
+
+        private async Task<QRCodePayloadData> DecodeQRPayloadAsync(string encryptedQRPayload)
+        {
+            try
+            {
+                // TODO: Implement QR payload decoding using your existing QR decoder utilities
+                // For now, this is a placeholder that assumes the payload contains the necessary data
+                // You'll need to integrate this with your existing QRCodeDecoder service
+                
+                // Example implementation (replace with actual decoder):
+                var decodedJson = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(encryptedQRPayload));
+                var payloadData = JsonSerializer.Deserialize<QRCodePayloadData>(decodedJson);
+                
+                return payloadData;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to decode QR payload");
+                return null;
+            }
+        }
+
+        private async Task<AttendanceProcessingResult> CallOfflineAttendanceEdgeFunctionAsync(EdgeFunctionRequest request)
+        {
+            try
+            {
+                // Create HTTP client request to the offline attendance edge function
+                using var httpClient = new HttpClient();
+                var supabaseUrl = "https://bjwbwcbumfqcdmrsbtkf.supabase.co";
+                var functionUrl = $"{supabaseUrl}/functions/v1/process-offline-attendance";
+                
+                var requestJson = JsonSerializer.Serialize(request);
+                var content = new StringContent(requestJson, System.Text.Encoding.UTF8, "application/json");
+                
+                // Add authorization header if needed
+                var supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJqd2J3Y2J1bWZxY2RtcnNidGtmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM3MTY0NzYsImV4cCI6MjA1OTI5MjQ3Nn0.EHg5Op2GVE9GhNmR9tEKFyVow2987rp3dsIgJxFVJD8";
+                httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", supabaseKey);
+                
+                var response = await httpClient.PostAsync(functionUrl, content);
+                var responseContent = await response.Content.ReadAsStringAsync();
+                
+                _logger.LogDebug("Offline edge function response: Status={Status}, Content={Content}", 
+                    response.StatusCode, responseContent);
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    var edgeResponse = JsonSerializer.Deserialize<EdgeFunctionResponse>(responseContent);
+                    return new AttendanceProcessingResult
+                    {
+                        Success = edgeResponse?.Success ?? false,
+                        Message = edgeResponse?.Message ?? "Unknown response",
+                        ErrorCode = edgeResponse?.ErrorCode,
+                        SessionData = edgeResponse?.SessionData != null ? new QRCodePayloadData
+                        {
+                            SessionId = edgeResponse.SessionData.SessionId,
+                            CourseCode = edgeResponse.SessionData.CourseCode,
+                            StartTime = edgeResponse.SessionData.StartTime,
+                            EndTime = edgeResponse.SessionData.EndTime
+                        } : null
+                    };
+                }
+                else
+                {
+                    // Parse error response
+                    try
+                    {
+                        var errorResponse = JsonSerializer.Deserialize<EdgeFunctionErrorResponse>(responseContent);
+                        return new AttendanceProcessingResult
+                        {
+                            Success = false,
+                            Message = errorResponse?.Message ?? "Unknown error",
+                            ErrorCode = errorResponse?.ErrorCode ?? "UNKNOWN_ERROR"
+                        };
+                    }
+                    catch
+                    {
+                        return new AttendanceProcessingResult
+                        {
+                            Success = false,
+                            Message = $"HTTP {response.StatusCode}: {responseContent}",
+                            ErrorCode = "HTTP_ERROR"
+                        };
+                    }
+                }
+            }
+            catch (HttpRequestException ex)
+            {
+                _logger.LogError(ex, "Network error calling offline attendance edge function");
+                return new AttendanceProcessingResult
+                {
+                    Success = false,
+                    Message = "Network connection failed. Will retry when connection is restored.",
+                    ErrorCode = "NETWORK_ERROR"
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error calling offline attendance edge function");
+                return new AttendanceProcessingResult
+                {
+                    Success = false,
+                    Message = ex.Message,
+                    ErrorCode = "PROCESSING_ERROR"
+                };
+            }
+        }
+
+        #endregion
+
+        #region Admin-Specific Methods (existing implementation)
 
         public async Task<SyncResult> SyncOfflineSessionAsync(OfflineSessionData session)
         {
@@ -146,7 +499,6 @@ namespace AirCode.Services.Attendance
             {
                 _logger.LogDebug("Syncing offline session: {SessionId}", session.SessionId);
                 
-                // Create offline attendance session record in Supabase
                 var offlineSession = new SupabaseOfflineAttendanceSession
                 {
                     SessionId = session.SessionId,
@@ -199,8 +551,138 @@ namespace AirCode.Services.Attendance
         }
 
         #endregion
+        
+        #region Admin Direct Database Methods (bypasses edge functions)
 
-        #region Admin-Specific Methods
+        /// <summary>
+        /// Directly insert attendance record into database (admin only)
+        /// </summary>
+        public async Task<bool> DirectInsertAttendanceRecordAsync(string sessionId, AttendanceRecord attendanceRecord)
+        {
+            try
+            {
+                var sessions = await _database.GetWithFilterAsync<SupabaseAttendanceSession>(
+                    "session_id", Supabase.Postgrest.Constants.Operator.Equals, sessionId);
+                
+                if (!sessions.Any())
+                {
+                    _logger.LogError("Session not found for direct insert: {SessionId}", sessionId);
+                    return false;
+                }
+
+                var session = sessions.First();
+                var existingRecords = session.GetAttendanceRecords();
+                
+                // Check for duplicates
+                if (existingRecords.Any(r => r.MatricNumber == attendanceRecord.MatricNumber))
+                {
+                    _logger.LogWarning("Duplicate attendance record - student already marked: {MatricNumber}", 
+                        attendanceRecord.MatricNumber);
+                    return false;
+                }
+
+                existingRecords.Add(attendanceRecord);
+                session.SetAttendanceRecords(existingRecords);
+                
+                await _database.UpdateAsync(session);
+                
+                _logger.LogInformation("Admin directly inserted attendance record: {MatricNumber} in {SessionId}", 
+                    attendanceRecord.MatricNumber, sessionId);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to directly insert attendance record");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Get all offline sessions for a course (admin view)
+        /// </summary>
+        public async Task<List<OfflineSessionData>> GetOfflineSessionsByCourseAsync(string courseCode)
+        {
+            try
+            {
+                var offlineSessions = await _database.GetWithFilterAsync<SupabaseOfflineAttendanceSession>(
+                    "course_code", Supabase.Postgrest.Constants.Operator.Equals, courseCode);
+
+                return offlineSessions.Select(session => new OfflineSessionData
+                {
+                    SessionId = session.SessionId,
+                    CreatedAt = session.CreatedAt,
+                    SessionDetails = new SessionData
+                    {
+                        SessionId = session.SessionId,
+                        CourseCode = session.CourseCode,
+                        StartTime = session.StartTime,
+                        Duration = session.Duration,
+                        EndTime = session.ExpirationTime,
+                        SecurityFeatures = (SecurityFeatures)session.SecurityFeatures,
+                        OfflineSyncEnabled = session.AllowOfflineSync
+                    },
+                    PendingAttendanceRecords = JsonSerializer.Deserialize<List<OfflineAttendanceRecordModel>>(
+                        session.OfflineRecords) ?? new List<OfflineAttendanceRecordModel>(),
+                    SyncStatus = (SyncStatus)session.SyncStatus
+                }).ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to get offline sessions for course: {CourseCode}", courseCode);
+                return new List<OfflineSessionData>();
+            }
+        }
+
+        /// <summary>
+        /// Archive old offline sessions (admin maintenance)
+        /// </summary>
+        public async Task<int> ArchiveOldOfflineSessionsAsync(int olderThanDays = 30)
+        {
+            try
+            {
+                var cutoffDate = DateTime.UtcNow.AddDays(-olderThanDays);
+                var oldSessions = await _database.GetAsync<SupabaseOfflineAttendanceSession>();
+                
+                var sessionsToArchive = oldSessions
+                    .Where(s => s.CreatedAt < cutoffDate && s.SyncStatus == (int)SyncStatus.Synced)
+                    .ToList();
+
+                int archivedCount = 0;
+                
+                foreach (var session in sessionsToArchive)
+                {
+                    try
+                    {
+                        // Create archived record
+                        var archivedData = new ArchivedAttendanceData
+                        {
+                            CourseCode = session.CourseCode,
+                            ArchivedData = JsonSerializer.Serialize(session),
+                            ArchivedAt = DateTime.UtcNow,
+                            DataType = "offline_sessions",
+                            CompressionUsed = false
+                        };
+                        
+                        await _database.InsertAsync(archivedData);
+                        await _database.DeleteAsync(session);
+                        
+                        archivedCount++;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to archive session: {SessionId}", session.SessionId);
+                    }
+                }
+
+                _logger.LogInformation("Archived {Count} old offline sessions", archivedCount);
+                return archivedCount;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to archive old offline sessions");
+                return 0;
+            }
+        }
 
         /// <summary>
         /// Admin method to create offline session records in Supabase when online
@@ -230,7 +712,7 @@ namespace AirCode.Services.Attendance
                 };
 
                 await _database.InsertAsync(offlineSession);
-                _logger.LogInformation("Created offline session record: {SessionId}", sessionData.SessionId);
+                _logger.LogInformation("Admin created offline session record: {SessionId}", sessionData.SessionId);
                 
                 return true;
             }
@@ -242,13 +724,13 @@ namespace AirCode.Services.Attendance
         }
 
         /// <summary>
-        /// Admin method to sync offline records to main attendance session
+        /// Admin method to sync offline records to main attendance session (bypasses edge functions)
         /// </summary>
         public async Task<BatchSyncResult> SyncOfflineRecordsToMainSessionAsync(string courseCode, string sessionId)
         {
             try
             {
-                _logger.LogInformation("Syncing offline records to main session. Course: {CourseCode}, Session: {SessionId}", 
+                _logger.LogInformation("Admin syncing offline records to main session. Course: {CourseCode}, Session: {SessionId}", 
                     courseCode, sessionId);
 
                 // Get offline records for the course
@@ -277,20 +759,30 @@ namespace AirCode.Services.Attendance
                 var existingRecords = session.GetAttendanceRecords();
                 var syncResults = new List<SyncResult>();
 
-                // Process each offline record
+                // Process each offline record directly (admin bypasses edge function validation)
                 foreach (var offlineRecord in offlineRecords)
                 {
                     try
                     {
-                        var attendanceData = JsonSerializer.Deserialize<List<AttendanceRecord>>(offlineRecord.OfflineRecords);
+                        var offlineAttendanceData = offlineRecord.GetOfflineRecords();
                         
-                        foreach (var record in attendanceData ?? new List<AttendanceRecord>())
+                        foreach (var record in offlineAttendanceData)
                         {
                             // Check if record already exists
                             if (!existingRecords.Any(r => r.MatricNumber == record.MatricNumber))
                             {
-                                existingRecords.Add(record);
-                                syncResults.Add(new SyncResult { Success = true, Message = "Record synced" });
+                                // Convert offline record to regular attendance record
+                                var attendanceRecord = new AttendanceRecord
+                                {
+                                    MatricNumber = record.MatricNumber,
+                                    HasScannedAttendance = record.HasScannedAttendance,
+                                    ScanTime = record.ScanTime,
+                                    IsOnlineScan = false, // It's from offline
+                                    DeviceGUID = record.DeviceGUID
+                                };
+                                
+                                existingRecords.Add(attendanceRecord);
+                                syncResults.Add(new SyncResult { Success = true, Message = "Record synced directly by admin" });
                             }
                             else
                             {
@@ -309,12 +801,13 @@ namespace AirCode.Services.Attendance
                     }
                 }
 
-                // Update main session with merged records
+                // Update main session with merged records (direct database update)
                 session.SetAttendanceRecords(existingRecords);
+                session.UpdatedAt = DateTime.UtcNow;
                 await _database.UpdateAsync(session);
 
                 var successful = syncResults.Count(r => r.Success);
-                _logger.LogInformation("Offline sync to main session completed: {Successful}/{Total}", 
+                _logger.LogInformation("Admin offline sync to main session completed: {Successful}/{Total}", 
                     successful, syncResults.Count);
 
                 return new BatchSyncResult
@@ -327,210 +820,47 @@ namespace AirCode.Services.Attendance
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to sync offline records to main session");
+                _logger.LogError(ex, "Admin failed to sync offline records to main session");
                 throw;
             }
         }
 
         #endregion
-
-        #region Client-Specific Methods
-
-        /// <summary>
-        /// Store offline attendance record locally on client device
-        /// </summary>
-        public async Task<bool> StoreOfflineAttendanceAsync(string encryptedQRPayload, string deviceId)
-        {
-            try
-            {
-                var offlineRecord = new OfflineAttendanceRecordModel
-                {
-                    Id = Guid.NewGuid().ToString(),
-                    EncryptedQrPayload = encryptedQRPayload,
-                    ScannedAt = DateTime.UtcNow,
-                    DeviceId = deviceId,
-                    Status = SyncStatus.Pending,
-                    RetryCount = 0
-                };
-
-                var existingRecords = await GetPendingOfflineRecordsAsync();
-                existingRecords.Add(offlineRecord);
-                
-                await _localStorage.SetItemAsync(OFFLINE_RECORDS_KEY, existingRecords);
-                
-                _logger.LogInformation("Stored offline attendance record: {RecordId}", offlineRecord.Id);
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to store offline attendance record");
-                return false;
-            }
-        }
-
-        /// <summary>
-        /// Check if user has pending offline attendance records
-        /// </summary>
-        public async Task<bool> HasPendingOfflineRecordsAsync()
-        {
-            try
-            {
-                var records = await GetPendingOfflineRecordsAsync();
-                return records.Any(r => r.Status == SyncStatus.Pending || r.Status == SyncStatus.Failed);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to check pending offline records");
-                return false;
-            }
-        }
-
-        #endregion
-
-        #region Private Helper Methods
-
-        private async Task<List<OfflineAttendanceRecordModel>> GetPendingOfflineRecordsAsync()
-        {
-            try
-            {
-                return await _localStorage.GetItemAsync<List<OfflineAttendanceRecordModel>>(OFFLINE_RECORDS_KEY) 
-                       ?? new List<OfflineAttendanceRecordModel>();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to get pending offline records");
-                return new List<OfflineAttendanceRecordModel>();
-            }
-        }
-
-        private async Task<SupabaseOfflineAttendanceSession?> GetOfflineSessionFromSupabaseAsync(string encryptedQRPayload)
-        {
-            try
-            {
-                // Extract session ID from QR payload (implement your QR decoder logic)
-                var sessionId = await ExtractSessionIdFromQRPayloadAsync(encryptedQRPayload);
-                if (string.IsNullOrEmpty(sessionId))
-                    return null;
-
-                var sessions = await _database.GetWithFilterAsync<SupabaseOfflineAttendanceSession>(
-                    "session_id", Supabase.Postgrest.Constants.Operator.Equals, sessionId);
-                
-                return sessions.FirstOrDefault();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to get offline session from Supabase");
-                return null;
-            }
-        }
-
-        private async Task<List<SupabaseOfflineAttendanceSession>> GetOfflineRecordsByCourseCodeAsync(string courseCode)
-        {
-            try
-            {
-                return await _database.GetWithFilterAsync<SupabaseOfflineAttendanceSession>(
-                    "course_code", Supabase.Postgrest.Constants.Operator.Equals, courseCode);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to get offline records by course code");
-                return new List<SupabaseOfflineAttendanceSession>();
-            }
-        }
-
-        private async Task<EdgeFunctionRequest> CreateOfflineEdgeFunctionRequestAsync(string encryptedQRPayload, AttendanceRecord attendanceRecord)
-        {
-            // Implement QR payload decoding and edge function request creation
-            // This should use your existing QR decoder utilities
-            var payloadData = await DecodeQRPayloadAsync(encryptedQRPayload);
-            
-            return new EdgeFunctionRequest
-            {
-                QrCodePayload = payloadData,
-                AttendanceData = attendanceRecord,
-                PayloadSignature = await GeneratePayloadSignatureAsync(payloadData)
-            };
-        }
-
-        private async Task<string> GetMatricNumberFromDeviceAsync(string deviceId)
-        {
-            // Implement device-to-matricnumber mapping
-            // This should retrieve the matric number associated with the device
-            return await _localStorage.GetItemAsync<string>($"matric_number_{deviceId}") ?? string.Empty;
-        }
-
-        private async Task UpdateOfflineRecordStatusAsync(OfflineAttendanceRecordModel record, SyncResult result)
-        {
-            try
-            {
-                if (result.Success)
-                {
-                    record.Status = SyncStatus.Synced;
-                    record.ErrorDetails = string.Empty;
-                }
-                else
-                {
-                    record.RetryCount++;
-                    record.ErrorDetails = result.Message;
-                    record.Status = record.RetryCount >= MAX_RETRY_COUNT ? SyncStatus.Failed : SyncStatus.Pending;
-                }
-
-                var allRecords = await GetPendingOfflineRecordsAsync();
-                var existingRecord = allRecords.FirstOrDefault(r => r.Id == record.Id);
-                if (existingRecord != null)
-                {
-                    var index = allRecords.IndexOf(existingRecord);
-                    allRecords[index] = record;
-                    await _localStorage.SetItemAsync(OFFLINE_RECORDS_KEY, allRecords);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to update offline record status: {RecordId}", record.Id);
-            }
-        }
-
-        private async Task CleanupSyncedRecordsAsync()
-        {
-            try
-            {
-                var allRecords = await GetPendingOfflineRecordsAsync();
-                var pendingRecords = allRecords.Where(r => r.Status != SyncStatus.Synced).ToList();
-                
-                await _localStorage.SetItemAsync(OFFLINE_RECORDS_KEY, pendingRecords);
-                
-                var cleanedCount = allRecords.Count - pendingRecords.Count;
-                if (cleanedCount > 0)
-                {
-                    _logger.LogInformation("Cleaned up {Count} synced offline records", cleanedCount);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to cleanup synced records");
-            }
-        }
-
-        // Placeholder methods for QR decoding - implement based on your existing utilities
-        private async Task<string> ExtractSessionIdFromQRPayloadAsync(string encryptedQRPayload)
-        {
-            // Implement using your existing QR decoder
-            throw new NotImplementedException("Implement QR session ID extraction");
-        }
-
-        private async Task<QRCodePayloadData> DecodeQRPayloadAsync(string encryptedQRPayload)
-        {
-            // Implement using your existing QR decoder
-            throw new NotImplementedException("Implement QR payload decoding");
-        }
-
-        private async Task<string> GeneratePayloadSignatureAsync(QRCodePayloadData payloadData)
-        {
-            // Implement HMAC signature generation
-            throw new NotImplementedException("Implement payload signature generation");
-        }
-
-        #endregion
     }
 
+    // Additional model classes for edge function responses
+    public class EdgeFunctionResponse
+    {
+        public bool Success { get; set; }
+        public string Message { get; set; } = string.Empty;
+        public string? ErrorCode { get; set; }
+        public SessionDataResponse? SessionData { get; set; }
+        public ProcessedAttendanceResponse? ProcessedAttendance { get; set; }
+    }
+
+    public class EdgeFunctionErrorResponse
+    {
+        public bool Success { get; set; }
+        public string Message { get; set; } = string.Empty;
+        public string ErrorCode { get; set; } = string.Empty;
+        public DateTime Timestamp { get; set; }
+        public bool CanRetry { get; set; }
+    }
+
+    public class SessionDataResponse
+    {
+        public string SessionId { get; set; } = string.Empty;
+        public string CourseCode { get; set; } = string.Empty;
+        public DateTime StartTime { get; set; }
+        public DateTime EndTime { get; set; }
+        public bool IsOfflineMode { get; set; }
+    }
+
+    public class ProcessedAttendanceResponse
+    {
+        public string MatricNumber { get; set; } = string.Empty;
+        public DateTime ScannedAt { get; set; }
+        public bool IsOfflineRecord { get; set; }
+        public string SyncStatus { get; set; } = string.Empty;
+    }
 }
