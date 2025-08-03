@@ -3,20 +3,18 @@
 @inject IBackdropService BackdropService
 @implements IDisposable
 
-@* InfoPopup.razor - Using GlobalBackdrop component *@
+@* InfoPopup.razor - FIXED: Removed overlay duplication *@
 @if (IsVisible)
 {
-    <div class="info-popup-overlay" @onclick="OnOverlayClick">
-        <div class="info-popup-modal" @onclick:stopPropagation="true">
-            <div class="info-popup-header">
-                <h4>@GetInfoTitle()</h4>
-                <button class="close-btn" @onclick="OnClose">
-                    <span>&times;</span>
-                </button>
-            </div>
-            <div class="info-popup-content">
-                <p>@GetInfoContent()</p>
-            </div>
+    <div class="info-popup-modal" @onclick:stopPropagation="true">
+        <div class="info-popup-header">
+            <h4>@GetInfoTitle()</h4>
+            <button class="close-btn" @onclick="OnClose">
+                <span>&times;</span>
+            </button>
+        </div>
+        <div class="info-popup-content">
+            <p>@GetInfoContent()</p>
         </div>
     </div>
 }
@@ -27,11 +25,6 @@
     [Parameter] public bool IsVisible { get; set; }
     [Parameter] public InfoType CurrentInfoType { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
-
-    private async Task OnOverlayClick()
-    {
-        await OnClose.InvokeAsync();
-    }
 
     private string GetInfoTitle()
     {

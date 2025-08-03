@@ -1,29 +1,17 @@
-/* InfoPopup.razor.css - Using GlobalBackdrop */
+/* InfoPopup.razor.css - FIXED */
+
+/* Remove duplicate overlay - use only GlobalBackdrop */
 .info-popup-overlay {
-    position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    bottom: 0 !important;
-    width: 100vw !important;
-    height: 100vh !important;
-    z-index: 9999 !important;
-
-    background-color: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(4px);
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    animation: fadeIn 0.3s ease-out;
-
-    margin: 0 !important;
-    padding: 0 !important;
-    transform: none !important;
+    display: none; /* Remove this layer completely */
 }
 
 .info-popup-modal {
+    position: fixed !important; /* Force fixed positioning */
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    z-index: 9999 !important; /* Above backdrop */
+
     background: white;
     border-radius: 8px;
     max-width: 500px;
@@ -32,8 +20,13 @@
     overflow-y: auto;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
     animation: slideUp 0.3s ease-out;
+
+    /* Ensure independence from parent containers */
+    margin: 0 !important;
+    position: fixed !important;
 }
 
+/* Rest unchanged */
 .info-popup-header {
     display: flex;
     justify-content: space-between;
@@ -81,19 +74,14 @@
     white-space: pre-line;
 }
 
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
 @keyframes slideUp {
     from {
         opacity: 0;
-        transform: translateY(30px) scale(0.95);
+        transform: translate(-50%, -50%) scale(0.95);
     }
     to {
         opacity: 1;
-        transform: translateY(0) scale(1);
+        transform: translate(-50%, -50%) scale(1);
     }
 }
 
