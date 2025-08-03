@@ -1,70 +1,70 @@
 using AirCode.Domain.Entities;
-
+using AirCode.Models.Supabase;
+using AttendanceRecord = AirCode.Models.Supabase.AttendanceRecord;
 namespace AirCode.Services.Attendance;
 
 /// <summary>
-/// Admin-side offline sync service interface for managing offline attendance sessions and syncing
-/// This service is used by administrators and has direct database access, bypassing edge function validation
+/// Admin-side offline sync service interface for managing offline attendance sessions
+/// This service is used by administrators and has direct database access
+/// For client-side operations, use IOfflineAttendanceClientService
 /// </summary>
 public interface IOfflineSyncService
 {
-    #region Core Sync Methods
+    #region Core Admin Sync Methods
     
     /// <summary>
-    /// Sync all pending offline records to the server
+    /// Sync all pending offline sessions to Firebase (admin use)
     /// </summary>
     Task<bool> SyncPendingRecordsAsync();
     
     /// <summary>
-    /// Process individual offline attendance record
+    /// Process individual offline attendance record (redirects to client service)
     /// </summary>
+    [Obsolete("Use IOfflineAttendanceClientService for client operations")]
     Task<SyncResult> ProcessOfflineAttendanceAsync(OfflineAttendanceRecordModel recordModel);
     
     /// <summary>
-    /// Sync offline session data (admin use)
+    /// Sync offline session data to Firebase (admin use)
     /// </summary>
     Task<SyncResult> SyncOfflineSessionAsync(OfflineSessionData session);
     
     /// <summary>
-    /// Schedule periodic background sync
+    /// Schedule periodic background sync for admin operations
     /// </summary>
     Task SchedulePeriodicSync();
     
     #endregion
 
-    #region Client-Side Offline Methods
+    #region Client-Side Methods (Not Implemented - Use Client Service)
     
     /// <summary>
-    /// Store offline attendance record when client scans QR code without internet
+    /// Not implemented - use IOfflineAttendanceClientService
     /// </summary>
-    /// <param name="encryptedQRPayload">The encrypted QR code payload</param>
-    /// <param name="deviceId">Optional device identifier, will generate if not provided</param>
-    /// <returns>True if stored successfully</returns>
+    [Obsolete("Use IOfflineAttendanceClientService.ProcessQRCodeScanAsync")]
     Task<bool> StoreOfflineAttendanceAsync(string encryptedQRPayload, string deviceId = null);
     
     /// <summary>
-    /// Check if user has pending offline attendance records
+    /// Not implemented - use IOfflineAttendanceClientService
     /// </summary>
-    /// <returns>True if there are pending records</returns>
+    [Obsolete("Use IOfflineAttendanceClientService.GetSyncStatusAsync")]
     Task<bool> HasPendingOfflineRecordsAsync();
     
     /// <summary>
-    /// Get count of pending offline records
+    /// Not implemented - use IOfflineAttendanceClientService
     /// </summary>
-    /// <returns>Number of pending offline records</returns>
+    [Obsolete("Use IOfflineAttendanceClientService.GetSyncStatusAsync")]
     Task<int> GetPendingOfflineRecordsCountAsync();
     
     /// <summary>
-    /// Store student's matric number for offline use
+    /// Not implemented - use IOfflineAttendanceClientService
     /// </summary>
-    /// <param name="matricNumber">Student's matric number</param>
-    /// <returns>True if stored successfully</returns>
+    [Obsolete("Use IOfflineAttendanceClientService.InitializeAsync")]
     Task<bool> StoreMatricNumberAsync(string matricNumber);
     
     /// <summary>
-    /// Clear all offline records (use with caution)
+    /// Not implemented - use IOfflineAttendanceClientService
     /// </summary>
-    /// <returns>True if cleared successfully</returns>
+    [Obsolete("Use IOfflineAttendanceClientService.ClearOfflineRecordsAsync")]
     Task<bool> ClearAllOfflineRecordsAsync();
     
     #endregion
@@ -72,7 +72,7 @@ public interface IOfflineSyncService
     #region Admin Direct Database Methods
     
     /// <summary>
-    /// Create offline session record directly in database (admin bypasses edge function)
+    /// Create offline session record in Supabase when admin creates session
     /// </summary>
     /// <param name="sessionData">Session data to create offline record for</param>
     /// <returns>True if created successfully</returns>

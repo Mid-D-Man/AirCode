@@ -89,6 +89,31 @@ namespace AirCode.Models.EdgeFunction
             MID_HelperFunctions.GetStructOrClassMemberValues(this);
     }
 
+    public class EdgeFunctionErrorResponse
+    {
+        public bool Success { get; set; }
+        public string Message { get; set; } = string.Empty;
+        public string ErrorCode { get; set; } = string.Empty;
+        public DateTime Timestamp { get; set; }
+        public bool CanRetry { get; set; }
+    }
+
+    public class SessionDataResponse
+    {
+        public string SessionId { get; set; } = string.Empty;
+        public string CourseCode { get; set; } = string.Empty;
+        public DateTime StartTime { get; set; }
+        public DateTime EndTime { get; set; }
+        public bool IsOfflineMode { get; set; }
+    }
+
+    public class ProcessedAttendanceResponse
+    {
+        public string MatricNumber { get; set; } = string.Empty;
+        public DateTime ScannedAt { get; set; }
+        public bool IsOfflineRecord { get; set; }
+        public string SyncStatus { get; set; } = string.Empty;
+    }
     public class CatResponse
     {
         public string ImageUrl { get; set; } = string.Empty;

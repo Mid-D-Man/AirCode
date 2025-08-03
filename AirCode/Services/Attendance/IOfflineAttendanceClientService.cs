@@ -1,3 +1,6 @@
+using AirCode.Models.Attendance;
+using AirCode.Models.Events;
+
 namespace AirCode.Services.Attendance;
 using AirCode.Models.QRCode;
 
