@@ -1,5 +1,17 @@
 /* InfoPopup.razor.css - FIXED */
 
+/* CRITICAL: Force GlobalBackdrop to escape content-bottom containment */
+.content-bottom .global-backdrop-portal {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    z-index: 8999 !important;
+}
+
 /* Remove duplicate overlay - use only GlobalBackdrop */
 .info-popup-overlay {
     display: none; /* Remove this layer completely */
@@ -98,4 +110,4 @@
     .info-popup-content {
         padding: 1rem;
     }
-} 
+}
