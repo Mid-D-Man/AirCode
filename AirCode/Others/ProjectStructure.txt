@@ -1,7 +1,7 @@
 Project Structure Documentation
-Generated: Sun Aug  3 15:53:40 UTC 2025
+Generated: Sun Aug  3 17:38:20 UTC 2025
 Repository: Mid-D-Man/AirCode
-Commit: 3858710fde9d44bc5ff90a6e32aa139819104c65
+Commit: 466157ffbdab47cb7dc0b02fe9963855e34f0499
 ==================================
 
 Source Files:
@@ -112,7 +112,9 @@ Layout/FullScreen/FullScreenLayout.razor.css
 Layout/Main/MainLayout.razor
 Layout/Main/MainLayout.razor.css
 Models/Admin/DashboardModels.cs
+Models/Attendance/AttendanceModels.cs
 Models/EdgeFunction/EdgeFunctionModels.cs
+Models/Events/EventModels.cs
 Models/Firebase/FirebaseModels.cs
 Models/Forms/FormModels.cs
 Models/PWA/PWAModels.cs
@@ -331,7 +333,7 @@ Directory Structure:
 
 File Count Summary:
 ==================
-.cs       : 108 files
+.cs       : 110 files
 .razor    : 66 files
 .csproj   : 1 files
 .json     : 12 files
