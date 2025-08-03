@@ -1,3 +1,5 @@
+using AirCode.Utilities.HelperScripts;
+
 namespace AirCode.Services.VisualElements;
 using Microsoft.AspNetCore.Components;
 
@@ -28,6 +30,7 @@ using Microsoft.AspNetCore.Components;
         public void Show()
         {
             IsVisible = true;
+          
         }
 
         public void Hide()

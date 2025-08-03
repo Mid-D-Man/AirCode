@@ -1,13 +1,13 @@
-/* GlobalBackdrop.razor.css */
+/* GlobalBackdrop.razor.css - Container-scoped positioning */
 .global-backdrop-portal {
-    position: fixed !important;
+    position: absolute !important; /* Changed from fixed */
     top: 0 !important;
     left: 0 !important;
     right: 0 !important;
     bottom: 0 !important;
-    width: 100vw !important;
-    height: 100vh !important;
-    z-index: 9999 !important;
+    width: 100% !important;
+    height: 100% !important;
+    z-index: 8999 !important; /* Below InfoPopup */
 
     background-color: rgba(0, 0, 0, 0.5);
     backdrop-filter: blur(4px);
@@ -27,32 +27,19 @@
 
 .global-backdrop-content {
     position: relative;
-    max-width: 90vw;
-    max-height: 90vh;
+    max-width: 90%;
+    max-height: 90%;
     overflow-y: auto;
     animation: slideUp 0.3s ease-out;
 }
 
-/* Dynamic viewport height support */
-@supports (height: 100dvh) {
-    .global-backdrop-portal {
-        height: 100dvh !important;
-        width: 100dvw !important;
-    }
+/* Layout-specific positioning */
+.superior-admin-layout .main-content {
+    position: relative; /* Establishes positioning context */
 }
 
-/* Mobile optimization */
-@media (max-width: 768px) {
-    .global-backdrop-portal {
-        height: 100vh !important;
-        width: 100vw !important;
-    }
-
-    .global-backdrop-content {
-        max-width: 95vw;
-        max-height: 95vh;
-        margin: 1rem;
-    }
+.client-layout .content-bottom {
+    position: relative; /* Establishes positioning context */
 }
 
 /* Animation keyframes */
@@ -76,11 +63,4 @@
     }
 }
 
-/* Force portal above all layout containers */
-.superior-admin-layout .global-backdrop-portal,
-.client-layout .global-backdrop-portal,
-.main-content .global-backdrop-portal,
-.content-bottom .global-backdrop-portal {
-    position: fixed !important;
-    z-index: 9999 !important;
-}
+/* Remove layout-specific overrides - no longer needed */
