@@ -6,12 +6,16 @@ using AirCode.Utilities.HelperScripts;
 using AirCode.Domain.Entities;
 using AirCode.Services.Auth;
 using ReactorBlazorQRCodeScanner;
+using AirCode.Models.Attendance;
+using AirCode.Models.Events;
 
 namespace AirCode.Pages.Client
 {
     public partial class OfflineScanPage : ComponentBase, IAsyncDisposable
     {
         [Inject] private IOfflineCredentialsService OfllineCredentialsService { get; set; }
+        [Inject] private IOfflineAttendanceClientService OfflineAttendanceService { get; set; }
+        
         private QRCodeScannerJsInterop? _qrCodeScannerJsInterop;
         private Action<string>? _onQrCodeScanAction;
         private bool isScanning = true;
@@ -20,13 +24,11 @@ namespace AirCode.Pages.Client
         private bool resultSuccess = false;
         private bool scanComplete = false;
         private bool isSyncing = false;
+        private bool isOnline = false;
         private string resultMessage = string.Empty;
         private int pendingRecordsCount = 0;
         private DateTime? lastSyncTime = null;
-
-        // TODO: Get actual user data from authentication service
-        private string currentUserMatricNumber = "OFFLINE_USER"; // Temporary for offline mode
-        private string currentDeviceGuid = GenerateDeviceGuid();
+        private string currentUserMatricNumber = string.Empty;
 
         protected override async Task OnInitializedAsync()
         {
@@ -37,8 +39,17 @@ namespace AirCode.Pages.Client
             {
                 await _qrCodeScannerJsInterop.Init(_onQrCodeScanAction);
                 MID_HelperFunctions.DebugMessage("Offline QR Scanner initialized successfully", DebugClass.Info);
+                
+                // Get user credentials
                 currentUserMatricNumber = await OfllineCredentialsService.GetMatricNumberAsync();
-                // Load offline status
+                
+                // Initialize offline service
+                await OfflineAttendanceService.InitializeAsync(currentUserMatricNumber);
+                
+                // Subscribe to events
+                SubscribeToServiceEvents();
+                
+                // Load initial status
                 await LoadOfflineStatus();
             }
             catch (Exception ex)
@@ -46,6 +57,35 @@ namespace AirCode.Pages.Client
                 MID_HelperFunctions.DebugMessage($"Failed to initialize offline scanner: {ex.Message}", DebugClass.Exception);
                 ShowResult($"Failed to initialize scanner: {ex.Message}", false);
             }
+        }
+
+        private void SubscribeToServiceEvents()
+        {
+            OfflineAttendanceService.OfflineAttendanceRecorded += OnOfflineAttendanceRecorded;
+            OfflineAttendanceService.SyncStatusChanged += OnSyncStatusChanged;
+            OfflineAttendanceService.NetworkStatusChanged += OnNetworkStatusChanged;
+        }
+
+        private async void OnOfflineAttendanceRecorded(object sender, OfflineAttendanceEventArgs e)
+        {
+            await LoadOfflineStatus();
+            await InvokeAsync(StateHasChanged);
+        }
+
+        private async void OnSyncStatusChanged(object sender, SyncStatusEventArgs e)
+        {
+            isSyncing = e.IsInProgress;
+            if (!e.IsInProgress)
+            {
+                await LoadOfflineStatus();
+            }
+            await InvokeAsync(StateHasChanged);
+        }
+
+        private async void OnNetworkStatusChanged(object sender, NetworkStatusEventArgs e)
+        {
+            isOnline = e.IsOnline;
+            await InvokeAsync(StateHasChanged);
         }
 
         private async void OnQrCodeScan(string code)
@@ -62,28 +102,25 @@ namespace AirCode.Pages.Client
             
                 try
                 {
-                    // Decode the session data to check offline capability
-                    var decodedSessionData = await QRDecoder.DecodeSessionDataAsync(code);
-                
-                    if (decodedSessionData != null)
+                    // Use the service to process the QR code
+                    var result = await OfflineAttendanceService.ProcessQRCodeScanAsync(code);
+                    
+                    if (result.Success)
                     {
-                        MID_HelperFunctions.DebugMessage($"Valid AirCode QR detected for offline processing - Course: {decodedSessionData.CourseCode}", DebugClass.Info);
-                    
-                        // Check if offline sync is allowed
-                        if (!decodedSessionData.AllowOfflineConnectionAndSync)
-                        {
-                            ShowResult("❌ This session does not support offline attendance. Please connect to the internet.", false);
-                            return;
-                        }
-                    
-                        // Process offline attendance
-                        await ProcessOfflineAttendance(code, decodedSessionData);
+                        var mode = result.IsOfflineMode ? "📴 Offline" : "🌐 Online";
+                        var syncInfo = result.RequiresSync ? "<br/><small>Will sync when online</small>" : "";
+                        ShowResult($"{mode} attendance recorded successfully!{syncInfo}", true);
+                        MID_HelperFunctions.DebugMessage("Attendance processed successfully", DebugClass.Info);
                     }
                     else
                     {
-                        MID_HelperFunctions.DebugMessage("QR code is not a valid AirCode attendance QR", DebugClass.Warning);
-                        ShowResult("Invalid attendance QR code format", false);
+                        var userFriendlyMessage = GetUserFriendlyErrorMessage(result.ErrorCode, result.Message);
+                        ShowResult(userFriendlyMessage, false);
+                        MID_HelperFunctions.DebugMessage($"Attendance processing failed: {result.Message}", DebugClass.Warning);
                     }
+                    
+                    // Refresh status after processing
+                    await LoadOfflineStatus();
                 }
                 catch (Exception ex)
                 {
@@ -96,65 +133,18 @@ namespace AirCode.Pages.Client
             }
         }
 
-        private async Task ProcessOfflineAttendance(string qrCode, Models.QRCode.DecodedSessionData decodedData)
+        private string GetUserFriendlyErrorMessage(string errorCode, string originalMessage)
         {
-            try
+            return errorCode switch
             {
-                MID_HelperFunctions.DebugMessage($"Processing offline attendance for session: {decodedData.SessionId}", DebugClass.Info);
-
-                // Create offline attendance record
-                var offlineRecord = new OfflineAttendanceRecordModel
-                {
-                    Id = Guid.NewGuid().ToString(),
-                    SessionId = decodedData.SessionId,
-                    CourseCode = decodedData.CourseCode,
-                    MatricNumber = currentUserMatricNumber,
-                    DeviceGuid = currentDeviceGuid,
-                    ScanTime = DateTime.UtcNow,
-                    EncryptedQrPayload = qrCode, // Store the original encrypted QR payload
-                    TemporalKey = decodedData.TemporalKey,
-                    UseTemporalKeyRefresh = decodedData.UseTemporalKeyRefresh,
-                    SecurityFeatures = (int)decodedData.SecurityFeatures,
-                    RecordedAt = DateTime.UtcNow,
-                    SyncStatus = SyncStatus.Pending,
-                    SyncAttempts = 0
-                };
-                MID_HelperFunctions.DebugMessage($"Offline attendance record: {MID_HelperFunctions.ToJson(offlineRecord)}", DebugClass.Log);
-
-                // Process the offline record
-                var result = await OfflineSyncService.ProcessOfflineAttendanceAsync(offlineRecord);
-
-                if (result.Success)
-                {
-                    ShowResult($"📴 Offline attendance recorded successfully!<br/><small>Course: {decodedData.CourseCode}<br/>Will sync when online</small>", true);
-                    MID_HelperFunctions.DebugMessage("Offline attendance processed successfully", DebugClass.Info);
-                    
-                    // Update offline status
-                    await LoadOfflineStatus();
-                }
-                else
-                {
-                    var userFriendlyMessage = GetOfflineErrorMessage(result.ErrorMessage);
-                    ShowResult(userFriendlyMessage, false);
-                    MID_HelperFunctions.DebugMessage($"Offline attendance processing failed: {result.ErrorMessage}", DebugClass.Warning);
-                }
-            }
-            catch (Exception ex)
-            {
-                MID_HelperFunctions.DebugMessage($"Exception in ProcessOfflineAttendance: {ex}", DebugClass.Exception);
-                ShowResult($"An unexpected error occurred during offline processing.", false);
-            }
-        }
-
-        private string GetOfflineErrorMessage(string originalMessage)
-        {
-            return originalMessage switch
-            {
+                "DUPLICATE_ATTENDANCE" => "⚠️ You have already recorded attendance for this session.",
                 "DUPLICATE_OFFLINE_RECORD" => "⚠️ You have already recorded attendance for this session offline.",
                 "DEVICE_ALREADY_USED_OFFLINE" => "🛡️ This device has already been used for this session by another student.",
                 "SESSION_EXPIRED" => "⏰ This attendance session has expired and cannot be recorded.",
                 "INVALID_QR_FORMAT" => "📋 Invalid QR code format. Please scan a valid attendance QR code.",
                 "STORAGE_ERROR" => "💾 Failed to save offline record. Please try again.",
+                "NETWORK_ERROR" => "🌐 Network connection failed. Please check your internet connection.",
+                "OFFLINE_NOT_SUPPORTED" => "❌ This session does not support offline attendance. Please connect to the internet.",
                 _ => $"❌ {originalMessage}"
             };
         }
@@ -168,7 +158,7 @@ namespace AirCode.Pages.Client
                 return false;
             }
 
-            // Validate user matric number (in real app, get from offline credentials)
+            // Validate user matric number
             if (string.IsNullOrWhiteSpace(currentUserMatricNumber))
             {
                 ShowResult("User identification not available for offline mode.", false);
@@ -182,10 +172,10 @@ namespace AirCode.Pages.Client
         {
             try
             {
-                // In a real implementation, this would query the offline storage service
-                // For now, simulate loading pending records count
-                pendingRecordsCount = await GetPendingRecordsCount();
-                lastSyncTime = await GetLastSyncTime();
+                var syncStatus = await OfflineAttendanceService.GetSyncStatusAsync();
+                pendingRecordsCount = syncStatus.PendingRecordsCount;
+                lastSyncTime = syncStatus.LastSyncAttempt;
+                isOnline = syncStatus.IsOnline;
                 StateHasChanged();
             }
             catch (Exception ex)
@@ -194,37 +184,19 @@ namespace AirCode.Pages.Client
             }
         }
 
-        private async Task<int> GetPendingRecordsCount()
-        {
-            // TODO: Implement actual count from offline storage
-            await Task.Delay(100); // Simulate async operation
-            return new Random().Next(0, 5); // Temporary simulation
-        }
-
-        private async Task<DateTime?> GetLastSyncTime()
-        {
-            // TODO: Implement actual last sync time from offline storage
-            await Task.Delay(100); // Simulate async operation
-            return DateTime.Now.AddMinutes(-new Random().Next(10, 120)); // Temporary simulation
-        }
-
         private async Task TrySync()
         {
             if (isSyncing) return;
-
-            isSyncing = true;
-            StateHasChanged();
 
             try
             {
                 MID_HelperFunctions.DebugMessage("Attempting to sync offline records", DebugClass.Info);
                 
-                var syncResult = await OfflineSyncService.SyncPendingRecordsAsync();
+                var syncResult = await OfflineAttendanceService.ManualSyncAsync();
                 
                 if (syncResult)
                 {
                     ShowResult("✅ Sync completed successfully!", true);
-                    await LoadOfflineStatus(); // Refresh status
                 }
                 else
                 {
@@ -236,18 +208,6 @@ namespace AirCode.Pages.Client
                 MID_HelperFunctions.DebugMessage($"Sync error: {ex.Message}", DebugClass.Exception);
                 ShowResult("❌ Sync failed due to an error.", false);
             }
-            finally
-            {
-                isSyncing = false;
-                StateHasChanged();
-            }
-        }
-
-        private static string GenerateDeviceGuid()
-        {
-            // In a real implementation, this should be stored and retrieved from device storage
-            // For now, generate a consistent GUID based on some device characteristics
-            return Guid.NewGuid().ToString("N")[..16].ToUpper();
         }
 
         private void ShowResult(string message, bool success)
@@ -314,6 +274,14 @@ namespace AirCode.Pages.Client
 
         public async ValueTask DisposeAsync()
         {
+            // Unsubscribe from events
+            if (OfflineAttendanceService != null)
+            {
+                OfflineAttendanceService.OfflineAttendanceRecorded -= OnOfflineAttendanceRecorded;
+                OfflineAttendanceService.SyncStatusChanged -= OnSyncStatusChanged;
+                OfflineAttendanceService.NetworkStatusChanged -= OnNetworkStatusChanged;
+            }
+
             if (_qrCodeScannerJsInterop != null && isScanning)
             {
                 try

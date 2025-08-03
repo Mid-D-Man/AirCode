@@ -9,12 +9,16 @@
 @inject QRCodeDecoder QRDecoder
 @inject IOfflineSyncService OfflineSyncService
 @layout FullScreenLayout
+
 <div class="offline-scan-page">
     <div class="scan-header">
-        <h3>Offline Attendance Scan</h3>
-        <p>Scan QR codes for offline attendance recording</p>
-        <div class="offline-indicator">
-            <span class="offline-badge">📴 Offline Mode</span>
+        <h3>Smart Attendance Scan</h3>
+        <p>Scan QR codes for automatic online/offline attendance recording</p>
+        <div class="status-indicators">
+            <div class="connection-indicator @(isOnline ? "online" : "offline")">
+                <span class="status-icon">@(isOnline ? "🌐" : "📴")</span>
+                <span class="status-text">@(isOnline ? "Online" : "Offline") Mode</span>
+            </div>
         </div>
     </div>
     
@@ -77,23 +81,44 @@
             }
         </div>
 
-        <!-- Offline status panel -->
-        <div class="offline-status-panel">
+        <!-- Smart sync status panel -->
+        <div class="sync-status-panel @(isOnline ? "online-mode" : "offline-mode")">
             <div class="status-header">
-                <span class="status-icon">💾</span>
-                <span>Offline Records</span>
+                <span class="status-icon">@(isOnline ? "⚡" : "💾")</span>
+                <span>@(isOnline ? "Sync Status" : "Offline Records")</span>
             </div>
+            
             <div class="status-info">
+                @if (isOnline)
+                {
+                    <div class="status-item">
+                        <span class="label">Connection:</span>
+                        <span class="value online-text">✅ Online</span>
+                    </div>
+                }
+                else
+                {
+                    <div class="status-item">
+                        <span class="label">Connection:</span>
+                        <span class="value offline-text">📴 Offline</span>
+                    </div>
+                }
+                
                 <div class="status-item">
                     <span class="label">Pending Records:</span>
-                    <span class="value">@pendingRecordsCount</span>
+                    <span class="value @(pendingRecordsCount > 0 ? "has-pending" : "")">@pendingRecordsCount</span>
                 </div>
-                <div class="status-item">
-                    <span class="label">Last Sync:</span>
-                    <span class="value">@(lastSyncTime?.ToString("HH:mm") ?? "Never")</span>
-                </div>
+                
+                @if (lastSyncTime.HasValue)
+                {
+                    <div class="status-item">
+                        <span class="label">Last Activity:</span>
+                        <span class="value">@lastSyncTime.Value.ToString("HH:mm")</span>
+                    </div>
+                }
             </div>
-            @if (pendingRecordsCount > 0)
+            
+            @if (pendingRecordsCount > 0 && isOnline)
             {
                 <button class="sync-btn" @onclick="TrySync" disabled="@isSyncing">
                     @if (isSyncing)
@@ -103,9 +128,23 @@
                     }
                     else
                     {
-                        <span>🔄 Try Sync</span>
+                        <span>🔄 Sync Now</span>
                     }
                 </button>
+            }
+            else if (pendingRecordsCount > 0 && !isOnline)
+            {
+                <div class="sync-info">
+                    <span class="info-icon">ℹ️</span>
+                    <span>Records will sync automatically when online</span>
+                </div>
+            }
+            else if (pendingRecordsCount == 0 && isOnline)
+            {
+                <div class="sync-info success">
+                    <span class="info-icon">✅</span>
+                    <span>All records synced</span>
+                </div>
             }
         </div>
     </div>

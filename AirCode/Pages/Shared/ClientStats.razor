@@ -1,7 +1,10 @@
 @page "/Client/Stats"
 @using AirCode.Layout.FullScreen
+@using AirCode.Components.SharedPrefabs.Spinner
+@using AirCode.Components.SharedPrefabs.Others
 @layout FullScreenLayout
 @inherits ClientStatsBase
+
 <div class="client-stats-page">
     <div class="stats-header">
         <h2>My Attendance Statistics</h2>
@@ -10,22 +13,7 @@
 
     @if (IsLoading)
     {
-        <div class="loading-container">
-            <div class="loading-content">
-                <div class="loading-spinner">
-                    <div class="spinner-ring"></div>
-                    <div class="spinner-ring spinner-ring-2"></div>
-                    <div class="spinner-ring spinner-ring-3"></div>
-                </div>
-                <h3>Loading Statistics</h3>
-                <p>Fetching your attendance data...</p>
-                <div class="loading-progress">
-                    <div class="progress-bar">
-                        <div class="progress-fill"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <LoadingSpinner Title="Loading Statistics" Subtitle="Fetching your attendance data..." />
     }
     else if (!string.IsNullOrEmpty(ErrorMessage))
     {
@@ -145,186 +133,194 @@
                 </div>
             </div>
         </div>
-
-        <!-- Overall Stats Modal/Section -->
-        @if (ShowOverallStatsModal)
-        {
-            <div class="stats-modal">
-                <div class="modal-header">
-                    <h2>Overall Statistics Summary</h2>
-                    <button class="close-btn" @onclick="CloseOverallStats">
-                        <i class="oi oi-x"></i>
-                    </button>
-                </div>
-                <div class="modal-content">
-                    <div class="overall-stats-grid">
-                        <div class="stat-card total-courses">
-                            <div class="card-header">
-                                <i class="oi oi-book"></i>
-                                <h4>Course Enrollment</h4>
-                            </div>
-                            <div class="stat-details">
-                                <div class="primary-stat">@TotalEnrolledCourses</div>
-                                <div class="stat-label">Total Courses</div>
-                                <div class="secondary-stats">
-                                    <div class="secondary-stat">
-                                        <span class="value">@TotalCreditUnits</span>
-                                        <span class="label">Credit Units</span>
-                                    </div>
-                                    @if (TotalCarryOverCourses > 0)
-                                    {
-                                        <div class="secondary-stat warning">
-                                            <span class="value">@TotalCarryOverCourses</span>
-                                            <span class="label">Carry Over</span>
-                                        </div>
-                                    }
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="stat-card attendance-summary">
-                            <div class="card-header">
-                                <i class="oi oi-check"></i>
-                                <h4>Attendance Summary</h4>
-                            </div>
-                            <div class="stat-details">
-                                <div class="attendance-circle @GetAttendanceClass(OverallAttendanceRate)">
-                                    <div class="percentage">@OverallAttendanceRate%</div>
-                                    <div class="circle-label">Overall Rate</div>
-                                </div>
-                                <div class="attendance-breakdown">
-                                    <div class="breakdown-item">
-                                        <span class="label">Classes Attended:</span>
-                                        <span class="value">@TotalClassesAttended</span>
-                                    </div>
-                                    <div class="breakdown-item">
-                                        <span class="label">Total Classes:</span>
-                                        <span class="value">@TotalClasses</span>
-                                    </div>
-                                    <div class="breakdown-item">
-                                        <span class="label">Classes Missed:</span>
-                                        <span class="value">@(TotalClasses - TotalClassesAttended)</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        }
-
-        <!-- Course-Specific Stats Section -->
-        @if (ShowCourseStatsModal)
-        {
-            <div class="stats-modal">
-                <div class="modal-header">
-                    <h2>Course-Specific Statistics</h2>
-                    <button class="close-btn" @onclick="CloseCourseStats">
-                        <i class="oi oi-x"></i>
-                    </button>
-                </div>
-                <div class="modal-content">
-                    <div class="courses-section">
-                        <div class="section-header">
-                            <div class="course-filters">
-                                <select @bind="SelectedSemesterFilter" @bind:after="FilterCourses" class="filter-select">
-                                    <option value="">All Semesters</option>
-                                    <option value="First">First Semester</option>
-                                    <option value="Second">Second Semester</option>
-                                </select>
-                                <select @bind="SelectedStatusFilter" @bind:after="FilterCourses" class="filter-select">
-                                    <option value="">All Status</option>
-                                    <option value="Enrolled">Enrolled</option>
-                                    <option value="Carryover">Carry Over</option>
-                                </select>
-                            </div>
-                        </div>
-                        
-                        @if (FilteredCourseStats?.Any() == true)
-                        {
-                            <div class="courses-grid">
-                                @foreach (var courseStats in FilteredCourseStats)
-                                {
-                                    <div class="course-stats-card @(courseStats.IsCarryOver ? "carry-over" : "")" 
-                                         @onclick="() => ViewCourseDetails(courseStats.CourseCode)">
-                                        <div class="course-header">
-                                            <div class="course-title">
-                                                <h4>@courseStats.CourseName</h4>
-                                                <span class="course-code">@courseStats.CourseCode</span>
-                                            </div>
-                                            <div class="course-badges">
-                                                @if (courseStats.IsCarryOver)
-                                                {
-                                                    <span class="carry-over-badge">Carry Over</span>
-                                                }
-                                                <span class="attendance-badge @GetAttendanceClass(courseStats.AttendancePercentage)">
-                                                    @GetAttendanceLabel(courseStats.AttendancePercentage)
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        <div class="course-stats">
-                                            <div class="stat-item">
-                                                <span class="stat-label">Attendance Rate</span>
-                                                <div class="progress-container">
-                                                    <div class="progress-bar">
-                                                        <div class="progress @GetAttendanceClass(courseStats.AttendancePercentage)" 
-                                                             style="width: @(courseStats.AttendancePercentage)%"></div>
-                                                    </div>
-                                                    <span class="stat-value">@(courseStats.AttendancePercentage)%</span>
-                                                </div>
-                                            </div>
-                                            
-                                            <div class="course-quick-stats">
-                                                <div class="quick-stat">
-                                                    <span class="value">@(courseStats.ClassesAttended)/@(courseStats.TotalClasses)</span>
-                                                    <span class="label">Classes</span>
-                                                </div>
-                                                <div class="quick-stat">
-                                                    <span class="value">@courseStats.CreditUnits</span>
-                                                    <span class="label">CU</span>
-                                                </div>
-                                                <div class="quick-stat">
-                                                    <span class="value">@courseStats.TotalAbsences</span>
-                                                    <span class="label">Absences</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                }
-                            </div>
-                        }
-                        else
-                        {
-                            <div class="no-courses">
-                                <div class="no-courses-icon">
-                                    <i class="oi oi-book"></i>
-                                </div>
-                                <h4>No Courses Found</h4>
-                                <p>@(string.IsNullOrEmpty(SelectedSemesterFilter) && string.IsNullOrEmpty(SelectedStatusFilter) 
-                                    ? "You are not enrolled in any courses yet." 
-                                    : "No courses match your current filters.")</p>
-                                @if (!string.IsNullOrEmpty(SelectedSemesterFilter) || !string.IsNullOrEmpty(SelectedStatusFilter))
-                                {
-                                    <button @onclick="ClearFilters" class="clear-filters-btn">
-                                        <i class="oi oi-x"></i>
-                                        Clear Filters
-                                    </button>
-                                }
-                            </div>
-                        }
-                    </div>
-                </div>
-            </div>
-        }
     }
 </div>
 
-<!-- Individual Course Details Modal (Existing) -->
+<!-- Overall Stats Modal -->
+@if (ShowOverallStatsModal)
+{
+    <GlobalBackdrop />
+    <div class="stats-modal">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h2>Overall Statistics Summary</h2>
+                <button class="close-btn" @onclick="CloseOverallStats">
+                    <i class="oi oi-x"></i>
+                </button>
+            </div>
+            <div class="modal-content">
+                <div class="overall-stats-grid">
+                    <div class="stat-card total-courses">
+                        <div class="card-header">
+                            <i class="oi oi-book"></i>
+                            <h4>Course Enrollment</h4>
+                        </div>
+                        <div class="stat-details">
+                            <div class="primary-stat">@TotalEnrolledCourses</div>
+                            <div class="stat-label">Total Courses</div>
+                            <div class="secondary-stats">
+                                <div class="secondary-stat">
+                                    <span class="value">@TotalCreditUnits</span>
+                                    <span class="label">Credit Units</span>
+                                </div>
+                                @if (TotalCarryOverCourses > 0)
+                                {
+                                    <div class="secondary-stat warning">
+                                        <span class="value">@TotalCarryOverCourses</span>
+                                        <span class="label">Carry Over</span>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card attendance-summary">
+                        <div class="card-header">
+                            <i class="oi oi-check"></i>
+                            <h4>Attendance Summary</h4>
+                        </div>
+                        <div class="stat-details">
+                            <div class="attendance-circle @GetAttendanceClass(OverallAttendanceRate)">
+                                <div class="percentage">@OverallAttendanceRate%</div>
+                                <div class="circle-label">Overall Rate</div>
+                            </div>
+                            <div class="attendance-breakdown">
+                                <div class="breakdown-item">
+                                    <span class="label">Classes Attended:</span>
+                                    <span class="value">@TotalClassesAttended</span>
+                                </div>
+                                <div class="breakdown-item">
+                                    <span class="label">Total Classes:</span>
+                                    <span class="value">@TotalClasses</span>
+                                </div>
+                                <div class="breakdown-item">
+                                    <span class="label">Classes Missed:</span>
+                                    <span class="value">@(TotalClasses - TotalClassesAttended)</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Course-Specific Stats Modal -->
+@if (ShowCourseStatsModal)
+{
+    <GlobalBackdrop />
+    <div class="stats-modal">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h2>Course-Specific Statistics</h2>
+                <button class="close-btn" @onclick="CloseCourseStats">
+                    <i class="oi oi-x"></i>
+                </button>
+            </div>
+            <div class="modal-content">
+                <div class="courses-section">
+                    <div class="section-header">
+                        <div class="course-filters">
+                            <select @bind="SelectedSemesterFilter" @bind:after="FilterCourses" class="filter-select">
+                                <option value="">All Semesters</option>
+                                <option value="First">First Semester</option>
+                                <option value="Second">Second Semester</option>
+                            </select>
+                            <select @bind="SelectedStatusFilter" @bind:after="FilterCourses" class="filter-select">
+                                <option value="">All Status</option>
+                                <option value="Enrolled">Enrolled</option>
+                                <option value="Carryover">Carry Over</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    @if (FilteredCourseStats?.Any() == true)
+                    {
+                        <div class="courses-grid">
+                            @foreach (var courseStats in FilteredCourseStats)
+                            {
+                                <div class="course-stats-card @(courseStats.IsCarryOver ? "carry-over" : "")" 
+                                     @onclick="() => ViewCourseDetails(courseStats.CourseCode)">
+                                    <div class="course-header">
+                                        <div class="course-title">
+                                            <h4>@courseStats.CourseName</h4>
+                                            <span class="course-code">@courseStats.CourseCode</span>
+                                        </div>
+                                        <div class="course-badges">
+                                            @if (courseStats.IsCarryOver)
+                                            {
+                                                <span class="carry-over-badge">Carry Over</span>
+                                            }
+                                            <span class="attendance-badge @GetAttendanceClass(courseStats.AttendancePercentage)">
+                                                @GetAttendanceLabel(courseStats.AttendancePercentage)
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div class="course-stats">
+                                        <div class="stat-item">
+                                            <span class="stat-label">Attendance Rate</span>
+                                            <div class="progress-container">
+                                                <div class="progress-bar">
+                                                    <div class="progress @GetAttendanceClass(courseStats.AttendancePercentage)" 
+                                                         style="width: @(courseStats.AttendancePercentage)%"></div>
+                                                </div>
+                                                <span class="stat-value">@(courseStats.AttendancePercentage)%</span>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="course-quick-stats">
+                                            <div class="quick-stat">
+                                                <span class="value">@(courseStats.ClassesAttended)/@(courseStats.TotalClasses)</span>
+                                                <span class="label">Classes</span>
+                                            </div>
+                                            <div class="quick-stat">
+                                                <span class="value">@courseStats.CreditUnits</span>
+                                                <span class="label">CU</span>
+                                            </div>
+                                            <div class="quick-stat">
+                                                <span class="value">@courseStats.TotalAbsences</span>
+                                                <span class="label">Absences</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="no-courses">
+                            <div class="no-courses-icon">
+                                <i class="oi oi-book"></i>
+                            </div>
+                            <h4>No Courses Found</h4>
+                            <p>@(string.IsNullOrEmpty(SelectedSemesterFilter) && string.IsNullOrEmpty(SelectedStatusFilter) 
+                                ? "You are not enrolled in any courses yet." 
+                                : "No courses match your current filters.")</p>
+                            @if (!string.IsNullOrEmpty(SelectedSemesterFilter) || !string.IsNullOrEmpty(SelectedStatusFilter))
+                            {
+                                <button @onclick="ClearFilters" class="clear-filters-btn">
+                                    <i class="oi oi-x"></i>
+                                    Clear Filters
+                                </button>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Individual Course Details Modal (if needed) currently not realy needed -->
 @if (ShowCourseModal && SelectedCourseDetails != null)
 {
-    <!-- Keep existing course details modal code -->
-    <div class="fullscreen-modal">
-        <!-- Existing modal content remains the same -->
+    <GlobalBackdrop />
+    <div class="stats-modal">
+        <div class="modal-container">
+            <!-- Keep existing course details modal content -->
+        </div>
     </div>
 }

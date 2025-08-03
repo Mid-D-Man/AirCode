@@ -9,16 +9,23 @@ using AirCode.Services.Firebase;
 using AirCode.Components.SharedPrefabs.QrCode;
 using AirCode.Components.SharedPrefabs.Others;
 using AirCode.Domain.Enums;
+using AirCode.Domain.ValueObjects;
 using AirCode.Models.Forms;
 using AirCode.Utilities.DataStructures;
+using AirCode.Utilities.HelperScripts;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
+using BatchSyncResult = AirCode.Domain.Entities.BatchSyncResult;
 using Course = AirCode.Domain.Entities.Course;
+using SyncResult = AirCode.Domain.Entities.SyncResult;
+using SyncStatus = AirCode.Domain.Entities.SyncStatus;
 
 namespace AirCode.Pages.Admin.Shared;
 
 public partial class OfflineAttendanceEvent : ComponentBase, IDisposable
 {
+    #region Dependency Injection
+    
     [Inject] private IJSRuntime JS { get; set; }
     [Inject] private ICryptographyService CryptographyService { get; set; }
     [Inject] private IOfflineSyncService OfflineSyncService { get; set; }
@@ -26,13 +33,23 @@ public partial class OfflineAttendanceEvent : ComponentBase, IDisposable
     [Inject] private ICourseService CourseService { get; set; }
     [Inject] private IFirestoreService FirestoreService { get; set; }
     [Inject] private SessionStateService SessionStateService { get; set; }
+    [Inject] private ConnectivityService ConnectivityService { get; set; }
 
-    // Core session management
+    #endregion
+
+    #region Core Session Management
+    
     private OfflineSessionData currentOfflineSession = new();
     private List<OfflineAttendanceRecordModel> pendingRecords = new();
     private List<OfflineSessionData> allOfflineSessions = new();
+    private DateTime sessionStartTime;
+    private DateTime sessionEndTime;
+    private bool isOfflineSessionActive = false;
     
-    // UI State Management
+    #endregion
+
+    #region UI State Management
+    
     private bool isCreatingOfflineSession = false;
     private bool isSyncInProgress = false;
     private bool showOfflineQR = false;
@@ -42,44 +59,110 @@ public partial class OfflineAttendanceEvent : ComponentBase, IDisposable
     private bool showCourseSelection = false;
     private string selectedTheme = "Standard";
     
-    // Course Selection
+    #endregion
+
+    #region Course Selection
+    
     private Course selectedCourse;
     
-    // Offline Configuration
+    #endregion
+
+    #region Offline Configuration
+    
     private bool useDeviceGuidCheck = false;
     private AdvancedSecurityFeatures securityFeatures = AdvancedSecurityFeatures.DeviceGuidCheck;
     private bool useAdvancedEncryption = true;
     private int maxOfflineStorageDays = 7;
     private int sessionDuration = 60; // Default 60 minutes
     
-    // Sync Management
+    #endregion
+
+    #region Sync Management
+    
     private BatchSyncResult lastSyncResult;
     private System.Threading.Timer periodicSyncTimer;
     private int syncIntervalMinutes = 15;
     
-    // Cryptographic Keys
+    #endregion
+
+    #region Cryptographic Keys
+    
     private string sessionEncryptionKey = string.Empty;
     private string deviceGuid = string.Empty;
     
-    // Session Tracking
-    private DateTime sessionStartTime;
-    private DateTime sessionEndTime;
-    private bool isOfflineSessionActive = false;
+    #endregion
+
+    #region Info Popup Management
     
-    // Info Popup Management
     private InfoPopup.InfoType currentInfoType = InfoPopup.InfoType.OfflineSync;
     
-    // Floating QR Code
+    #endregion
+
+    #region Floating QR Code
+    
     private QRCodeData floatingOfflineSessionData = new();
+
+    #endregion
+
+    #region Component Lifecycle
 
     protected override async Task OnInitializedAsync()
     {
+        await InitializeConnectivityAsync();
         await InitializeOfflineEnvironmentAsync();
         await LoadExistingOfflineSessionsAsync();
         await StartPeriodicSyncAsync();
         
         StateHasChanged();
     }
+
+    #endregion
+
+    #region Connectivity Management
+
+    private async Task InitializeConnectivityAsync()
+    {
+        try
+        {
+            await ConnectivityService.InitializeAsync();
+            ConnectivityService.ConnectivityChanged += OnConnectivityChanged;
+        }
+        catch (Exception ex)
+        {
+         await MID_HelperFunctions.DebugMessageAsync($"Error initializing connectivity service: {ex.Message}",DebugClass.Exception);
+        }
+    }
+
+    private void OnConnectivityChanged(ConnectivityStatus status)
+    {
+        InvokeAsync(() =>
+        {
+            StateHasChanged();
+            
+            // Auto-sync when coming back online if there are pending records
+            if (status.IsOnline && HasPendingRecords())
+            {
+                _ = Task.Run(async () => await SyncOfflineDataAsync());
+            }
+        });
+    }
+
+    private async Task<bool> CheckConnectivityAsync()
+    {
+        try
+        {
+            var status = await ConnectivityService.GetConnectivityStatusAsync();
+            return status.IsOnline;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    #endregion
+
+    #region Offline Environment Initialization
 
     private async Task InitializeOfflineEnvironmentAsync()
     {
@@ -144,6 +227,10 @@ public partial class OfflineAttendanceEvent : ComponentBase, IDisposable
         }
     }
 
+    #endregion
+
+    #region Session Creation and Management
+
     private async Task CreateOfflineSessionAsync()
     {
         if (selectedCourse == null) return;
@@ -160,7 +247,9 @@ public partial class OfflineAttendanceEvent : ComponentBase, IDisposable
                 CourseName = selectedCourse.Name,
                 StartTime = DateTime.UtcNow,
                 Duration = sessionDuration,
-                CreatedAt = DateTime.UtcNow.Date
+                CreatedAt = DateTime.UtcNow.Date,
+                OfflineSyncEnabled = true,
+                SecurityFeatures = securityFeatures
             };
 
             sessionStartTime = DateTime.UtcNow;
@@ -180,6 +269,12 @@ public partial class OfflineAttendanceEvent : ComponentBase, IDisposable
                 PendingAttendanceRecords = new List<OfflineAttendanceRecordModel>(),
                 SyncStatus = SyncStatus.Pending
             };
+
+            // Create offline session record in database if online
+            if (ConnectivityService.IsOnline)
+            {
+                await OfflineSyncService.CreateOfflineSessionRecordAsync(sessionData);
+            }
 
             // Store session locally with encryption
             await SaveOfflineSessionAsync(currentOfflineSession);
@@ -234,6 +329,36 @@ public partial class OfflineAttendanceEvent : ComponentBase, IDisposable
         return Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(jsonPayload));
     }
 
+    private async Task EndOfflineSessionAsync()
+    {
+        if (currentOfflineSession == null) return;
+
+        try
+        {
+            // Attempt final sync before ending if online
+            if (ConnectivityService.IsOnline && HasPendingRecords())
+            {
+                await SyncOfflineDataAsync();
+            }
+
+            isOfflineSessionActive = false;
+            showOfflineQR = false;
+            currentOfflineSession = null;
+            selectedCourse = null;
+
+            Console.WriteLine("Offline session ended");
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error ending offline session: {ex.Message}");
+        }
+    }
+
+    #endregion
+
+    #region Attendance Processing
+
     private async Task ProcessOfflineAttendanceAsync(string qrCode, string matricNumber)
     {
         if (!isOfflineSessionActive || currentOfflineSession == null) return;
@@ -281,8 +406,19 @@ public partial class OfflineAttendanceEvent : ComponentBase, IDisposable
         }
     }
 
+    #endregion
+
+    #region Sync Operations
+
     private async Task SyncOfflineDataAsync()
     {
+        // Check connectivity first
+        if (!await CheckConnectivityAsync())
+        {
+            Console.WriteLine("Cannot sync: Device is offline");
+            return;
+        }
+
         try
         {
             isSyncInProgress = true;
@@ -340,7 +476,7 @@ public partial class OfflineAttendanceEvent : ComponentBase, IDisposable
         var interval = TimeSpan.FromMinutes(syncIntervalMinutes);
         periodicSyncTimer = new System.Threading.Timer(
             async _ => await InvokeAsync(async () => {
-                if (!isSyncInProgress && HasPendingRecords())
+                if (!isSyncInProgress && ConnectivityService.IsOnline && HasPendingRecords())
                 {
                     await SyncOfflineDataAsync();
                 }
@@ -355,6 +491,10 @@ public partial class OfflineAttendanceEvent : ComponentBase, IDisposable
     {
         return allOfflineSessions.Any(s => s.SyncStatus == SyncStatus.Pending && s.PendingAttendanceRecords.Any());
     }
+
+    #endregion
+
+    #region Local Storage Management
 
     private async Task SaveOfflineSessionAsync(OfflineSessionData session)
     {
@@ -392,33 +532,10 @@ public partial class OfflineAttendanceEvent : ComponentBase, IDisposable
         }
     }
 
-    private async Task EndOfflineSessionAsync()
-    {
-        if (currentOfflineSession == null) return;
+    #endregion
 
-        try
-        {
-            // Attempt final sync before ending
-            if (HasPendingRecords())
-            {
-                await SyncOfflineDataAsync();
-            }
+    #region UI Event Handlers
 
-            isOfflineSessionActive = false;
-            showOfflineQR = false;
-            currentOfflineSession = null;
-            selectedCourse = null;
-
-            Console.WriteLine("Offline session ended");
-            StateHasChanged();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error ending offline session: {ex.Message}");
-        }
-    }
-
-    // UI Event Handlers
     private void ShowCourseSelection()
     {
         showCourseSelection = true;
@@ -472,6 +589,22 @@ public partial class OfflineAttendanceEvent : ComponentBase, IDisposable
         showOfflineFloatingQR = false;
     }
 
+    private void HandleOfflineQRCodeGenerated(QRCodeData qrData)
+    {
+        floatingOfflineSessionData = qrData;
+        StateHasChanged();
+    }
+
+    private void HandleQRCodeGenerated(QRCodeData qrData)
+    {
+        // Handle QR code generation completion
+        Console.WriteLine($"QR Code generated for session: {qrData.Id}");
+    }
+
+    #endregion
+
+    #region QR Code Generation
+
     private QRCodeBaseOptions GenerateOfflineQRCodeOptions()
     {
         var theme = ConvertStringToTheme(selectedTheme);
@@ -511,19 +644,10 @@ public partial class OfflineAttendanceEvent : ComponentBase, IDisposable
         };
     }
 
-    private void HandleOfflineQRCodeGenerated(QRCodeData qrData)
-    {
-        floatingOfflineSessionData = qrData;
-        StateHasChanged();
-    }
+    #endregion
 
-    private void HandleQRCodeGenerated(QRCodeData qrData)
-    {
-        // Handle QR code generation completion
-        Console.WriteLine($"QR Code generated for session: {qrData.Id}");
-    }
+    #region Helper Methods
 
-    // Helper Methods
     private QRCodeTheme ConvertStringToTheme(string theme)
     {
         return theme switch
@@ -585,7 +709,10 @@ public partial class OfflineAttendanceEvent : ComponentBase, IDisposable
         return remaining.TotalMinutes <= 5;
     }
 
-    // Configuration Properties for Razor binding
+    #endregion
+
+    #region Configuration Properties
+
     private bool DeviceGuidCheck
     {
         get => securityFeatures.HasFlag(AdvancedSecurityFeatures.DeviceGuidCheck);
@@ -628,10 +755,18 @@ public partial class OfflineAttendanceEvent : ComponentBase, IDisposable
         set => syncIntervalMinutes = value;
     }
 
+    #endregion
+
+    #region Disposal
+
     public void Dispose()
     {
         periodicSyncTimer?.Dispose();
+        if (ConnectivityService != null)
+        {
+            ConnectivityService.ConnectivityChanged -= OnConnectivityChanged;
+        }
     }
 
-    
+    #endregion
 }
