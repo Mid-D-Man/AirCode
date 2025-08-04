@@ -426,6 +426,123 @@
     text-align: center;
 }
 
+/* Loading Styles */
+.loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 300px;
+    color: var(--text-secondary);
+}
+
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid var(--border);
+    border-top: 4px solid var(--primary-500);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 1rem;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Level Items */
+.level-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.level-item:last-child {
+    border-bottom: none;
+}
+
+.level-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.level-name {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.level-count {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.level-stats {
+    text-align: right;
+}
+
+.active-count {
+    font-size: 0.8rem;
+    color: var(--success);
+    font-weight: 500;
+}
+
+/* Attendance Stats */
+.attendance-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 1rem;
+}
+
+.stat-item {
+    text-align: center;
+    padding: 1rem;
+    background: var(--bg-tertiary);
+    border-radius: 6px;
+}
+
+.stat-label {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+}
+
+.stat-value {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primary-500);
+}
+
+/* Status Styles */
+.status.disconnected {
+    background: rgba(var(--error), 0.1);
+    color: var(--error);
+}
+
+.health-indicator.error {
+    background: rgba(var(--error), 0.1);
+    color: var(--error);
+}
+
+/* No Data State */
+.no-data {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 2rem;
+    color: var(--text-tertiary);
+}
+
+.no-data i {
+    font-size: 2rem;
+    opacity: 0.5;
+}
 /* Responsive Design */
 @media (max-width: 768px) {
     .superior-dashboard {
