@@ -48,7 +48,7 @@
 
 /* When not checked (collapsed), show hamburger test */
 .burger input:not(:checked) + label svg {
-    transform: rotate(-90deg);
+    transform: rotate(-0deg);
 }
 
 .burger input:not(:checked) + label svg .line-top-bottom {
