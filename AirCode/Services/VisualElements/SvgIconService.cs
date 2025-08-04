@@ -15,7 +15,9 @@ namespace AirCode.Services.VisualElements
         private readonly NavigationManager _navigationManager;
         private readonly Dictionary<string, string> _iconCache = new Dictionary<string, string>();
         private readonly Dictionary<string, string> _iconNameMap = new Dictionary<string, string>();
+        private readonly Dictionary<string, string> _emojiMap = new Dictionary<string, string>();
         private List<string> _availableIcons = null;
+        private List<string> _availableEmojis = null;
         private const string DefaultIcon = "fas fa-circle";
         private const string SvgFolder = "svgs/";
         private const string SvgExtension = ".svg";
@@ -25,11 +27,11 @@ namespace AirCode.Services.VisualElements
             _httpClient = httpClient;
             _navigationManager = navigationManager;
             InitializeIconNameMap();
+            InitializeEmojiMap();
         }
 
         private void InitializeIconNameMap()
         {
-            // Map icon names to their file names
             _iconNameMap.Add("add_user", "AddUser_Icon");
             _iconNameMap.Add("admin", "Admin_Icon");
             _iconNameMap.Add("airplane", "Airplane_Icon");
@@ -64,36 +66,43 @@ namespace AirCode.Services.VisualElements
             _iconNameMap.Add("warning", "Warning_Icon");
         }
 
-        public string GetIconClass(string iconName)
+        private void InitializeEmojiMap()
         {
-            return DefaultIcon;
+            // Blue monochrome style emojis for the app
+            _emojiMap.Add("check_mark", "✅");
+            _emojiMap.Add("cross_mark", "❎");
+            _emojiMap.Add("target", "🎯");
+            _emojiMap.Add("chart", "📊");
+            _emojiMap.Add("clock", "🕐");
+            _emojiMap.Add("teacher", "👨‍🏫");
+            _emojiMap.Add("student", "👩‍🎓");
+            _emojiMap.Add("school", "🏫");
+            _emojiMap.Add("calendar", "📅");
+            _emojiMap.Add("locked", "🔐");
+            _emojiMap.Add("unlocked", "🔓");
+            _emojiMap.Add("star", "⭐");
         }
 
         public async Task<string> GetSvgContentAsync(string iconName)
         {
-            // Check cache first
             if (_iconCache.TryGetValue(iconName, out string cachedSvg))
             {
                 return cachedSvg;
             }
 
-            // Normalize the icon name
             string normalizedName = iconName.ToLower().Replace(" ", "_");
-
-            // Check for mapping
             string fileName = normalizedName;
+            
             if (_iconNameMap.TryGetValue(normalizedName, out string mappedName))
             {
                 fileName = mappedName;
             }
 
-            // Ensure correct file extension
             if (!fileName.EndsWith(SvgExtension))
             {
                 fileName += SvgExtension;
             }
 
-            // Construct URL
             string baseUrl = _navigationManager.BaseUri.TrimEnd('/');
             string url = $"{baseUrl}/{SvgFolder}{fileName}";
 
@@ -114,23 +123,55 @@ namespace AirCode.Services.VisualElements
         {
             var opt = options ?? new SvgOptions();
             
-            // Try to get existing SVG first
             var existingSvg = await GetSvgContentAsync(iconName);
             if (!string.IsNullOrEmpty(existingSvg))
             {
                 return ApplySvgOptions(existingSvg, opt);
             }
 
-            // Generate basic SVG if not found
             return GenerateBasicSvg(iconName, opt);
+        }
+
+        public async Task<string> GetEmojiIconAsync(string emojiId)
+        {
+            if (_emojiMap.TryGetValue(emojiId.ToLower(), out string emoji))
+            {
+                return CreateEmojiSvg(emoji);
+            }
+            
+            return null;
+        }
+
+        public async Task<IEnumerable<string>> GetAvailableEmojiIdsAsync()
+        {
+            if (_availableEmojis != null)
+            {
+                return _availableEmojis;
+            }
+
+            _availableEmojis = _emojiMap.Keys.ToList();
+            return _availableEmojis;
+        }
+
+        public bool EmojiExists(string emojiId)
+        {
+            return _emojiMap.ContainsKey(emojiId.ToLower());
+        }
+
+        private string CreateEmojiSvg(string emoji)
+        {
+            var svg = new StringBuilder();
+            svg.AppendLine("<svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" xmlns=\"http://www.w3.org/2000/svg\">");
+            svg.AppendLine($"  <text x=\"12\" y=\"16\" text-anchor=\"middle\" font-size=\"18\" fill=\"#2563eb\">{emoji}</text>");
+            svg.AppendLine("</svg>");
+            
+            return svg.ToString();
         }
 
         private string ApplySvgOptions(string svgContent, SvgOptions options)
         {
-            // Parse and modify existing SVG with new options
             var modifiedSvg = svgContent;
             
-            // Replace width and height
             modifiedSvg = System.Text.RegularExpressions.Regex.Replace(
                 modifiedSvg, 
                 @"width=""\d+""", 
@@ -141,13 +182,11 @@ namespace AirCode.Services.VisualElements
                 @"height=""\d+""", 
                 $"height=\"{options.Height}\"");
 
-            // Replace fill color
             modifiedSvg = System.Text.RegularExpressions.Regex.Replace(
                 modifiedSvg, 
                 @"fill=""[^""]*""", 
                 $"fill=\"{options.Fill}\"");
 
-            // Add custom attributes if any
             foreach (var attr in options.CustomAttributes)
             {
                 modifiedSvg = modifiedSvg.Replace("<svg", $"<svg {attr.Key}=\"{attr.Value}\"");
@@ -184,7 +223,7 @@ namespace AirCode.Services.VisualElements
             return _iconNameMap.ContainsKey(normalizedName);
         }
 
-        // Specific icon helper methods - all mapped from existing implementation
+        // SVG Icon Methods
         public async Task<string> GetAddUserIconAsync() => await GetSvgContentAsync("add_user");
         public async Task<string> GetAdminIconAsync() => await GetSvgContentAsync("admin");
         public async Task<string> GetAirplaneIconAsync() => await GetSvgContentAsync("airplane");
@@ -217,5 +256,19 @@ namespace AirCode.Services.VisualElements
         public async Task<string> GetStats2IconAsync() => await GetSvgContentAsync("stats2");
         public async Task<string> GetUsersIconAsync() => await GetSvgContentAsync("users");
         public async Task<string> GetWarningIconAsync() => await GetSvgContentAsync("warning");
+
+        // Emoji Methods
+        public async Task<string> GetCheckMarkEmojiAsync() => await GetEmojiIconAsync("check_mark");
+        public async Task<string> GetCrossMarkEmojiAsync() => await GetEmojiIconAsync("cross_mark");
+        public async Task<string> GetTargetEmojiAsync() => await GetEmojiIconAsync("target");
+        public async Task<string> GetChartEmojiAsync() => await GetEmojiIconAsync("chart");
+        public async Task<string> GetClockEmojiAsync() => await GetEmojiIconAsync("clock");
+        public async Task<string> GetTeacherEmojiAsync() => await GetEmojiIconAsync("teacher");
+        public async Task<string> GetStudentEmojiAsync() => await GetEmojiIconAsync("student");
+        public async Task<string> GetSchoolEmojiAsync() => await GetEmojiIconAsync("school");
+        public async Task<string> GetCalendarEmojiAsync() => await GetEmojiIconAsync("calendar");
+        public async Task<string> GetLockedEmojiAsync() => await GetEmojiIconAsync("locked");
+        public async Task<string> GetUnlockedEmojiAsync() => await GetEmojiIconAsync("unlocked");
+        public async Task<string> GetStarEmojiAsync() => await GetEmojiIconAsync("star");
     }
 }
