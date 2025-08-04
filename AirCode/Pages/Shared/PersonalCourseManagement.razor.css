@@ -1,4 +1,4 @@
-/* Component-scoped styles for PersonalCourseManagement.razor */
+/* PersonalCourseManagement.razor.css */
 
 .student-course-container {
     padding: 1rem;
@@ -17,7 +17,7 @@
     padding: 1rem;
     background: linear-gradient(135deg, var(--primary-500) 0%, var(--primary-700) 100%);
     border-radius: 12px;
-    color: var(--nav-text);
+    color: var(--text-on-primary);
     box-shadow: 0 4px 20px rgba(15, 76, 117, 0.3);
 }
 
@@ -28,6 +28,7 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    color: var(--text-on-primary);
 }
 
 .icon-books::before {
@@ -49,6 +50,7 @@
     padding: 0.4rem 0.8rem;
     border-radius: 8px;
     backdrop-filter: blur(10px);
+    color: var(--text-on-primary);
 }
 
 .level-badge {
@@ -58,15 +60,15 @@
     font-size: 0.8rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    color: white;
+    color: var(--text-on-success);
 }
 
 .level-level100 { background: var(--success); }
 .level-level200 { background: var(--info); }
 .level-level300 { background: var(--secondary-500); }
-.level-level400 { background: var(--warning); }
+.level-level400 { background: var(--warning); color: var(--text-on-warning); }
 .level-level500 { background: var(--error); }
-.level-levelextra { background: var(--dark-text-tertiary); }
+.level-levelextra { background: var(--text-tertiary); }
 
 /* Loading and Error States */
 .loading-container {
@@ -103,20 +105,20 @@
 }
 
 .alert-error {
-    background: #fef2f2;
+    background: var(--bg-secondary);
     color: var(--error);
-    border: 1px solid #fecaca;
+    border: 1px solid var(--error);
 }
 
 .icon-warning::before {
     content: "⚠️";
 }
 
-/* Main Grid Layout - Desktop First */
+/* Main Grid Layout - Mobile First */
 .course-management-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 2rem;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
     margin-bottom: 2rem;
 }
 
@@ -136,12 +138,12 @@
     margin: 0;
     font-size: 1.3rem;
     font-weight: 600;
-    color: var(--text-primary);
+    color: var(--text-adaptive-primary);
 }
 
 .course-count {
     background: var(--bg-tertiary);
-    color: var(--text-secondary);
+    color: var(--text-adaptive-secondary);
     padding: 0.4rem 0.8rem;
     border-radius: 20px;
     font-size: 0.8rem;
@@ -164,7 +166,7 @@
     font-size: 0.85rem;
     transition: border-color 0.2s ease;
     background: var(--bg-secondary);
-    color: var(--text-primary);
+    color: var(--text-adaptive-primary);
 }
 
 .filter-select:focus, .search-input:focus {
@@ -178,24 +180,27 @@
     flex: 1;
 }
 
-/* Course Grids - Responsive */
+/* Course Grids - Mobile First */
 .courses-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 1.25rem;
+    grid-template-columns: 1fr;
+    gap: 1rem;
     margin-bottom: 2rem;
 }
 
-/* Course Cards - Enhanced */
+/* Course Cards - Mobile First Design */
 .course-card {
     background: var(--bg-secondary);
     border-radius: 12px;
-    padding: 1.25rem;
+    padding: 1rem;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     transition: all 0.3s ease;
     border: 1px solid var(--border);
     position: relative;
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 160px;
 }
 
 .course-card:hover {
@@ -211,30 +216,10 @@
     right: 0;
     height: 4px;
     background: linear-gradient(90deg, var(--primary-500), var(--primary-700));
+    z-index: 1;
 }
 
-/* Carryover Course Banner - NEW */
-.carryover-banner {
-    position: absolute;
-    top: 0;
-    right: 0;
-    background: linear-gradient(135deg, var(--warning) 0%, #d97706 100%);
-    color: white;
-    padding: 0.25rem 0.75rem;
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    border-bottom-left-radius: 8px;
-    z-index: 10;
-}
-
-.carryover-banner::before {
-    content: "🔄 ";
-    margin-right: 0.25rem;
-}
-
-/* Enrolled Course Card Statuses */
+/* Status-Based Card Styling */
 .enrolled-card.status-enrolled::before {
     background: linear-gradient(90deg, var(--success), #059669);
 }
@@ -247,121 +232,158 @@
     background: linear-gradient(90deg, var(--error), #dc2626);
 }
 
+/* Status Banners - Mobile Optimized */
+.carryover-banner {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: linear-gradient(135deg, var(--warning) 0%, #d97706 100%);
+    color: var(--text-on-warning);
+    padding: 0.2rem 0.5rem;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    border-radius: 6px;
+    z-index: 10;
+    line-height: 1;
+}
+
+.carryover-banner::before {
+    content: "🔄 ";
+    font-size: 0.7rem;
+}
+
+/* Course Header - Mobile Optimized */
 .course-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 1rem;
+    margin-bottom: 0.75rem;
+    gap: 0.5rem;
     position: relative;
+    padding-right: 0.5rem;
 }
 
 .course-code {
     margin: 0;
-    font-size: 1.1rem;
+    font-size: 1rem;
     font-weight: 700;
-    color: var(--text-primary);
+    color: var(--text-adaptive-primary);
+    flex-shrink: 0;
 }
 
 .course-status .status-badge {
-    padding: 0.25rem 0.6rem;
-    border-radius: 12px;
-    font-size: 0.7rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 8px;
+    font-size: 0.65rem;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.3px;
+    line-height: 1;
 }
 
 .status-enrolled {
-    background: #d1fae5;
-    color: #065f46;
+    background: var(--success);
+    color: var(--text-on-success);
 }
 
 .status-carryover {
-    background: #fef3c7;
-    color: #92400e;
+    background: var(--warning);
+    color: var(--text-on-warning);
 }
 
 .status-dropped {
-    background: #fee2e2;
-    color: #991b1b;
+    background: var(--error);
+    color: var(--text-on-error);
 }
 
+/* Course Details - Improved Text Handling */
 .course-details {
-    margin-bottom: 1rem;
+    flex: 1;
+    margin-bottom: 0.75rem;
+    min-height: 0;
 }
 
 .course-name {
-    margin: 0 0 0.6rem 0;
-    font-size: 1rem;
+    margin: 0 0 0.5rem 0;
+    font-size: 0.9rem;
     font-weight: 600;
-    color: var(--text-secondary);
-    line-height: 1.4;
+    color: var(--text-adaptive-secondary);
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    word-break: break-word;
+    hyphens: auto;
 }
 
 .course-info {
     display: flex;
-    gap: 0.75rem;
-    margin-bottom: 0.6rem;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
     flex-wrap: wrap;
 }
 
 .course-info span {
-    font-size: 0.8rem;
-    color: var(--text-tertiary);
+    font-size: 0.75rem;
+    color: var(--text-adaptive-tertiary);
     background: var(--bg-tertiary);
-    padding: 0.2rem 0.4rem;
+    padding: 0.15rem 0.35rem;
     border-radius: 4px;
+    flex-shrink: 0;
 }
 
 .credit-units {
     font-weight: 600;
-    color: var(--text-secondary) !important;
+    color: var(--text-adaptive-secondary) !important;
 }
 
-/* Schedule Information */
+/* Schedule Information - Mobile Optimized */
 .schedule-info, .schedule-preview {
-    margin-top: 0.6rem;
+    margin-top: 0.5rem;
 }
 
 .time-slot, .schedule-item {
     display: inline-flex;
     align-items: center;
-    gap: 0.4rem;
+    gap: 0.3rem;
     background: var(--bg-tertiary);
-    padding: 0.2rem 0.4rem;
+    padding: 0.15rem 0.3rem;
     border-radius: 4px;
-    font-size: 0.75rem;
-    margin-right: 0.4rem;
+    font-size: 0.7rem;
+    margin-right: 0.3rem;
     margin-bottom: 0.2rem;
 }
 
 .day {
     font-weight: 600;
-    color: var(--text-secondary);
+    color: var(--text-adaptive-secondary);
 }
 
 .time {
-    color: var(--text-tertiary);
+    color: var(--text-adaptive-tertiary);
 }
 
 .more-schedule {
-    font-size: 0.7rem;
-    color: var(--text-tertiary);
+    font-size: 0.65rem;
+    color: var(--text-adaptive-tertiary);
     font-style: italic;
 }
 
 /* Course Dates */
 .course-dates {
-    margin: 0.8rem 0;
-    padding-top: 0.6rem;
+    margin: 0.6rem 0;
+    padding-top: 0.5rem;
     border-top: 1px solid var(--border);
 }
 
 .course-dates small {
     display: block;
-    color: var(--text-tertiary);
-    font-size: 0.75rem;
-    margin-bottom: 0.2rem;
+    color: var(--text-adaptive-tertiary);
+    font-size: 0.7rem;
+    margin-bottom: 0.15rem;
 }
 
 .enrollment-date {
@@ -372,22 +394,22 @@
     color: var(--warning) !important;
 }
 
-/* Course Actions */
+/* Course Actions - Mobile Optimized */
 .course-actions {
     display: flex;
-    gap: 0.5rem;
-    margin-top: 1rem;
-    padding-top: 0.8rem;
+    gap: 0.4rem;
+    margin-top: auto;
+    padding-top: 0.6rem;
     border-top: 1px solid var(--border);
     flex-wrap: wrap;
 }
 
-/* Button Styles - Updated for Theme */
+/* Button Styles - Updated for Mobile */
 .btn {
-    padding: 0.4rem 0.8rem;
+    padding: 0.35rem 0.6rem;
     border: none;
     border-radius: 6px;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -395,9 +417,10 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.4rem;
+    gap: 0.3rem;
     flex: 1;
     min-width: fit-content;
+    line-height: 1;
 }
 
 .btn:disabled {
@@ -417,7 +440,7 @@
 
 .btn-success {
     background: var(--success);
-    color: white;
+    color: var(--text-on-success);
 }
 
 .btn-success:hover:not(:disabled) {
@@ -426,7 +449,7 @@
 
 .btn-warning {
     background: var(--warning);
-    color: white;
+    color: var(--text-on-warning);
 }
 
 .btn-warning:hover:not(:disabled) {
@@ -435,7 +458,7 @@
 
 .btn-danger {
     background: var(--error);
-    color: white;
+    color: var(--text-on-error);
 }
 
 .btn-danger:hover:not(:disabled) {
@@ -450,12 +473,12 @@
 
 .btn-outline:hover:not(:disabled) {
     background: var(--primary-500);
-    color: white;
+    color: var(--text-on-primary);
 }
 
 .btn-sm {
-    padding: 0.3rem 0.6rem;
-    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.7rem;
 }
 
 /* Available Course Cards */
@@ -467,10 +490,10 @@
 .enrolled-indicator {
     display: flex;
     align-items: center;
-    gap: 0.4rem;
+    gap: 0.3rem;
     color: var(--success);
     font-weight: 500;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
 }
 
 .icon-check::before {
@@ -486,12 +509,12 @@
 .empty-state {
     text-align: center;
     padding: 3rem 1rem;
-    color: var(--text-secondary);
+    color: var(--text-adaptive-secondary);
 }
 
 .empty-state h4 {
     margin: 1rem 0 0.5rem 0;
-    color: var(--text-primary);
+    color: var(--text-adaptive-primary);
 }
 
 /* Load More Container */
@@ -500,17 +523,17 @@
     margin-top: 1.5rem;
 }
 
-/* Course Statistics */
+/* Course Statistics - Mobile First */
 .course-statistics {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
     margin-top: 2rem;
 }
 
 .stat-card {
     background: var(--bg-secondary);
-    padding: 1.5rem;
+    padding: 1rem;
     border-radius: 12px;
     text-align: center;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
@@ -518,15 +541,15 @@
 }
 
 .stat-number {
-    font-size: 2rem;
+    font-size: 1.5rem;
     font-weight: 700;
     color: var(--primary-500);
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.25rem;
 }
 
 .stat-label {
-    color: var(--text-secondary);
-    font-size: 0.9rem;
+    color: var(--text-adaptive-secondary);
+    font-size: 0.8rem;
     font-weight: 500;
 }
 
@@ -534,7 +557,8 @@
 .toast {
     position: fixed;
     top: 2rem;
-    right: 2rem;
+    right: 1rem;
+    left: 1rem;
     background: var(--bg-secondary);
     border: 1px solid var(--border);
     border-radius: 8px;
@@ -555,7 +579,7 @@
     border: none;
     font-size: 1.2rem;
     cursor: pointer;
-    color: var(--text-tertiary);
+    color: var(--text-adaptive-tertiary);
     margin-left: auto;
 }
 
@@ -563,207 +587,28 @@
     content: "✅";
 }
 
-/* RESPONSIVE DESIGN - Mobile First Approach */
+/* RESPONSIVE DESIGN - Progressive Enhancement */
 
-/* Mobile Portrait - Extra Small Screens */
-@media (max-width: 480px) {
-    .student-course-container {
-        padding: 0.75rem;
-    }
-
-    .page-header {
-        flex-direction: column;
-        gap: 1rem;
-        text-align: center;
-        padding: 1rem;
-    }
-
-    .page-title {
-        font-size: 1.25rem;
-    }
-
-    .student-info {
-        justify-content: center;
-    }
-
-    .matric-number, .level-badge {
-        font-size: 0.8rem;
-        padding: 0.3rem 0.6rem;
-    }
-
-    /* Single column layout for mobile */
-    .course-management-grid {
-        grid-template-columns: 1fr;
-        gap: 1.5rem;
-    }
-
-    .section-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0.75rem;
-    }
-
-    .section-header h3 {
-        font-size: 1.1rem;
-    }
-
-    .course-filters {
-        width: 100%;
-        flex-direction: column;
-    }
-
-    .filter-select, .search-input {
-        width: 100%;
-    }
-
-    /* Mobile Card Layout - Horizontal Rectangle */
+/* Small Mobile - 481px and up */
+@media (min-width: 481px) {
     .courses-grid {
-        grid-template-columns: 1fr;
-        gap: 1rem;
-    }
-
-    .course-card {
-        padding: 1rem;
-        display: flex;
-        flex-direction: row;
-        align-items: flex-start;
-        gap: 1rem;
-        min-height: 120px;
-    }
-
-    .course-card::before {
-        height: 100%;
-        width: 4px;
-        top: 0;
-        left: 0;
-        right: auto;
-        bottom: 0;
-    }
-
-    .carryover-banner {
-        top: 0.5rem;
-        right: 0.5rem;
-        font-size: 0.6rem;
-        padding: 0.2rem 0.5rem;
-    }
-
-    .course-header {
-        margin-bottom: 0.5rem;
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0.25rem;
-        flex: 0 0 auto;
-        min-width: 80px;
-    }
-
-    .course-code {
-        font-size: 0.9rem;
-        font-weight: 700;
-    }
-
-    .course-status .status-badge {
-        font-size: 0.6rem;
-        padding: 0.2rem 0.4rem;
-    }
-
-    .course-details {
-        flex: 1;
-        margin-bottom: 0.5rem;
-    }
-
-    .course-name {
-        font-size: 0.9rem;
-        margin-bottom: 0.4rem;
-        line-height: 1.3;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-    }
-
-    .course-info {
-        gap: 0.5rem;
-        margin-bottom: 0.4rem;
-    }
-
-    .course-info span {
-        font-size: 0.7rem;
-        padding: 0.15rem 0.3rem;
-    }
-
-    .schedule-info, .schedule-preview {
-        display: none; /* Hide schedule on mobile for space */
-    }
-
-    .course-dates {
-        display: none; /* Hide dates on mobile for space */
-    }
-
-    .course-actions {
-        flex-direction: column;
-        gap: 0.4rem;
-        margin-top: 0.5rem;
-        padding-top: 0.5rem;
-        flex: 0 0 auto;
-        min-width: 80px;
-    }
-
-    .btn {
-        font-size: 0.7rem;
-        padding: 0.3rem 0.5rem;
-        width: 100%;
-    }
-
-    /* Statistics Grid - Mobile */
-    .course-statistics {
         grid-template-columns: repeat(2, 1fr);
-        gap: 0.75rem;
+        gap: 1rem;
     }
 
-    .stat-card {
-        padding: 1rem;
+    .course-statistics {
+        grid-template-columns: repeat(4, 1fr);
     }
 
-    .stat-number {
-        font-size: 1.5rem;
-    }
-
-    .stat-label {
-        font-size: 0.8rem;
-    }
-
-    /* Toast positioning for mobile */
     .toast {
-        top: 1rem;
-        right: 1rem;
-        left: 1rem;
-        width: auto;
+        right: 2rem;
+        left: auto;
+        max-width: 400px;
     }
 }
 
-/* Mobile Landscape - Small Screens */
-@media (min-width: 481px) and (max-width: 767px) {
-    .student-course-container {
-        padding: 1rem;
-    }
-
-    .course-management-grid {
-        grid-template-columns: 1fr;
-        gap: 1.5rem;
-    }
-
-    .courses-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 1rem;
-    }
-
-    .course-statistics {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
-
-/* Tablet Portrait - Medium Screens */
-@media (min-width: 768px) and (max-width: 1024px) {
+/* Tablet Portrait - 768px and up */
+@media (min-width: 768px) {
     .student-course-container {
         padding: 1.25rem;
     }
@@ -774,13 +619,12 @@
     }
 
     .courses-grid {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
         gap: 1.25rem;
     }
 
     .section-header {
         flex-direction: row;
-        flex-wrap: wrap;
     }
 
     .course-filters {
@@ -788,13 +632,35 @@
         width: auto;
     }
 
-    .course-statistics {
-        grid-template-columns: repeat(4, 1fr);
+    .course-card {
+        padding: 1.25rem;
+        min-height: 180px;
+    }
+
+    .course-name {
+        font-size: 1rem;
+    }
+
+    .btn {
+        font-size: 0.8rem;
+        padding: 0.4rem 0.8rem;
+    }
+
+    .stat-card {
+        padding: 1.5rem;
+    }
+
+    .stat-number {
+        font-size: 2rem;
+    }
+
+    .stat-label {
+        font-size: 0.9rem;
     }
 }
 
-/* Tablet Landscape - Large Screens */
-@media (min-width: 1025px) and (max-width: 1279px) {
+/* Desktop - 1024px and up */
+@media (min-width: 1024px) {
     .student-course-container {
         padding: 1.5rem;
     }
@@ -805,11 +671,20 @@
     }
 
     .courses-grid {
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .page-title {
+        font-size: 1.75rem;
+    }
+
+    .section-header h3 {
+        font-size: 1.4rem;
     }
 }
 
-/* Desktop - Extra Large Screens */
+/* Large Desktop - 1280px and up */
 @media (min-width: 1280px) {
     .student-course-container {
         padding: 2rem;
@@ -817,7 +692,6 @@
 
     .courses-grid {
         grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-        gap: 1.5rem;
     }
 
     .page-title {

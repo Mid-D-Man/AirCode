@@ -50,7 +50,6 @@
     align-items: center;
     justify-content: center;
     gap: var(--spacing-md);
-    color: var(--text-secondary);
     font-size: 1.125rem;
     font-weight: 500;
     background: rgba(255, 255, 255, 0.7);
@@ -75,7 +74,6 @@
 
 .lecturer-label {
     font-size: 0.875rem;
-    color: var(--text-tertiary);
     font-weight: 400;
 }
 
@@ -86,34 +84,6 @@
     background: rgba(15, 76, 117, 0.1);
     padding: var(--spacing-xs) var(--spacing-sm);
     border-radius: 6px;
-}
-
-/* Enhanced Loading Container */
-.loading-container {
-    text-align: center;
-    padding: var(--spacing-xxl);
-    background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
-    border-radius: 16px;
-    border: 1px solid var(--border);
-    margin: var(--spacing-xl) 0;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-}
-
-.loading-spinner {
-    width: 48px;
-    height: 48px;
-    margin: 0 auto var(--spacing-lg);
-    border: 4px solid var(--primary-200);
-    border-radius: 50%;
-    border-top-color: var(--primary-600);
-    animation: spin 1s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
-}
-
-.loading-text {
-    color: var(--text-secondary);
-    font-size: 1.125rem;
-    font-weight: 500;
-    margin: 0;
 }
 
 /* Error Container */
@@ -147,18 +117,31 @@
 
 .retry-btn {
     background: var(--error);
-    color: white;
+    color: var(--text-on-error);
     border: none;
     padding: var(--spacing-md) var(--spacing-lg);
     border-radius: 8px;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
+    font-size: 1rem;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .retry-btn:hover {
     background: #dc2626;
     transform: translateY(-1px);
+}
+
+.retry-btn:active {
+    transform: translateY(0);
+}
+
+.btn-text {
+    white-space: nowrap;
 }
 
 /* Courses Section */
@@ -190,13 +173,13 @@
 
 .status-message.success {
     background: linear-gradient(135deg, rgba(34, 197, 94, 0.9) 0%, rgba(22, 163, 74, 0.9) 100%);
-    color: white;
+    color: var(--text-on-success);
     border: 1px solid rgba(34, 197, 94, 0.3);
 }
 
 .status-message.error {
     background: linear-gradient(135deg, rgba(239, 68, 68, 0.9) 0%, rgba(220, 38, 38, 0.9) 100%);
-    color: white;
+    color: var(--text-on-error);
     border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
@@ -210,11 +193,6 @@
 }
 
 /* Animations */
-@keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-}
-
 @keyframes slideInRight {
     from {
         opacity: 0;
@@ -239,7 +217,6 @@ body.dark-mode .page-header h2 {
 body.dark-mode .lecturer-info {
     background: rgba(26, 26, 26, 0.8);
     border-color: var(--gold-700);
-    color: var(--dark-text-secondary);
 }
 
 body.dark-mode .lecturer-id {
@@ -247,22 +224,48 @@ body.dark-mode .lecturer-id {
     background: rgba(34, 197, 94, 0.1);
 }
 
-body.dark-mode .loading-container {
-    background: linear-gradient(135deg, var(--dark-bg-secondary) 0%, var(--dark-bg-tertiary) 100%);
-}
-
-body.dark-mode .loading-spinner {
-    border-color: var(--gold-800);
-    border-top-color: var(--green-400);
-}
-
 body.dark-mode .error-container {
     background: linear-gradient(135deg, rgba(127, 29, 29, 0.3) 0%, rgba(153, 27, 27, 0.3) 100%);
     border-color: rgba(239, 68, 68, 0.3);
 }
 
-/* Responsive Design */
-@media (max-width: 1024px) {
+body.dark-mode .retry-btn {
+    background: var(--error);
+    color: var(--text-on-error);
+}
+
+body.dark-mode .retry-btn:hover {
+    background: #dc2626;
+}
+
+/* Responsive Design - Large Screens / Desktop */
+@media (min-width: 1280px) {
+    .lecturer-courses-page {
+        padding: var(--spacing-xxl);
+    }
+
+    .page-header {
+        padding: var(--spacing-xxl);
+    }
+
+    .courses-section {
+        padding: var(--spacing-xxl);
+    }
+}
+
+/* Large Screens / Tablet Landscape */
+@media (min-width: 1025px) and (max-width: 1279px) {
+    .lecturer-courses-page {
+        padding: var(--spacing-xl);
+    }
+
+    .page-header h2 {
+        font-size: 2rem;
+    }
+}
+
+/* Medium Screens / Tablet Portrait */
+@media (min-width: 768px) and (max-width: 1024px) {
     .lecturer-courses-page {
         padding: var(--spacing-lg);
     }
@@ -270,18 +273,32 @@ body.dark-mode .error-container {
     .page-header {
         padding: var(--spacing-lg);
         margin-bottom: var(--spacing-xl);
+        border-radius: 16px;
     }
 
     .page-header h2 {
         font-size: 1.875rem;
+        margin-bottom: var(--spacing-md);
+    }
+
+    .lecturer-info {
+        font-size: 1rem;
+        padding: var(--spacing-sm) var(--spacing-md);
     }
 
     .courses-section {
         padding: var(--spacing-lg);
+        border-radius: 12px;
+    }
+
+    .status-message {
+        min-width: 280px;
+        padding: var(--spacing-sm) var(--spacing-md);
     }
 }
 
-@media (max-width: 768px) {
+/* Small Screens / Mobile Landscape */
+@media (min-width: 481px) and (max-width: 767px) {
     .lecturer-courses-page {
         padding: var(--spacing-md);
     }
@@ -289,26 +306,26 @@ body.dark-mode .error-container {
     .page-header {
         padding: var(--spacing-md);
         margin-bottom: var(--spacing-lg);
-        border-radius: 16px;
+        border-radius: 12px;
     }
 
     .page-header h2 {
         font-size: 1.5rem;
-        margin-bottom: var(--spacing-md);
+        margin-bottom: var(--spacing-sm);
     }
 
     .lecturer-info {
         flex-direction: column;
         gap: var(--spacing-sm);
-        font-size: 1rem;
-        padding: var(--spacing-sm) var(--spacing-md);
-    }
-
-    .lecturer-details {
+        font-size: 0.95rem;
+        padding: var(--spacing-sm);
         text-align: center;
     }
 
-    .loading-container,
+    .lecturer-details {
+        align-items: center;
+    }
+
     .error-container {
         padding: var(--spacing-lg);
         margin: var(--spacing-md) 0;
@@ -325,9 +342,18 @@ body.dark-mode .error-container {
         left: var(--spacing-md);
         right: var(--spacing-md);
         min-width: unset;
+        padding: var(--spacing-sm) var(--spacing-md);
+        font-size: 0.9rem;
+    }
+
+    .retry-btn {
+        padding: var(--spacing-sm) var(--spacing-md);
+        font-size: 0.95rem;
+        min-height: 42px;
     }
 }
 
+/* Extra Small Screens / Mobile Portrait */
 @media (max-width: 480px) {
     .lecturer-courses-page {
         padding: var(--spacing-sm);
@@ -336,67 +362,122 @@ body.dark-mode .error-container {
     .page-header {
         padding: var(--spacing-sm);
         margin-bottom: var(--spacing-md);
+        border-radius: 8px;
     }
 
     .page-header h2 {
         font-size: 1.25rem;
+        margin-bottom: var(--spacing-xs);
     }
 
     .lecturer-info {
+        flex-direction: column;
+        gap: var(--spacing-xs);
         font-size: 0.875rem;
         padding: var(--spacing-xs) var(--spacing-sm);
+        border-radius: 8px;
     }
 
     .lecturer-icon {
         font-size: 1.25rem;
     }
 
-    .loading-container,
-    .error-container {
-        padding: var(--spacing-md);
+    .lecturer-label {
+        font-size: 0.75rem;
     }
 
-    .loading-spinner {
-        width: 36px;
-        height: 36px;
+    .lecturer-id {
+        font-size: 0.875rem;
+        padding: 2px var(--spacing-xs);
+    }
+
+    .error-container {
+        padding: var(--spacing-md);
+        margin: var(--spacing-sm) 0;
+        border-radius: 8px;
+    }
+
+    .error-container h3 {
+        font-size: 1.1rem;
+    }
+
+    .error-container p {
+        font-size: 0.9rem;
+    }
+
+    .error-icon {
+        font-size: 2.5rem;
     }
 
     .courses-section {
         padding: var(--spacing-sm);
+        border-radius: 8px;
     }
 
     .status-message {
-        padding: var(--spacing-sm) var(--spacing-md);
+        position: fixed;
+        top: var(--spacing-sm);
+        left: var(--spacing-sm);
+        right: var(--spacing-sm);
+        min-width: unset;
+        padding: var(--spacing-sm);
         font-size: 0.875rem;
+        border-radius: 8px;
+    }
+
+    .status-icon {
+        font-size: 1rem;
+    }
+
+    .retry-btn {
+        width: 100%;
+        padding: var(--spacing-sm);
+        font-size: 0.9rem;
+        min-height: 40px;
+        border-radius: 6px;
     }
 }
 
 /* High contrast mode support */
-@media (prefers-contrast: high) {
-    .page-header {
-        border-width: 2px;
-    }
-
-    .lecturer-info {
-        border-width: 2px;
-    }
-
+@media (prefers-contrast: more) {
+    .page-header,
+    .lecturer-info,
+    .error-container,
+    .courses-section,
     .status-message {
         border-width: 2px;
+    }
+
+    .retry-btn {
+        border: 2px solid transparent;
     }
 }
 
 /* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
-    .loading-spinner {
-        animation: none;
-    }
-
     .status-message {
         animation: none;
     }
 
     * {
         transition: none !important;
+    }
+}
+
+/* Focus styles for accessibility */
+.retry-btn:focus-visible {
+    outline: 2px solid var(--primary-500);
+    outline-offset: 2px;
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+    .retry-btn {
+        min-height: 44px;
+        padding: var(--spacing-md) var(--spacing-lg);
+    }
+
+    .status-message {
+        padding: var(--spacing-md);
     }
 }

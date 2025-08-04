@@ -5,6 +5,7 @@
 @using AirCode.Services.Courses
 @using AirCode.Services.Auth
 @using AirCode.Components.SharedPrefabs.Others
+@using AirCode.Components.SharedPrefabs.Spinner
 
 @using AirCode.Layout.AdminLayout.Superior
 @using Microsoft.AspNetCore.Authorization
@@ -15,12 +16,12 @@
 <div class="lecturer-courses-page">
     <div class="page-header">
         <div class="header-content">
-            <h2>My Courses</h2>
+            <h2 class="text-adaptive-primary">My Courses</h2>
             <div class="lecturer-info">
                 <span class="lecturer-icon">👨‍🏫</span>
                 <div class="lecturer-details">
-                    <span class="lecturer-label">Lecturer ID:</span>
-                    <span class="lecturer-id">@CurrentLecturerId</span>
+                    <span class="lecturer-label text-adaptive-muted">Lecturer ID:</span>
+                    <span class="lecturer-id text-adaptive-primary">@CurrentLecturerId</span>
                 </div>
             </div>
         </div>
@@ -28,19 +29,18 @@
 
     @if (IsInitialLoading)
     {
-        <div class="loading-container">
-            <div class="loading-spinner"></div>
-            <p class="loading-text">Loading your courses...</p>
-        </div>
+        <LoadingSpinner 
+            Title="Loading Your Courses" 
+            Subtitle="Please wait while we retrieve your assigned courses..." />
     }
     else if (!string.IsNullOrEmpty(AuthErrorMessage))
     {
         <div class="error-container">
             <div class="error-icon">⚠️</div>
-            <h3>Authentication Error</h3>
-            <p>@AuthErrorMessage</p>
+            <h3 class="text-adaptive-primary">Authentication Error</h3>
+            <p class="text-adaptive-secondary">@AuthErrorMessage</p>
             <button class="retry-btn" @onclick="LoadLecturerCourses">
-                Retry Authentication
+                <span class="btn-text">Retry Authentication</span>
             </button>
         </div>
     }
