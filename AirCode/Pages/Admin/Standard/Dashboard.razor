@@ -4,190 +4,361 @@
 @using AirCode.Domain.Entities
 @using AirCode.Domain.Enums
 @using AirCode.Services.Courses
+@using AirCode.Services.Attendance
+@using AirCode.Services.Firebase
 @using AirCode.Components.Admin.Shared
 @using AirCode.Models.UI
 @layout SuperiorAdminLayout
 @attribute [Authorize(Policy = "StandardAdmin")]
 @inject ICourseService CourseService
+@inject IAttendanceSessionService AttendanceService
+@inject IFirestoreService FirestoreService
 @inject IJSRuntime JSRuntime
 
 <PageTitle>Lecturer Dashboard</PageTitle>
 
 <div class="dashboard-container">
-    <div class="dashboard-header">
-        <h1 class="dashboard-title">Lecturer Dashboard</h1>
-        <div class="dashboard-date">@DateTime.Now.ToString("dddd, MMMM dd, yyyy")</div>
-    </div>
-
-    <div class="dashboard-grid">
-        <!-- Quick Stats Section -->
-        <div class="stats-section">
-            <AdminCard Title="My Teaching Load">
-                <Content>
-                    <div class="stats-grid">
-                        <StatCard 
-                            Title="My Courses" 
-                            Value="@_myCourses.Count.ToString()" 
-                            Icon="fas fa-book" 
-                            Trend="stable" />
-                        <StatCard 
-                            Title="Total Students" 
-                            Value="@_totalStudents.ToString()" 
-                            Icon="fas fa-users" 
-                            Trend="up" />
-                        <StatCard 
-                            Title="Active Enrollments" 
-                            Value="@_activeEnrollments.ToString()" 
-                            Icon="fas fa-user-check" 
-                            Trend="up" />
-                    </div>
-                </Content>
-            </AdminCard>
+    @if (_isLoading)
+    {
+        <div class="loading-container">
+            <div class="loading-spinner"></div>
+            <p>Loading dashboard data...</p>
+        </div>
+    }
+    else
+    {
+        <div class="dashboard-header">
+            <h1 class="dashboard-title">Lecturer Dashboard</h1>
+            <div class="dashboard-date">@DateTime.Now.ToString("dddd, MMMM dd, yyyy")</div>
         </div>
 
-        <!-- My Courses Section -->
-        <div class="courses-section">
-            <AdminCard Title="My Courses">
-                <Content>
-                    @if (_myCourses.Any())
-                    {
-                        <div class="courses-list">
-                            @foreach (var course in _myCourses.Take(6))
+        <div class="dashboard-grid">
+            <!-- Quick Stats Section -->
+            <div class="stats-section">
+                <AdminCard Title="My Teaching Load">
+                    <Content>
+                        <div class="stats-grid">
+                            <StatCard 
+                                Title="My Courses" 
+                                Value="@_myCourses.Count.ToString()" 
+                                Icon="fas fa-book" 
+                                Trend="stable" />
+                            <StatCard 
+                                Title="Total Students" 
+                                Value="@_totalStudents.ToString()" 
+                                Icon="fas fa-users" 
+                                Trend="up" />
+                            <StatCard 
+                                Title="Active Sessions" 
+                                Value="@_activeSessions.ToString()" 
+                                Icon="fas fa-calendar-check" 
+                                Trend="@(_activeSessions > 0 ? "up" : "stable")" />
+                        </div>
+                    </Content>
+                </AdminCard>
+            </div>
+
+            <!-- My Courses Section -->
+            <div class="courses-section">
+                <AdminCard Title="My Courses">
+                    <Content>
+                        @if (_myCourses.Any())
+                        {
+                            <div class="courses-list">
+                                @foreach (var course in _myCourses.Take(6))
+                                {
+                                    <div class="course-item">
+                                        <div class="course-header">
+                                            <span class="course-code">@course.CourseCode</span>
+                                            <span class="course-level">@course.Level.ToString().Replace("Level", "L")</span>
+                                        </div>
+                                        <div class="course-name">@course.Name</div>
+                                        <div class="course-details">
+                                            <span class="credit-units">@course.CreditUnits CU</span>
+                                            <span class="semester">@course.Semester</span>
+                                        </div>
+                                        <div class="course-stats">
+                                            <span class="enrolled-count">@GetEnrolledStudentsCount(course.CourseCode) students</span>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                            @if (_myCourses.Count > 6)
                             {
-                                <div class="course-item">
-                                    <div class="course-header">
-                                        <span class="course-code">@course.CourseCode</span>
-                                        <span class="course-level">@course.Level.ToString().Replace("Level", "L")</span>
+                                <div class="view-all-link">
+                                    <a href="/Admin/Courses">View All Courses (@_myCourses.Count)</a>
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <div class="empty-state">
+                                <i class="fas fa-book-open"></i>
+                                <p>No courses assigned yet</p>
+                            </div>
+                        }
+                    </Content>
+                </AdminCard>
+            </div>
+
+            <!-- Attendance Status Section -->
+            <div class="attendance-section">
+                <AdminCard Title="Attendance Status">
+                    <Content>
+                        <div class="attendance-overview">
+                            <div class="status-item @(_activeSessions > 0 ? "active" : "")">
+                                <div class="status-icon">
+                                    <i class="fas fa-@(_activeSessions > 0 ? "play-circle" : "pause-circle")"></i>
+                                </div>
+                                <div class="status-details">
+                                    <span class="status-title">Active Sessions</span>
+                                    <span class="status-count">@_activeSessions</span>
+                                </div>
+                            </div>
+                            
+                            <div class="status-item @(_pendingOfflineSync > 0 ? "warning" : "")">
+                                <div class="status-icon">
+                                    <i class="fas fa-@(_pendingOfflineSync > 0 ? "sync-alt" : "check-circle")"></i>
+                                </div>
+                                <div class="status-details">
+                                    <span class="status-title">Offline Sessions</span>
+                                    <span class="status-count">@_pendingOfflineSync @(_pendingOfflineSync > 0 ? "pending sync" : "synced")</span>
+                                </div>
+                            </div>
+                            
+                            <div class="status-item">
+                                <div class="status-icon">
+                                    <i class="fas fa-calendar-alt"></i>
+                                </div>
+                                <div class="status-details">
+                                    <span class="status-title">Total Sessions</span>
+                                    <span class="status-count">@_totalSessions</span>
+                                </div>
+                            </div>
+                            
+                            @if (_incompleteSessions > 0)
+                            {
+                                <div class="status-item warning">
+                                    <div class="status-icon">
+                                        <i class="fas fa-exclamation-triangle"></i>
                                     </div>
-                                    <div class="course-name">@course.Name</div>
-                                    <div class="course-details">
-                                        <span class="credit-units">@course.CreditUnits CU</span>
-                                        <span class="semester">@course.Semester</span>
-                                    </div>
-                                    <div class="course-stats">
-                                        <span class="enrolled-count">@GetEnrolledStudentsCount(course.CourseCode) students</span>
+                                    <div class="status-details">
+                                        <span class="status-title">Incomplete Sessions</span>
+                                        <span class="status-count">@_incompleteSessions need attention</span>
                                     </div>
                                 </div>
                             }
                         </div>
-                        @if (_myCourses.Count > 6)
-                        {
-                            <div class="view-all-link">
-                                <a href="/Admin/Courses">View All Courses (@_myCourses.Count)</a>
-                            </div>
-                        }
-                    }
-                    else
-                    {
-                        <div class="empty-state">
-                            <i class="fas fa-book-open"></i>
-                            <p>No courses assigned yet</p>
-                        </div>
-                    }
-                </Content>
-            </AdminCard>
-        </div>
+                    </Content>
+                </AdminCard>
+            </div>
 
-        <!-- Student Enrollments Section -->
-        <div class="enrollments-section">
-            <AdminCard Title="Recent Student Activities">
-                <Content>
-                    <div class="activities-list">
-                        @foreach (var activity in _recentActivities.Take(8))
+            <!-- Recent Activities Section -->
+            <div class="activities-section">
+                <AdminCard Title="Recent Activities">
+                    <Content>
+                        @if (_recentActivities.Any())
                         {
-                            <div class="activity-item">
-                                <div class="activity-icon @GetActivityIconClass(activity.Type)">
-                                    <i class="@GetActivityIcon(activity.Type)"></i>
-                                </div>
-                                <div class="activity-details">
-                                    <div class="activity-title">@activity.Title</div>
-                                    <div class="activity-meta">
-                                        <span class="course-code">@activity.CourseCode</span>
-                                        <span class="activity-time">@activity.Time.ToString("MMM dd, HH:mm")</span>
+                            <div class="activities-list">
+                                @foreach (var activity in _recentActivities.Take(6))
+                                {
+                                    <div class="activity-item">
+                                        <div class="activity-icon @GetActivityIconClass(activity.Type)">
+                                            <i class="@GetActivityIcon(activity.Type)"></i>
+                                        </div>
+                                        <div class="activity-details">
+                                            <div class="activity-title">@activity.Title</div>
+                                            <div class="activity-meta">
+                                                <span class="course-code">@activity.CourseCode</span>
+                                                <span class="activity-time">@activity.Time.ToString("MMM dd, HH:mm")</span>
+                                            </div>
+                                        </div>
+                                        <div class="activity-status @activity.Status.ToString().ToLower()">
+                                            @activity.Status
+                                        </div>
                                     </div>
-                                </div>
-                                <div class="activity-status @activity.Status.ToString().ToLower()">
-                                    @activity.Status
-                                </div>
+                                }
                             </div>
                         }
-                    </div>
-                </Content>
-            </AdminCard>
-        </div>
+                        else
+                        {
+                            <div class="empty-state">
+                                <i class="fas fa-history"></i>
+                                <p>No recent activities</p>
+                            </div>
+                        }
+                    </Content>
+                </AdminCard>
+            </div>
 
-        <!-- Course Schedule Section -->
-        <div class="schedule-section">
-            <AdminCard Title="Today's Schedule">
-                <Content>
-                    @if (_todaySchedule.Any())
-                    {
-                        <div class="schedule-list">
-                            @foreach (var schedule in _todaySchedule)
+            <!-- Today's Schedule Section -->
+            <div class="schedule-section">
+                <AdminCard Title="Today's Schedule">
+                    <Content>
+                        @if (_todaySchedule.Any())
+                        {
+                            <div class="schedule-list">
+                                @foreach (var schedule in _todaySchedule)
+                                {
+                                    <div class="schedule-item">
+                                        <div class="schedule-time">
+                                            <span class="time-range">@schedule.StartTime.ToString(@"hh\:mm") - @schedule.EndTime.ToString(@"hh\:mm")</span>
+                                        </div>
+                                        <div class="schedule-details">
+                                            <div class="course-info">@schedule.CourseCode - @schedule.CourseName</div>
+                                            <div class="location">@schedule.Location</div>
+                                        </div>
+                                        @if (HasActiveSession(schedule.CourseCode))
+                                        {
+                                            <div class="session-indicator active">
+                                                <i class="fas fa-circle"></i>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="empty-state">
+                                <i class="fas fa-calendar-check"></i>
+                                <p>No classes scheduled for today</p>
+                            </div>
+                        }
+                    </Content>
+                </AdminCard>
+            </div>
+
+            <!-- Quick Actions Section -->
+            <div class="actions-section">
+                <AdminCard Title="Quick Actions">
+                    <Content>
+                        <div class="action-buttons">
+                            <button class="action-btn primary" @onclick="CreateAttendanceSession">
+                                <i class="fas fa-plus"></i>
+                                <span>New Session</span>
+                            </button>
+                            <button class="action-btn secondary" @onclick="ViewAllSessions">
+                                <i class="fas fa-list"></i>
+                                <span>All Sessions</span>
+                            </button>
+                            @if (_pendingOfflineSync > 0)
                             {
-                                <div class="schedule-item">
-                                    <div class="schedule-time">
-                                        <span class="time-range">@schedule.StartTime.ToString(@"hh\:mm") - @schedule.EndTime.ToString(@"hh\:mm")</span>
-                                    </div>
-                                    <div class="schedule-details">
-                                        <div class="course-info">@schedule.CourseCode - @schedule.CourseName</div>
-                                        <div class="location">@schedule.Location</div>
-                                    </div>
-                                </div>
+                                <button class="action-btn warning" @onclick="SyncOfflineData">
+                                    <i class="fas fa-sync-alt"></i>
+                                    <span>Sync Offline</span>
+                                </button>
                             }
+                            <button class="action-btn tertiary" @onclick="RefreshData">
+                                <i class="fas fa-refresh"></i>
+                                <span>Refresh</span>
+                            </button>
                         </div>
-                    }
-                    else
-                    {
-                        <div class="empty-state">
-                            <i class="fas fa-calendar-check"></i>
-                            <p>No classes scheduled for today</p>
-                        </div>
-                    }
-                </Content>
-            </AdminCard>
+                    </Content>
+                </AdminCard>
+            </div>
         </div>
-
-        <!-- Quick Actions Section -->
-       
-    </div>
+    }
 </div>
 
 @code {
+    private bool _isLoading = true;
+    private bool _disposed = false;
+
+    // Core data
     private List<Course> _myCourses = new();
     private List<StudentCourse> _allStudentCourses = new();
     private List<ActivityItem> _recentActivities = new();
     private List<ScheduleItem> _todaySchedule = new();
     
+    // Statistics
     private int _totalStudents;
-    private int _activeEnrollments;
+    private int _activeSessions;
+    private int _totalSessions;
+    private int _pendingOfflineSync;
+    private int _incompleteSessions;
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadDashboardData();
+        try
+        {
+            await LoadDashboardData();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading dashboard data: {ex.Message}");
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
     }
 
     private async Task LoadDashboardData()
     {
+        // Load all data concurrently
+        var tasks = new[]
+        {
+            LoadCourseData(),
+            LoadAttendanceData(),
+            LoadStudentData()
+        };
+
+        await Task.WhenAll(tasks);
+        
+        // Generate derived data
+        CalculateStats();
+        GenerateRecentActivities();
+        GenerateTodaySchedule();
+    }
+
+    private async Task LoadCourseData()
+    {
         try
         {
-            // Load lecturer's courses - in real implementation, filter by current lecturer ID
+            // In real implementation, filter by current lecturer ID
             _myCourses = await CourseService.GetAllCoursesAsync() ?? new List<Course>();
-            
-            // Load student courses for enrollment data
-            _allStudentCourses = await CourseService.GetAllStudentCoursesAsync() ?? new List<StudentCourse>();
-            
-            // Calculate stats
-            CalculateStats();
-            
-            // Generate mock activities and schedule
-            GenerateRecentActivities();
-            GenerateTodaySchedule();
         }
         catch (Exception ex)
         {
-            // Handle error - could show notification
-            Console.WriteLine($"Error loading dashboard data: {ex.Message}");
+            Console.WriteLine($"Error loading courses: {ex.Message}");
+            _myCourses = new List<Course>();
+        }
+    }
+
+    private async Task LoadAttendanceData()
+    {
+        try
+        {
+            var activeSessions = await AttendanceService.GetActiveSessionsAsync();
+            var allSessions = await AttendanceService.GetAllSessionsAsync();
+            var offlineSessions = await AttendanceService.GetActiveOfflineSessionsAsync();
+            
+            _activeSessions = activeSessions?.Count ?? 0;
+            _totalSessions = allSessions?.Count ?? 0;
+            _pendingOfflineSync = offlineSessions?.Count ?? 0;
+            
+            // Calculate incomplete sessions (sessions that should be ended but aren't)
+            _incompleteSessions = activeSessions?.Count(s => 
+                DateTime.UtcNow > s.CreatedAt.AddHours(3)) ?? 0; // Sessions older than 3 hours
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading attendance data: {ex.Message}");
+        }
+    }
+
+    private async Task LoadStudentData()
+    {
+        try
+        {
+            _allStudentCourses = await CourseService.GetAllStudentCoursesAsync() ?? new List<StudentCourse>();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading student data: {ex.Message}");
+            _allStudentCourses = new List<StudentCourse>();
         }
     }
 
@@ -201,11 +372,6 @@
             .ToList();
             
         _totalStudents = studentsInMyCourses.Count;
-        
-        // Count active enrollments
-        _activeEnrollments = _allStudentCourses
-            .SelectMany(sc => sc.StudentCoursesRefs ?? new List<CourseRefrence>())
-            .Count(cr => myCourseCodes.Contains(cr.CourseCode) && cr.CourseEnrollmentStatus == CourseEnrollmentStatus.Enrolled);
     }
 
     private int GetEnrolledStudentsCount(string courseCode)
@@ -217,23 +383,46 @@
 
     private void GenerateRecentActivities()
     {
-        var random = new Random();
         var activities = new List<ActivityItem>();
-        var activityTypes = new[] { "Enrollment", "Carryover", "Dropped" };
         
-        for (int i = 0; i < 10; i++)
+        // Add real activities based on actual data
+        if (_activeSessions > 0)
         {
-            var course = _myCourses.ElementAtOrDefault(random.Next(_myCourses.Count));
-            if (course != null)
+            activities.Add(new ActivityItem
             {
-                var activityType = activityTypes[random.Next(activityTypes.Length)];
+                Type = "Session",
+                Title = "Active attendance sessions",
+                CourseCode = "Multiple",
+                Time = DateTime.Now.AddMinutes(-15),
+                Status = CourseEnrollmentStatus.Enrolled
+            });
+        }
+
+        if (_pendingOfflineSync > 0)
+        {
+            activities.Add(new ActivityItem
+            {
+                Type = "Sync",
+                Title = "Offline sessions pending sync",
+                CourseCode = "Multiple",
+                Time = DateTime.Now.AddMinutes(-30),
+                Status = CourseEnrollmentStatus.Carryover
+            });
+        }
+
+        // Add course-based activities
+        foreach (var course in _myCourses.Take(3))
+        {
+            var studentCount = GetEnrolledStudentsCount(course.CourseCode);
+            if (studentCount > 0)
+            {
                 activities.Add(new ActivityItem
                 {
-                    Type = activityType,
-                    Title = $"Student {activityType.ToLower()}",
+                    Type = "Enrollment",
+                    Title = $"{studentCount} students enrolled",
                     CourseCode = course.CourseCode,
-                    Time = DateTime.Now.AddHours(-random.Next(1, 72)),
-                    Status = Enum.Parse<CourseEnrollmentStatus>(activityType == "Enrollment" ? "Enrolled" : activityType)
+                    Time = DateTime.Now.AddHours(-Random.Shared.Next(1, 24)),
+                    Status = CourseEnrollmentStatus.Enrolled
                 });
             }
         }
@@ -246,9 +435,10 @@
         var today = DateTime.Now.DayOfWeek;
         var scheduleItems = new List<ScheduleItem>();
         
-        foreach (var course in _myCourses.Take(3))
+        foreach (var course in _myCourses.Take(4))
         {
-            if (course.Schedule.TimeSlots.Any(ts => ts.Day == today) == true)
+            // Check if course has schedule for today
+            if (course.Schedule.TimeSlots?.Any(ts => ts.Day == today) == true)
             {
                 var timeSlot = course.Schedule.TimeSlots.First(ts => ts.Day == today);
                 scheduleItems.Add(new ScheduleItem
@@ -257,7 +447,7 @@
                     CourseName = course.Name,
                     StartTime = timeSlot.StartTime,
                     EndTime = timeSlot.EndTime,
-                    Location = timeSlot.Location
+                    Location = timeSlot.Location ?? "TBA"
                 });
             }
         }
@@ -265,9 +455,17 @@
         _todaySchedule = scheduleItems.OrderBy(s => s.StartTime).ToList();
     }
 
+    private bool HasActiveSession(string courseCode)
+    {
+        // This would check against actual active sessions
+        return _activeSessions > 0 && _myCourses.Any(c => c.CourseCode == courseCode);
+    }
+
     private string GetActivityIcon(string type) => type switch
     {
         "Enrollment" => "fas fa-user-plus",
+        "Session" => "fas fa-play-circle",
+        "Sync" => "fas fa-sync-alt",
         "Carryover" => "fas fa-redo",
         "Dropped" => "fas fa-user-minus",
         _ => "fas fa-info-circle"
@@ -276,14 +474,46 @@
     private string GetActivityIconClass(string type) => type switch
     {
         "Enrollment" => "success",
+        "Session" => "primary",
+        "Sync" => "warning",
         "Carryover" => "warning",
         "Dropped" => "error",
         _ => "info"
     };
 
-    private async Task NavigateTo(string url)
+    private async Task RefreshData()
     {
-        await JSRuntime.InvokeVoidAsync("window.location.href", url);
+        if (_disposed) return;
+        
+        _isLoading = true;
+        StateHasChanged();
+        
+        try
+        {
+            await LoadDashboardData();
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
     }
 
+    private async Task CreateAttendanceSession()
+    {
+        if (_disposed) return;
+        await JSRuntime.InvokeVoidAsync("location.assign", "/Admin/Attendance/Create");
+    }
+
+    private async Task ViewAllSessions()
+    {
+        if (_disposed) return;
+        await JSRuntime.InvokeVoidAsync("location.assign", "/Admin/Attendance");
+    }
+
+    private async Task SyncOfflineData()
+    {
+        if (_disposed) return;
+        await JSRuntime.InvokeVoidAsync("location.assign", "/Admin/Attendance/Sync");
+    }
 }

@@ -10,7 +10,7 @@ namespace AirCode.Services.Storage
     
     /// <summary>
     /// Enhanced local storage service leveraging Blazored.LocalStorage with persistent device management
-    /// Optimized for AirCode application with prefix-based key management and batch operations
+    /// Optimized for AirCode application with prefix-based key management and batch operations to make things easier to distinguish
     /// </summary>
     public class BlazorAppLocalStorageService : IBlazorAppLocalStorageService
     {

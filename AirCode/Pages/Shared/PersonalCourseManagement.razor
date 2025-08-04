@@ -5,9 +5,11 @@
 @using AirCode.Services.Courses
 @using AirCode.Layout.AdminLayout.Superior
 @using AirCode.Layout.FullScreen
+@using AirCode.Utilities.ObjectPooling
 @layout FullScreenLayout
 @inject ICourseService CourseService
 @inject IJSRuntime JSRuntime
+@implements IDisposable
 
 <PageTitle>My Course Management</PageTitle>
 
@@ -52,11 +54,10 @@
             @if (CurrentStudentCourse?.StudentCoursesRefs?.Any() == true)
             {
             <div class="courses-grid">
-                @foreach (var courseRef in CurrentStudentCourse.StudentCoursesRefs.OrderBy(c => c.CourseCode))
+                @foreach (var courseRef in GetEnrolledCoursesForCurrentPage())
                 {
                 var course = AvailableCourses.FirstOrDefault(c => c.CourseCode == courseRef.CourseCode);
                 <div class="course-card enrolled-card status-@courseRef.CourseEnrollmentStatus.ToString().ToLower()">
-                    @* Carryover Banner - Conditional Visual Identifier *@
                     @if (courseRef.CourseEnrollmentStatus == CourseEnrollmentStatus.Carryover)
                     {
                         <div class="carryover-banner">
@@ -67,9 +68,9 @@
                     <div class="course-header">
                         <h4 class="course-code">@courseRef.CourseCode</h4>
                         <div class="course-status">
-                                        <span class="status-badge status-@courseRef.CourseEnrollmentStatus.ToString().ToLower()">
-                                            @courseRef.CourseEnrollmentStatus
-                                        </span>
+                            <span class="status-badge status-@courseRef.CourseEnrollmentStatus.ToString().ToLower()">
+                                @courseRef.CourseEnrollmentStatus
+                            </span>
                         </div>
                     </div>
 
@@ -136,6 +137,31 @@
                 </div>
                 }
             </div>
+
+            <!-- Enrolled Courses Pagination -->
+            @if (GetTotalEnrolledPages() > 1)
+            {
+                <div class="pagination-container">
+                    <div class="pagination-info">
+                        Page @_paginationState.StudentsCurrentPage of @GetTotalEnrolledPages()
+                    </div>
+                    <div class="pagination-controls">
+                        <button class="btn btn-outline btn-sm" 
+                                @onclick="PreviousEnrolledPage" 
+                                disabled="@(_paginationState.StudentsCurrentPage <= 1)">
+                            ← Previous
+                        </button>
+                        <span class="page-indicator">
+                            @_paginationState.StudentsCurrentPage / @GetTotalEnrolledPages()
+                        </span>
+                        <button class="btn btn-outline btn-sm" 
+                                @onclick="NextEnrolledPage" 
+                                disabled="@(_paginationState.StudentsCurrentPage >= GetTotalEnrolledPages())">
+                            Next →
+                        </button>
+                    </div>
+                </div>
+            }
             }
             else
             {
@@ -152,18 +178,18 @@
             <div class="section-header">
                 <h3>Available Courses</h3>
                 <div class="course-filters">
-                    <select class="filter-select" @bind="SelectedSemester" @bind:after="FilterCourses">
+                    <select class="filter-select" @bind="SelectedSemester" @bind:after="OnSemesterFilterChanged">
                         <option value="">All Semesters</option>
                         <option value="@SemesterType.FirstSemester">First Semester</option>
                         <option value="@SemesterType.SecondSemester">Second Semester</option>
                     </select>
                     <input type="text" class="search-input" placeholder="Search courses..."
-                           @bind="SearchTerm" @bind:after="FilterCourses" />
+                           @bind="SearchTerm" @bind:after="OnSearchChanged" />
                 </div>
             </div>
 
             <div class="courses-grid">
-                @foreach (var course in FilteredCourses.Take(12))
+                @foreach (var course in FilteredCourses)
                 {
                 var isEnrolled = IsStudentEnrolledInCourse(course.CourseCode);
                 <div class="course-card available-card @(isEnrolled ? "already-enrolled" : "")">
@@ -185,9 +211,9 @@
                             @foreach (var slot in course.Schedule.TimeSlots.Take(1))
                             {
                             <span class="schedule-item">
-                                                @slot.Day.ToString().Substring(0, 3)
+                                @slot.Day.ToString().Substring(0, 3)
                                 @slot.StartTime.ToString(@"hh\:mm")-@slot.EndTime.ToString(@"hh\:mm")
-                                            </span>
+                            </span>
                             }
                             @if (course.Schedule.TimeSlots.Count > 1)
                             {
@@ -201,8 +227,8 @@
                         @if (isEnrolled)
                         {
                         <span class="enrolled-indicator">
-                                        <i class="icon-check"></i> Already Enrolled
-                                    </span>
+                            <i class="icon-check"></i> Already Enrolled
+                        </span>
                         }
                         else
                         {
@@ -217,13 +243,40 @@
                 }
             </div>
 
-            @if (FilteredCourses.Count > 12)
+            <!-- Available Courses Pagination -->
+            @if (GetTotalAvailablePages() > 1)
             {
-            <div class="load-more-container">
-                <button class="btn btn-outline" @onclick="LoadMoreCourses">
-                    Load More Courses (@(FilteredCourses.Count - 12) remaining)
-                </button>
-            </div>
+                <div class="pagination-container">
+                    <div class="pagination-info">
+                        Page @_paginationState.CourseRepsCurrentPage of @GetTotalAvailablePages()
+                        (@(GetTotalAvailablePages() * CoursesPerPage) total courses)
+                    </div>
+                    <div class="pagination-controls">
+                        <button class="btn btn-outline btn-sm" 
+                                @onclick="PreviousPage" 
+                                disabled="@(_paginationState.CourseRepsCurrentPage <= 1)">
+                            ← Previous
+                        </button>
+                        
+                        <!-- Page number buttons for quick navigation -->
+                        @for (int i = Math.Max(1, _paginationState.CourseRepsCurrentPage - 2); 
+                              i <= Math.Min(GetTotalAvailablePages(), _paginationState.CourseRepsCurrentPage + 2); 
+                              i++)
+                        {
+                            var pageNum = i; // Capture for closure
+                            <button class="btn @(_paginationState.CourseRepsCurrentPage == pageNum ? "btn-primary" : "btn-outline") btn-sm"
+                                    @onclick="() => GoToPage(pageNum)">
+                                @pageNum
+                            </button>
+                        }
+                        
+                        <button class="btn btn-outline btn-sm" 
+                                @onclick="NextPage" 
+                                disabled="@(_paginationState.CourseRepsCurrentPage >= GetTotalAvailablePages())">
+                            Next →
+                        </button>
+                    </div>
+                </div>
             }
         </div>
     </div>
@@ -250,12 +303,12 @@
     }
 </div>
 
-<!-- Success/Error Messages -->
+<!-- Success Messages using notification component -->
 @if (!string.IsNullOrEmpty(SuccessMessage))
 {
-<div class="toast toast-success">
+<div class="toast toast-success" @onclick="ClearSuccessMessage">
     <i class="icon-success"></i>
     <span>@SuccessMessage</span>
-    <button class="toast-close" @onclick="() => SuccessMessage = string.Empty">×</button>
+    <button class="toast-close" @onclick="ClearSuccessMessage">×</button>
 </div>
 }

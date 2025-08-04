@@ -1,4 +1,4 @@
-/* PersonalCourseManagement.razor.css */
+/* Enhanced PersonalCourseManagement.razor.css with Pagination */
 
 .student-course-container {
     padding: 1rem;
@@ -114,7 +114,7 @@
     content: "⚠️";
 }
 
-/* Main Grid Layout - Mobile First */
+/* Main Grid Layout */
 .course-management-grid {
     display: grid;
     grid-template-columns: 1fr;
@@ -180,15 +180,15 @@
     flex: 1;
 }
 
-/* Course Grids - Mobile First */
+/* Course Grids */
 .courses-grid {
     display: grid;
     grid-template-columns: 1fr;
     gap: 1rem;
-    margin-bottom: 2rem;
+    margin-bottom: 1rem;
 }
 
-/* Course Cards - Mobile First Design */
+/* Course Cards */
 .course-card {
     background: var(--bg-secondary);
     border-radius: 12px;
@@ -232,7 +232,7 @@
     background: linear-gradient(90deg, var(--error), #dc2626);
 }
 
-/* Status Banners - Mobile Optimized */
+/* Status Banners */
 .carryover-banner {
     position: absolute;
     top: 8px;
@@ -254,7 +254,7 @@
     font-size: 0.7rem;
 }
 
-/* Course Header - Mobile Optimized */
+/* Course Header */
 .course-header {
     display: flex;
     justify-content: space-between;
@@ -298,7 +298,7 @@
     color: var(--text-on-error);
 }
 
-/* Course Details - Improved Text Handling */
+/* Course Details */
 .course-details {
     flex: 1;
     margin-bottom: 0.75rem;
@@ -340,7 +340,7 @@
     color: var(--text-adaptive-secondary) !important;
 }
 
-/* Schedule Information - Mobile Optimized */
+/* Schedule Information */
 .schedule-info, .schedule-preview {
     margin-top: 0.5rem;
 }
@@ -394,7 +394,7 @@
     color: var(--warning) !important;
 }
 
-/* Course Actions - Mobile Optimized */
+/* Course Actions */
 .course-actions {
     display: flex;
     gap: 0.4rem;
@@ -404,7 +404,7 @@
     flex-wrap: wrap;
 }
 
-/* Button Styles - Updated for Mobile */
+/* Button Styles */
 .btn {
     padding: 0.35rem 0.6rem;
     border: none;
@@ -517,13 +517,46 @@
     color: var(--text-adaptive-primary);
 }
 
-/* Load More Container */
-.load-more-container {
-    text-align: center;
+/* PAGINATION STYLES */
+.pagination-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     margin-top: 1.5rem;
+    padding: 1rem;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    flex-wrap: wrap;
+    gap: 1rem;
 }
 
-/* Course Statistics - Mobile First */
+.pagination-info {
+    color: var(--text-adaptive-secondary);
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.pagination-controls .btn {
+    min-width: 70px;
+    flex: none;
+}
+
+.page-indicator {
+    color: var(--text-adaptive-secondary);
+    font-size: 0.8rem;
+    font-weight: 500;
+    padding: 0 0.5rem;
+}
+
+/* Course Statistics */
 .course-statistics {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -568,6 +601,7 @@
     gap: 0.75rem;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
     z-index: 1000;
+    cursor: pointer;
 }
 
 .toast-success {
@@ -587,7 +621,7 @@
     content: "✅";
 }
 
-/* RESPONSIVE DESIGN - Progressive Enhancement */
+/* RESPONSIVE DESIGN */
 
 /* Small Mobile - 481px and up */
 @media (min-width: 481px) {
@@ -604,6 +638,11 @@
         right: 2rem;
         left: auto;
         max-width: 400px;
+    }
+
+    .pagination-container {
+        flex-direction: row;
+        justify-content: space-between;
     }
 }
 
@@ -657,6 +696,14 @@
     .stat-label {
         font-size: 0.9rem;
     }
+
+    .pagination-controls {
+        gap: 0.75rem;
+    }
+
+    .pagination-controls .btn {
+        min-width: 80px;
+    }
 }
 
 /* Desktop - 1024px and up */
@@ -681,6 +728,14 @@
 
     .section-header h3 {
         font-size: 1.4rem;
+    }
+
+    .pagination-controls {
+        gap: 1rem;
+    }
+
+    .pagination-controls .btn {
+        min-width: 90px;
     }
 }
 

@@ -1,4 +1,4 @@
-/* Enhanced ScanPage.razor.css */
+/* Enhanced ScanPage.razor.css - Simplified Scanner */
 
 .scan-attendance-page {
     position: fixed;
@@ -47,7 +47,7 @@
     opacity: 0.9;
 }
 
-/* Main Scanner Container - Full viewport */
+/* Main Scanner Container */
 .scan-container {
     position: relative;
     width: 100%;
@@ -79,7 +79,7 @@
     }
 }
 
-/* QR Scanner Container - Optimized video handling */
+/* QR Scanner Container */
 .qr-scanner-container {
     position: absolute;
     top: 0;
@@ -94,7 +94,6 @@
     z-index: 3;
 }
 
-/* Video Performance Optimization */
 .qr-scanner-container video {
     position: absolute !important;
     top: 50% !important;
@@ -111,7 +110,7 @@
     -webkit-backface-visibility: hidden;
 }
 
-/* Enhanced Scan Frame - Square with dashed borders */
+/* Simplified Scan Frame */
 .scan-frame {
     position: absolute;
     width: min(70vw, 70vh);
@@ -126,108 +125,82 @@
     margin-top: -10px;
 }
 
-/* Dashed border design */
-.scan-frame::before {
-    content: '';
-    position: absolute;
-    top: -2px;
-    left: -2px;
-    right: -2px;
-    bottom: -2px;
-    background: linear-gradient(90deg,
-    #4CAF50 0%, #4CAF50 20%,
-    transparent 20%, transparent 30%,
-    #4CAF50 30%, #4CAF50 50%,
-    transparent 50%, transparent 60%,
-    #4CAF50 60%, #4CAF50 80%,
-    transparent 80%, transparent 90%,
-    #4CAF50 90%, #4CAF50 100%);
-    background-size: 40px 4px;
-    border-radius: 8px;
-    animation: dashRotate 8s linear infinite;
-    opacity: 0.8;
-    filter: drop-shadow(0 0 8px rgba(76, 175, 80, 0.4));
-}
-
-@keyframes dashRotate {
-    0% { background-position: 0 0; }
-    100% { background-position: 160px 0; }
-}
-
-/* Corner indicators - cleaner design */
+/* Simple corner brackets */
 .corner {
     position: absolute;
-    width: 24px;
-    height: 24px;
-    border: 2px solid #4CAF50;
-    border-radius: 2px;
-    box-shadow: 0 0 12px rgba(76, 175, 80, 0.6);
-    opacity: 0.9;
+    width: 30px;
+    height: 30px;
+    border: 3px solid #4CAF50;
+    box-shadow: 0 0 15px rgba(76, 175, 80, 0.5);
 }
 
 .corner.top-left {
-    top: -12px;
-    left: -12px;
+    top: -15px;
+    left: -15px;
     border-right: none;
     border-bottom: none;
+    border-radius: 8px 0 0 0;
 }
 
 .corner.top-right {
-    top: -12px;
-    right: -12px;
+    top: -15px;
+    right: -15px;
     border-left: none;
     border-bottom: none;
+    border-radius: 0 8px 0 0;
 }
 
 .corner.bottom-left {
-    bottom: -12px;
-    left: -12px;
+    bottom: -15px;
+    left: -15px;
     border-right: none;
     border-top: none;
+    border-radius: 0 0 0 8px;
 }
 
 .corner.bottom-right {
-    bottom: -12px;
-    right: -12px;
+    bottom: -15px;
+    right: -15px;
     border-left: none;
     border-top: none;
+    border-radius: 0 0 8px 0;
 }
 
-/* Smooth scanning line with lerp animation */
+/* Simple scanning line */
 .scan-line {
     position: absolute;
     top: 0;
-    left: 8px;
-    right: 8px;
-    height: 2px;
+    left: 0;
+    right: 0;
+    height: 3px;
     background: linear-gradient(90deg,
     transparent 0%,
-    rgba(76, 175, 80, 0.3) 20%,
+    rgba(76, 175, 80, 0.4) 25%,
     #4CAF50 50%,
-    rgba(76, 175, 80, 0.3) 80%,
+    rgba(76, 175, 80, 0.4) 75%,
     transparent 100%);
-    border-radius: 1px;
-    box-shadow: 0 0 12px rgba(76, 175, 80, 0.8);
-    animation: smoothScanLine 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-    will-change: transform, opacity;
+    border-radius: 2px;
+    box-shadow: 0 0 20px rgba(76, 175, 80, 0.8);
+    animation: simpleScanLine 2s ease-in-out infinite;
+    will-change: transform;
 }
 
-@keyframes smoothScanLine {
-    0%, 5% {
+@keyframes simpleScanLine {
+    0% {
         transform: translateY(0);
         opacity: 0.8;
     }
-    45%, 55% {
-        transform: translateY(calc(100% + 16px));
+    50% {
+        transform: translateY(calc(100% + 12px));
         opacity: 1;
     }
-    95%, 100% {
-        transform: translateY(calc(200% + 32px));
-        opacity: 0.3;
+    100% {
+        transform: translateY(calc(200% + 24px));
+        opacity: 0.8;
     }
 }
 
-/* Optimized Processing Overlay */
+/* Processing Overlay */
 .processing-overlay {
     position: absolute;
     top: 0;
@@ -269,119 +242,7 @@
     100% { transform: rotate(360deg); }
 }
 
-/* Clean Professional Result Overlay */
-.result-overlay {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: min(85vw, 340px);
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border-radius: 16px;
-    padding: 1.5rem;
-    text-align: center;
-    z-index: 25;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-    animation: resultSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-}
-
-.result-overlay.success {
-    background: rgba(237, 247, 237, 0.95);
-    border-color: rgba(76, 175, 80, 0.3);
-}
-
-.result-overlay.error {
-    background: rgba(253, 237, 237, 0.95);
-    border-color: rgba(244, 67, 54, 0.3);
-}
-
-@keyframes resultSlideIn {
-    0% {
-        opacity: 0;
-        transform: translate(-50%, -50%) scale(0.8);
-    }
-    100% {
-        opacity: 1;
-        transform: translate(-50%, -50%) scale(1);
-    }
-}
-
-.result-icon {
-    width: 48px;
-    height: 48px;
-    margin: 0 auto 1rem;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.5rem;
-    font-weight: 700;
-    animation: resultIconScale 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s both;
-}
-
-.result-overlay.success .result-icon {
-    background: rgba(76, 175, 80, 0.15);
-    color: var(--success);
-}
-
-.result-overlay.error .result-icon {
-    background: rgba(244, 67, 54, 0.15);
-    color: var(--error);
-}
-
-@keyframes resultIconScale {
-    0% {
-        transform: scale(0);
-    }
-    100% {
-        transform: scale(1);
-    }
-}
-
-.result-message {
-    color: var(--text-dark-primary);
-    font-size: clamp(0.9rem, 3vw, 1rem);
-    font-weight: 500;
-    line-height: 1.4;
-    margin-bottom: 1.25rem;
-    animation: fadeInUp 0.4s ease-out 0.3s both;
-}
-
-@keyframes fadeInUp {
-    0% {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    100% {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.continue-btn {
-    background: var(--primary-500);
-    color: var(--text-on-primary);
-    border: none;
-    border-radius: 10px;
-    padding: 0.75rem 1.5rem;
-    font-size: 0.9rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    animation: fadeInUp 0.4s ease-out 0.4s both;
-    min-width: 120px;
-}
-
-.continue-btn:hover {
-    background: var(--primary-600);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(15, 76, 117, 0.4);
-}
-
-/* Scanner Controls - Bottom positioned */
+/* Scanner Controls */
 .scan-controls {
     position: absolute;
     bottom: max(env(safe-area-inset-bottom), 20px);
@@ -422,7 +283,7 @@
     font-size: 0.9rem;
 }
 
-/* Mobile-First Responsive Optimizations */
+/* Responsive Design */
 @media (max-width: 480px) {
     .scan-header {
         padding: max(env(safe-area-inset-top), 0.75rem) 0.75rem 0.5rem;
@@ -436,10 +297,16 @@
         margin-top: -5px;
     }
 
-    .result-overlay {
-        width: min(90vw, 300px);
-        padding: 1.25rem;
+    .corner {
+        width: 25px;
+        height: 25px;
+        border-width: 2px;
     }
+
+    .corner.top-left { top: -12px; left: -12px; }
+    .corner.top-right { top: -12px; right: -12px; }
+    .corner.bottom-left { bottom: -12px; left: -12px; }
+    .corner.bottom-right { bottom: -12px; right: -12px; }
 
     .scan-controls {
         bottom: max(env(safe-area-inset-bottom), 15px);
@@ -452,15 +319,6 @@
     }
 }
 
-@media (min-width: 481px) and (max-width: 767px) {
-    .scan-frame {
-        width: min(65vw, 65vh);
-        height: min(65vw, 65vh);
-        max-width: 300px;
-        max-height: 300px;
-    }
-}
-
 @media (min-width: 768px) {
     .scan-frame {
         width: min(50vw, 60vh);
@@ -469,19 +327,20 @@
         max-height: 400px;
     }
 
-    .result-overlay {
-        width: min(60vw, 380px);
+    .corner {
+        width: 35px;
+        height: 35px;
     }
+
+    .corner.top-left { top: -18px; left: -18px; }
+    .corner.top-right { top: -18px; right: -18px; }
+    .corner.bottom-left { bottom: -18px; left: -18px; }
+    .corner.bottom-right { bottom: -18px; right: -18px; }
 }
 
 /* Performance optimizations */
 @media (prefers-reduced-motion: reduce) {
     .scan-line {
-        animation: none;
-    }
-
-    .corner::before,
-    .scan-frame::before {
         animation: none;
     }
 
@@ -491,15 +350,13 @@
     }
 }
 
-/* Hardware acceleration for smoother animations */
+/* Hardware acceleration */
 .scan-line,
-.spinner,
-.scan-frame::before {
+.spinner {
     transform: translateZ(0);
     will-change: transform;
 }
 
-/* Utility classes */
 .fadeIn {
     animation: fadeIn 0.3s ease-out;
 }

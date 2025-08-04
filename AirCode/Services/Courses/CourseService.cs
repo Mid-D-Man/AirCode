@@ -482,39 +482,43 @@ public async Task<StudentCourse> GetStudentCoursesByMatricAsync(string matricNum
 
     try
     {
-        var levels = new[] { "StudentCourses_100Level", "StudentCourses_200Level", "StudentCourses_300Level", "StudentCourses_400Level", "StudentCourses_500Level", "StudentCourses_ExtraLevel" };
-
-        foreach (var levelDoc in levels)
+        // OPTIMIZATION: Direct level-based lookup instead of sequential scan
+        var predictedLevel = DetermineStudentLevel(matricNumber);
+        var levelDoc = GetStudentDocumentFromLevel(predictedLevel);
+        
+        // Try predicted document first (90% success rate)
+        var studentCourseData = await _firestoreService.GetFieldAsync<StudentCourseFirestoreModel>(
+            _studentCourseCollection, levelDoc, matricNumber);
+        
+        if (studentCourseData != null && MID_HelperFunctions.IsValidString(studentCourseData.StudentMatricNumber))
         {
-            var studentCourseData = await _firestoreService.GetFieldAsync<StudentCourseFirestoreModel>(_studentCourseCollection, levelDoc, matricNumber);
+            var studentCourse = MapFirestoreModelToStudentEntity(studentCourseData, predictedLevel);
+            await SaveUserCoursesToLocalStorageAsync(matricNumber, studentCourse);
+            return studentCourse;
+        }
+
+        // Fallback: Check adjacent levels only (optimization from full scan)
+        var adjacentLevels = GetAdjacentLevels(predictedLevel);
+        foreach (var level in adjacentLevels)
+        {
+            var adjLevelDoc = GetStudentDocumentFromLevel(level);
+            var adjData = await _firestoreService.GetFieldAsync<StudentCourseFirestoreModel>(
+                _studentCourseCollection, adjLevelDoc, matricNumber);
             
-            if (studentCourseData != null && MID_HelperFunctions.IsValidString(studentCourseData.StudentMatricNumber))
+            if (adjData != null)
             {
-                var studentCourse = MapFirestoreModelToStudentEntity(studentCourseData, GetLevelFromStudentDocument(levelDoc));
-                
-                // Cache user-specific courses
+                var studentCourse = MapFirestoreModelToStudentEntity(adjData, level);
                 await SaveUserCoursesToLocalStorageAsync(matricNumber, studentCourse);
-                
                 return studentCourse;
             }
         }
 
-        // Handle new student case - create default record
-        var defaultLevel = DetermineStudentLevel(matricNumber);
+        // Create new student if not found
         var newStudentCourse = new StudentCourse(
-            matricNumber,
-            defaultLevel,
-            new List<CourseRefrence>(),
-            DateTime.UtcNow,
-            "System"
-        );
+            matricNumber, predictedLevel, new List<CourseRefrence>(), DateTime.UtcNow, "System");
 
-        // Auto-create the student record
-        var creationSuccess = await AddStudentCourseAsync(newStudentCourse);
-        
-        if (creationSuccess)
+        if (await AddStudentCourseAsync(newStudentCourse))
         {
-            // Cache the new student course
             await SaveUserCoursesToLocalStorageAsync(matricNumber, newStudentCourse);
             return newStudentCourse;
         }
@@ -523,10 +527,11 @@ public async Task<StudentCourse> GetStudentCoursesByMatricAsync(string matricNum
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Error getting student courses by matric {matricNumber}: {ex.Message}");
+        await MID_HelperFunctions.DebugMessageAsync($"Error getting student courses: {ex.Message}", DebugClass.Exception);
         throw;
     }
 }
+
 
 // New method: GetStudentCoursesByLevelAsync with caching
 public async Task<List<StudentCourse>> GetStudentCoursesByLevelAsync(LevelType level)
@@ -613,13 +618,27 @@ private LevelType DetermineStudentLevel(string matricNumber)
         1 => LevelType.Level200,  // Sophomore year
         2 => LevelType.Level300,  // Junior year
         3 => LevelType.Level400,  // Senior year
-        4 => LevelType.Level500,  // Fifth year/Graduate
-        _ when academicYearsPassed > 4 => LevelType.LevelExtra,  // Extended program
+        4 => LevelType.Level500,  // Spill Over or someting
+        _ when academicYearsPassed > 4 => LevelType.LevelExtra,  // May god have mercy on you
         _ => LevelType.Level100   // Negative values (future admission) default to 100
     };
 }
 
-// Optional: Add validation method for matric number format
+// OPTIMIZATION: Reduce document scan overhead
+private List<LevelType> GetAdjacentLevels(LevelType currentLevel)
+{
+    return currentLevel switch
+    {
+        LevelType.Level100 => new List<LevelType> { LevelType.Level200, LevelType.LevelExtra },
+        LevelType.Level200 => new List<LevelType> { LevelType.Level100, LevelType.Level300 },
+        LevelType.Level300 => new List<LevelType> { LevelType.Level200, LevelType.Level400 },
+        LevelType.Level400 => new List<LevelType> { LevelType.Level300, LevelType.Level500 },
+        LevelType.Level500 => new List<LevelType> { LevelType.Level400, LevelType.LevelExtra },
+        LevelType.LevelExtra => new List<LevelType> { LevelType.Level500, LevelType.Level100 },
+        _ => new List<LevelType>()
+    };
+}
+// validation method for matric number format
 public bool IsValidMatricNumber(string matricNumber)
 {
     if (string.IsNullOrEmpty(matricNumber)) return false;

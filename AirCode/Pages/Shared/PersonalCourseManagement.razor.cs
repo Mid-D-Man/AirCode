@@ -2,31 +2,58 @@ using AirCode.Domain.Entities;
 using AirCode.Domain.Enums;
 using AirCode.Domain.ValueObjects;
 using AirCode.Services.Courses;
+using AirCode.Utilities.ObjectPooling;
 using Microsoft.AspNetCore.Components;
+
 namespace AirCode.Pages.Shared;
 
-public partial class PersonalCourseManagement : ComponentBase
+public partial class PersonalCourseManagement : ComponentBase, IDisposable
 {
-    // Component State ... removed from layout since its general shared page for now though
+    // Object Pools
+    private static readonly MID_ComponentObjectPool<List<Course>> _courseListPool = new(
+        () => new List<Course>(),
+        list => list.Clear(),
+        maxPoolSize: 50,
+        cleanupInterval: TimeSpan.FromMinutes(10)
+    );
+
+    private static readonly MID_ComponentObjectPool<Collections> _collectionsPool = new(
+        () => new Collections(),
+        collections => 
+        {
+            collections.Students.Clear();
+            collections.Lecturers.Clear();
+            collections.CourseReps.Clear();
+        },
+        maxPoolSize: 20,
+        cleanupInterval: TimeSpan.FromMinutes(5)
+    );
+
+    // Component State
     private bool IsLoading = true;
     private bool IsProcessing = false;
     private string ErrorMessage = string.Empty;
     private string SuccessMessage = string.Empty;
-  
-    //using matric num if user above level and course below enrol as carry over
+
     // Student Data
-    [Parameter] public string CurrentMatricNumber { get; set; } = "U21CYS1083"; // This should come from auth context
-    [Parameter] public LevelType CurrentStudentLevel { get; set; } = LevelType.Level100; // This should come from auth context
+    [Parameter] public string CurrentMatricNumber { get; set; } = "U21CYS1083";
+    [Parameter] public LevelType CurrentStudentLevel { get; set; } = LevelType.Level100;
     
     private StudentCourse? CurrentStudentCourse;
     private List<Course> AvailableCourses = new();
     private List<Course> FilteredCourses = new();
 
-    // Filtering
+    // Pagination & Filtering
+    private const int CoursesPerPage = 10;
+    private readonly PaginationState _paginationState = new();
     private string SearchTerm = string.Empty;
     private SemesterType? SelectedSemester;
-    private int DisplayedCoursesCount = 12;
-   
+
+    // Pooled objects
+    private PooledObjectWrapper<List<Course>>? _pooledEnrolledCourses;
+    private PooledObjectWrapper<List<Course>>? _pooledAvailableCourses;
+    private PooledObjectWrapper<Collections>? _pooledCollections;
+
     protected override async Task OnInitializedAsync()
     {
         await LoadStudentData();
@@ -34,33 +61,33 @@ public partial class PersonalCourseManagement : ComponentBase
 
     private async Task LoadStudentData()
     {
+        using var loadOperation = _courseListPool.GetPooled();
+        
         try
         {
             IsLoading = true;
             ErrorMessage = string.Empty;
 
+            // Get pooled objects
+            _pooledCollections = _collectionsPool.GetPooled();
+            _pooledEnrolledCourses = _courseListPool.GetPooled();
+            _pooledAvailableCourses = _courseListPool.GetPooled();
+
             // Load student's current course data
             CurrentStudentCourse = await CourseService.GetStudentCoursesByMatricAsync(CurrentMatricNumber);
-            //creating if missing already handled by the get func
-            /*
-            // If student doesn't exist, create new student course record
-            if (CurrentStudentCourse == null)
-            {
-                CurrentStudentCourse = new StudentCourse(
-                    CurrentMatricNumber,
-                    CurrentStudentLevel,
-                    new List<CourseRefrence>(),
-                    DateTime.UtcNow,
-                    "Student"
-                );
-                await CourseService.AddStudentCourseAsync(CurrentStudentCourse);
-            }
-             */
-            // Load available courses for the student's level
-            //get all courses not by level cause we gas account for carryover courses and what not
-            AvailableCourses = await CourseService.GetAllCoursesAsync();
             
-            FilterCourses();
+            // Load available courses
+            var allCourses = await CourseService.GetAllCoursesAsync();
+            
+            // Use pooled list to avoid allocations
+            var tempFilteredList = loadOperation.Object;
+            tempFilteredList.AddRange(allCourses);
+            
+            // Copy to our main collections using pooled objects
+            AvailableCourses.Clear();
+            AvailableCourses.AddRange(tempFilteredList);
+            
+            FilterCoursesWithPagination();
         }
         catch (Exception ex)
         {
@@ -72,8 +99,36 @@ public partial class PersonalCourseManagement : ComponentBase
         }
     }
 
+    private void FilterCoursesWithPagination()
+    {
+        using var filterOperation = _courseListPool.GetPooled();
+        var tempList = filterOperation.Object;
+
+        // Apply filters
+        foreach (var course in AvailableCourses)
+        {
+            var matchesSearch = string.IsNullOrEmpty(SearchTerm) || 
+                               course.CourseCode.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase) ||
+                               course.Name.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase);
+            
+            var matchesSemester = !SelectedSemester.HasValue || course.Semester == SelectedSemester.Value;
+            
+            if (matchesSearch && matchesSemester)
+            {
+                tempList.Add(course);
+            }
+        }
+
+        // Apply pagination
+        var skip = (_paginationState.CourseRepsCurrentPage - 1) * CoursesPerPage;
+        FilteredCourses.Clear();
+        FilteredCourses.AddRange(tempList.Skip(skip).Take(CoursesPerPage));
+    }
+
     private async Task EnrollInCourse(string courseCode)
     {
+        using var enrollOperation = _courseListPool.GetPooled();
+        
         try
         {
             IsProcessing = true;
@@ -90,7 +145,7 @@ public partial class PersonalCourseManagement : ComponentBase
             if (success)
             {
                 SuccessMessage = $"Successfully enrolled in {courseCode}";
-                await LoadStudentData(); // Refresh data
+                await LoadStudentData();
             }
             else
             {
@@ -109,6 +164,8 @@ public partial class PersonalCourseManagement : ComponentBase
 
     private async Task RemoveCourse(string courseCode)
     {
+        using var removeOperation = _courseListPool.GetPooled();
+        
         try
         {
             IsProcessing = true;
@@ -118,7 +175,7 @@ public partial class PersonalCourseManagement : ComponentBase
             if (success)
             {
                 SuccessMessage = $"Successfully removed {courseCode}";
-                await LoadStudentData(); // Refresh data
+                await LoadStudentData();
             }
             else
             {
@@ -137,6 +194,8 @@ public partial class PersonalCourseManagement : ComponentBase
 
     private async Task UpdateCourseStatus(string courseCode, CourseEnrollmentStatus newStatus)
     {
+        using var updateOperation = _courseListPool.GetPooled();
+        
         try
         {
             IsProcessing = true;
@@ -146,7 +205,7 @@ public partial class PersonalCourseManagement : ComponentBase
             if (success)
             {
                 SuccessMessage = $"Course {courseCode} status updated to {newStatus}";
-                await LoadStudentData(); // Refresh data
+                await LoadStudentData();
             }
             else
             {
@@ -163,9 +222,47 @@ public partial class PersonalCourseManagement : ComponentBase
         }
     }
 
-    private void FilterCourses()
+    // Pagination Methods
+    private async Task NextPage()
     {
-        FilteredCourses = AvailableCourses.Where(course => 
+        var totalPages = GetTotalAvailablePages();
+        if (_paginationState.CourseRepsCurrentPage < totalPages)
+        {
+            _paginationState.CourseRepsCurrentPage++;
+            FilterCoursesWithPagination();
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task PreviousPage()
+    {
+        if (_paginationState.CourseRepsCurrentPage > 1)
+        {
+            _paginationState.CourseRepsCurrentPage--;
+            FilterCoursesWithPagination();
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task GoToPage(int pageNumber)
+    {
+        var totalPages = GetTotalAvailablePages();
+        if (pageNumber >= 1 && pageNumber <= totalPages)
+        {
+            _paginationState.CourseRepsCurrentPage = pageNumber;
+            FilterCoursesWithPagination();
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private int GetTotalAvailablePages()
+    {
+        using var countOperation = _courseListPool.GetPooled();
+        var tempList = countOperation.Object;
+
+        // Count filtered courses without creating new list
+        var count = 0;
+        foreach (var course in AvailableCourses)
         {
             var matchesSearch = string.IsNullOrEmpty(SearchTerm) || 
                                course.CourseCode.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase) ||
@@ -173,13 +270,27 @@ public partial class PersonalCourseManagement : ComponentBase
             
             var matchesSemester = !SelectedSemester.HasValue || course.Semester == SelectedSemester.Value;
             
-            return matchesSearch && matchesSemester;
-        }).ToList();
+            if (matchesSearch && matchesSemester)
+            {
+                count++;
+            }
+        }
+
+        return (int)Math.Ceiling(count / (double)CoursesPerPage);
     }
 
-    private void LoadMoreCourses()
+    private async Task OnSearchChanged()
     {
-        DisplayedCoursesCount += 12;
+        _paginationState.CourseRepsCurrentPage = 1; // Reset to first page
+        FilterCoursesWithPagination();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task OnSemesterFilterChanged()
+    {
+        _paginationState.CourseRepsCurrentPage = 1; // Reset to first page
+        FilterCoursesWithPagination();
+        await InvokeAsync(StateHasChanged);
     }
 
     // Helper Methods
@@ -197,13 +308,20 @@ public partial class PersonalCourseManagement : ComponentBase
     {
         if (CurrentStudentCourse?.StudentCoursesRefs == null) return 0;
         
-        return CurrentStudentCourse.StudentCoursesRefs
-            .Where(cr => cr.CourseEnrollmentStatus == CourseEnrollmentStatus.Enrolled)
-            .Sum(cr => 
+        var totalUnits = 0;
+        foreach (var courseRef in CurrentStudentCourse.StudentCoursesRefs)
+        {
+            if (courseRef.CourseEnrollmentStatus == CourseEnrollmentStatus.Enrolled)
             {
-                var course = AvailableCourses.FirstOrDefault(c => c.CourseCode == cr.CourseCode);
-                return course?.CreditUnits ?? 0;
-            });
+                var course = AvailableCourses.FirstOrDefault(c => c.CourseCode == courseRef.CourseCode);
+                if (course != null)
+                {
+                    totalUnits += course.CreditUnits;
+                }
+            }
+        }
+        
+        return totalUnits;
     }
 
     private int GetCarryoverCount()
@@ -228,5 +346,55 @@ public partial class PersonalCourseManagement : ComponentBase
             LevelType.LevelExtra => "Extra",
             _ => "Unknown"
         };
+    }
+
+    private IEnumerable<CourseRefrence> GetEnrolledCoursesForCurrentPage()
+    {
+        if (CurrentStudentCourse?.StudentCoursesRefs == null)
+            return Enumerable.Empty<CourseRefrence>();
+
+        var skip = (_paginationState.StudentsCurrentPage - 1) * CoursesPerPage;
+        return CurrentStudentCourse.StudentCoursesRefs
+            .OrderBy(c => c.CourseCode)
+            .Skip(skip)
+            .Take(CoursesPerPage);
+    }
+
+    private int GetTotalEnrolledPages()
+    {
+        var count = CurrentStudentCourse?.StudentCoursesRefs?.Count ?? 0;
+        return (int)Math.Ceiling(count / (double)CoursesPerPage);
+    }
+
+    private async Task NextEnrolledPage()
+    {
+        var totalPages = GetTotalEnrolledPages();
+        if (_paginationState.StudentsCurrentPage < totalPages)
+        {
+            _paginationState.StudentsCurrentPage++;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task PreviousEnrolledPage()
+    {
+        if (_paginationState.StudentsCurrentPage > 1)
+        {
+            _paginationState.StudentsCurrentPage--;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void ClearSuccessMessage()
+    {
+        SuccessMessage = string.Empty;
+    }
+
+    public void Dispose()
+    {
+        // Dispose pooled objects
+        _pooledEnrolledCourses?.Dispose();
+        _pooledAvailableCourses?.Dispose();
+        _pooledCollections?.Dispose();
     }
 }
