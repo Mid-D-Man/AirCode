@@ -8,24 +8,24 @@
 <div class="client-nav-menu">
     <div class="nav-buttons">
         <CircularNavigationButton 
-            IconSvgContent="@_icons["stats"]"
-            IconPath="@(string.IsNullOrEmpty(_icons["stats"]) ? "svgs/stats.svg" : "")"
+            IconSvgContent="@GetIconContent("stats")"
+            IconPath="@(string.IsNullOrEmpty(GetIconContent("stats")) ? "svgs/stats.svg" : "")"
             Text="Stats"
             ButtonClass="@GetButtonClass("stats")"
             IsActive="@(_currentPage == "stats")"
             OnClick="@(() => NavigateTo("stats"))" />
         
         <CircularNavigationButton 
-            IconSvgContent="@_icons["scan"]"
-            IconPath="@(string.IsNullOrEmpty(_icons["scan"]) ? "svgs/scan_qrcode.svg" : "")"
+            IconSvgContent="@GetIconContent("scan")"
+            IconPath="@(string.IsNullOrEmpty(GetIconContent("scan")) ? "svgs/scan_qrcode.svg" : "")"
             Text="Scan"
             ButtonClass="@GetPrimaryButtonClass("scan")"
             IsActive="@(_currentPage == "scan")"
             OnClick="@(() => NavigateTo("scan"))" />
         
         <CircularNavigationButton 
-            IconSvgContent="@_icons["courses"]"
-            IconPath="@(string.IsNullOrEmpty(_icons["courses"]) ? "svgs/courses.svg" : "")"
+            IconSvgContent="@GetIconContent("courses")"
+            IconPath="@(string.IsNullOrEmpty(GetIconContent("courses")) ? "svgs/courses.svg" : "")"
             Text="MyCourses"
             ButtonClass="@GetButtonClass("courses")"
             IsActive="@(_currentPage == "courses")"
@@ -46,9 +46,25 @@
 
     protected override async Task OnInitializedAsync()
     {
+        // Initialize icons with fallbacks first
+        InitializeIconsWithFallbacks();
+        
         SetCurrentPage();
         NavigationManager.LocationChanged += OnLocationChanged;
         await LoadIconsOptimized();
+    }
+
+    private void InitializeIconsWithFallbacks()
+    {
+        foreach (var kvp in _emojiMap)
+        {
+            _icons[kvp.Key] = CreateEmojiSvg(kvp.Value);
+        }
+    }
+
+    private string GetIconContent(string key)
+    {
+        return _icons.TryGetValue(key, out var content) ? content : CreateEmojiSvg(_emojiMap.GetValueOrDefault(key, "❓"));
     }
 
     private void SetCurrentPage()

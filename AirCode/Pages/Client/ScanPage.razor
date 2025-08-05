@@ -79,23 +79,23 @@
         try
         {
             await _qrCodeScannerJsInterop.Init(_onQrCodeScanAction);
-            MID_HelperFunctions.DebugMessage("QR Scanner initialized successfully", DebugClass.Info);
+           await MID_HelperFunctions.DebugMessageAsync("QR Scanner initialized successfully", DebugClass.Info);
 
             currentUserMatricNumber = await AuthService.GetMatricNumberAsync();
             deviceGUID = await AuthService.GetDeviceIdAsync();
         }
         catch (Exception ex)
         {
-            MID_HelperFunctions.DebugMessage($"Failed to initialize scanner: {ex.Message}", DebugClass.Exception);
+           await MID_HelperFunctions.DebugMessageAsync($"Failed to initialize scanner: {ex.Message}", DebugClass.Exception);
             // Use notification component instead of ShowResult
         }
     }
 
     private async void OnQrCodeScan(string code)
     {
-        if (!string.IsNullOrEmpty(code) && CanProcessAttendance())
+        if (!string.IsNullOrEmpty(code) && await CanProcessAttendance())
         {
-            MID_HelperFunctions.DebugMessage($"QR Code detected: {code}", DebugClass.Info);
+          await MID_HelperFunctions.DebugMessageAsync($"QR Code detected: {code}", DebugClass.Info);
         
             await PauseScanning();
             isProcessing = true;
@@ -108,7 +108,7 @@
 
                 if (decodedSessionData != null)
                 {
-                    MID_HelperFunctions.DebugMessage($"Valid AirCode QR detected for course: {decodedSessionData.CourseCode}", DebugClass.Info);
+                   await MID_HelperFunctions.DebugMessageAsync($"Valid AirCode QR detected for course: {decodedSessionData.CourseCode}", DebugClass.Info);
                     var myCourses = await CourseService.GetStudentCoursesByMatricAsync(currentUserMatricNumber);
                     var courseRefs = myCourses.GetEnrolledCourses();
 
@@ -120,19 +120,19 @@
                     }
                     else
                     {
-                        MID_HelperFunctions.DebugMessage("You are not taking this course", DebugClass.Warning);
+                       await MID_HelperFunctions.DebugMessageAsync("You are not taking this course", DebugClass.Warning);
                         // Use notification component here
                     }
                 }
                 else
                 {
-                    MID_HelperFunctions.DebugMessage("QR code is not a valid AirCode attendance QR", DebugClass.Warning);
+                   await MID_HelperFunctions.DebugMessageAsync("QR code is not a valid AirCode attendance QR", DebugClass.Warning);
                     // Use notification component here
                 }
             }
             catch (Exception ex)
             {
-                MID_HelperFunctions.DebugMessage($"Error processing QR code: {ex.Message}", DebugClass.Exception);
+              await  MID_HelperFunctions.DebugMessageAsync($"Error processing QR code: {ex.Message}", DebugClass.Exception);
                 // Use notification component here
             }
         
@@ -147,7 +147,7 @@
     {
         try
         {
-            MID_HelperFunctions.DebugMessage($"Processing attendance with new payload structure for QR: {qrCode}", DebugClass.Info);
+           await MID_HelperFunctions.DebugMessageAsync($"Processing attendance with new payload structure for QR: {qrCode}", DebugClass.Info);
         
             var attendanceRecord = new AttendanceRecord
             {
@@ -157,38 +157,38 @@
                 DeviceGUID = deviceGUID
             };
         
-            MID_HelperFunctions.DebugMessage($"Attendance record: {MID_HelperFunctions.ToJson(attendanceRecord)}", DebugClass.Log);
+           await MID_HelperFunctions.DebugMessageAsync($"Attendance record: {MID_HelperFunctions.ToJson(attendanceRecord)}", DebugClass.Log);
         
             var edgeFunctionRequest = await QRDecoder.CreateEdgeFunctionRequestAsync(qrCode, attendanceRecord);
             
             if (edgeFunctionRequest == null)
             {
-                MID_HelperFunctions.DebugMessage("Failed to create valid request payload", DebugClass.Warning);
+               await MID_HelperFunctions.DebugMessageAsync("Failed to create valid request payload", DebugClass.Warning);
                 // Use notification component here
                 return;
             }
 
-            MID_HelperFunctions.DebugMessage($"Edge function request: {MID_HelperFunctions.ToJson(edgeFunctionRequest)}", DebugClass.Log);
+           await MID_HelperFunctions.DebugMessageAsync($"Edge function request: {MID_HelperFunctions.ToJson(edgeFunctionRequest)}", DebugClass.Log);
         
             var result = await EdgeService.ProcessAttendanceWithPayloadAsync(edgeFunctionRequest);
         
-            MID_HelperFunctions.DebugMessage($"Edge function result: {MID_HelperFunctions.ToJson(result)}", DebugClass.Log);
+           await MID_HelperFunctions.DebugMessageAsync($"Edge function result: {MID_HelperFunctions.ToJson(result)}", DebugClass.Log);
         
             if (result.Success)
             {
-                MID_HelperFunctions.DebugMessage("Attendance recorded successfully!", DebugClass.Info);
+              await  MID_HelperFunctions.DebugMessageAsync("Attendance recorded successfully!", DebugClass.Info);
                 // Use notification component for success
             }
             else
             {
                 var userFriendlyMessage = GetUserFriendlyErrorMessage(result.ErrorCode, result.Message);
-                MID_HelperFunctions.DebugMessage($"Attendance processing failed: {result.Message} (Code: {result.ErrorCode})", DebugClass.Warning);
+               await MID_HelperFunctions.DebugMessageAsync($"Attendance processing failed: {result.Message} (Code: {result.ErrorCode})", DebugClass.Warning);
                 // Use notification component for error
             }
         }
         catch (Exception ex)
         {
-            MID_HelperFunctions.DebugMessage($"Exception in ProcessAttendanceWithNewPayload: {ex}", DebugClass.Exception);
+          await  MID_HelperFunctions.DebugMessageAsync($"Exception in ProcessAttendanceWithNewPayload: {ex}", DebugClass.Exception);
             // Use notification component for exception
         }
     }
@@ -214,17 +214,17 @@
         };
     }
 
-    private bool CanProcessAttendance()
+    private async Task<bool> CanProcessAttendance()
     {
         if (isProcessing)
         {
-            MID_HelperFunctions.DebugMessage("Attendance processing already in progress", DebugClass.Warning);
+           await MID_HelperFunctions.DebugMessageAsync("Attendance processing already in progress", DebugClass.Warning);
             return false;
         }
 
         if (string.IsNullOrWhiteSpace(currentUserMatricNumber))
         {
-            MID_HelperFunctions.DebugMessage("User identification not available. Please ensure you are logged in.", DebugClass.Warning);
+          await  MID_HelperFunctions.DebugMessageAsync("User identification not available. Please ensure you are logged in.", DebugClass.Warning);
             // Use notification component here
             return false;
         }
@@ -240,11 +240,11 @@
             {
                 await _qrCodeScannerJsInterop.StopRecording();
                 isScanning = false;
-                MID_HelperFunctions.DebugMessage("Scanner paused", DebugClass.Log);
+               await MID_HelperFunctions.DebugMessageAsync("Scanner paused", DebugClass.Log);
             }
             catch (Exception ex)
             {
-                MID_HelperFunctions.DebugMessage($"Failed to pause scanner: {ex.Message}", DebugClass.Exception);
+              await  MID_HelperFunctions.DebugMessageAsync($"Failed to pause scanner: {ex.Message}", DebugClass.Exception);
             }
         }
     }
@@ -257,11 +257,11 @@
             {
                 await _qrCodeScannerJsInterop.Init(_onQrCodeScanAction);
                 isScanning = true;
-                MID_HelperFunctions.DebugMessage("Scanner resumed", DebugClass.Log);
+               await MID_HelperFunctions.DebugMessageAsync("Scanner resumed", DebugClass.Log);
             }
             catch (Exception ex)
             {
-                MID_HelperFunctions.DebugMessage($"Failed to resume scanner: {ex.Message}", DebugClass.Exception);
+               await MID_HelperFunctions.DebugMessageAsync($"Failed to resume scanner: {ex.Message}", DebugClass.Exception);
             }
         }
     }
@@ -283,7 +283,7 @@
             try
             {
                 await _qrCodeScannerJsInterop.StopRecording();
-                MID_HelperFunctions.DebugMessage("Scanner disposed", DebugClass.Log);
+               await MID_HelperFunctions.DebugMessageAsync("Scanner disposed", DebugClass.Log);
             }
             catch
             {
