@@ -112,7 +112,7 @@
 
 /* Clean Modern Scan Frame - Centered */
 .scan-frame {
-    position: absolute;
+    position: fixed;
     width: min(70vw, 70vh, 280px);
     height: min(70vw, 70vh, 280px);
     top: 50%;
@@ -122,6 +122,7 @@
     pointer-events: none;
     border: 2px solid rgba(255, 255, 255, 0.3);
     border-radius: 12px;
+    margin: 0;
 }
 
 /* Corner Markers - Clean and Simple */
@@ -183,7 +184,7 @@
 /* Fixed Scanning Line - Full vertical travel */
 .scan-line {
     position: absolute;
-    top: 0;
+    top: 10px;
     left: 10px;
     right: 10px;
     height: 2px;
@@ -201,15 +202,15 @@
 
 @keyframes scanLineMove {
     0% {
-        transform: translateY(0);
+        transform: translateY(10px);
         opacity: 0.8;
     }
     50% {
-        transform: translateY(calc(100% + 20px));
+        transform: translateY(calc(100% - 30px));
         opacity: 1;
     }
     100% {
-        transform: translateY(0);
+        transform: translateY(10px);
         opacity: 0.8;
     }
 }
