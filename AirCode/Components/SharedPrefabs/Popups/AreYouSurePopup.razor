@@ -1,0 +1,73 @@
+@namespace AirCode.Components.SharedPrefabs.Popups
+@using AirCode.Components.SharedPrefabs.Others
+@using AirCode.Components.SharedPrefabs.Spinner
+@using AirCode.Services.VisualElements
+@inject IBackdropService BackdropService
+
+@if (IsVisible)
+{
+    <GlobalBackdrop />
+    <div class="popup-container">
+        <div class="popup-content">
+            @if (IsLoading)
+            {
+                <div class="popup-loading">
+                    <LoadingSpinner Title="@LoadingTitle" Subtitle="@LoadingSubtitle" />
+                </div>
+            }
+            else
+            {
+                <div class="popup-header">
+                    <h3 class="popup-title">@Title</h3>
+                </div>
+
+                <div class="popup-body">
+                    <p class="popup-message">@Message</p>
+                    @if (!string.IsNullOrEmpty(WarningText))
+                    {
+                        <div class="popup-warning">
+                            <i class="warning-icon"></i>
+                            <span>@WarningText</span>
+                        </div>
+                    }
+                </div>
+
+                <div class="popup-actions">
+                    <button class="btn btn-outline" @onclick="OnCancel" disabled="@IsLoading">
+                        Cancel
+                    </button>
+                    <button class="btn @ConfirmButtonClass" @onclick="OnConfirm" disabled="@IsLoading">
+                        @ConfirmButtonText
+                    </button>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public string Title { get; set; } = "Confirm Action";
+    [Parameter] public string Message { get; set; } = "Are you sure you want to proceed?";
+    [Parameter] public string WarningText { get; set; } = string.Empty;
+    [Parameter] public string ConfirmButtonText { get; set; } = "Confirm";
+    [Parameter] public string ConfirmButtonClass { get; set; } = "btn-primary";
+    [Parameter] public string LoadingTitle { get; set; } = "Processing...";
+    [Parameter] public string LoadingSubtitle { get; set; } = "Please wait while we process your request.";
+
+    [Parameter] public EventCallback OnConfirm { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        if (IsVisible)
+        {
+            BackdropService.Show();
+        }
+        else
+        {
+            BackdropService.Hide();
+        }
+    }
+}

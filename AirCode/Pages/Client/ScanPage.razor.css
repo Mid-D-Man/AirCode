@@ -138,7 +138,7 @@
 /* Scan line animation */
 .scan-line {
     position: absolute;
-    top: 12px;
+    top: 0;
     left: 12px;
     right: 12px;
     height: 2px;
@@ -155,15 +155,15 @@
 
 @keyframes scanMove {
     0% {
-        transform: translateY(0);
+        transform: translateY(12px);
         opacity: 0.8;
     }
     50% {
-        transform: translateY(calc(100% - 36px));
+        transform: translateY(calc(100% + 260px));
         opacity: 1;
     }
     100% {
-        transform: translateY(0);
+        transform: translateY(12px);
         opacity: 0.8;
     }
 }
@@ -272,9 +272,9 @@
     }
 
     @keyframes scanMove {
-        0% { transform: translateY(0); opacity: 0.8; }
-        50% { transform: translateY(calc(100% - 30px)); opacity: 1; }
-        100% { transform: translateY(0); opacity: 0.8; }
+        0% { transform: translateY(10px); opacity: 0.8; }
+        50% { transform: translateY(240px); opacity: 1; }
+        100% { transform: translateY(10px); opacity: 0.8; }
     }
 
     .control-btn {
@@ -312,9 +312,9 @@
     }
 
     @keyframes scanMove {
-        0% { transform: translateY(0); opacity: 0.8; }
-        50% { transform: translateY(calc(100% - 42px)); opacity: 1; }
-        100% { transform: translateY(0); opacity: 0.8; }
+        0% { transform: translateY(14px); opacity: 0.8; }
+        50% { transform: translateY(290px); opacity: 1; }
+        100% { transform: translateY(14px); opacity: 0.8; }
     }
 }
 
