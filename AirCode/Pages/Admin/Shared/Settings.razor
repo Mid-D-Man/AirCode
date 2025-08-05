@@ -31,19 +31,6 @@
                 <div class="settings-content">
                     <div class="info-grid">
                         <div class="info-item">
-                            <label>User ID</label>
-                            <div class="copyable-field">
-                                <input type="text" value="@userId" readonly />
-                                <button class="copy-btn" @onclick="() => CopyToClipboard(userId)" title="Copy User ID">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                                    </svg>
-                                </button>
-                            </div>
-                        </div>
-
-                        <div class="info-item">
                             <label>Role</label>
                             <div class="role-display">
                                 <span class="role-badge role-@userRole?.ToLower()">@userRole</span>
@@ -81,19 +68,6 @@
                                 </div>
                             </div>
                         }
-
-                        <div class="info-item">
-                            <label>Device ID</label>
-                            <div class="copyable-field">
-                                <input type="text" value="@deviceId" readonly />
-                                <button class="copy-btn" @onclick="() => CopyToClipboard(deviceId)" title="Copy Device ID">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                                    </svg>
-                                </button>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -192,13 +166,6 @@
                     <div class="settings-content">
                         <div class="debug-info">
                             <div class="debug-item">
-                                <strong>JWT Token Preview:</strong>
-                                <div class="token-preview">
-                                    @(string.IsNullOrEmpty(jwtToken) ? "No token available" : 
-                                      jwtToken.Length > 50 ? $"{jwtToken.Substring(0, 50)}..." : jwtToken)
-                                </div>
-                            </div>
-                            <div class="debug-item">
                                 <strong>User Picture URL:</strong>
                                 <div class="picture-preview">
                                     @(string.IsNullOrEmpty(userPicture) ? "No picture available" : userPicture)
@@ -265,12 +232,9 @@
     private bool showCopyNotification = false;
     private bool canGenerateAdminId = false;
 
-    private string userId = "";
     private string userRole = "";
     private string lecturerId = "";
     private string matricNumber = "";
-    private string deviceId = "";
-    private string jwtToken = "";
     private string userPicture = "";
 
     protected override async Task OnInitializedAsync()
@@ -286,9 +250,8 @@
             
             if (isAuthenticated)
             {
-                userId = await AuthService.GetUserIdAsync() ?? "Not available";
+                var userId = await AuthService.GetUserIdAsync() ?? "";
                 userRole = await AuthService.GetUserRoleAsync() ?? "Unknown";
-                deviceId = await AuthService.GetDeviceIdAsync() ?? "Not available";
                 
                 // Load role-specific information
                 try
@@ -307,15 +270,6 @@
                 catch
                 {
                     matricNumber = "";
-                }
-
-                try
-                {
-                    jwtToken = await AuthService.GetJwtTokenAsync() ?? "";
-                }
-                catch
-                {
-                    jwtToken = "";
                 }
 
                 try

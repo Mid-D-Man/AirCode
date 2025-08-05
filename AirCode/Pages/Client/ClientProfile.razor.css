@@ -1,24 +1,30 @@
 .client-profile-page {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 1rem;
-    height: 100%;
-    overflow-y: auto;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: var(--spacing-lg);
+    background-color: var(--bg-primary);
+    color: var(--text-adaptive-primary);
+    min-height: 100vh;
 }
 
 .profile-header {
     display: flex;
     flex-direction: column;
     align-items: center;
-    margin-bottom: 2rem;
+    margin-bottom: var(--spacing-xxl);
     text-align: center;
+    padding: var(--spacing-xl);
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 }
 
 .profile-avatar-container {
     position: relative;
-    margin-bottom: 1rem;
+    margin-bottom: var(--spacing-lg);
 }
+
 
 .profile-avatar {
     width: 120px;

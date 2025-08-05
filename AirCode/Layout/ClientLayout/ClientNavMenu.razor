@@ -3,192 +3,131 @@
 @inject NavigationManager NavigationManager
 @inject AirCode.Services.VisualElements.ISvgIconService SvgIconService
 @using AirQrCode.Components.SharedPrefabs
+@implements IDisposable
 
 <div class="client-nav-menu">
     <div class="nav-buttons">
         <CircularNavigationButton 
-            IconSvgContent="@statsIconSvg"
-            IconPath="@(string.IsNullOrEmpty(statsIconSvg) ? "svgs/stats.svg" : "")"
+            IconSvgContent="@_icons["stats"]"
+            IconPath="@(string.IsNullOrEmpty(_icons["stats"]) ? "svgs/stats.svg" : "")"
             Text="Stats"
             ButtonClass="@GetButtonClass("stats")"
-            IsActive="@(currentPage == "stats")"
+            IsActive="@(_currentPage == "stats")"
             OnClick="@(() => NavigateTo("stats"))" />
         
         <CircularNavigationButton 
-            IconSvgContent="@scanIconSvg"
-            IconPath="@(string.IsNullOrEmpty(scanIconSvg) ? "svgs/scan_qrcode.svg" : "")"
+            IconSvgContent="@_icons["scan"]"
+            IconPath="@(string.IsNullOrEmpty(_icons["scan"]) ? "svgs/scan_qrcode.svg" : "")"
             Text="Scan"
             ButtonClass="@GetPrimaryButtonClass("scan")"
-            IsActive="@(currentPage == "scan")"
+            IsActive="@(_currentPage == "scan")"
             OnClick="@(() => NavigateTo("scan"))" />
         
         <CircularNavigationButton 
-            IconSvgContent="@settingsIconSvg"
-            IconPath="@(string.IsNullOrEmpty(settingsIconSvg) ? "svgs/settings.svg" : "")"
+            IconSvgContent="@_icons["courses"]"
+            IconPath="@(string.IsNullOrEmpty(_icons["courses"]) ? "svgs/courses.svg" : "")"
             Text="MyCourses"
             ButtonClass="@GetButtonClass("courses")"
-            IsActive="@(currentPage == "courses")"
+            IsActive="@(_currentPage == "courses")"
             OnClick="@(() => NavigateTo("courses"))" />
     </div>
 </div>
 
 @code {
-    private string currentPage = "scan";
-    private string statsIconSvg = string.Empty;
-    private string scanIconSvg = string.Empty;
-    private string settingsIconSvg = string.Empty;
-    private bool _iconsLoaded = false;
-    private int _retryCount = 0;
-    private const int MAX_RETRIES = 3;
+    private string _currentPage = "scan";
+    private readonly Dictionary<string, string> _icons = new();
+    private readonly Dictionary<string, string> _emojiMap = new()
+    {
+        { "stats", "📊" },
+        { "scan", "📷" },
+        { "courses", "📚" }
+    };
+    private bool _disposed = false;
 
     protected override async Task OnInitializedAsync()
     {
         SetCurrentPage();
-        await LoadIconsWithRetry();
         NavigationManager.LocationChanged += OnLocationChanged;
+        await LoadIconsOptimized();
     }
 
     private void SetCurrentPage()
     {
-        var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
-        var path = uri.AbsolutePath;
-        
-        currentPage = path switch
+        var path = NavigationManager.ToAbsoluteUri(NavigationManager.Uri).AbsolutePath;
+        _currentPage = path switch
         {
             var p when p.Contains("Stats") => "stats",
-            var p when p.Contains("Courses") || p.Contains("/Client/Courses") => "courses",
+            var p when p.Contains("Courses") => "courses",
             _ => "scan"
         };
     }
     
     private void OnLocationChanged(object sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
     {
-        SetCurrentPage();
-        InvokeAsync(StateHasChanged);
-    }
-    
-    public void Dispose()
-    {
-        NavigationManager.LocationChanged -= OnLocationChanged;
+        if (!_disposed)
+        {
+            SetCurrentPage();
+            InvokeAsync(StateHasChanged);
+        }
     }
 
-    private async Task LoadIconsWithRetry()
+    private async Task LoadIconsOptimized()
     {
-        while (_retryCount < MAX_RETRIES && !_iconsLoaded)
+        var iconMap = new Dictionary<string, string>
         {
-            _retryCount++;
-            
+            { "stats", "stats" },
+            { "scan", "scan_qrcode" },
+            { "courses", "courses" }
+        };
+
+        var loadTasks = iconMap.Select(async kvp =>
+        {
             try
             {
-                Console.WriteLine($"Attempting icon load (attempt {_retryCount}/{MAX_RETRIES})");
-                
-                // Load icons with timeout protection
-                var loadTasks = new[]
-                {
-                    LoadSingleIconAsync("stats"),
-                    LoadSingleIconAsync("scan_qrcode"),
-                    LoadSingleIconAsync("settings")
-                };
-
-                // Add overall timeout
-                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(8));
-                var results = await Task.WhenAll(loadTasks).WaitAsync(cts.Token);
-                
-                statsIconSvg = results[0];
-                scanIconSvg = results[1];  
-                settingsIconSvg = results[2];
-
-                // Validate load success
-                var loadedCount = new[] { statsIconSvg, scanIconSvg, settingsIconSvg }
-                    .Count(icon => !string.IsNullOrEmpty(icon));
-
-                Console.WriteLine($"Loaded {loadedCount}/3 icons successfully");
-                
-                if (loadedCount >= 2) // Accept partial success
-                {
-                    _iconsLoaded = true;
-                    Console.WriteLine("Icon loading completed successfully");
-                }
-                else if (_retryCount < MAX_RETRIES)
-                {
-                    Console.WriteLine($"Insufficient icons loaded, retrying in {_retryCount}s...");
-                    await Task.Delay(_retryCount * 1000); // Progressive delay
-                }
+                var svgContent = await SvgIconService.GetSvgContentAsync(kvp.Value);
+                return (key: kvp.Key, content: svgContent ?? CreateEmojiSvg(_emojiMap[kvp.Key]));
             }
-            catch (Exception ex)
+            catch
             {
-                Console.WriteLine($"Icon load attempt {_retryCount} failed: {ex.Message}");
-                
-                if (_retryCount < MAX_RETRIES)
-                {
-                    await Task.Delay(_retryCount * 1000);
-                }
+                return (key: kvp.Key, content: CreateEmojiSvg(_emojiMap[kvp.Key]));
             }
-        }
+        });
 
-        // Final fallback assignment
-        if (!_iconsLoaded)
+        var results = await Task.WhenAll(loadTasks);
+        
+        foreach (var (key, content) in results)
         {
-            Console.WriteLine("All icon load attempts failed, using fallbacks");
-            statsIconSvg = string.Empty;
-            scanIconSvg = string.Empty;
-            settingsIconSvg = string.Empty;
+            _icons[key] = content;
         }
         
         StateHasChanged();
     }
 
-    private async Task<string> LoadSingleIconAsync(string iconName)
+    private string CreateEmojiSvg(string emoji)
     {
-        try
-        {
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
-            var content = await SvgIconService.GetSvgContentAsync(iconName);
-            
-            if (!string.IsNullOrEmpty(content))
-            {
-                Console.WriteLine($"✓ {iconName} loaded successfully");
-                return content;
-            }
-            else
-            {
-                Console.WriteLine($"✗ {iconName} returned empty content");
-                return string.Empty;
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"✗ {iconName} load failed: {ex.Message}");
-            return string.Empty;
-        }
+        return $@"<svg width=""24"" height=""24"" viewBox=""0 0 24 24"" xmlns=""http://www.w3.org/2000/svg"">
+                    <text x=""12"" y=""16"" text-anchor=""middle"" font-size=""16"">{emoji}</text>
+                  </svg>";
     }
 
-    private string GetButtonClass(string page)
-    {
-        return currentPage == page ? "nav-active" : "";
-    }
-
-    private string GetPrimaryButtonClass(string page)
-    {
-        var baseClass = "primary";
-        var activeClass = currentPage == page ? " nav-active" : "";
-        return baseClass + activeClass;
-    }
+    private string GetButtonClass(string page) => _currentPage == page ? "nav-active" : "";
+    
+    private string GetPrimaryButtonClass(string page) => "primary" + (_currentPage == page ? " nav-active" : "");
 
     private void NavigateTo(string page)
     {
-        switch (page)
+        var route = page switch
         {
-            case "stats":
-                NavigationManager.NavigateTo("Client/Stats");
-                break;
-            case "courses":
-                NavigationManager.NavigateTo("Client/Courses");
-                break;
-            case "scan":
-            default:
-                NavigationManager.NavigateTo("Client/ScanAttendance");
-                break;
-        }
+            "stats" => "Client/Stats",
+            "courses" => "Client/Courses",
+            _ => "Client/ScanAttendance"
+        };
+        NavigationManager.NavigateTo(route);
+    }
+    
+    public void Dispose()
+    {
+        _disposed = true;
+        NavigationManager.LocationChanged -= OnLocationChanged;
     }
 }

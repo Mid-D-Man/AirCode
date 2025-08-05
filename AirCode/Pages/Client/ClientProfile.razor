@@ -10,85 +10,104 @@
 <div class="client-profile-page">
     <div class="profile-header">
         <div class="profile-avatar-container">
-            <img src="@ProfileImagePath" alt="Profile" class="profile-avatar" />
+            @if (!string.IsNullOrEmpty(profileImageUrl))
+            {
+                <img src="@profileImageUrl" alt="Profile" class="profile-avatar" @onerror="HandleImageError" />
+            }
+            else if (!string.IsNullOrEmpty(userIconSvg))
+            {
+                <div class="profile-avatar-svg">
+                    @((MarkupString)userIconSvg)
+                </div>
+            }
+            else
+            {
+                <div class="profile-avatar-default">
+                    <i class="oi oi-person"></i>
+                </div>
+            }
         </div>
         <div class="profile-user-info">
             <h3>@UserName</h3>
             <p>@UserEmail</p>
-            <span class="role-badge">@UserRole</span>
+            <span class="role-badge role-@UserRole?.ToLower()">@UserRole</span>
         </div>
     </div>
 
     <div class="profile-sections">
         <div class="profile-section">
-            <h4>User Information</h4>
-            <div class="info-group">
-                <div class="info-item">
-                    <label>User ID</label>
-                    <div class="copyable-field">
-                        <input type="text" value="@UserId" readonly />
-                        <button class="copy-btn" @onclick="() => CopyToClipboard(UserId)">
-                            <i class="oi oi-clipboard"></i>
-                        </button>
-                    </div>
+            <div class="section-header">
+                <h4>User Information</h4>
+                <div class="section-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
                 </div>
-                
-                @if (!string.IsNullOrEmpty(MatricNumber))
-                {
-                    <div class="info-item">
-                        <label>Matric Number</label>
-                        <div class="copyable-field">
-                            <input type="text" value="@MatricNumber" readonly />
-                            <button class="copy-btn" @onclick="() => CopyToClipboard(MatricNumber)">
-                                <i class="oi oi-clipboard"></i>
-                            </button>
+            </div>
+            <div class="settings-content">
+                <div class="info-grid">
+                    @if (!string.IsNullOrEmpty(MatricNumber))
+                    {
+                        <div class="info-item">
+                            <label>Matric Number</label>
+                            <div class="copyable-field">
+                                <input type="text" value="@MatricNumber" readonly />
+                                <button class="copy-btn" @onclick="() => CopyToClipboard(MatricNumber)" title="Copy Matric Number">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
-                    </div>
-                }
+                    }
 
-                @if (!string.IsNullOrEmpty(LecturerId))
-                {
-                    <div class="info-item">
-                        <label>Lecturer ID</label>
-                        <div class="copyable-field">
-                            <input type="text" value="@LecturerId" readonly />
-                            <button class="copy-btn" @onclick="() => CopyToClipboard(LecturerId)">
-                                <i class="oi oi-clipboard"></i>
-                            </button>
+                    @if (!string.IsNullOrEmpty(LecturerId))
+                    {
+                        <div class="info-item">
+                            <label>Lecturer ID</label>
+                            <div class="copyable-field">
+                                <input type="text" value="@LecturerId" readonly />
+                                <button class="copy-btn" @onclick="() => CopyToClipboard(LecturerId)" title="Copy Lecturer ID">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
-                    </div>
-                }
-
-                <div class="info-item">
-                    <label>Device ID</label>
-                    <div class="copyable-field">
-                        <input type="text" value="@DeviceId" readonly />
-                        <button class="copy-btn" @onclick="() => CopyToClipboard(DeviceId)">
-                            <i class="oi oi-clipboard"></i>
-                        </button>
-                    </div>
+                    }
                 </div>
             </div>
         </div>
 
         <div class="profile-section">
-            <h4>App Settings</h4>
-            <div class="settings-notice">
-                <p><i class="oi oi-info"></i> Minimal settings available for now. More customization options will be added in future updates for a smoother experience.</p>
-            </div>
-            
-            <div class="setting-item">
-                <div class="setting-info">
-                    <span class="setting-title">Dark Mode</span>
-                    <span class="setting-description">Switch between light and dark themes</span>
+            <div class="section-header">
+                <h4>App Settings</h4>
+                <div class="section-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1"></path>
+                    </svg>
                 </div>
-                <div class="setting-control">
-                    <label class="toggle-switch">
-                        <input type="checkbox" 
-                               checked="@isDarkModeEnabled" 
-                               @onchange="ToggleDarkMode" />
-                        <span class="slider round"></span>
-                    </label>
+            </div>
+            <div class="settings-content">
+                <div class="settings-notice">
+                    <p><i class="oi oi-info"></i> Minimal settings available for now. More customization options will be added in future updates for a smoother experience.</p>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <label>Theme</label>
+                        <span class="setting-description">Switch between light and dark mode</span>
+                    </div>
+                    <button class="theme-toggle-btn" @onclick="ToggleDarkMode">
+                        <div class="theme-toggle-slider">
+                            <div class="theme-toggle-thumb"></div>
+                        </div>
+                        <span class="theme-label">@(isDarkModeEnabled ? "Dark" : "Light")</span>
+                    </button>
                 </div>
             </div>
         </div>
@@ -96,7 +115,12 @@
 
     <div class="profile-actions">
         <button class="btn btn-logout" @onclick="Logout">
-            <i class="oi oi-account-logout"></i> Logout
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                <polyline points="16,17 21,12 16,7"></polyline>
+                <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
+            Logout
         </button>
     </div>
 
@@ -106,29 +130,52 @@
             @StatusMessage
         </div>
     }
+
+    <!-- Copy Notification -->
+    @if (showCopyNotification)
+    {
+        <div class="copy-notification">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 6L9 17l-5-5"></path>
+            </svg>
+            <span>Copied to clipboard!</span>
+        </div>
+    }
 </div>
 
 @code {
-    private string ProfileImagePath = "/icons/user-profile.png";
+    private string profileImageUrl = string.Empty;
+    private string userIconSvg = string.Empty;
+    private bool imageLoadFailed = false;
     private string UserName = "Loading...";
     private string UserEmail = "Loading...";
     private string UserRole = "Loading...";
-    private string UserId = "Loading...";
     private string MatricNumber = "";
     private string LecturerId = "";
-    private string DeviceId = "Loading...";
     private bool isDarkModeEnabled = false;
     private string StatusMessage = "";
     private bool IsErrorMessage = false;
+    private bool showCopyNotification = false;
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadUserProfileAsync();
+    }
+
+    private async Task LoadUserProfileAsync()
+    {
         try
         {
-            // Load user data from AuthService
-            UserId = await AuthService.GetUserIdAsync() ?? "Not Available";
-            UserRole = await AuthService.GetUserRoleAsync() ?? "Not Available";
-            DeviceId = await AuthService.GetDeviceIdAsync() ?? "Not Available";
+            // Get user picture from AuthService
+            profileImageUrl = await AuthService.GetUserPictureAsync() ?? "";
+            
+            if (string.IsNullOrEmpty(profileImageUrl))
+            {
+                // Fall back to SVG icon service if needed
+                // userIconSvg = await SvgIconService.GetCrowGuyIconAsync();
+            }
+            
+            UserRole = await AuthService.GetUserRoleAsync() ?? "Unknown";
             
             // Load role-specific data
             if (UserRole?.Contains("Student") == true || UserRole?.Contains("CourseRep") == true)
@@ -141,11 +188,11 @@
                 LecturerId = await AuthService.GetLecturerIdAsync() ?? "";
             }
 
-            // Set display values (you can enhance this with actual user service later)
+            // Set display values
             UserName = !string.IsNullOrEmpty(MatricNumber) ? $"Student {MatricNumber}" : 
                       !string.IsNullOrEmpty(LecturerId) ? $"Lecturer {LecturerId}" : 
-                      $"User {UserId}";
-            UserEmail = "user@aircode.edu"; // Placeholder - replace with actual email service
+                      "User";
+            UserEmail = "user@aircode.edu"; // Placeholder
 
             // Load theme setting
             isDarkModeEnabled = await BlazorAppLocalStorage.GetItemAsync<bool>("darkMode");
@@ -160,18 +207,27 @@
         }
     }
 
+    private async Task HandleImageError()
+    {
+        if (!imageLoadFailed)
+        {
+            imageLoadFailed = true;
+            profileImageUrl = string.Empty;
+            StateHasChanged();
+        }
+    }
+
     private async Task CopyToClipboard(string text)
     {
         try
         {
             await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", text);
-            StatusMessage = "Copied to clipboard!";
-            IsErrorMessage = false;
+            showCopyNotification = true;
             StateHasChanged();
             
-            // Clear message after 3 seconds
-            await Task.Delay(3000);
-            StatusMessage = "";
+            // Hide notification after 2 seconds
+            await Task.Delay(2000);
+            showCopyNotification = false;
             StateHasChanged();
         }
         catch
@@ -182,16 +238,21 @@
         }
     }
 
-    private async Task ToggleDarkMode(ChangeEventArgs e)
+    private async Task ToggleDarkMode()
     {
         try
         {
-            isDarkModeEnabled = (bool)e.Value;
+            isDarkModeEnabled = !isDarkModeEnabled;
             await BlazorAppLocalStorage.SetItemAsync("darkMode", isDarkModeEnabled);
             await JSRuntime.InvokeVoidAsync("window.themeSwitcher.toggleTheme");
             
             StatusMessage = isDarkModeEnabled ? "Dark mode enabled" : "Light mode enabled";
             IsErrorMessage = false;
+            StateHasChanged();
+            
+            // Clear message after 3 seconds
+            await Task.Delay(3000);
+            StatusMessage = "";
             StateHasChanged();
         }
         catch
@@ -206,9 +267,8 @@
     {
         try
         {
-            // Clear any stored data if needed
             await BlazorAppLocalStorage.RemoveItemAsync("darkMode");
-            NavigationManager.NavigateTo("/logout", true);
+            NavigationManager.NavigateTo("logout", true);
         }
         catch
         {

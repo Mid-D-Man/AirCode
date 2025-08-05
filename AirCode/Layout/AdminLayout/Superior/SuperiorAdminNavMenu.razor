@@ -5,10 +5,12 @@
 @using AirCode.Models.UI
 @using Microsoft.AspNetCore.Components.Authorization
 @using AirCode.Services.Auth
+@using AirCode.Services.VisualElements
 @inject IJSRuntime JSRuntime
 @inject IAuthService AuthService
 @inject AuthenticationStateProvider AuthenticationStateProvider
-@inject  ConnectivityService ConnectivityService
+@inject ConnectivityService ConnectivityService
+@inject ISvgIconService SvgIconService
 @implements IDisposable
 
 <div class="nav-menu @(IsExpanded ? "expanded" : "collapsed")" @ref="navMenuRef">
@@ -22,6 +24,7 @@
             <NavLink href="@item.Path" class="nav-item" data-tooltip="@item.Label">
                 <NavMenuButton
                     IconName="@item.IconName"
+                    IconSvg="@GetIconContent(item.IconName)"
                     Label="@item.Label"
                     IsExpanded="IsExpanded"
                     OnClick="@(() => NavigationManager.NavigateTo(item.Path, false))"
@@ -37,6 +40,7 @@
             <NavLink href="@(item.Path ?? "#")" class="nav-item" data-tooltip="@item.Label">
                 <NavMenuButton
                     IconName="@item.IconName"
+                    IconSvg="@GetIconContent(item.IconName)"
                     Label="@item.Label"
                     IsExpanded="IsExpanded"
                     OnClick="@(item.Action ?? (() => {}))"
@@ -53,19 +57,31 @@
     private string UserRole { get; set; } = string.Empty;
     private ElementReference navMenuRef;
     private DotNetObjectReference<SuperiorAdminNavMenu> objRef;
+    private Dictionary<string, string> _iconCache = new();
+    private Dictionary<string, string> _emojiMap = new()
+    {
+        { "home", "🏠" },
+        { "qrcode", "📱" },
+        { "users", "👥" },
+        { "admin", "⚙️" },
+        { "courses", "📚" },
+        { "adduser", "👤➕" },
+        { "courses2", "📖" },
+        { "stats", "📊" },
+        { "records", "📋" },
+        { "settings", "⚙️" },
+        { "contact", "📞" },
+        { "logout", "🚪" }
+    };
 
     [Inject]
     private NavigationManager NavigationManager { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
-        // Initialize connectivity checker
         objRef = DotNetObjectReference.Create(this);
-        
-        // Get initial online status
         IsOnline = await ConnectivityService.GetSimpleOnlineStatusAsync();
 
-        // Get user role
         try
         {
             UserRole = await AuthService.GetUserRoleAsync() ?? string.Empty;
@@ -75,8 +91,60 @@
             UserRole = string.Empty;
         }
 
-        // Enable GPU acceleration
+        await LoadIconsAsync();
         await JSRuntime.InvokeVoidAsync("enableGPUAcceleration", navMenuRef);
+    }
+
+    private async Task LoadIconsAsync()
+    {
+        var iconNames = new[] { "home", "qrcode", "users", "admin", "courses", "adduser", 
+                               "courses2", "stats", "records", "settings", "contact", "logout" };
+        
+        foreach (var iconName in iconNames)
+        {
+            try
+            {
+                var svgContent = await SvgIconService.GetSvgContentAsync(iconName);
+                if (!string.IsNullOrEmpty(svgContent))
+                {
+                    _iconCache[iconName] = svgContent;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to load icon {iconName}: {ex.Message}");
+            }
+        }
+    }
+
+    private string GetIconContent(string iconName)
+    {
+        if (_iconCache.TryGetValue(iconName, out var svgContent))
+        {
+            return svgContent;
+        }
+
+        // Fallback to emoji
+        if (_emojiMap.TryGetValue(iconName, out var emoji))
+        {
+            return CreateEmojiSvg(emoji);
+        }
+
+        return CreateDefaultSvg();
+    }
+
+    private string CreateEmojiSvg(string emoji)
+    {
+        return $@"<svg width=""20"" height=""20"" viewBox=""0 0 20 20"" xmlns=""http://www.w3.org/2000/svg"">
+                    <text x=""10"" y=""14"" text-anchor=""middle"" font-size=""14"">{emoji}</text>
+                  </svg>";
+    }
+
+    private string CreateDefaultSvg()
+    {
+        return @"<svg width=""20"" height=""20"" viewBox=""0 0 20 20"" xmlns=""http://www.w3.org/2000/svg"">
+                   <circle cx=""10"" cy=""10"" r=""8"" fill=""currentColor"" opacity=""0.3""/>
+                 </svg>";
     }
 
     [JSInvokable]
@@ -95,7 +163,7 @@
     private void HandleSettings() => NavigationManager.NavigateTo("/admin/settings");
     private void HandleContact() => NavigationManager.NavigateTo("/admin/contact");
     private void HandleLogout() => NavigationManager.NavigateTo("logout");
-//arrange this stuff propperly  do keep in mind if clasrep start attendance he auto scan for himself first 
+
     private List<NavItemExtended> NavigationItems => new()
     {
         new("home", "Dashboard", "Admin/SuperiorDashboard", true, new[] { "superioradmin"}),
@@ -139,6 +207,4 @@
        await ConnectivityService.DisposeAsync();
         objRef?.Dispose();
     }
-
-    
 }
