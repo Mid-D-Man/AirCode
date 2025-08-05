@@ -4,8 +4,8 @@
   "start_url": "/AirCode/",
   "scope": "/AirCode/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#007bff",
+  "background_color": "#1a1a1a",
+  "theme_color": "#00d4ff",
   "description": "AirCode - Modern development environment",
   "orientation": "portrait-primary",
   "categories": ["productivity", "developer"],
@@ -13,13 +13,49 @@
   "dir": "ltr",
   "icons": [
     {
-      "src": "icon-192.png",
+      "src": "icons/icon-96-full-solid.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-128-full-solid.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-144-full-solid.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-152-full-solid.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-180-full-solid.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "icon-512.png",
+      "src": "icons/icon-256-no-full.png",
+      "sizes": "256x256",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512-no-full.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
@@ -33,7 +69,7 @@
       "url": "/AirCode/",
       "icons": [
         {
-          "src": "icon-192.png",
+          "src": "icons/icon-192.png",
           "sizes": "192x192"
         }
       ]
