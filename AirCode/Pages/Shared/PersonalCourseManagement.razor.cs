@@ -33,7 +33,6 @@ public partial class PersonalCourseManagement : ComponentBase, IDisposable
     private bool IsLoading = true;
     private bool IsProcessing = false;
     private string ErrorMessage = string.Empty;
-    private string SuccessMessage = string.Empty;
 
     // Student Data
     [Parameter] public string CurrentMatricNumber { get; set; } = "U21CYS1083";
@@ -125,14 +124,12 @@ public partial class PersonalCourseManagement : ComponentBase, IDisposable
         FilteredCourses.AddRange(tempList.Skip(skip).Take(CoursesPerPage));
     }
 
-    private async Task EnrollInCourse(string courseCode)
+    private async Task<bool> EnrollInCourse(string courseCode)
     {
         using var enrollOperation = _courseListPool.GetPooled();
         
         try
         {
-            IsProcessing = true;
-            
             var courseRef = new CourseRefrence(
                 courseCode,
                 CourseEnrollmentStatus.Enrolled,
@@ -144,81 +141,71 @@ public partial class PersonalCourseManagement : ComponentBase, IDisposable
             
             if (success)
             {
-                SuccessMessage = $"Successfully enrolled in {courseCode}";
                 await LoadStudentData();
+                return true;
             }
             else
             {
                 ErrorMessage = "Failed to enroll in course. Please try again.";
+                return false;
             }
         }
         catch (Exception ex)
         {
             ErrorMessage = $"Error enrolling in course: {ex.Message}";
-        }
-        finally
-        {
-            IsProcessing = false;
+            return false;
         }
     }
 
-    private async Task RemoveCourse(string courseCode)
+    private async Task<bool> RemoveCourse(string courseCode)
     {
         using var removeOperation = _courseListPool.GetPooled();
         
         try
         {
-            IsProcessing = true;
-            
             var success = await CourseService.RemoveCourseReferenceFromStudentAsync(CurrentMatricNumber, courseCode);
             
             if (success)
             {
-                SuccessMessage = $"Successfully removed {courseCode}";
                 await LoadStudentData();
+                return true;
             }
             else
             {
                 ErrorMessage = "Failed to remove course. Please try again.";
+                return false;
             }
         }
         catch (Exception ex)
         {
             ErrorMessage = $"Error removing course: {ex.Message}";
-        }
-        finally
-        {
-            IsProcessing = false;
+            return false;
         }
     }
 
-    private async Task UpdateCourseStatus(string courseCode, CourseEnrollmentStatus newStatus)
+    private async Task<bool> UpdateCourseStatus(string courseCode, CourseEnrollmentStatus newStatus)
     {
         using var updateOperation = _courseListPool.GetPooled();
         
         try
         {
-            IsProcessing = true;
-            
             var success = await CourseService.UpdateStudentCourseReferenceStatusAsync(CurrentMatricNumber, courseCode, newStatus);
             
             if (success)
             {
-                SuccessMessage = $"Course {courseCode} status updated to {newStatus}";
                 await LoadStudentData();
+                return true;
             }
             else
             {
                 ErrorMessage = "Failed to update course status. Please try again.";
+                return false;
             }
         }
         catch (Exception ex)
         {
             ErrorMessage = $"Error updating course status: {ex.Message}";
-        }
-        finally
-        {
-            IsProcessing = false;
+            return false;
         }
     }
 
@@ -383,11 +370,6 @@ public partial class PersonalCourseManagement : ComponentBase, IDisposable
             _paginationState.StudentsCurrentPage--;
             await InvokeAsync(StateHasChanged);
         }
-    }
-
-    private void ClearSuccessMessage()
-    {
-        SuccessMessage = string.Empty;
     }
 
     public void Dispose()

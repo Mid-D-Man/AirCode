@@ -1,4 +1,4 @@
-/* Enhanced PersonalCourseManagement.razor.css with Pagination */
+/* Enhanced PersonalCourseManagement.razor.css with Fixed Colors and Mobile Layout */
 
 .student-course-container {
     padding: 1rem;
@@ -10,15 +10,21 @@
 
 /* Page Header */
 .page-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
     margin-bottom: 1.5rem;
     padding: 1rem;
     background: linear-gradient(135deg, var(--primary-500) 0%, var(--primary-700) 100%);
     border-radius: 12px;
     color: var(--text-on-primary);
     box-shadow: 0 4px 20px rgba(15, 76, 117, 0.3);
+    overflow: hidden;
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
 }
 
 .page-title {
@@ -29,6 +35,7 @@
     align-items: center;
     gap: 0.5rem;
     color: var(--text-on-primary);
+    flex-shrink: 0;
 }
 
 .icon-books::before {
@@ -41,6 +48,9 @@
     align-items: center;
     gap: 0.75rem;
     flex-wrap: wrap;
+    justify-content: flex-end;
+    flex-shrink: 1;
+    min-width: 0;
 }
 
 .matric-number {
@@ -51,6 +61,11 @@
     border-radius: 8px;
     backdrop-filter: blur(10px);
     color: var(--text-on-primary);
+    white-space: nowrap;
+    flex-shrink: 1;
+    min-width: 0;
+    text-overflow: ellipsis;
+    overflow: hidden;
 }
 
 .level-badge {
@@ -61,6 +76,8 @@
     text-transform: uppercase;
     letter-spacing: 0.5px;
     color: var(--text-on-success);
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .level-level100 { background: var(--success); }
@@ -69,6 +86,15 @@
 .level-level400 { background: var(--warning); color: var(--text-on-warning); }
 .level-level500 { background: var(--error); }
 .level-levelextra { background: var(--text-tertiary); }
+
+/* Dark mode header adjustments */
+body.dark-mode .page-header {
+    background: linear-gradient(135deg, var(--gold-800) 0%, var(--gold-900) 100%);
+}
+
+body.dark-mode .matric-number {
+    color: var(--text-on-gold);
+}
 
 /* Loading and Error States */
 .loading-container {
@@ -340,7 +366,7 @@
     color: var(--text-adaptive-secondary) !important;
 }
 
-/* Schedule Information */
+/* Schedule Information - FIXED COLORS FOR DARK MODE */
 .schedule-info, .schedule-preview {
     margin-top: 0.5rem;
 }
@@ -355,21 +381,47 @@
     font-size: 0.7rem;
     margin-right: 0.3rem;
     margin-bottom: 0.2rem;
+    border: 1px solid var(--border);
 }
 
 .day {
     font-weight: 600;
-    color: var(--text-adaptive-secondary);
+    color: var(--text-adaptive-primary);
 }
 
 .time {
-    color: var(--text-adaptive-tertiary);
+    color: var(--text-adaptive-secondary);
 }
 
 .more-schedule {
     font-size: 0.65rem;
     color: var(--text-adaptive-tertiary);
     font-style: italic;
+    background: var(--bg-tertiary);
+    padding: 0.1rem 0.3rem;
+    border-radius: 4px;
+    margin-top: 0.2rem;
+    display: inline-block;
+}
+
+/* Dark mode specific schedule fixes */
+body.dark-mode .time-slot,
+body.dark-mode .schedule-item {
+    background: var(--dark-bg-tertiary);
+    border-color: var(--dark-border);
+}
+
+body.dark-mode .day {
+    color: var(--text-light-primary);
+}
+
+body.dark-mode .time {
+    color: var(--text-light-secondary);
+}
+
+body.dark-mode .more-schedule {
+    color: var(--text-light-tertiary);
+    background: var(--dark-bg-tertiary);
 }
 
 /* Course Dates */
@@ -474,6 +526,17 @@
 .btn-outline:hover:not(:disabled) {
     background: var(--primary-500);
     color: var(--text-on-primary);
+}
+
+/* Dark mode button adjustments */
+body.dark-mode .btn-outline {
+    color: var(--gold-400);
+    border-color: var(--gold-400);
+}
+
+body.dark-mode .btn-outline:hover:not(:disabled) {
+    background: var(--gold-400);
+    color: var(--text-on-gold);
 }
 
 .btn-sm {
@@ -586,6 +649,11 @@
     font-weight: 500;
 }
 
+/* Dark mode stat adjustments */
+body.dark-mode .stat-number {
+    color: var(--gold-400);
+}
+
 /* Toast Messages */
 .toast {
     position: fixed;
@@ -623,7 +691,119 @@
 
 /* RESPONSIVE DESIGN */
 
-/* Small Mobile - 481px and up */
+/* Small Mobile - 320px to 480px */
+@media (max-width: 480px) {
+    .student-course-container {
+        padding: 0.75rem;
+    }
+
+    .page-header {
+        padding: 0.75rem;
+        margin-bottom: 1rem;
+    }
+
+    .header-content {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+    }
+
+    .page-title {
+        font-size: 1.25rem;
+        justify-content: center;
+        text-align: center;
+    }
+
+    .student-info {
+        justify-content: center;
+        gap: 0.5rem;
+    }
+
+    .matric-number {
+        font-size: 0.8rem;
+        padding: 0.3rem 0.6rem;
+        flex: 1;
+        text-align: center;
+        max-width: none;
+    }
+
+    .level-badge {
+        font-size: 0.75rem;
+        padding: 0.3rem 0.6rem;
+        flex-shrink: 0;
+    }
+
+    .section-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+    }
+
+    .course-filters {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .filter-select, .search-input {
+        width: 100%;
+    }
+
+    .course-card {
+        padding: 0.75rem;
+        min-height: 140px;
+    }
+
+    .course-actions {
+        flex-direction: column;
+        gap: 0.3rem;
+    }
+
+    .course-actions .btn {
+        flex: none;
+        width: 100%;
+    }
+
+    .pagination-container {
+        flex-direction: column;
+        gap: 0.75rem;
+        text-align: center;
+    }
+
+    .pagination-controls {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .pagination-controls .btn {
+        min-width: 60px;
+        font-size: 0.7rem;
+    }
+
+    .course-statistics {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.5rem;
+    }
+
+    .stat-card {
+        padding: 0.75rem;
+    }
+
+    .stat-number {
+        font-size: 1.25rem;
+    }
+
+    .stat-label {
+        font-size: 0.75rem;
+    }
+
+    .toast {
+        right: 0.75rem;
+        left: 0.75rem;
+        top: 1rem;
+    }
+}
+
+/* Mobile - 481px and up */
 @media (min-width: 481px) {
     .courses-grid {
         grid-template-columns: repeat(2, 1fr);
@@ -643,6 +823,14 @@
     .pagination-container {
         flex-direction: row;
         justify-content: space-between;
+    }
+
+    .header-content {
+        flex-direction: row;
+    }
+
+    .student-info {
+        justify-content: flex-end;
     }
 }
 

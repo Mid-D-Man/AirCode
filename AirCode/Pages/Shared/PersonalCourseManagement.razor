@@ -6,6 +6,8 @@
 @using AirCode.Layout.AdminLayout.Superior
 @using AirCode.Layout.FullScreen
 @using AirCode.Utilities.ObjectPooling
+@using AirCode.Components.SharedPrefabs.Popups
+@using AirCode.Components.SharedPrefabs.Cards
 @layout FullScreenLayout
 @inject ICourseService CourseService
 @inject IJSRuntime JSRuntime
@@ -15,15 +17,17 @@
 
 <div class="student-course-container">
     <div class="page-header">
-        <h2 class="page-title">
-            <i class="icon-books"></i>
-            Course Management
-        </h2>
-        <div class="student-info">
-            <span class="matric-number">@CurrentMatricNumber</span>
-            <span class="level-badge level-@CurrentStudentLevel.ToString().ToLower()">
-                @GetLevelDisplay(CurrentStudentLevel)
-            </span>
+        <div class="header-content">
+            <h2 class="page-title">
+                <i class="icon-books"></i>
+                Course Management
+            </h2>
+            <div class="student-info">
+                <span class="matric-number">@CurrentMatricNumber</span>
+                <span class="level-badge level-@CurrentStudentLevel.ToString().ToLower()">
+                    @GetLevelDisplay(CurrentStudentLevel)
+                </span>
+            </div>
         </div>
     </div>
 
@@ -83,7 +87,7 @@
                             <span class="semester">@course.Semester Semester</span>
                         </div>
 
-                        @if (course.Schedule.TimeSlots?.Any() == true)
+                        @if (course.Schedule.TimeSlots.Any() == true)
                         {
                         <div class="schedule-info">
                             @foreach (var slot in course.Schedule.TimeSlots.Take(2))
@@ -92,6 +96,10 @@
                                 <span class="day">@slot.Day.ToString().Substring(0, 3)</span>
                                 <span class="time">@slot.StartTime.ToString(@"hh\:mm") - @slot.EndTime.ToString(@"hh\:mm")</span>
                             </div>
+                            }
+                            @if (course.Schedule.TimeSlots.Count > 2)
+                            {
+                            <div class="more-schedule">+@(course.Schedule.TimeSlots.Count - 2) more</div>
                             }
                         </div>
                         }
@@ -114,7 +122,7 @@
                         @if (courseRef.CourseEnrollmentStatus == CourseEnrollmentStatus.Enrolled)
                         {
                         <button class="btn btn-warning btn-sm"
-                                @onclick="() => UpdateCourseStatus(courseRef.CourseCode, CourseEnrollmentStatus.Dropped)"
+                                @onclick="() => ShowDropConfirmation(courseRef.CourseCode)"
                                 disabled="@IsProcessing">
                             Drop Course
                         </button>
@@ -122,14 +130,14 @@
                         else if (courseRef.CourseEnrollmentStatus == CourseEnrollmentStatus.Dropped)
                         {
                         <button class="btn btn-success btn-sm"
-                                @onclick="() => UpdateCourseStatus(courseRef.CourseCode, CourseEnrollmentStatus.Enrolled)"
+                                @onclick="() => ShowReenrollConfirmation(courseRef.CourseCode)"
                                 disabled="@IsProcessing">
                             Re-enroll
                         </button>
                         }
 
                         <button class="btn btn-danger btn-sm"
-                                @onclick="() => RemoveCourse(courseRef.CourseCode)"
+                                @onclick="() => ShowRemoveConfirmation(courseRef.CourseCode)"
                                 disabled="@IsProcessing">
                             Remove
                         </button>
@@ -233,7 +241,7 @@
                         else
                         {
                         <button class="btn btn-primary"
-                                @onclick="() => EnrollInCourse(course.CourseCode)"
+                                @onclick="() => ShowEnrollConfirmation(course.CourseCode)"
                                 disabled="@IsProcessing">
                             Enroll Now
                         </button>
@@ -303,12 +311,154 @@
     }
 </div>
 
-<!-- Success Messages using notification component -->
-@if (!string.IsNullOrEmpty(SuccessMessage))
-{
-<div class="toast toast-success" @onclick="ClearSuccessMessage">
-    <i class="icon-success"></i>
-    <span>@SuccessMessage</span>
-    <button class="toast-close" @onclick="ClearSuccessMessage">×</button>
-</div>
+<!-- Confirmation Popup -->
+<AreYouSurePopup IsVisible="@ShowConfirmPopup"
+                 IsLoading="@IsProcessing"
+                 Title="@ConfirmationTitle"
+                 Message="@ConfirmationMessage"
+                 WarningText="@ConfirmationWarning"
+                 ConfirmButtonText="@ConfirmButtonText"
+                 ConfirmButtonClass="@ConfirmButtonClass"
+                 LoadingTitle="Processing..."
+                 LoadingSubtitle="@LoadingMessage"
+                 OnConfirm="HandleConfirmAction"
+                 OnCancel="HideConfirmation" />
+
+<!-- Notification Component -->
+<NotificationComponent @ref="NotificationRef" />
+
+@code {
+    // Confirmation popup state
+    private bool ShowConfirmPopup = false;
+    private string ConfirmationTitle = "";
+    private string ConfirmationMessage = "";
+    private string ConfirmationWarning = "";
+    private string ConfirmButtonText = "";
+    private string ConfirmButtonClass = "";
+    private string LoadingMessage = "";
+    private string PendingCourseCode = "";
+    private CourseAction PendingAction = CourseAction.None;
+    private NotificationComponent? NotificationRef;
+
+    private enum CourseAction
+    {
+        None,
+        Enroll,
+        Remove,
+        Drop,
+        Reenroll
+    }
+
+    // Confirmation methods
+    private void ShowEnrollConfirmation(string courseCode)
+    {
+        var course = AvailableCourses.FirstOrDefault(c => c.CourseCode == courseCode);
+        PendingCourseCode = courseCode;
+        PendingAction = CourseAction.Enroll;
+        
+        ConfirmationTitle = "Confirm Enrollment";
+        ConfirmationMessage = $"Are you sure you want to enroll in {courseCode}?";
+        ConfirmationWarning = course != null ? $"This will add {course.CreditUnits} credit units to your current load." : "";
+        ConfirmButtonText = "Enroll";
+        ConfirmButtonClass = "btn-primary";
+        LoadingMessage = "Enrolling you in the course...";
+        
+        ShowConfirmPopup = true;
+    }
+
+    private void ShowRemoveConfirmation(string courseCode)
+    {
+        PendingCourseCode = courseCode;
+        PendingAction = CourseAction.Remove;
+        
+        ConfirmationTitle = "Remove Course";
+        ConfirmationMessage = $"Are you sure you want to permanently remove {courseCode} from your course list?";
+        ConfirmationWarning = "This action cannot be undone. You will need to re-enroll if you want to take this course again.";
+        ConfirmButtonText = "Remove";
+        ConfirmButtonClass = "btn-danger";
+        LoadingMessage = "Removing course from your list...";
+        
+        ShowConfirmPopup = true;
+    }
+
+    private void ShowDropConfirmation(string courseCode)
+    {
+        PendingCourseCode = courseCode;
+        PendingAction = CourseAction.Drop;
+        
+        ConfirmationTitle = "Drop Course";
+        ConfirmationMessage = $"Are you sure you want to drop {courseCode}?";
+        ConfirmationWarning = "You can re-enroll later, but this will affect your current course load.";
+        ConfirmButtonText = "Drop";
+        ConfirmButtonClass = "btn-warning";
+        LoadingMessage = "Dropping course...";
+        
+        ShowConfirmPopup = true;
+    }
+
+    private void ShowReenrollConfirmation(string courseCode)
+    {
+        PendingCourseCode = courseCode;
+        PendingAction = CourseAction.Reenroll;
+        
+        ConfirmationTitle = "Re-enroll in Course";
+        ConfirmationMessage = $"Are you sure you want to re-enroll in {courseCode}?";
+        ConfirmationWarning = "";
+        ConfirmButtonText = "Re-enroll";
+        ConfirmButtonClass = "btn-success";
+        LoadingMessage = "Re-enrolling you in the course...";
+        
+        ShowConfirmPopup = true;
+    }
+
+    private void HideConfirmation()
+    {
+        ShowConfirmPopup = false;
+        PendingCourseCode = "";
+        PendingAction = CourseAction.None;
+    }
+
+    private async Task HandleConfirmAction()
+    {
+        if (string.IsNullOrEmpty(PendingCourseCode) || PendingAction == CourseAction.None)
+        {
+            HideConfirmation();
+            return;
+        }
+
+        try
+        {
+            bool success = false;
+            string successMessage = "";
+
+            switch (PendingAction)
+            {
+                case CourseAction.Enroll:
+                    success = await EnrollInCourse(PendingCourseCode);
+                    successMessage = $"Successfully enrolled in {PendingCourseCode}";
+                    break;
+                case CourseAction.Remove:
+                    success = await RemoveCourse(PendingCourseCode);
+                    successMessage = $"Successfully removed {PendingCourseCode}";
+                    break;
+                case CourseAction.Drop:
+                    success = await UpdateCourseStatus(PendingCourseCode, CourseEnrollmentStatus.Dropped);
+                    successMessage = $"Successfully dropped {PendingCourseCode}";
+                    break;
+                case CourseAction.Reenroll:
+                    success = await UpdateCourseStatus(PendingCourseCode, CourseEnrollmentStatus.Enrolled);
+                    successMessage = $"Successfully re-enrolled in {PendingCourseCode}";
+                    break;
+            }
+
+            if (success && NotificationRef != null)
+            {
+                NotificationRef.ShowSuccess(successMessage);
+            }
+        }
+        finally
+        {
+            HideConfirmation();
+        }
+    }
 }
