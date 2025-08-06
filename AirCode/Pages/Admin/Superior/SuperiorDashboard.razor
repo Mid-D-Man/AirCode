@@ -3,16 +3,20 @@
 @attribute [Authorize(Roles = "SuperiorAdmin")]
 @layout SuperiorAdminLayout
 @using AirCode.Domain.ValueObjects
+@using AirCode.Domain.Entities
+@using AirCode.Domain.Enums
 @using Microsoft.AspNetCore.Authorization
 @using AirCode.Layout.AdminLayout.Superior
 @using AirCode.Models.Admin
 @using AirCode.Services.Firebase
 @using AirCode.Services.Courses
 @using AirCode.Services.Attendance
+@using AirCode.Services.Academic
 @inject IJSRuntime JSRuntime
 @inject IFirestoreService FirestoreService
 @inject ICourseService CourseService
 @inject IAttendanceSessionService AttendanceService
+@inject IAcademicSessionService AcademicSessionService
 @implements IDisposable
 
 <PageTitle>Superior Admin Dashboard</PageTitle>
@@ -80,7 +84,7 @@
                     <p>Total Courses</p>
                     <span class="trend positive">
                         <i class="fas fa-calendar"></i>
-                        Current Session
+                        @_currentSession?.Name ?? "No Session"
                     </span>
                 </div>
             </div>
@@ -90,19 +94,29 @@
         <div class="content-grid">
             <div class="dashboard-card">
                 <div class="card-header">
-                    <h4><i class="fas fa-users-cog"></i> User Distribution</h4>
+                    <h4><i class="fas fa-users-cog"></i> Student Distribution</h4>
                 </div>
                 <div class="card-content">
-                    @foreach (var level in _studentsByLevel)
+                    @if (_studentsByLevel.Any())
                     {
-                        <div class="level-item">
-                            <div class="level-info">
-                                <span class="level-name">@level.Key Level</span>
-                                <span class="level-count">@level.Value students</span>
+                        @foreach (var level in _studentsByLevel)
+                        {
+                            <div class="level-item">
+                                <div class="level-info">
+                                    <span class="level-name">@level.Key Level</span>
+                                    <span class="level-count">@level.Value students</span>
+                                </div>
+                                <div class="level-stats">
+                                    <span class="active-count">@GetActiveLevelCount(level.Key) active</span>
+                                </div>
                             </div>
-                            <div class="level-stats">
-                                <span class="active-count">@GetActiveLevelCount(level.Key) active</span>
-                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="no-data">
+                            <i class="fas fa-info-circle"></i>
+                            <span>No student data available</span>
                         </div>
                     }
                 </div>
@@ -126,6 +140,10 @@
                         <div class="health-item">
                             <span class="label">Last Sync</span>
                             <span class="value">@_lastSyncTime.ToString("HH:mm")</span>
+                        </div>
+                        <div class="health-item">
+                            <span class="label">Academic Session</span>
+                            <span class="value">@(_currentSession?.Name ?? "None")</span>
                         </div>
                     </div>
                 </div>
@@ -155,25 +173,27 @@
 
             <div class="dashboard-card full-width">
                 <div class="card-header">
-                    <h4><i class="fas fa-chart-bar"></i> Recent Activity</h4>
+                    <h4><i class="fas fa-chart-bar"></i> Course Statistics</h4>
                 </div>
                 <div class="card-content">
-                    @if (_recentActivities.Any())
+                    @if (_coursesByLevel.Any())
                     {
-                        <div class="activities-list">
-                            @foreach (var activity in _recentActivities.Take(5))
+                        <div class="course-stats-grid">
+                            @foreach (var levelGroup in _coursesByLevel)
                             {
-                                <div class="activity-item">
-                                    <div class="activity-icon @activity.Type.ToLower()">
-                                        <i class="fas fa-@GetActivityIcon(activity.Type)"></i>
+                                <div class="course-stat-item">
+                                    <div class="stat-header">
+                                        <span class="level-label">@levelGroup.Key Level</span>
+                                        <span class="course-count">@levelGroup.Value.Count courses</span>
                                     </div>
-                                    <div class="activity-details">
-                                        <span class="activity-title">@activity.Title</span>
-                                        <span class="activity-description">@activity.Description</span>
-                                        <span class="activity-time">@activity.Timestamp.ToString("MMM dd, HH:mm")</span>
-                                    </div>
-                                    <div class="activity-user">
-                                        <span>@activity.User</span>
+                                    <div class="course-details">
+                                        @foreach (var semester in levelGroup.Value.GroupBy(c => c.Semester))
+                                        {
+                                            <div class="semester-info">
+                                                <span class="semester-name">@semester.Key:</span>
+                                                <span class="semester-count">@semester.Count() courses</span>
+                                            </div>
+                                        }
                                     </div>
                                 </div>
                             }
@@ -182,8 +202,8 @@
                     else
                     {
                         <div class="no-data">
-                            <i class="fas fa-info-circle"></i>
-                            <span>No recent activities</span>
+                            <i class="fas fa-book"></i>
+                            <span>No course data available</span>
                         </div>
                     }
                 </div>
@@ -221,6 +241,11 @@
     private bool _isConnected = false;
     private DateTime _lastSyncTime = DateTime.Now;
 
+    // Core entities
+    private AcademicSession? _currentSession;
+    private List<Course> _allCourses = new();
+    private List<StudentCourse> _allStudentCourses = new();
+
     // Metrics
     private int _totalUsers = 0;
     private int _totalStudents = 0;
@@ -238,13 +263,12 @@
     // Data collections
     private Dictionary<string, int> _studentsByLevel = new();
     private Dictionary<string, int> _activeStudentsByLevel = new();
-    private List<AdminActivity> _recentActivities = new();
+    private Dictionary<LevelType, List<Course>> _coursesByLevel = new();
 
     // Constants
     private const string STUDENTS_COLLECTION = "STUDENTS_MATRICULATION_NUMBERS";
     private const string ADMIN_IDS_COLLECTION = "VALID_ADMIN_IDS";
     private const string LECTURER_ADMIN_DOC = "LecturerAdminIdsDoc";
-    private const string COURSEREP_ADMIN_DOC = "CourseRepAdminIdsDoc";
 
     protected override async Task OnInitializedAsync()
     {
@@ -271,6 +295,7 @@
         // Load all data concurrently
         var tasks = new[]
         {
+            LoadAcademicData(),
             LoadStudentData(),
             LoadLecturerData(),
             LoadCourseData(),
@@ -279,14 +304,55 @@
 
         await Task.WhenAll(tasks);
         
-        // Calculate totals
+        // Calculate derived metrics
         CalculateTotals();
-        
-        // Generate recent activities
-        GenerateRecentActivities();
+        GroupCoursesByLevel();
+    }
+
+    private async Task LoadAcademicData()
+    {
+        try
+        {
+            _currentSession = await AcademicSessionService.GetCurrentSessionAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading academic data: {ex.Message}");
+        }
     }
 
     private async Task LoadStudentData()
+    {
+        try
+        {
+            _allStudentCourses = await CourseService.GetAllStudentCoursesAsync() ?? new List<StudentCourse>();
+            
+            // Group students by level from StudentCourse entities
+            _studentsByLevel.Clear();
+            _activeStudentsByLevel.Clear();
+
+            var levelGroups = _allStudentCourses.GroupBy(sc => sc.Level);
+            foreach (var levelGroup in levelGroups)
+            {
+                var levelKey = levelGroup.Key.ToString().Replace("Level", "");
+                var totalCount = levelGroup.Count();
+                var activeCount = levelGroup.Count(sc => sc.StudentCoursesRefs?.Any(cr => 
+                    cr.CourseEnrollmentStatus == CourseEnrollmentStatus.Enrolled) == true);
+                
+                _studentsByLevel[levelKey] = totalCount;
+                _activeStudentsByLevel[levelKey] = activeCount;
+            }
+
+            // Also try to load from Firebase student documents if available
+            await LoadFirebaseStudentData();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading student data: {ex.Message}");
+        }
+    }
+
+    private async Task LoadFirebaseStudentData()
     {
         try
         {
@@ -302,19 +368,18 @@
                     var totalStudents = levelDoc.ValidStudentMatricNumbers.Count;
                     var activeStudents = levelDoc.ValidStudentMatricNumbers.Count(s => s.IsCurrentlyInUse);
                     
-                    _studentsByLevel[level] = totalStudents;
-                    _activeStudentsByLevel[level] = activeStudents;
-                }
-                else
-                {
-                    _studentsByLevel[level] = 0;
-                    _activeStudentsByLevel[level] = 0;
+                    // Update if Firebase has more recent data
+                    if (totalStudents > (_studentsByLevel.GetValueOrDefault(level, 0)))
+                    {
+                        _studentsByLevel[level] = totalStudents;
+                        _activeStudentsByLevel[level] = activeStudents;
+                    }
                 }
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading student data: {ex.Message}");
+            Console.WriteLine($"Error loading Firebase student data: {ex.Message}");
         }
     }
 
@@ -340,8 +405,8 @@
     {
         try
         {
-            var courses = await CourseService.GetAllCoursesAsync();
-            _totalCourses = courses?.Count ?? 0;
+            _allCourses = await CourseService.GetAllCoursesAsync() ?? new List<Course>();
+            _totalCourses = _allCourses.Count;
         }
         catch (Exception ex)
         {
@@ -375,31 +440,15 @@
         _activeUsers = _activeStudents + _activeLecturers;
     }
 
+    private void GroupCoursesByLevel()
+    {
+        _coursesByLevel = _allCourses.GroupBy(c => c.Level).ToDictionary(g => g.Key, g => g.ToList());
+    }
+
     private int GetActiveLevelCount(string level)
     {
         return _activeStudentsByLevel.TryGetValue(level, out var count) ? count : 0;
     }
-
-    private void GenerateRecentActivities()
-    {
-        _recentActivities = new List<AdminActivity>
-        {
-            new() { Title = "System Data Sync", Description = "Dashboard data refreshed", 
-                   Type = "System", User = "System", Timestamp = DateTime.Now },
-            new() { Title = "User Status Update", Description = $"{_activeUsers} users currently active", 
-                   Type = "Update", User = "System", Timestamp = DateTime.Now.AddMinutes(-5) },
-            new() { Title = "Attendance Summary", Description = $"{_activeSessions} active sessions", 
-                   Type = "Info", User = "System", Timestamp = DateTime.Now.AddMinutes(-10) }
-        };
-    }
-
-    private string GetActivityIcon(string type) => type.ToLower() switch
-    {
-        "system" => "cog",
-        "update" => "sync-alt",
-        "info" => "info-circle",
-        _ => "circle"
-    };
 
     private async Task RefreshData()
     {
@@ -411,6 +460,7 @@
         try
         {
             await LoadDashboardData();
+            _lastSyncTime = DateTime.Now;
         }
         finally
         {
@@ -440,14 +490,5 @@
     public void Dispose()
     {
         _disposed = true;
-    }
-    
-    public class AdminActivity
-    {
-        public string Title { get; set; } = "";
-        public string Description { get; set; } = "";
-        public string Type { get; set; } = "";
-        public string User { get; set; } = "";
-        public DateTime Timestamp { get; set; }
     }
 }
