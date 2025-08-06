@@ -84,7 +84,7 @@
                     <p>Total Courses</p>
                     <span class="trend positive">
                         <i class="fas fa-calendar"></i>
-                        @_currentSession?.Name ?? "No Session"
+                        @_currentSession?.SessionId ?? "No Session"
                     </span>
                 </div>
             </div>
@@ -143,7 +143,7 @@
                         </div>
                         <div class="health-item">
                             <span class="label">Academic Session</span>
-                            <span class="value">@(_currentSession?.Name ?? "None")</span>
+                            <span class="value">@(_currentSession?.SessionId ?? "None")</span>
                         </div>
                     </div>
                 </div>
@@ -331,7 +331,7 @@
             _studentsByLevel.Clear();
             _activeStudentsByLevel.Clear();
 
-            var levelGroups = _allStudentCourses.GroupBy(sc => sc.Level);
+            var levelGroups = _allStudentCourses.GroupBy(sc => sc.StudentLevel);
             foreach (var levelGroup in levelGroups)
             {
                 var levelKey = levelGroup.Key.ToString().Replace("Level", "");

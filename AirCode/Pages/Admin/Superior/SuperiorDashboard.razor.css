@@ -31,7 +31,7 @@
 
 .metric-card.primary { border-left-color: var(--primary-500); }
 .metric-card.secondary { border-left-color: var(--secondary-500); }
-.metric-card.accent { 
+.metric-card.accent {
     border-left-color: var(--gold-500);
 }
 
@@ -54,7 +54,7 @@ body.dark-mode .metric-card.accent {
 
 .metric-card.primary .metric-icon { background: var(--primary-500); }
 .metric-card.secondary .metric-icon { background: var(--secondary-500); }
-.metric-card.accent .metric-icon { 
+.metric-card.accent .metric-icon {
     background: var(--gold-500);
     color: var(--text-on-gold);
 }
@@ -64,8 +64,8 @@ body.dark-mode .metric-card.accent .metric-icon {
     color: var(--text-on-gold);
 }
 
-.metric-card.warning .metric-icon { 
-    background: var(--warning); 
+.metric-card.warning .metric-icon {
+    background: var(--warning);
     color: var(--text-on-warning);
 }
 
@@ -446,4 +446,344 @@ body.dark-mode .loading-spinner {
 
     .course-stats-grid {
         grid-template-columns: 1fr;
-        }}
+    }
+}
+
+/* Mobile Landscape - 481px to 767px */
+@media (min-width: 481px) and (max-width: 767px) {
+    .superior-dashboard {
+        padding: 1rem;
+    }
+
+    .overview-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .metric-card {
+        padding: 1rem;
+        gap: 0.75rem;
+    }
+
+    .metric-icon {
+        width: 50px;
+        height: 50px;
+        font-size: 1.25rem;
+    }
+
+    .metric-content h3 {
+        font-size: 1.5rem;
+    }
+
+    .content-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .card-content {
+        padding: 1rem;
+    }
+
+    .actions-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
+    }
+
+    .action-btn {
+        padding: 0.75rem;
+    }
+
+    .action-btn i {
+        font-size: 1.25rem;
+    }
+
+    .action-btn span {
+        font-size: 0.8rem;
+    }
+
+    .attendance-stats {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.5rem;
+    }
+
+    .stat-item {
+        padding: 0.75rem;
+    }
+
+    .stat-value {
+        font-size: 1.25rem;
+    }
+
+    .course-stats-grid {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+
+    .course-stat-item {
+        padding: 0.75rem;
+    }
+}
+
+/* Mobile Portrait - up to 480px */
+@media (max-width: 480px) {
+    .superior-dashboard {
+        padding: 0.75rem;
+    }
+
+    .overview-grid {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .metric-card {
+        padding: 1rem;
+        gap: 0.75rem;
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .metric-icon {
+        width: 50px;
+        height: 50px;
+        font-size: 1.25rem;
+    }
+
+    .metric-content {
+        text-align: center;
+    }
+
+    .metric-content h3 {
+        font-size: 1.5rem;
+    }
+
+    .metric-content p {
+        font-size: 0.85rem;
+    }
+
+    .trend {
+        justify-content: center;
+        font-size: 0.75rem;
+    }
+
+    .content-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .card-header {
+        padding: 0.75rem 1rem;
+    }
+
+    .card-header h4 {
+        font-size: 0.9rem;
+    }
+
+    .card-content {
+        padding: 1rem;
+    }
+
+    .health-indicator {
+        font-size: 0.7rem;
+        padding: 0.2rem 0.5rem;
+    }
+
+    .health-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.25rem;
+    }
+
+    .level-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+        padding: 1rem 0;
+    }
+
+    .level-stats {
+        text-align: left;
+        width: 100%;
+    }
+
+    .attendance-stats {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+
+    .stat-item {
+        padding: 1rem;
+    }
+
+    .stat-label {
+        font-size: 0.75rem;
+    }
+
+    .stat-value {
+        font-size: 1.5rem;
+    }
+
+    .course-stats-grid {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+
+    .course-stat-item {
+        padding: 1rem;
+    }
+
+    .stat-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.25rem;
+    }
+
+    .semester-info {
+        font-size: 0.75rem;
+    }
+
+    .quick-actions {
+        padding: 1rem;
+    }
+
+    .actions-grid {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+
+    .action-btn {
+        padding: 1rem;
+        flex-direction: row;
+        justify-content: flex-start;
+        text-align: left;
+        gap: 0.75rem;
+    }
+
+    .action-btn i {
+        font-size: 1.25rem;
+    }
+
+    .action-btn span {
+        font-size: 0.9rem;
+    }
+
+    .no-data {
+        padding: 1.5rem;
+    }
+
+    .no-data i {
+        font-size: 1.5rem;
+    }
+}
+
+/* Extra Small Screens - up to 320px */
+@media (max-width: 320px) {
+    .superior-dashboard {
+        padding: 0.5rem;
+    }
+
+    .overview-grid,
+    .content-grid {
+        gap: 0.5rem;
+    }
+
+    .metric-card {
+        padding: 0.75rem;
+    }
+
+    .card-header {
+        padding: 0.5rem 0.75rem;
+    }
+
+    .card-content {
+        padding: 0.75rem;
+    }
+
+    .quick-actions {
+        padding: 0.75rem;
+    }
+
+    .action-btn {
+        padding: 0.75rem;
+        gap: 0.5rem;
+    }
+
+    .metric-content h3 {
+        font-size: 1.25rem;
+    }
+
+    .stat-value {
+        font-size: 1.25rem;
+    }
+}
+
+/* ===== ENHANCED HOVER STATES FOR DESKTOP ===== */
+@media (hover: hover) and (pointer: fine) {
+    .metric-card:hover {
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    .dashboard-card:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .action-btn:hover {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+}
+
+/* ===== DARK MODE SPECIFIC ADJUSTMENTS ===== */
+body.dark-mode {
+    .metric-card {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .metric-card:hover {
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    }
+
+    .dashboard-card {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    .loading-spinner {
+        border-color: var(--dark-border);
+        border-top-color: var(--gold-500);
+    }
+}
+
+/* ===== ACCESSIBILITY IMPROVEMENTS ===== */
+@media (prefers-reduced-motion: reduce) {
+    .metric-card,
+    .dashboard-card,
+    .action-btn,
+    .loading-spinner {
+        transition: none;
+        animation: none;
+    }
+}
+
+/* Focus states for keyboard navigation */
+.action-btn:focus {
+    outline: 2px solid var(--primary-500);
+    outline-offset: 2px;
+}
+
+body.dark-mode .action-btn:focus {
+    outline-color: var(--gold-500);
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: more) {
+    .metric-card,
+    .dashboard-card {
+        border: 2px solid var(--border);
+    }
+
+    .health-indicator,
+    .status {
+        border: 1px solid currentColor;
+    }
+}
