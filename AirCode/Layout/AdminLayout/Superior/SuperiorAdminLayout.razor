@@ -1,6 +1,7 @@
 @* Layout/Admin/SuperiorAdminLayout.razor *@
 @inherits LayoutComponentBase
 
+@using System.Text.Json
 @using AirCode.Components.SharedPrefabs.Buttons
 @using AirCode.Components.SharedPrefabs.Others
 @using AirCode.Domain.Entities
@@ -123,13 +124,25 @@
     {
         try
         {
-            var sessions = await AttendanceService?.GetActiveSessionsAsync() ?? new List<SupabaseAttendanceSession>();
-            _activeSessions = sessions.Count;
+            // Direct Firestore collection query
+            var allEvents = await FirestoreService.GetCollectionAsync<Dictionary<string, object>>(
+                "ATTENDANCE_EVENTS");
+        
+            _activeSessions = allEvents?.SelectMany(doc => 
+                    doc.Where(kvp => kvp.Key.StartsWith("Event_") && IsActiveEvent(kvp.Value)))
+                .Count() ?? 0;
         }
         catch
         {
-            _activeSessions = 25; // Fallback
+            _activeSessions = 0;
         }
+    }
+
+    private static bool IsActiveEvent(object eventValue)
+    {
+        return eventValue is JsonElement element &&
+               element.TryGetProperty("Status", out var status) &&
+               status.GetString() == "Active";
     }
 
     private void StartAutoRefresh()

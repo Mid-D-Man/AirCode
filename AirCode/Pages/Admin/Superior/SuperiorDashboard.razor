@@ -2,6 +2,7 @@
 @page "/Admin/SuperiorDashboard"
 @attribute [Authorize(Roles = "SuperiorAdmin")]
 @layout SuperiorAdminLayout
+@using System.Text.Json
 @using AirCode.Domain.ValueObjects
 @using AirCode.Domain.Entities
 @using AirCode.Domain.Enums
@@ -308,7 +309,59 @@
         CalculateTotals();
         GroupCoursesByLevel();
     }
+    private async Task LoadAttendanceData()
+    {
+        try
+        {
+            // Replace Supabase queries with Firestore document analysis
+            var attendanceEvents = await FirestoreService.GetCollectionAsync<Dictionary<string, object>>(
+                "ATTENDANCE_EVENTS");
+        
+            _activeSessions = CountActiveSessions(attendanceEvents);
+            _totalSessions = CountTotalSessions(attendanceEvents);
+            _offlineSessions = await CountOfflineSessionsAsync();
+        }
+        catch (Exception ex)
+        {
+            MID_HelperFunctions.DebugMessage("Error loading attendance data via Firestore" + ex.Message,DebugClass.Exception );
+            // Use fallbacks
+            _activeSessions = 0;
+            _totalSessions = 0;
+            _offlineSessions = 0;
+        }
+    }
 
+    private static int CountActiveSessions(List<Dictionary<string, object>> events)
+    {
+        return events?.Sum(doc => doc.Count(kvp => 
+            kvp.Key.StartsWith("Event_") && IsActiveEvent(kvp.Value))) ?? 0;
+    }
+
+    private static int CountTotalSessions(List<Dictionary<string, object>> events)
+    {
+        return events?.Sum(doc => doc.Count(kvp => kvp.Key.StartsWith("Event_"))) ?? 0;
+    }
+
+    private async Task<int> CountOfflineSessionsAsync()
+    {
+        try
+        {
+            var offlineEvents = await FirestoreService.GetCollectionAsync<Dictionary<string, object>>(
+                "OFFLINE_ATTENDANCE_EVENTS");
+            return CountActiveSessions(offlineEvents);
+        }
+        catch
+        {
+            return 0;
+        }
+    }
+
+    private static bool IsActiveEvent(object eventValue)
+    {
+        return eventValue is JsonElement element &&
+               element.TryGetProperty("Status", out var status) &&
+               status.GetString() == "Active";
+    }
     private async Task LoadAcademicData()
     {
         try
@@ -414,23 +467,7 @@
         }
     }
 
-    private async Task LoadAttendanceData()
-    {
-        try
-        {
-            var activeSessions = await AttendanceService.GetActiveSessionsAsync();
-            var allSessions = await AttendanceService.GetAllSessionsAsync();
-            var offlineSessions = await AttendanceService.GetActiveOfflineSessionsAsync();
-            
-            _activeSessions = activeSessions?.Count ?? 0;
-            _totalSessions = allSessions?.Count ?? 0;
-            _offlineSessions = offlineSessions?.Count ?? 0;
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error loading attendance data: {ex.Message}");
-        }
-    }
+    
 
     private void CalculateTotals()
     {
