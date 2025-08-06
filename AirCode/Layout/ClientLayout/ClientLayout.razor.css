@@ -5,7 +5,7 @@
     flex-direction: column;
     height: 100vh;
     width: 100%;
-    background: linear-gradient(135deg, var(--primary-500) 0%, var(--primary-700) 100%);
+    background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%); 
     color: var(--dark-text-color);
     position: relative;
     overflow: hidden;
@@ -99,7 +99,24 @@
     position: relative;
     animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
+body:not(.dark-mode) .nav-buttons .circular-button {
+    background: rgba(30, 58, 138, 0.9); /* Cobalt blue base */
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
 
+body:not(.dark-mode) .nav-buttons .circular-button:hover {
+    background: rgba(30, 64, 175, 0.95); /* Darker cobalt on hover */
+}
+
+body:not(.dark-mode) .nav-buttons .button-content svg {
+    fill: white; /* Force white SVGs */
+}
+
+body:not(.dark-mode) .nav-buttons .button-text {
+    color: white; /* Force white text */
+    font-weight: 600;
+    }
 .content-bottom::before {
     content: '';
     position: absolute;
