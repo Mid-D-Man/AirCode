@@ -419,46 +419,52 @@
     }
 
     private async Task HandleConfirmAction()
+{
+    if (string.IsNullOrEmpty(PendingCourseCode) || PendingAction == CourseAction.None)
     {
-        if (string.IsNullOrEmpty(PendingCourseCode) || PendingAction == CourseAction.None)
+        HideConfirmation();
+        return;
+    }
+
+    try
+    {
+        // Set processing state BEFORE any async operations
+        IsProcessing = true;
+        StateHasChanged(); // Force UI update to show spinner
+
+        bool success = false;
+        string successMessage = "";
+
+        switch (PendingAction)
         {
-            HideConfirmation();
-            return;
+            case CourseAction.Enroll:
+                success = await EnrollInCourse(PendingCourseCode);
+                successMessage = $"Successfully enrolled in {PendingCourseCode}";
+                break;
+            case CourseAction.Remove:
+                success = await RemoveCourse(PendingCourseCode);
+                successMessage = $"Successfully removed {PendingCourseCode}";
+                break;
+            case CourseAction.Drop:
+                success = await UpdateCourseStatus(PendingCourseCode, CourseEnrollmentStatus.Dropped);
+                successMessage = $"Successfully dropped {PendingCourseCode}";
+                break;
+            case CourseAction.Reenroll:
+                success = await UpdateCourseStatus(PendingCourseCode, CourseEnrollmentStatus.Enrolled);
+                successMessage = $"Successfully re-enrolled in {PendingCourseCode}";
+                break;
         }
 
-        try
+        if (success && NotificationRef != null)
         {
-            bool success = false;
-            string successMessage = "";
-
-            switch (PendingAction)
-            {
-                case CourseAction.Enroll:
-                    success = await EnrollInCourse(PendingCourseCode);
-                    successMessage = $"Successfully enrolled in {PendingCourseCode}";
-                    break;
-                case CourseAction.Remove:
-                    success = await RemoveCourse(PendingCourseCode);
-                    successMessage = $"Successfully removed {PendingCourseCode}";
-                    break;
-                case CourseAction.Drop:
-                    success = await UpdateCourseStatus(PendingCourseCode, CourseEnrollmentStatus.Dropped);
-                    successMessage = $"Successfully dropped {PendingCourseCode}";
-                    break;
-                case CourseAction.Reenroll:
-                    success = await UpdateCourseStatus(PendingCourseCode, CourseEnrollmentStatus.Enrolled);
-                    successMessage = $"Successfully re-enrolled in {PendingCourseCode}";
-                    break;
-            }
-
-            if (success && NotificationRef != null)
-            {
-                NotificationRef.ShowSuccess(successMessage);
-            }
-        }
-        finally
-        {
-            HideConfirmation();
+            NotificationRef.ShowSuccess(successMessage, 3000); // 3 second duration
         }
     }
+    finally
+    {
+        IsProcessing = false;
+        HideConfirmation();
+        StateHasChanged();
+    }
+}
 }
