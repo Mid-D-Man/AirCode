@@ -24,13 +24,17 @@
     <!-- Main Scanner Area -->
     <main class="scanner-main">
         <!-- QR Scanner Video -->
-        <div class="video-container">
-            <QRCodeScanner ShowOutput="false" Width="100%" />
+        <div class="video-container" id="videoContainer">
+            <QRCodeScanner @ref="qrCodeScanner" 
+                          ShowOutput="false" 
+                          Width="100%" 
+                          Height="100%"
+                          OnQrCodeDetected="OnQrCodeDetected" />
         </div>
 
         <!-- Scan Frame Overlay -->
         <div class="scan-overlay">
-            <div class="scan-frame">
+            <div class="scan-frame" id="scanFrame">
                 <div class="frame-corners">
                     <div class="corner tl"></div>
                     <div class="corner tr"></div>
@@ -79,6 +83,18 @@
         </div>
     }
 
+    <!-- Performance Info (Debug) -->
+    @if (showPerformanceInfo)
+    {
+        <div class="performance-info">
+            <small>
+                GPU: @(gpuAccelerated ? "✓" : "✗") | 
+                FPS: @currentFPS |
+                Device: @devicePixelRatio
+            </small>
+        </div>
+    }
+
     <!-- Controls -->
     <footer class="scan-controls">
         @if (isScanning)
@@ -95,15 +111,26 @@
                 Start Scanner
             </button>
         }
+        
+        <button class="control-btn settings" @onclick="TogglePerformanceInfo">
+            <span class="icon">⚙️</span>
+            Performance
+        </button>
     </footer>
 </div>
 
 @code {
-    private QRCodeScannerJsInterop? _qrCodeScannerJsInterop;
-    private Action<string>? _onQrCodeScanAction;
+    private QRCodeScanner? qrCodeScanner;
     private bool isScanning = true;
     private bool isProcessing = false;
     private bool scanComplete = false;
+    
+    // Performance monitoring
+    private bool gpuAccelerated = false;
+    private bool showPerformanceInfo = false;
+    private int currentFPS = 0;
+    private double devicePixelRatio = 1.0;
+    private Timer? performanceTimer;
     
     // Popup state
     private bool showResultPopup = false;
@@ -117,28 +144,96 @@
     
     protected override async Task OnInitializedAsync()
     {
-        _onQrCodeScanAction = (code) => OnQrCodeScan(code);
-        _qrCodeScannerJsInterop = new QRCodeScannerJsInterop(JSRuntime);
-        
         try
         {
-            await _qrCodeScannerJsInterop.Init(_onQrCodeScanAction);
-            MID_HelperFunctions.DebugMessage("QR Scanner initialized successfully", DebugClass.Info);
-
             currentUserMatricNumber = await AuthService.GetMatricNumberAsync();
             deviceGUID = await AuthService.GetDeviceIdAsync();
         }
         catch (Exception ex)
         {
-            MID_HelperFunctions.DebugMessage($"Failed to initialize scanner: {ex.Message}", DebugClass.Exception);
+            MID_HelperFunctions.DebugMessage($"Failed to initialize user data: {ex.Message}", DebugClass.Exception);
         }
     }
 
-    private async void OnQrCodeScan(string code)
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!string.IsNullOrEmpty(code) && CanProcessAttendance())
+        if (firstRender)
         {
-            MID_HelperFunctions.DebugMessage($"QR Code detected: {code}", DebugClass.Info);
+            await OptimizePerformance();
+            await MonitorPerformance();
+        }
+    }
+
+    private async Task OptimizePerformance()
+    {
+        try
+        {
+            // Enable GPU acceleration for key elements
+            var gpuElements = new[]
+            {
+                "#videoContainer",
+                ".video-container video",
+                "#scanFrame",
+                ".scan-line",
+                ".processing-state",
+                ".result-popup"
+            };
+
+            foreach (var element in gpuElements)
+            {
+                await JSRuntime.InvokeVoidAsync("enableGPUAcceleration", element);
+            }
+
+            // Check GPU acceleration status
+            gpuAccelerated = await JSRuntime.InvokeAsync<bool>("getGPUAccelerationStatus", "#videoContainer");
+            
+            // Get device pixel ratio for optimization
+            devicePixelRatio = await JSRuntime.InvokeAsync<double>("eval", "window.devicePixelRatio || 1");
+            
+            MID_HelperFunctions.DebugMessage($"Performance optimized - GPU: {gpuAccelerated}, DPR: {devicePixelRatio}", DebugClass.Info);
+        }
+        catch (Exception ex)
+        {
+            MID_HelperFunctions.DebugMessage($"Performance optimization failed: {ex.Message}", DebugClass.Warning);
+        }
+    }
+
+    private async Task MonitorPerformance()
+    {
+        try
+        {
+            // Monitor performance every 2 seconds
+            performanceTimer = new Timer(async _ => 
+            {
+                try
+                {
+                    var fps = await JSRuntime.InvokeAsync<int>("eval", @"
+                        (() => {
+                            const video = document.querySelector('.video-container video');
+                            return video && video.webkitDecodedFrameCount ? 
+                                Math.round(video.webkitDecodedFrameCount / video.currentTime) || 0 : 0;
+                        })()
+                    ");
+                    currentFPS = fps;
+                    await InvokeAsync(StateHasChanged);
+                }
+                catch
+                {
+                    // Ignore monitoring errors
+                }
+            }, null, 0, 2000);
+        }
+        catch (Exception ex)
+        {
+            MID_HelperFunctions.DebugMessage($"Performance monitoring setup failed: {ex.Message}", DebugClass.Warning);
+        }
+    }
+
+    private async Task OnQrCodeDetected(string qrCode)
+    {
+        if (!string.IsNullOrEmpty(qrCode) && CanProcessAttendance())
+        {
+            MID_HelperFunctions.DebugMessage($"QR Code detected: {qrCode}", DebugClass.Info);
         
             await PauseScanning();
             isProcessing = true;
@@ -147,7 +242,7 @@
         
             try
             {
-                var decodedSessionData = await QRDecoder.DecodeSessionDataAsync(code);
+                var decodedSessionData = await QRDecoder.DecodeSessionDataAsync(qrCode);
 
                 if (decodedSessionData != null)
                 {
@@ -159,7 +254,7 @@
 
                     if (isTakingCourse)
                     {
-                        await ProcessAttendanceWithNewPayload(code);
+                        await ProcessAttendanceWithNewPayload(qrCode);
                     }
                     else
                     {
@@ -246,6 +341,12 @@
         await ResumeScanning();
     }
 
+    private void TogglePerformanceInfo()
+    {
+        showPerformanceInfo = !showPerformanceInfo;
+        StateHasChanged();
+    }
+
     private string GetUserFriendlyErrorMessage(string errorCode, string originalMessage)
     {
         return errorCode switch
@@ -286,11 +387,11 @@
 
     private async Task PauseScanning()
     {
-        if (_qrCodeScannerJsInterop != null && isScanning)
+        if (qrCodeScanner != null && isScanning)
         {
             try
             {
-                await _qrCodeScannerJsInterop.StopRecording();
+                await qrCodeScanner.StopAsync();
                 isScanning = false;
                 MID_HelperFunctions.DebugMessage("Scanner paused", DebugClass.Log);
             }
@@ -303,11 +404,11 @@
 
     private async Task ResumeScanning()
     {
-        if (_qrCodeScannerJsInterop != null && !isScanning)
+        if (qrCodeScanner != null && !isScanning)
         {
             try
             {
-                await _qrCodeScannerJsInterop.Init(_onQrCodeScanAction);
+                await qrCodeScanner.StartAsync();
                 isScanning = true;
                 MID_HelperFunctions.DebugMessage("Scanner resumed", DebugClass.Log);
             }
@@ -330,17 +431,29 @@
 
     public async ValueTask DisposeAsync()
     {
-        if (_qrCodeScannerJsInterop != null && isScanning)
+        performanceTimer?.Dispose();
+        
+        if (qrCodeScanner != null && isScanning)
         {
             try
             {
-                await _qrCodeScannerJsInterop.StopRecording();
+                await qrCodeScanner.StopAsync();
                 MID_HelperFunctions.DebugMessage("Scanner disposed", DebugClass.Log);
             }
             catch
             {
                 // Ignore disposal errors
             }
+        }
+
+        // Disable GPU acceleration on cleanup
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("disableGPUAcceleration", "#videoContainer");
+        }
+        catch
+        {
+            // Ignore cleanup errors
         }
     }
 }
