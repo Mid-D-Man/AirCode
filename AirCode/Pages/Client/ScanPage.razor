@@ -7,6 +7,8 @@
 @using AirCode.Services.SupaBase
 @using ReactorBlazorQRCodeScanner
 @using AirCode.Utilities.HelperScripts
+@using AirCode.Components.SharedPrefabs.Spinner
+@using AirCode.Components.SharedPrefabs.Buttons
 @inject ISupabaseEdgeFunctionService EdgeService
 @inject QRCodeDecoder QRDecoder
 @inject IAuthService AuthService
@@ -43,11 +45,39 @@
         @if (isProcessing)
         {
             <div class="processing-state">
-                <div class="spinner"></div>
-                <span>Processing QR Code...</span>
+                <LoadingSpinner Title="Processing QR Code..." Subtitle="Please wait while we verify your attendance" />
             </div>
         }
     </main>
+
+    <!-- Scan Result Popup -->
+    @if (showResultPopup)
+    {
+        <div class="popup-overlay" @onclick="ClosePopup">
+            <div class="result-popup" @onclick:stopPropagation="true">
+                <div class="popup-header">
+                    <h4>@popupTitle</h4>
+                    <button class="close-btn" @onclick="ClosePopup">×</button>
+                </div>
+                <div class="popup-content">
+                    <div class="result-icon @(scanSuccess ? "success" : "error")">
+                        @if (scanSuccess)
+                        {
+                            <span>✓</span>
+                        }
+                        else
+                        {
+                            <span>✗</span>
+                        }
+                    </div>
+                    <p class="result-message">@popupMessage</p>
+                </div>
+                <div class="popup-footer">
+                    <PrimaryButton Text="Continue" OnClick="ClosePopup" />
+                </div>
+            </div>
+        </div>
+    }
 
     <!-- Controls -->
     <footer class="scan-controls">
@@ -74,6 +104,12 @@
     private bool isScanning = true;
     private bool isProcessing = false;
     private bool scanComplete = false;
+    
+    // Popup state
+    private bool showResultPopup = false;
+    private bool scanSuccess = false;
+    private string popupTitle = "";
+    private string popupMessage = "";
 
     // User data
     private string currentUserMatricNumber = "SukaBlak";
@@ -127,22 +163,22 @@
                     }
                     else
                     {
-                        MID_HelperFunctions.DebugMessage("You are not taking this course", DebugClass.Warning);
+                        ShowResultPopup(false, "Course Not Found", "You are not enrolled in this course. Please contact your instructor if this is incorrect.");
                     }
                 }
                 else
                 {
-                    MID_HelperFunctions.DebugMessage("QR code is not a valid AirCode attendance QR", DebugClass.Warning);
+                    ShowResultPopup(false, "Invalid QR Code", "This QR code is not a valid AirCode attendance QR. Please scan the correct QR code from your instructor.");
                 }
             }
             catch (Exception ex)
             {
                 MID_HelperFunctions.DebugMessage($"Error processing QR code: {ex.Message}", DebugClass.Exception);
+                ShowResultPopup(false, "Processing Error", "An error occurred while processing the QR code. Please try again.");
             }
         
             isProcessing = false;
             scanComplete = false;
-            await ResumeScanning();
             await InvokeAsync(StateHasChanged);
         }
     }
@@ -167,7 +203,7 @@
             
             if (edgeFunctionRequest == null)
             {
-                MID_HelperFunctions.DebugMessage("Failed to create valid request payload", DebugClass.Warning);
+                ShowResultPopup(false, "Request Failed", "Failed to create a valid attendance request. Please try scanning again.");
                 return;
             }
 
@@ -179,38 +215,55 @@
         
             if (result.Success)
             {
-                MID_HelperFunctions.DebugMessage("Attendance recorded successfully!", DebugClass.Info);
+                ShowResultPopup(true, "Attendance Recorded", "Your attendance has been successfully recorded for this session.");
             }
             else
             {
                 var userFriendlyMessage = GetUserFriendlyErrorMessage(result.ErrorCode, result.Message);
-                MID_HelperFunctions.DebugMessage($"Attendance processing failed: {result.Message} (Code: {result.ErrorCode})", DebugClass.Warning);
+                ShowResultPopup(false, "Attendance Failed", userFriendlyMessage);
             }
         }
         catch (Exception ex)
         {
             MID_HelperFunctions.DebugMessage($"Exception in ProcessAttendanceWithNewPayload: {ex}", DebugClass.Exception);
+            ShowResultPopup(false, "System Error", "A system error occurred. Please try again or contact support.");
         }
+    }
+
+    private void ShowResultPopup(bool success, string title, string message)
+    {
+        scanSuccess = success;
+        popupTitle = title;
+        popupMessage = message;
+        showResultPopup = true;
+        StateHasChanged();
+    }
+
+    private async Task ClosePopup()
+    {
+        showResultPopup = false;
+        StateHasChanged();
+        await ResumeScanning();
     }
 
     private string GetUserFriendlyErrorMessage(string errorCode, string originalMessage)
     {
         return errorCode switch
         {
-            "DUPLICATE_ATTENDANCE" => "⚠️ You have already marked attendance for this session. Multiple submissions are not allowed.",
-            "SESSION_NOT_FOUND" => "❌ This attendance session does not exist or has been removed. Please check with your instructor.",
-            "TEMPORAL_KEY_EXPIRED" => "⏰ Your QR code has expired. Please scan the latest QR code displayed by your instructor.",
-            "TEMPORAL_KEY_MISSING" => "🔒 This session requires a temporal security key. Please scan a fresh QR code.",
-            "DEVICE_SECURITY_VIOLATION" => "🛡️ This device has already been used by another student for attendance. Please use your own device or contact your instructor.",
-            "DEVICE_GUID_MISSING" => "📱 Device identification is required for this secure session.",
-            "MATRIC_NUMBER_MISSING" => "🆔 Student identification number is required for attendance.",
-            "SESSION_QUERY_ERROR" => "🔌 Database connection failed. Please check your internet connection and try again.",
-            "ATTENDANCE_UPDATE_ERROR" => "💾 Failed to save attendance record. Please try again or contact support.",
-            "NETWORK_ERROR" => "🌐 Network connection failed. Please check your internet connection.",
-            "SUPABASE_CONFIG_ERROR" => "⚙️ Server configuration error. Please contact technical support.",
-            "INVALID_JSON" => "📋 Invalid request format. Please try scanning the QR code again.",
-            "MISSING_PARAMETERS" => "📝 Required information is missing. Please try scanning the QR code again.",
-            _ => $"❌ {originalMessage}"
+            "DUPLICATE_ATTENDANCE" => "You have already marked attendance for this session. Multiple submissions are not allowed.",
+            "SESSION_NOT_FOUND" => "This attendance session does not exist or has been removed. Please check with your instructor.",
+            "TEMPORAL_KEY_EXPIRED" => "Your QR code has expired. Please scan the latest QR code displayed by your instructor.",
+            "TEMPORAL_KEY_MISSING" => "This session requires a temporal security key. Please scan a fresh QR code.",
+            "DEVICE_SECURITY_VIOLATION" => "This device has already been used by another student for attendance. Please use your own device or contact your instructor.",
+            "DEVICE_GUID_MISSING" => "Device identification is required for this secure session.",
+            "MATRIC_NUMBER_MISSING" => "Student identification number is required for attendance.",
+            "SESSION_QUERY_ERROR" => "Database connection failed. Please check your internet connection and try again.",
+            "ATTENDANCE_UPDATE_ERROR" => "Failed to save attendance record. Please try again or contact support.",
+            "NETWORK_ERROR" => "Network connection failed. Please check your internet connection.",
+            "SUPABASE_CONFIG_ERROR" => "Server configuration error. Please contact technical support.",
+            "INVALID_JSON" => "Invalid request format. Please try scanning the QR code again.",
+            "MISSING_PARAMETERS" => "Required information is missing. Please try scanning the QR code again.",
+            _ => originalMessage
         };
     }
 
