@@ -1,7 +1,7 @@
 Project Structure Documentation
-Generated: Sun Aug 10 11:31:56 UTC 2025
+Generated: Sun Aug 10 11:45:31 UTC 2025
 Repository: Mid-D-Man/AirCode
-Commit: 5ca7a9ac24156dbd8051772af174682415a241b1
+Commit: 32905676f53b4944524dfc884a17d34670c44eb1
 ==================================
 
 Source Files:
@@ -316,6 +316,7 @@ wwwroot/js/pageNavigator.js
 wwwroot/js/pdf-service.js
 wwwroot/js/pwaManager.js
 wwwroot/js/qrCodeModule.js
+wwwroot/js/scannerPerformance.js
 wwwroot/js/search-helpers.js
 wwwroot/js/shaderRenderer1.js
 wwwroot/js/site.js
@@ -341,5 +342,5 @@ File Count Summary:
 .csproj   : 1 files
 .json     : 12 files
 .css      : 78 files
-.js       : 47 files
+.js       : 48 files
 .html     : 3 files
