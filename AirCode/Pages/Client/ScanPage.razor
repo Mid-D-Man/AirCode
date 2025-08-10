@@ -25,11 +25,7 @@
     <main class="scanner-main">
         <!-- QR Scanner Video -->
         <div class="video-container" id="videoContainer">
-            <QRCodeScanner @ref="qrCodeScanner" 
-                          ShowOutput="false" 
-                          Width="100%" 
-                          Height="100%"
-                          OnQrCodeDetected="OnQrCodeDetected" />
+            <QRCodeScanner ShowOutput="false" Width="100%" />
         </div>
 
         <!-- Scan Frame Overlay -->
@@ -120,7 +116,8 @@
 </div>
 
 @code {
-    private QRCodeScanner? qrCodeScanner;
+    private QRCodeScannerJsInterop? _qrCodeScannerJsInterop;
+    private Action<string>? _onQrCodeScanAction;
     private bool isScanning = true;
     private bool isProcessing = false;
     private bool scanComplete = false;
@@ -144,14 +141,20 @@
     
     protected override async Task OnInitializedAsync()
     {
+        _onQrCodeScanAction = (code) => OnQrCodeScan(code);
+        _qrCodeScannerJsInterop = new QRCodeScannerJsInterop(JSRuntime);
+        
         try
         {
+            await _qrCodeScannerJsInterop.Init(_onQrCodeScanAction);
+            MID_HelperFunctions.DebugMessage("QR Scanner initialized successfully", DebugClass.Info);
+
             currentUserMatricNumber = await AuthService.GetMatricNumberAsync();
             deviceGUID = await AuthService.GetDeviceIdAsync();
         }
         catch (Exception ex)
         {
-            MID_HelperFunctions.DebugMessage($"Failed to initialize user data: {ex.Message}", DebugClass.Exception);
+            MID_HelperFunctions.DebugMessage($"Failed to initialize scanner: {ex.Message}", DebugClass.Exception);
         }
     }
 
@@ -229,11 +232,11 @@
         }
     }
 
-    private async Task OnQrCodeDetected(string qrCode)
+    private async Task OnQrCodeScan(string code)
     {
-        if (!string.IsNullOrEmpty(qrCode) && CanProcessAttendance())
+        if (!string.IsNullOrEmpty(code) && CanProcessAttendance())
         {
-            MID_HelperFunctions.DebugMessage($"QR Code detected: {qrCode}", DebugClass.Info);
+            MID_HelperFunctions.DebugMessage($"QR Code detected: {code}", DebugClass.Info);
         
             await PauseScanning();
             isProcessing = true;
@@ -242,7 +245,7 @@
         
             try
             {
-                var decodedSessionData = await QRDecoder.DecodeSessionDataAsync(qrCode);
+                var decodedSessionData = await QRDecoder.DecodeSessionDataAsync(code);
 
                 if (decodedSessionData != null)
                 {
@@ -254,7 +257,7 @@
 
                     if (isTakingCourse)
                     {
-                        await ProcessAttendanceWithNewPayload(qrCode);
+                        await ProcessAttendanceWithNewPayload(code);
                     }
                     else
                     {
@@ -387,11 +390,11 @@
 
     private async Task PauseScanning()
     {
-        if (qrCodeScanner != null && isScanning)
+        if (_qrCodeScannerJsInterop != null && isScanning)
         {
             try
             {
-                await qrCodeScanner.StopAsync();
+                await _qrCodeScannerJsInterop.StopRecording();
                 isScanning = false;
                 MID_HelperFunctions.DebugMessage("Scanner paused", DebugClass.Log);
             }
@@ -404,11 +407,11 @@
 
     private async Task ResumeScanning()
     {
-        if (qrCodeScanner != null && !isScanning)
+        if (_qrCodeScannerJsInterop != null && !isScanning)
         {
             try
             {
-                await qrCodeScanner.StartAsync();
+                await _qrCodeScannerJsInterop.Init(_onQrCodeScanAction);
                 isScanning = true;
                 MID_HelperFunctions.DebugMessage("Scanner resumed", DebugClass.Log);
             }
@@ -433,11 +436,11 @@
     {
         performanceTimer?.Dispose();
         
-        if (qrCodeScanner != null && isScanning)
+        if (_qrCodeScannerJsInterop != null && isScanning)
         {
             try
             {
-                await qrCodeScanner.StopAsync();
+                await _qrCodeScannerJsInterop.StopRecording();
                 MID_HelperFunctions.DebugMessage("Scanner disposed", DebugClass.Log);
             }
             catch
