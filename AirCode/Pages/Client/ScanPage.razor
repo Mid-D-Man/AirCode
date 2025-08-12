@@ -139,24 +139,65 @@
     private string currentUserMatricNumber = "SukaBlak";
     private string deviceGUID = "N";
     
-    protected override async Task OnInitializedAsync()
-    {
-        _onQrCodeScanAction = (code) => OnQrCodeScan(code);
-        _qrCodeScannerJsInterop = new QRCodeScannerJsInterop(JSRuntime);
-        
-        try
-        {
-            await _qrCodeScannerJsInterop.Init(_onQrCodeScanAction);
-            MID_HelperFunctions.DebugMessage("QR Scanner initialized successfully", DebugClass.Info);
+    // Add this method to your ScanPage.razor @code section
 
-            currentUserMatricNumber = await AuthService.GetMatricNumberAsync();
-            deviceGUID = await AuthService.GetDeviceIdAsync();
-        }
-        catch (Exception ex)
+private async Task InitializeAndroidOptimizedScanner()
+{
+    try
+    {
+        // Apply Android-specific constraints via JS interop
+        var isAndroid = await JSRuntime.InvokeAsync<bool>("eval", 
+            "/Android/i.test(navigator.userAgent)");
+            
+        if (isAndroid)
         {
-            MID_HelperFunctions.DebugMessage($"Failed to initialize scanner: {ex.Message}", DebugClass.Exception);
+            MID_HelperFunctions.DebugMessage("Applying Android optimizations", DebugClass.Info);
+            
+            // Initialize Android camera fixes
+            await JSRuntime.InvokeVoidAsync("AndroidCameraFixes.initializeAndroidOptimizations", 
+                ".video-container video");
+                
+            // Get Android-specific stream
+            var stream = await JSRuntime.InvokeAsync<IJSObjectReference>("AndroidCameraFixes.getAndroidCameraStream");
+            
+            MID_HelperFunctions.DebugMessage("Android camera stream acquired", DebugClass.Info);
         }
+        
+        // Continue with normal scanner initialization
+        await InitializeScanner();
     }
+    catch (Exception ex)
+    {
+        MID_HelperFunctions.DebugMessage($"Android optimization failed: {ex.Message}", DebugClass.Warning);
+        // Fallback to standard initialization
+        await InitializeScanner();
+    }
+}
+
+private async Task InitializeScanner()
+{
+    _onQrCodeScanAction = (code) => OnQrCodeScan(code);
+    _qrCodeScannerJsInterop = new QRCodeScannerJsInterop(JSRuntime);
+    
+    try
+    {
+        await _qrCodeScannerJsInterop.Init(_onQrCodeScanAction);
+        MID_HelperFunctions.DebugMessage("QR Scanner initialized successfully", DebugClass.Info);
+
+        currentUserMatricNumber = await AuthService.GetMatricNumberAsync();
+        deviceGUID = await AuthService.GetDeviceIdAsync();
+    }
+    catch (Exception ex)
+    {
+        MID_HelperFunctions.DebugMessage($"Failed to initialize scanner: {ex.Message}", DebugClass.Exception);
+    }
+}
+
+// Replace your OnInitializedAsync method with this
+protected override async Task OnInitializedAsync()
+{
+    await InitializeAndroidOptimizedScanner();
+}
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
