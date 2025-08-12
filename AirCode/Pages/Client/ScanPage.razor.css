@@ -529,3 +529,32 @@ body.dark-mode .result-message {
     from { opacity: 0; }
     to { opacity: 1; }
     }
+/* Add to ScanPage.razor.css */
+
+/* Android-specific video fixes */
+@supports (-webkit-appearance: none) {
+    .video-container video {
+        /* Force sharp rendering on Android */
+        -webkit-transform: translate3d(-50%, -50%, 0) !important;
+        transform: translate3d(-50%, -50%, 0) !important;
+        
+        /* Prevent blur */
+        -webkit-filter: none !important;
+        filter: contrast(1.15) brightness(1.1) !important;
+        
+        /* Sharp pixel rendering */
+        image-rendering: -webkit-optimize-contrast !important;
+        image-rendering: crisp-edges !important;
+        
+        /* Force hardware acceleration */
+        will-change: transform, filter !important;
+        -webkit-backface-visibility: hidden !important;
+    }
+}
+
+/* Android Chrome specific */
+@media screen and (-webkit-min-device-pixel-ratio: 1) {
+    .video-container video {
+        transform: translate3d(-50%, -50%, 0) scale(1.001) !important;
+    }
+}
