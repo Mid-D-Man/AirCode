@@ -1,4 +1,4 @@
-/* ScanPage.razor.css - Clean centered scanner with popup */
+/* ScanPage.razor.css - Enhanced with zoom controls and performance fixes */
 
 /* Main page container */
 .scan-page {
@@ -64,12 +64,26 @@
     position: absolute !important;
     top: 50% !important;
     left: 50% !important;
-    transform: translate(-50%, -50%) !important;
+    transform: translate3d(-50%, -50%, 0) !important;
     min-width: 100% !important;
     min-height: 100% !important;
     width: auto !important;
     height: auto !important;
     object-fit: cover !important;
+    will-change: transform !important;
+    backface-visibility: hidden !important;
+}
+
+/* Android-specific video optimizations */
+@supports (-webkit-appearance: none) {
+    .video-container video {
+        -webkit-transform: translate3d(-50%, -50%, 0) !important;
+        image-rendering: -webkit-optimize-contrast !important;
+        image-rendering: crisp-edges !important;
+        -webkit-filter: contrast(1.15) brightness(1.1) !important;
+        filter: contrast(1.15) brightness(1.1) !important;
+        -webkit-backface-visibility: hidden !important;
+    }
 }
 
 /* Scan overlay - perfectly centered */
@@ -143,11 +157,11 @@
     right: 12px;
     height: 2px;
     background: linear-gradient(90deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.4) 20%,
-    #ffffff 50%,
-    rgba(255, 255, 255, 0.4) 80%,
-    transparent 100%);
+        transparent 0%,
+        rgba(255, 255, 255, 0.4) 20%,
+        #ffffff 50%,
+        rgba(255, 255, 255, 0.4) 80%,
+        transparent 100%);
     border-radius: 1px;
     box-shadow: 0 0 12px rgba(255, 255, 255, 0.8);
     animation: scanMove 2.5s ease-in-out infinite;
@@ -166,6 +180,91 @@
         transform: translateY(12px);
         opacity: 0.8;
     }
+}
+
+/* Zoom Controls */
+.zoom-controls {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(16px);
+    border-radius: 12px;
+    padding: 12px;
+    z-index: 15;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    pointer-events: auto;
+}
+
+.zoom-slider-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.zoom-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    font-size: 18px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.zoom-btn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+.zoom-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.zoom-slider {
+    width: 100px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+    outline: none;
+    appearance: none;
+    cursor: pointer;
+}
+
+.zoom-slider::-webkit-slider-thumb {
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #ffffff;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.zoom-slider::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #ffffff;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.zoom-indicator {
+    color: #ffffff;
+    font-size: 12px;
+    text-align: center;
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
 }
 
 /* Processing overlay */
@@ -284,6 +383,100 @@
     justify-content: center;
 }
 
+/* Performance Info - Fixed Layout */
+.performance-info {
+    position: fixed;
+    top: 120px;
+    left: 20px;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(16px);
+    border-radius: 12px;
+    padding: 12px 16px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    z-index: 15;
+    min-width: 160px;
+}
+
+.perf-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 4px;
+}
+
+.perf-row:last-child {
+    margin-bottom: 0;
+}
+
+.perf-row small {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 11px;
+    font-weight: 500;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.perf-warning {
+    margin-top: 8px;
+    padding: 4px 8px;
+    background: rgba(239, 68, 68, 0.2);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 6px;
+    color: #fca5a5;
+    font-size: 10px;
+    text-align: center;
+}
+
+/* Controls */
+.scan-controls {
+    position: fixed;
+    bottom: max(env(safe-area-inset-bottom), 24px);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 20;
+}
+
+.control-buttons {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.control-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(20px);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    min-width: 100px;
+    justify-content: center;
+}
+
+.control-btn:hover:not(:disabled) {
+    background: rgba(0, 0, 0, 0.9);
+    border-color: rgba(255, 255, 255, 0.4);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
+}
+
+.control-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.control-btn .icon {
+    font-size: 1rem;
+}
+
 /* Dark mode adjustments */
 body.dark-mode .result-popup {
     background: var(--dark-bg-secondary, #1f2937);
@@ -318,82 +511,74 @@ body.dark-mode .result-message {
     }
 }
 
-/* Controls */
-.scan-controls {
-    position: fixed;
-    bottom: max(env(safe-area-inset-bottom), 24px);
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 20;
-}
-
-.control-btn {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.875rem 1.5rem;
-    background: rgba(0, 0, 0, 0.8);
-    backdrop-filter: blur(20px);
-    color: #ffffff;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 14px;
-    font-size: 0.95rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-    min-width: 160px;
-    justify-content: center;
-}
-
-.control-btn:hover {
-    background: rgba(0, 0, 0, 0.9);
-    border-color: rgba(255, 255, 255, 0.4);
-    transform: translateY(-2px);
-    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
-}
-
-.control-btn .icon {
-    font-size: 1rem;
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
+    .zoom-controls {
+        top: 15px;
+        right: 15px;
+        padding: 10px;
+    }
+
+    .zoom-slider {
+        width: 80px;
+    }
+
+    .zoom-btn {
+        width: 28px;
+        height: 28px;
+        font-size: 16px;
+    }
+
+    .performance-info {
+        top: 100px;
+        left: 15px;
+        padding: 10px 12px;
+        min-width: 140px;
+    }
+
     .result-popup {
         max-width: 90vw;
         min-width: 280px;
     }
 
-    .popup-header {
-        padding: 1.25rem 1.25rem 0;
+    .control-buttons {
+        gap: 8px;
     }
 
-    .popup-header h4 {
-        font-size: 1.125rem;
-    }
-
-    .popup-content {
-        padding: 0.75rem 1.25rem;
-    }
-
-    .popup-footer {
-        padding: 0 1.25rem 1.25rem;
-    }
-
-    .result-icon {
-        width: 56px;
-        height: 56px;
-        font-size: 1.75rem;
-    }
-
-    .result-message {
-        font-size: 0.95rem;
+    .control-btn {
+        padding: 0.625rem 1rem;
+        font-size: 0.85rem;
+        min-width: 80px;
     }
 }
 
 @media (max-width: 480px) {
-    .scan-header {
-        padding: max(env(safe-area-inset-top), 0.75rem) 0.75rem 0.75rem;
+    .zoom-controls {
+        top: 10px;
+        right: 10px;
+        padding: 8px;
+    }
+
+    .zoom-slider {
+        width: 60px;
+    }
+
+    .zoom-btn {
+        width: 24px;
+        height: 24px;
+        font-size: 14px;
+    }
+
+    .performance-info {
+        top: 80px;
+        left: 10px;
+        padding: 8px 10px;
+        min-width: 120px;
     }
 
     .scan-frame {
@@ -426,29 +611,14 @@ body.dark-mode .result-message {
     }
 
     .control-btn {
-        padding: 0.75rem 1.25rem;
-        font-size: 0.9rem;
-        min-width: 140px;
+        padding: 0.5rem 0.75rem;
+        font-size: 0.8rem;
+        min-width: 70px;
+        gap: 0.25rem;
     }
 
     .scan-controls {
-        bottom: max(env(safe-area-inset-bottom), 20px);
-    }
-
-    .result-popup {
-        min-width: 260px;
-    }
-
-    .popup-header {
-        padding: 1rem 1rem 0;
-    }
-
-    .popup-content {
-        padding: 0.5rem 1rem;
-    }
-
-    .popup-footer {
-        padding: 0 1rem 1rem;
+        bottom: max(env(safe-area-inset-bottom), 16px);
     }
 }
 
@@ -494,7 +664,17 @@ body.dark-mode .result-message {
     }
 
     .scan-controls {
-        bottom: 12px;
+        bottom: 8px;
+    }
+
+    .zoom-controls {
+        top: 8px;
+        right: 8px;
+    }
+
+    .performance-info {
+        top: 60px;
+        left: 8px;
     }
 
     .result-popup {
@@ -520,41 +700,9 @@ body.dark-mode .result-message {
 /* Hardware acceleration */
 .scan-line,
 .scan-frame,
-.result-popup {
+.result-popup,
+.zoom-controls,
+.performance-info {
     will-change: transform;
     backface-visibility: hidden;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-    }
-/* Add to ScanPage.razor.css */
-
-/* Android-specific video fixes */
-@supports (-webkit-appearance: none) {
-    .video-container video {
-        /* Force sharp rendering on Android */
-        -webkit-transform: translate3d(-50%, -50%, 0) !important;
-        transform: translate3d(-50%, -50%, 0) !important;
-        
-        /* Prevent blur */
-        -webkit-filter: none !important;
-        filter: contrast(1.15) brightness(1.1) !important;
-        
-        /* Sharp pixel rendering */
-        image-rendering: -webkit-optimize-contrast !important;
-        image-rendering: crisp-edges !important;
-        
-        /* Force hardware acceleration */
-        will-change: transform, filter !important;
-        -webkit-backface-visibility: hidden !important;
-    }
-}
-
-/* Android Chrome specific */
-@media screen and (-webkit-min-device-pixel-ratio: 1) {
-    .video-container video {
-        transform: translate3d(-50%, -50%, 0) scale(1.001) !important;
-    }
-}
+                           }
