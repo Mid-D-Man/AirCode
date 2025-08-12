@@ -1,280 +1,622 @@
-@page "/Client/Profile"
-@using AirCode.Services.Auth
-@using ILocalStorageService = AirCode.Services.Storage.IBlazorAppLocalStorageService
+@page "/Client/ScanAttendance"
 @layout AirCode.Layout.ClientLayout.ClientLayout
-@inject NavigationManager NavigationManager
-@inject ILocalStorageService BlazorAppLocalStorage
-@inject IAuthService AuthService
 @inject IJSRuntime JSRuntime
+@using AirCode.Models.Supabase
+@using AirCode.Services.Auth
+@using AirCode.Services.Courses
+@using AirCode.Services.SupaBase
+@using ReactorBlazorQRCodeScanner
+@using AirCode.Utilities.HelperScripts
+@using AirCode.Components.SharedPrefabs.Spinner
+@using AirCode.Components.SharedPrefabs.Buttons
+@inject ISupabaseEdgeFunctionService EdgeService
+@inject QRCodeDecoder QRDecoder
+@inject IAuthService AuthService
+@inject ICourseService CourseService
 
-<div class="client-profile-page">
-    <div class="profile-header">
-        <div class="profile-avatar-container">
-            @if (!string.IsNullOrEmpty(profileImageUrl))
-            {
-                <img src="@profileImageUrl" alt="Profile" class="profile-avatar" @onerror="HandleImageError" />
-            }
-            else if (!string.IsNullOrEmpty(userIconSvg))
-            {
-                <div class="profile-avatar-svg">
-                    @((MarkupString)userIconSvg)
+<div class="scan-page">
+    <!-- Header -->
+    <header class="scan-header">
+        <h3>Scan QR Code</h3>
+        <p>Scan the attendance QR code to mark your presence</p>
+    </header>
+
+    <!-- Main Scanner Area -->
+    <main class="scanner-main">
+        <!-- QR Scanner Video -->
+        <div class="video-container" id="videoContainer">
+            <QRCodeScanner ShowOutput="false" Width="100%" />
+        </div>
+
+        <!-- Scan Frame Overlay -->
+        <div class="scan-overlay">
+            <div class="scan-frame" id="scanFrame">
+                <div class="frame-corners">
+                    <div class="corner tl"></div>
+                    <div class="corner tr"></div>
+                    <div class="corner bl"></div>
+                    <div class="corner br"></div>
                 </div>
+                <div class="scan-line"></div>
+            </div>
+        </div>
+
+        <!-- Zoom Controls -->
+        <div class="zoom-controls">
+            <div class="zoom-slider-container">
+                <button class="zoom-btn" @onclick="ZoomOut" disabled="@(!canZoomOut)">-</button>
+                <input type="range" 
+                       class="zoom-slider" 
+                       min="1" 
+                       max="@maxZoom" 
+                       step="0.1" 
+                       value="@currentZoom" 
+                       @oninput="OnZoomChange" />
+                <button class="zoom-btn" @onclick="ZoomIn" disabled="@(!canZoomIn)">+</button>
+            </div>
+            <div class="zoom-indicator">@currentZoom.ToString("F1")x</div>
+        </div>
+
+        <!-- Processing State -->
+        @if (isProcessing)
+        {
+            <div class="processing-state">
+                <LoadingSpinner Title="Processing QR Code..." Subtitle="Please wait while we verify your attendance" />
+            </div>
+        }
+    </main>
+
+    <!-- Scan Result Popup -->
+    @if (showResultPopup)
+    {
+        <div class="popup-overlay" @onclick="ClosePopup">
+            <div class="result-popup" @onclick:stopPropagation="true">
+                <div class="popup-header">
+                    <h4>@popupTitle</h4>
+                    <button class="close-btn" @onclick="ClosePopup">×</button>
+                </div>
+                <div class="popup-content">
+                    <div class="result-icon @(scanSuccess ? "success" : "error")">
+                        @if (scanSuccess)
+                        {
+                            <span>✓</span>
+                        }
+                        else
+                        {
+                            <span>✗</span>
+                        }
+                    </div>
+                    <p class="result-message">@popupMessage</p>
+                </div>
+                <div class="popup-footer">
+                    <PrimaryButton Text="Continue" OnClick="ClosePopup" />
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Performance Info -->
+    @if (showPerformanceInfo)
+    {
+        <div class="performance-info">
+            <div class="perf-row">
+                <small>GPU: @(gpuAccelerated ? "✓" : "✗")</small>
+                <small>FPS: @currentFPS</small>
+            </div>
+            <div class="perf-row">
+                <small>Device: @deviceInfo</small>
+                <small>Zoom: @currentZoom.ToString("F1")x</small>
+            </div>
+            @if (!string.IsNullOrEmpty(performanceWarning))
+            {
+                <div class="perf-warning">⚠️ @performanceWarning</div>
+            }
+        </div>
+    }
+
+    <!-- Controls -->
+    <footer class="scan-controls">
+        <div class="control-buttons">
+            @if (isScanning)
+            {
+                <button class="control-btn stop" @onclick="StopScanning">
+                    <span class="icon">⏸</span>
+                    Stop
+                </button>
             }
             else
             {
-                <div class="profile-avatar-default">
-                    <i class="oi oi-person"></i>
-                </div>
+                <button class="control-btn start" @onclick="StartScanning">
+                    <span class="icon">▶</span>
+                    Start
+                </button>
             }
-        </div>
-        <div class="profile-user-info">
-            <h3>@UserName</h3>
-            <p>@UserEmail</p>
-            <span class="role-badge role-@UserRole?.ToLower()">@UserRole</span>
-        </div>
-    </div>
+            
+            <button class="control-btn settings" @onclick="TogglePerformanceInfo">
+                <span class="icon">⚙️</span>
+                Stats
+            </button>
 
-    <div class="profile-sections">
-        <div class="profile-section">
-            <div class="section-header">
-                <h4>User Information</h4>
-                <div class="section-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                        <circle cx="12" cy="7" r="4"></circle>
-                    </svg>
-                </div>
-            </div>
-            <div class="settings-content">
-                <div class="info-grid">
-                    @if (!string.IsNullOrEmpty(MatricNumber))
-                    {
-                        <div class="info-item">
-                            <label>Matric Number</label>
-                            <div class="copyable-field">
-                                <input type="text" value="@MatricNumber" readonly />
-                                <button class="copy-btn" @onclick="() => CopyToClipboard(MatricNumber)" title="Copy Matric Number">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                                    </svg>
-                                </button>
-                            </div>
-                        </div>
-                    }
-
-                    @if (!string.IsNullOrEmpty(LecturerId))
-                    {
-                        <div class="info-item">
-                            <label>Lecturer ID</label>
-                            <div class="copyable-field">
-                                <input type="text" value="@LecturerId" readonly />
-                                <button class="copy-btn" @onclick="() => CopyToClipboard(LecturerId)" title="Copy Lecturer ID">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                                    </svg>
-                                </button>
-                            </div>
-                        </div>
-                    }
-                </div>
-            </div>
+            <button class="control-btn zoom-reset" @onclick="ResetZoom" disabled="@(Math.Abs(currentZoom - 1.0) < 0.1)">
+                <span class="icon">🔍</span>
+                Reset
+            </button>
         </div>
-
-        <div class="profile-section">
-            <div class="section-header">
-                <h4>App Settings</h4>
-                <div class="section-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="5"></circle>
-                        <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1"></path>
-                    </svg>
-                </div>
-            </div>
-            <div class="settings-content">
-                <div class="settings-notice">
-                    <p><i class="oi oi-info"></i> Minimal settings available for now. More customization options will be added in future updates for a smoother experience.</p>
-                </div>
-                
-                <div class="setting-item">
-                    <div class="setting-info">
-                        <label>Theme</label>
-                        <span class="setting-description">Switch between light and dark mode</span>
-                    </div>
-                    <button class="theme-toggle-btn" @onclick="ToggleDarkMode">
-                        <div class="theme-toggle-slider">
-                            <div class="theme-toggle-thumb"></div>
-                        </div>
-                        <span class="theme-label">@(isDarkModeEnabled ? "Dark" : "Light")</span>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="profile-actions">
-        <button class="btn btn-logout" @onclick="Logout">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                <polyline points="16,17 21,12 16,7"></polyline>
-                <line x1="21" y1="12" x2="9" y2="12"></line>
-            </svg>
-            Logout
-        </button>
-    </div>
-
-    @if (!string.IsNullOrEmpty(StatusMessage))
-    {
-        <div class="status-message @(IsErrorMessage ? "error" : "success")">
-            @StatusMessage
-        </div>
-    }
-
-    <!-- Copy Notification -->
-    @if (showCopyNotification)
-    {
-        <div class="copy-notification">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M20 6L9 17l-5-5"></path>
-            </svg>
-            <span>Copied to clipboard!</span>
-        </div>
-    }
+    </footer>
 </div>
 
 @code {
-    private string profileImageUrl = string.Empty;
-    private string userIconSvg = string.Empty;
-    private bool imageLoadFailed = false;
-    private string UserName = "Loading...";
-    private string UserEmail = "Loading...";
-    private string UserRole = "Loading...";
-    private string MatricNumber = "";
-    private string LecturerId = "";
-    private bool isDarkModeEnabled = false;
-    private string StatusMessage = "";
-    private bool IsErrorMessage = false;
-    private bool showCopyNotification = false;
+    private QRCodeScannerJsInterop? _qrCodeScannerJsInterop;
+    private Action<string>? _onQrCodeScanAction;
+    private bool isScanning = true;
+    private bool isProcessing = false;
+    private bool scanComplete = false;
+    
+    // Performance monitoring - Fixed
+    private bool gpuAccelerated = false;
+    private bool showPerformanceInfo = false;
+    private int currentFPS = 0;
+    private string deviceInfo = "Unknown";
+    private string performanceWarning = "";
+    private Timer? performanceTimer;
+    private int frameCount = 0;
+    private DateTime lastFpsCheck = DateTime.Now;
+    
+    // Zoom controls - New
+    private double currentZoom = 1.0;
+    private double maxZoom = 3.0;
+    private bool canZoomIn => currentZoom < maxZoom;
+    private bool canZoomOut => currentZoom > 1.0;
+    private bool isAndroidDevice = false;
+    
+    // Popup state
+    private bool showResultPopup = false;
+    private bool scanSuccess = false;
+    private string popupTitle = "";
+    private string popupMessage = "";
 
+    // User data
+    private string currentUserMatricNumber = "SukaBlak";
+    private string deviceGUID = "N";
+    
     protected override async Task OnInitializedAsync()
     {
-        await LoadUserProfileAsync();
+        _onQrCodeScanAction = (code) => OnQrCodeScan(code);
+        _qrCodeScannerJsInterop = new QRCodeScannerJsInterop(JSRuntime);
+        
+        try
+        {
+            // Detect device type
+            isAndroidDevice = await JSRuntime.InvokeAsync<bool>("eval", "/Android/i.test(navigator.userAgent)");
+            
+            // Initialize with device-specific settings
+            if (isAndroidDevice)
+            {
+                await InitializeAndroidOptimizations();
+            }
+            
+            await _qrCodeScannerJsInterop.Init(_onQrCodeScanAction);
+            MID_HelperFunctions.DebugMessage("QR Scanner initialized successfully", DebugClass.Info);
+
+            currentUserMatricNumber = await AuthService.GetMatricNumberAsync();
+            deviceGUID = await AuthService.GetDeviceIdAsync();
+        }
+        catch (Exception ex)
+        {
+            MID_HelperFunctions.DebugMessage($"Failed to initialize scanner: {ex.Message}", DebugClass.Exception);
+        }
     }
 
-    private async Task LoadUserProfileAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await OptimizePerformance();
+            await StartPerformanceMonitoring();
+        }
+    }
+
+    private async Task InitializeAndroidOptimizations()
     {
         try
         {
-            // Get user picture from AuthService
-            profileImageUrl = await AuthService.GetUserPictureAsync() ?? "";
-            
-            if (string.IsNullOrEmpty(profileImageUrl))
-            {
-                // Fall back to SVG icon service if needed
-                // userIconSvg = await SvgIconService.GetCrowGuyIconAsync();
-            }
-            
-            UserRole = await AuthService.GetUserRoleAsync() ?? "Unknown";
-            
-            // Load role-specific data
-            if (UserRole?.Contains("Student") == true || UserRole?.Contains("CourseRep") == true)
-            {
-                MatricNumber = await AuthService.GetMatricNumberAsync() ?? "";
-            }
-            
-            if (UserRole?.Contains("Lecturer") == true)
-            {
-                LecturerId = await AuthService.GetLecturerIdAsync() ?? "";
-            }
+            // Apply Android-specific camera constraints
+            await JSRuntime.InvokeVoidAsync("eval", @"
+                if (window.ReactorQRScanner && window.ReactorQRScanner.getUserMedia) {
+                    const originalGetUserMedia = window.ReactorQRScanner.getUserMedia.bind(window.ReactorQRScanner);
+                    window.ReactorQRScanner.getUserMedia = async function(constraints) {
+                        const androidConstraints = {
+                            video: {
+                                width: { exact: 640 },
+                                height: { exact: 480 },
+                                frameRate: { exact: 15 },
+                                facingMode: 'environment',
+                                focusMode: 'continuous'
+                            }
+                        };
+                        try {
+                            return await navigator.mediaDevices.getUserMedia(androidConstraints);
+                        } catch (e) {
+                            console.warn('Android constraints failed, falling back:', e);
+                            return await originalGetUserMedia(constraints);
+                        }
+                    };
+                }
+            ");
 
-            // Set display values
-            UserName = !string.IsNullOrEmpty(MatricNumber) ? $"Student {MatricNumber}" : 
-                      !string.IsNullOrEmpty(LecturerId) ? $"Lecturer {LecturerId}" : 
-                      "User";
-            UserEmail = "user@aircode.edu"; // Placeholder
+            MID_HelperFunctions.DebugMessage("Android optimizations applied", DebugClass.Info);
+        }
+        catch (Exception ex)
+        {
+            MID_HelperFunctions.DebugMessage($"Android optimization failed: {ex.Message}", DebugClass.Warning);
+        }
+    }
 
-            // Load theme setting
-            isDarkModeEnabled = await BlazorAppLocalStorage.GetItemAsync<bool>("darkMode");
+    private async Task OptimizePerformance()
+    {
+        try
+        {
+            // Apply optimizations to video element
+            await JSRuntime.InvokeVoidAsync("eval", @"
+                setTimeout(() => {
+                    const video = document.querySelector('.video-container video');
+                    if (video) {
+                        video.style.transform = 'translate3d(-50%, -50%, 0)';
+                        video.style.willChange = 'transform';
+                        video.style.backfaceVisibility = 'hidden';
+                        
+                        // Android-specific fixes
+                        if (/Android/i.test(navigator.userAgent)) {
+                            video.style.imageRendering = 'crisp-edges';
+                            video.style.filter = 'contrast(1.15) brightness(1.1)';
+                        }
+                    }
+                }, 500);
+            ");
+
+            // Check GPU acceleration
+            gpuAccelerated = await JSRuntime.InvokeAsync<bool>("eval", @"
+                (() => {
+                    const video = document.querySelector('.video-container video');
+                    if (!video) return false;
+                    const style = getComputedStyle(video);
+                    return style.transform && style.transform !== 'none';
+                })()
+            ");
             
+            // Get device info
+            deviceInfo = await JSRuntime.InvokeAsync<string>("eval", @"
+                (() => {
+                    const ratio = window.devicePixelRatio || 1;
+                    const cores = navigator.hardwareConcurrency || 'Unknown';
+                    return `DPR:${ratio} Cores:${cores}`;
+                })()
+            ");
+            
+            MID_HelperFunctions.DebugMessage($"Performance optimized - GPU: {gpuAccelerated}", DebugClass.Info);
+        }
+        catch (Exception ex)
+        {
+            MID_HelperFunctions.DebugMessage($"Performance optimization failed: {ex.Message}", DebugClass.Warning);
+        }
+    }
+
+    private async Task StartPerformanceMonitoring()
+    {
+        try
+        {
+            // Use timer-based FPS monitoring instead of unreliable video properties
+            performanceTimer = new Timer(async _ => 
+            {
+                try
+                {
+                    var now = DateTime.Now;
+                    var elapsed = (now - lastFpsCheck).TotalSeconds;
+                    
+                    if (elapsed >= 1.0)
+                    {
+                        currentFPS = (int)(frameCount / elapsed);
+                        frameCount = 0;
+                        lastFpsCheck = now;
+                        
+                        // Performance warnings
+                        if (currentFPS > 0 && currentFPS < 8)
+                        {
+                            performanceWarning = "Low FPS detected";
+                        }
+                        else if (!gpuAccelerated)
+                        {
+                            performanceWarning = "GPU acceleration unavailable";
+                        }
+                        else
+                        {
+                            performanceWarning = "";
+                        }
+                        
+                        await InvokeAsync(StateHasChanged);
+                    }
+                    
+                    frameCount++;
+                }
+                catch
+                {
+                    // Ignore monitoring errors
+                }
+            }, null, 0, 100); // Check every 100ms
+        }
+        catch (Exception ex)
+        {
+            MID_HelperFunctions.DebugMessage($"Performance monitoring setup failed: {ex.Message}", DebugClass.Warning);
+        }
+    }
+
+    // Zoom Control Methods
+    private async Task OnZoomChange(ChangeEventArgs e)
+    {
+        if (double.TryParse(e.Value?.ToString(), out double newZoom))
+        {
+            currentZoom = Math.Round(newZoom, 1);
+            await ApplyZoom();
+        }
+    }
+
+    private async Task ZoomIn()
+    {
+        if (canZoomIn)
+        {
+            currentZoom = Math.Min(maxZoom, Math.Round(currentZoom + 0.2, 1));
+            await ApplyZoom();
+        }
+    }
+
+    private async Task ZoomOut()
+    {
+        if (canZoomOut)
+        {
+            currentZoom = Math.Max(1.0, Math.Round(currentZoom - 0.2, 1));
+            await ApplyZoom();
+        }
+    }
+
+    private async Task ResetZoom()
+    {
+        currentZoom = 1.0;
+        await ApplyZoom();
+    }
+
+    private async Task ApplyZoom()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("eval", $@"
+                const video = document.querySelector('.video-container video');
+                if (video) {{
+                    video.style.transform = 'translate3d(-50%, -50%, 0) scale({currentZoom.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)})';
+                }}
+            ");
             StateHasChanged();
         }
         catch (Exception ex)
         {
-            StatusMessage = "Error loading profile data";
-            IsErrorMessage = true;
-            StateHasChanged();
+            MID_HelperFunctions.DebugMessage($"Zoom application failed: {ex.Message}", DebugClass.Warning);
         }
     }
 
-    private async Task HandleImageError()
+    private async Task OnQrCodeScan(string code)
     {
-        if (!imageLoadFailed)
+        if (!string.IsNullOrEmpty(code) && CanProcessAttendance())
         {
-            imageLoadFailed = true;
-            profileImageUrl = string.Empty;
+            MID_HelperFunctions.DebugMessage($"QR Code detected: {code}", DebugClass.Info);
+        
+            await PauseScanning();
+            isProcessing = true;
+            scanComplete = true;
             StateHasChanged();
+        
+            try
+            {
+                var decodedSessionData = await QRDecoder.DecodeSessionDataAsync(code);
+
+                if (decodedSessionData != null)
+                {
+                    MID_HelperFunctions.DebugMessage($"Valid AirCode QR detected for course: {decodedSessionData.CourseCode}", DebugClass.Info);
+                    var myCourses = await CourseService.GetStudentCoursesByMatricAsync(currentUserMatricNumber);
+                    var courseRefs = myCourses.GetEnrolledCourses();
+
+                    bool isTakingCourse = courseRefs.FirstOrDefault(course => course.CourseCode == decodedSessionData.CourseCode) != null;
+
+                    if (isTakingCourse)
+                    {
+                        await ProcessAttendanceWithNewPayload(code);
+                    }
+                    else
+                    {
+                        ShowResultPopup(false, "Course Not Found", "You are not enrolled in this course. Please contact your instructor if this is incorrect.");
+                    }
+                }
+                else
+                {
+                    ShowResultPopup(false, "Invalid QR Code", "This QR code is not a valid AirCode attendance QR. Please scan the correct QR code from your instructor.");
+                }
+            }
+            catch (Exception ex)
+            {
+                MID_HelperFunctions.DebugMessage($"Error processing QR code: {ex.Message}", DebugClass.Exception);
+                ShowResultPopup(false, "Processing Error", "An error occurred while processing the QR code. Please try again.");
+            }
+        
+            isProcessing = false;
+            scanComplete = false;
+            await InvokeAsync(StateHasChanged);
         }
     }
 
-    private async Task CopyToClipboard(string text)
-    {
-        try
-        {
-            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", text);
-            showCopyNotification = true;
-            StateHasChanged();
-            
-            // Hide notification after 2 seconds
-            await Task.Delay(2000);
-            showCopyNotification = false;
-            StateHasChanged();
-        }
-        catch
-        {
-            StatusMessage = "Failed to copy to clipboard";
-            IsErrorMessage = true;
-            StateHasChanged();
-        }
-    }
-
-    private async Task ToggleDarkMode()
-    {
-        try
-        {
-            isDarkModeEnabled = !isDarkModeEnabled;
-            await BlazorAppLocalStorage.SetItemAsync("darkMode", isDarkModeEnabled);
-            await JSRuntime.InvokeVoidAsync("window.themeSwitcher.toggleTheme");
-            
-            StatusMessage = isDarkModeEnabled ? "Dark mode enabled" : "Light mode enabled";
-            IsErrorMessage = false;
-            StateHasChanged();
-            
-            // Clear message after 3 seconds
-            await Task.Delay(3000);
-            StatusMessage = "";
-            StateHasChanged();
-        }
-        catch
-        {
-            StatusMessage = "Failed to change theme";
-            IsErrorMessage = true;
-            StateHasChanged();
-        }
-    }
-
-    private async Task Logout()
+    private async Task ProcessAttendanceWithNewPayload(string qrCode)
     {
         try
         {
-            await BlazorAppLocalStorage.RemoveItemAsync("darkMode");
-            NavigationManager.NavigateTo("logout", true);
+            MID_HelperFunctions.DebugMessage($"Processing attendance with new payload structure for QR: {qrCode}", DebugClass.Info);
+        
+            var attendanceRecord = new AttendanceRecord
+            {
+                MatricNumber = currentUserMatricNumber,
+                HasScannedAttendance = true,
+                IsOnlineScan = true,
+                DeviceGUID = deviceGUID
+            };
+        
+            MID_HelperFunctions.DebugMessage($"Attendance record: {MID_HelperFunctions.ToJson(attendanceRecord)}", DebugClass.Log);
+        
+            var edgeFunctionRequest = await QRDecoder.CreateEdgeFunctionRequestAsync(qrCode, attendanceRecord);
+            
+            if (edgeFunctionRequest == null)
+            {
+                ShowResultPopup(false, "Request Failed", "Failed to create a valid attendance request. Please try scanning again.");
+                return;
+            }
+
+            MID_HelperFunctions.DebugMessage($"Edge function request: {MID_HelperFunctions.ToJson(edgeFunctionRequest)}", DebugClass.Log);
+        
+            var result = await EdgeService.ProcessAttendanceWithPayloadAsync(edgeFunctionRequest);
+        
+            MID_HelperFunctions.DebugMessage($"Edge function result: {MID_HelperFunctions.ToJson(result)}", DebugClass.Log);
+        
+            if (result.Success)
+            {
+                ShowResultPopup(true, "Attendance Recorded", "Your attendance has been successfully recorded for this session.");
+            }
+            else
+            {
+                var userFriendlyMessage = GetUserFriendlyErrorMessage(result.ErrorCode, result.Message);
+                ShowResultPopup(false, "Attendance Failed", userFriendlyMessage);
+            }
         }
-        catch
+        catch (Exception ex)
         {
-            StatusMessage = "Logout failed";
-            IsErrorMessage = true;
-            StateHasChanged();
+            MID_HelperFunctions.DebugMessage($"Exception in ProcessAttendanceWithNewPayload: {ex}", DebugClass.Exception);
+            ShowResultPopup(false, "System Error", "A system error occurred. Please try again or contact support.");
+        }
+    }
+
+    private void ShowResultPopup(bool success, string title, string message)
+    {
+        scanSuccess = success;
+        popupTitle = title;
+        popupMessage = message;
+        showResultPopup = true;
+        StateHasChanged();
+    }
+
+    private async Task ClosePopup()
+    {
+        showResultPopup = false;
+        StateHasChanged();
+        await ResumeScanning();
+    }
+
+    private void TogglePerformanceInfo()
+    {
+        showPerformanceInfo = !showPerformanceInfo;
+        StateHasChanged();
+    }
+
+    private string GetUserFriendlyErrorMessage(string errorCode, string originalMessage)
+    {
+        return errorCode switch
+        {
+            "DUPLICATE_ATTENDANCE" => "You have already marked attendance for this session. Multiple submissions are not allowed.",
+            "SESSION_NOT_FOUND" => "This attendance session does not exist or has been removed. Please check with your instructor.",
+            "TEMPORAL_KEY_EXPIRED" => "Your QR code has expired. Please scan the latest QR code displayed by your instructor.",
+            "TEMPORAL_KEY_MISSING" => "This session requires a temporal security key. Please scan a fresh QR code.",
+            "DEVICE_SECURITY_VIOLATION" => "This device has already been used by another student for attendance. Please use your own device or contact your instructor.",
+            "DEVICE_GUID_MISSING" => "Device identification is required for this secure session.",
+            "MATRIC_NUMBER_MISSING" => "Student identification number is required for attendance.",
+            "SESSION_QUERY_ERROR" => "Database connection failed. Please check your internet connection and try again.",
+            "ATTENDANCE_UPDATE_ERROR" => "Failed to save attendance record. Please try again or contact support.",
+            "NETWORK_ERROR" => "Network connection failed. Please check your internet connection.",
+            "SUPABASE_CONFIG_ERROR" => "Server configuration error. Please contact technical support.",
+            "INVALID_JSON" => "Invalid request format. Please try scanning the QR code again.",
+            "MISSING_PARAMETERS" => "Required information is missing. Please try scanning the QR code again.",
+            _ => originalMessage
+        };
+    }
+
+    private bool CanProcessAttendance()
+    {
+        if (isProcessing)
+        {
+            MID_HelperFunctions.DebugMessage("Attendance processing already in progress", DebugClass.Warning);
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(currentUserMatricNumber))
+        {
+            MID_HelperFunctions.DebugMessage("User identification not available. Please ensure you are logged in.", DebugClass.Warning);
+            return false;
+        }
+
+        return true;
+    }
+
+    private async Task PauseScanning()
+    {
+        if (_qrCodeScannerJsInterop != null && isScanning)
+        {
+            try
+            {
+                await _qrCodeScannerJsInterop.StopRecording();
+                isScanning = false;
+                MID_HelperFunctions.DebugMessage("Scanner paused", DebugClass.Log);
+            }
+            catch (Exception ex)
+            {
+                MID_HelperFunctions.DebugMessage($"Failed to pause scanner: {ex.Message}", DebugClass.Exception);
+            }
+        }
+    }
+
+    private async Task ResumeScanning()
+    {
+        if (_qrCodeScannerJsInterop != null && !isScanning)
+        {
+            try
+            {
+                await _qrCodeScannerJsInterop.Init(_onQrCodeScanAction);
+                isScanning = true;
+                MID_HelperFunctions.DebugMessage("Scanner resumed", DebugClass.Log);
+            }
+            catch (Exception ex)
+            {
+                MID_HelperFunctions.DebugMessage($"Failed to resume scanner: {ex.Message}", DebugClass.Exception);
+            }
+        }
+    }
+
+    private async Task StartScanning()
+    {
+        await ResumeScanning();
+    }
+
+    private async Task StopScanning()
+    {
+        await PauseScanning();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        performanceTimer?.Dispose();
+        
+        if (_qrCodeScannerJsInterop != null && isScanning)
+        {
+            try
+            {
+                await _qrCodeScannerJsInterop.StopRecording();
+                MID_HelperFunctions.DebugMessage("Scanner disposed", DebugClass.Log);
+            }
+            catch
+            {
+                // Ignore disposal errors
+            }
         }
     }
 }
