@@ -41,6 +41,22 @@
             </div>
         </div>
 
+        <!-- Zoom Controls -->
+        <div class="zoom-controls">
+            <div class="zoom-slider-container">
+                <button class="zoom-btn" @onclick="ZoomOut" disabled="@(!canZoomOut)">-</button>
+                <input type="range" 
+                       class="zoom-slider" 
+                       min="1" 
+                       max="@maxZoom" 
+                       step="0.1" 
+                       value="@currentZoom" 
+                       @oninput="OnZoomChange" />
+                <button class="zoom-btn" @onclick="ZoomIn" disabled="@(!canZoomIn)">+</button>
+            </div>
+            <div class="zoom-indicator">@currentZoom.ToString("F1")x</div>
+        </div>
+
         <!-- Processing State -->
         @if (isProcessing)
         {
@@ -79,39 +95,53 @@
         </div>
     }
 
-    <!-- Performance Info (Debug) -->
+    <!-- Performance Info -->
     @if (showPerformanceInfo)
     {
         <div class="performance-info">
-            <small>
-                GPU: @(gpuAccelerated ? "✓" : "✗") | 
-                FPS: @currentFPS |
-                Device: @devicePixelRatio
-            </small>
+            <div class="perf-row">
+                <small>GPU: @(gpuAccelerated ? "✓" : "✗")</small>
+                <small>FPS: @currentFPS</small>
+            </div>
+            <div class="perf-row">
+                <small>Device: @deviceInfo</small>
+                <small>Zoom: @currentZoom.ToString("F1")x</small>
+            </div>
+            @if (!string.IsNullOrEmpty(performanceWarning))
+            {
+                <div class="perf-warning">⚠️ @performanceWarning</div>
+            }
         </div>
     }
 
     <!-- Controls -->
     <footer class="scan-controls">
-        @if (isScanning)
-        {
-            <button class="control-btn stop" @onclick="StopScanning">
-                <span class="icon">⏸</span>
-                Stop Scanner
+        <div class="control-buttons">
+            @if (isScanning)
+            {
+                <button class="control-btn stop" @onclick="StopScanning">
+                    <span class="icon">⏸</span>
+                    Stop
+                </button>
+            }
+            else
+            {
+                <button class="control-btn start" @onclick="StartScanning">
+                    <span class="icon">▶</span>
+                    Start
+                </button>
+            }
+            
+            <button class="control-btn settings" @onclick="TogglePerformanceInfo">
+                <span class="icon">⚙️</span>
+                Stats
             </button>
-        }
-        else
-        {
-            <button class="control-btn start" @onclick="StartScanning">
-                <span class="icon">▶</span>
-                Start Scanner
+
+            <button class="control-btn zoom-reset" @onclick="ResetZoom" disabled="@(Math.Abs(currentZoom - 1.0) < 0.1)">
+                <span class="icon">🔍</span>
+                Reset
             </button>
-        }
-        
-        <button class="control-btn settings" @onclick="TogglePerformanceInfo">
-            <span class="icon">⚙️</span>
-            Performance
-        </button>
+        </div>
     </footer>
 </div>
 
@@ -122,12 +152,22 @@
     private bool isProcessing = false;
     private bool scanComplete = false;
     
-    // Performance monitoring
+    // Performance monitoring - Fixed
     private bool gpuAccelerated = false;
     private bool showPerformanceInfo = false;
     private int currentFPS = 0;
-    private double devicePixelRatio = 1.0;
+    private string deviceInfo = "Unknown";
+    private string performanceWarning = "";
     private Timer? performanceTimer;
+    private int frameCount = 0;
+    private DateTime lastFpsCheck = DateTime.Now;
+    
+    // Zoom controls - New
+    private double currentZoom = 1.0;
+    private double maxZoom = 3.0;
+    private bool canZoomIn => currentZoom < maxZoom;
+    private bool canZoomOut => currentZoom > 1.0;
+    private bool isAndroidDevice = false;
     
     // Popup state
     private bool showResultPopup = false;
@@ -139,72 +179,76 @@
     private string currentUserMatricNumber = "SukaBlak";
     private string deviceGUID = "N";
     
-    // Add this method to your ScanPage.razor @code section
-
-private async Task InitializeAndroidOptimizedScanner()
-{
-    try
+    protected override async Task OnInitializedAsync()
     {
-        // Apply Android-specific constraints via JS interop
-        var isAndroid = await JSRuntime.InvokeAsync<bool>("eval", 
-            "/Android/i.test(navigator.userAgent)");
-            
-        if (isAndroid)
-        {
-            MID_HelperFunctions.DebugMessage("Applying Android optimizations", DebugClass.Info);
-            
-            // Initialize Android camera fixes
-            await JSRuntime.InvokeVoidAsync("AndroidCameraFixes.initializeAndroidOptimizations", 
-                ".video-container video");
-                
-            // Get Android-specific stream
-            var stream = await JSRuntime.InvokeAsync<IJSObjectReference>("AndroidCameraFixes.getAndroidCameraStream");
-            
-            MID_HelperFunctions.DebugMessage("Android camera stream acquired", DebugClass.Info);
-        }
+        _onQrCodeScanAction = (code) => OnQrCodeScan(code);
+        _qrCodeScannerJsInterop = new QRCodeScannerJsInterop(JSRuntime);
         
-        // Continue with normal scanner initialization
-        await InitializeScanner();
-    }
-    catch (Exception ex)
-    {
-        MID_HelperFunctions.DebugMessage($"Android optimization failed: {ex.Message}", DebugClass.Warning);
-        // Fallback to standard initialization
-        await InitializeScanner();
-    }
-}
+        try
+        {
+            // Detect device type
+            isAndroidDevice = await JSRuntime.InvokeAsync<bool>("eval", "/Android/i.test(navigator.userAgent)");
+            
+            // Initialize with device-specific settings
+            if (isAndroidDevice)
+            {
+                await InitializeAndroidOptimizations();
+            }
+            
+            await _qrCodeScannerJsInterop.Init(_onQrCodeScanAction);
+            MID_HelperFunctions.DebugMessage("QR Scanner initialized successfully", DebugClass.Info);
 
-private async Task InitializeScanner()
-{
-    _onQrCodeScanAction = (code) => OnQrCodeScan(code);
-    _qrCodeScannerJsInterop = new QRCodeScannerJsInterop(JSRuntime);
-    
-    try
-    {
-        await _qrCodeScannerJsInterop.Init(_onQrCodeScanAction);
-        MID_HelperFunctions.DebugMessage("QR Scanner initialized successfully", DebugClass.Info);
-
-        currentUserMatricNumber = await AuthService.GetMatricNumberAsync();
-        deviceGUID = await AuthService.GetDeviceIdAsync();
+            currentUserMatricNumber = await AuthService.GetMatricNumberAsync();
+            deviceGUID = await AuthService.GetDeviceIdAsync();
+        }
+        catch (Exception ex)
+        {
+            MID_HelperFunctions.DebugMessage($"Failed to initialize scanner: {ex.Message}", DebugClass.Exception);
+        }
     }
-    catch (Exception ex)
-    {
-        MID_HelperFunctions.DebugMessage($"Failed to initialize scanner: {ex.Message}", DebugClass.Exception);
-    }
-}
-
-// Replace your OnInitializedAsync method with this
-protected override async Task OnInitializedAsync()
-{
-    await InitializeAndroidOptimizedScanner();
-}
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
             await OptimizePerformance();
-            await MonitorPerformance();
+            await StartPerformanceMonitoring();
+        }
+    }
+
+    private async Task InitializeAndroidOptimizations()
+    {
+        try
+        {
+            // Apply Android-specific camera constraints
+            await JSRuntime.InvokeVoidAsync("eval", @"
+                if (window.ReactorQRScanner && window.ReactorQRScanner.getUserMedia) {
+                    const originalGetUserMedia = window.ReactorQRScanner.getUserMedia.bind(window.ReactorQRScanner);
+                    window.ReactorQRScanner.getUserMedia = async function(constraints) {
+                        const androidConstraints = {
+                            video: {
+                                width: { exact: 640 },
+                                height: { exact: 480 },
+                                frameRate: { exact: 15 },
+                                facingMode: 'environment',
+                                focusMode: 'continuous'
+                            }
+                        };
+                        try {
+                            return await navigator.mediaDevices.getUserMedia(androidConstraints);
+                        } catch (e) {
+                            console.warn('Android constraints failed, falling back:', e);
+                            return await originalGetUserMedia(constraints);
+                        }
+                    };
+                }
+            ");
+
+            MID_HelperFunctions.DebugMessage("Android optimizations applied", DebugClass.Info);
+        }
+        catch (Exception ex)
+        {
+            MID_HelperFunctions.DebugMessage($"Android optimization failed: {ex.Message}", DebugClass.Warning);
         }
     }
 
@@ -212,29 +256,44 @@ protected override async Task OnInitializedAsync()
     {
         try
         {
-            // Enable GPU acceleration for key elements
-            var gpuElements = new[]
-            {
-                "#videoContainer",
-                ".video-container video",
-                "#scanFrame",
-                ".scan-line",
-                ".processing-state",
-                ".result-popup"
-            };
+            // Apply optimizations to video element
+            await JSRuntime.InvokeVoidAsync("eval", @"
+                setTimeout(() => {
+                    const video = document.querySelector('.video-container video');
+                    if (video) {
+                        video.style.transform = 'translate3d(-50%, -50%, 0)';
+                        video.style.willChange = 'transform';
+                        video.style.backfaceVisibility = 'hidden';
+                        
+                        // Android-specific fixes
+                        if (/Android/i.test(navigator.userAgent)) {
+                            video.style.imageRendering = 'crisp-edges';
+                            video.style.filter = 'contrast(1.15) brightness(1.1)';
+                        }
+                    }
+                }, 500);
+            ");
 
-            foreach (var element in gpuElements)
-            {
-                await JSRuntime.InvokeVoidAsync("enableGPUAcceleration", element);
-            }
-
-            // Check GPU acceleration status
-            gpuAccelerated = await JSRuntime.InvokeAsync<bool>("getGPUAccelerationStatus", "#videoContainer");
+            // Check GPU acceleration
+            gpuAccelerated = await JSRuntime.InvokeAsync<bool>("eval", @"
+                (() => {
+                    const video = document.querySelector('.video-container video');
+                    if (!video) return false;
+                    const style = getComputedStyle(video);
+                    return style.transform && style.transform !== 'none';
+                })()
+            ");
             
-            // Get device pixel ratio for optimization
-            devicePixelRatio = await JSRuntime.InvokeAsync<double>("eval", "window.devicePixelRatio || 1");
+            // Get device info
+            deviceInfo = await JSRuntime.InvokeAsync<string>("eval", @"
+                (() => {
+                    const ratio = window.devicePixelRatio || 1;
+                    const cores = navigator.hardwareConcurrency || 'Unknown';
+                    return `DPR:${ratio} Cores:${cores}`;
+                })()
+            ");
             
-            MID_HelperFunctions.DebugMessage($"Performance optimized - GPU: {gpuAccelerated}, DPR: {devicePixelRatio}", DebugClass.Info);
+            MID_HelperFunctions.DebugMessage($"Performance optimized - GPU: {gpuAccelerated}", DebugClass.Info);
         }
         catch (Exception ex)
         {
@@ -242,34 +301,104 @@ protected override async Task OnInitializedAsync()
         }
     }
 
-    private async Task MonitorPerformance()
+    private async Task StartPerformanceMonitoring()
     {
         try
         {
-            // Monitor performance every 2 seconds
+            // Use timer-based FPS monitoring instead of unreliable video properties
             performanceTimer = new Timer(async _ => 
             {
                 try
                 {
-                    var fps = await JSRuntime.InvokeAsync<int>("eval", @"
-                        (() => {
-                            const video = document.querySelector('.video-container video');
-                            return video && video.webkitDecodedFrameCount ? 
-                                Math.round(video.webkitDecodedFrameCount / video.currentTime) || 0 : 0;
-                        })()
-                    ");
-                    currentFPS = fps;
-                    await InvokeAsync(StateHasChanged);
+                    var now = DateTime.Now;
+                    var elapsed = (now - lastFpsCheck).TotalSeconds;
+                    
+                    if (elapsed >= 1.0)
+                    {
+                        currentFPS = (int)(frameCount / elapsed);
+                        frameCount = 0;
+                        lastFpsCheck = now;
+                        
+                        // Performance warnings
+                        if (currentFPS > 0 && currentFPS < 8)
+                        {
+                            performanceWarning = "Low FPS detected";
+                        }
+                        else if (!gpuAccelerated)
+                        {
+                            performanceWarning = "GPU acceleration unavailable";
+                        }
+                        else
+                        {
+                            performanceWarning = "";
+                        }
+                        
+                        await InvokeAsync(StateHasChanged);
+                    }
+                    
+                    frameCount++;
                 }
                 catch
                 {
                     // Ignore monitoring errors
                 }
-            }, null, 0, 2000);
+            }, null, 0, 100); // Check every 100ms
         }
         catch (Exception ex)
         {
             MID_HelperFunctions.DebugMessage($"Performance monitoring setup failed: {ex.Message}", DebugClass.Warning);
+        }
+    }
+
+    // Zoom Control Methods
+    private async Task OnZoomChange(ChangeEventArgs e)
+    {
+        if (double.TryParse(e.Value?.ToString(), out double newZoom))
+        {
+            currentZoom = Math.Round(newZoom, 1);
+            await ApplyZoom();
+        }
+    }
+
+    private async Task ZoomIn()
+    {
+        if (canZoomIn)
+        {
+            currentZoom = Math.Min(maxZoom, Math.Round(currentZoom + 0.2, 1));
+            await ApplyZoom();
+        }
+    }
+
+    private async Task ZoomOut()
+    {
+        if (canZoomOut)
+        {
+            currentZoom = Math.Max(1.0, Math.Round(currentZoom - 0.2, 1));
+            await ApplyZoom();
+        }
+    }
+
+    private async Task ResetZoom()
+    {
+        currentZoom = 1.0;
+        await ApplyZoom();
+    }
+
+    private async Task ApplyZoom()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("eval", $@"
+                const video = document.querySelector('.video-container video');
+                if (video) {{
+                    video.style.transform = 'translate3d(-50%, -50%, 0) scale({currentZoom.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)})';
+                }}
+            ");
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            MID_HelperFunctions.DebugMessage($"Zoom application failed: {ex.Message}", DebugClass.Warning);
         }
     }
 
@@ -488,16 +617,6 @@ protected override async Task OnInitializedAsync()
             {
                 // Ignore disposal errors
             }
-        }
-
-        // Disable GPU acceleration on cleanup
-        try
-        {
-            await JSRuntime.InvokeVoidAsync("disableGPUAcceleration", "#videoContainer");
-        }
-        catch
-        {
-            // Ignore cleanup errors
         }
     }
 }
