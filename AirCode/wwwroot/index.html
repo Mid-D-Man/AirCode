@@ -158,7 +158,10 @@
         integrity="sha512-qZvrmS2ekKPF2mSznTQsxqPgnpkI4DNTlrdUmTzrDgektczlKNRRhy5X5AAOnx5S09ydFYWWNSfcEqDTTHgtNA=="
         crossorigin="anonymous"></script>
 <script src="js/pdf-service.js"></script>
+<!-- Add this line BEFORE the existing scripts in index.html -->
+<script src="js/androidCameraOptimization.js"></script>
 
+<!-- Place it right after gpuPerformance.js and before scannerPerformance.js -->
 <!-- Camera utilities -->
 <script>
     window.getCameraStream = async (constraints) => {
