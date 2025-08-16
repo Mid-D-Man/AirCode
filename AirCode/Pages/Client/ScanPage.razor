@@ -146,38 +146,38 @@
 </div>
 
 @code {
-    private QRCodeScannerJsInterop? _qrCodeScannerJsInterop;
-    private Action<string>? _onQrCodeScanAction;
-    private bool isScanning = true;
-    private bool isProcessing = false;
-    private bool scanComplete = false;
+    QRCodeScannerJsInterop? _qrCodeScannerJsInterop;
+    Action<string>? _onQrCodeScanAction;
+    bool isScanning = true;
+    bool isProcessing = false;
+    bool scanComplete = false;
     
-    // Performance monitoring - Fixed
-    private bool gpuAccelerated = false;
-    private bool showPerformanceInfo = false;
-    private int currentFPS = 0;
-    private string deviceInfo = "Unknown";
-    private string performanceWarning = "";
-    private Timer? performanceTimer;
-    private int frameCount = 0;
-    private DateTime lastFpsCheck = DateTime.Now;
+    // Performance monitoring
+    bool gpuAccelerated = false;
+    bool showPerformanceInfo = false;
+    int currentFPS = 0;
+    string deviceInfo = "Unknown";
+    string performanceWarning = "";
+    Timer? performanceTimer;
+    int frameCount = 0;
+    DateTime lastFpsCheck = DateTime.Now;
     
-    // Zoom controls - New
-    private double currentZoom = 1.0;
-    private double maxZoom = 3.0;
-    private bool canZoomIn => currentZoom < maxZoom;
-    private bool canZoomOut => currentZoom > 1.0;
-    private bool isAndroidDevice = false;
+    // Zoom controls
+    double currentZoom = 1.0;
+    double maxZoom = 3.0;
+    bool canZoomIn => currentZoom < maxZoom;
+    bool canZoomOut => currentZoom > 1.0;
+    bool isAndroidDevice = false;
     
     // Popup state
-    private bool showResultPopup = false;
-    private bool scanSuccess = false;
-    private string popupTitle = "";
-    private string popupMessage = "";
+    bool showResultPopup = false;
+    bool scanSuccess = false;
+    string popupTitle = "";
+    string popupMessage = "";
 
     // User data
-    private string currentUserMatricNumber = "SukaBlak";
-    private string deviceGUID = "N";
+    string currentUserMatricNumber = "SukaBlak";
+    string deviceGUID = "N";
     
     protected override async Task OnInitializedAsync()
     {
@@ -186,10 +186,8 @@
         
         try
         {
-            // Detect device type
             isAndroidDevice = await JSRuntime.InvokeAsync<bool>("eval", "/Android/i.test(navigator.userAgent)");
             
-            // Initialize with device-specific settings
             if (isAndroidDevice)
             {
                 await InitializeAndroidOptimizations();
@@ -216,11 +214,10 @@
         }
     }
 
-    private async Task InitializeAndroidOptimizations()
+    async Task InitializeAndroidOptimizations()
     {
         try
         {
-            // Apply Android-specific camera constraints
             await JSRuntime.InvokeVoidAsync("eval", @"
                 if (window.ReactorQRScanner && window.ReactorQRScanner.getUserMedia) {
                     const originalGetUserMedia = window.ReactorQRScanner.getUserMedia.bind(window.ReactorQRScanner);
@@ -252,11 +249,10 @@
         }
     }
 
-    private async Task OptimizePerformance()
+    async Task OptimizePerformance()
     {
         try
         {
-            // Apply optimizations to video element
             await JSRuntime.InvokeVoidAsync("eval", @"
                 setTimeout(() => {
                     const video = document.querySelector('.video-container video');
@@ -265,7 +261,6 @@
                         video.style.willChange = 'transform';
                         video.style.backfaceVisibility = 'hidden';
                         
-                        // Android-specific fixes
                         if (/Android/i.test(navigator.userAgent)) {
                             video.style.imageRendering = 'crisp-edges';
                             video.style.filter = 'contrast(1.15) brightness(1.1)';
@@ -274,7 +269,6 @@
                 }, 500);
             ");
 
-            // Check GPU acceleration
             gpuAccelerated = await JSRuntime.InvokeAsync<bool>("eval", @"
                 (() => {
                     const video = document.querySelector('.video-container video');
@@ -284,7 +278,6 @@
                 })()
             ");
             
-            // Get device info
             deviceInfo = await JSRuntime.InvokeAsync<string>("eval", @"
                 (() => {
                     const ratio = window.devicePixelRatio || 1;
@@ -301,11 +294,10 @@
         }
     }
 
-    private async Task StartPerformanceMonitoring()
+    async Task StartPerformanceMonitoring()
     {
         try
         {
-            // Use timer-based FPS monitoring instead of unreliable video properties
             performanceTimer = new Timer(async _ => 
             {
                 try
@@ -319,7 +311,6 @@
                         frameCount = 0;
                         lastFpsCheck = now;
                         
-                        // Performance warnings
                         if (currentFPS > 0 && currentFPS < 8)
                         {
                             performanceWarning = "Low FPS detected";
@@ -342,7 +333,7 @@
                 {
                     // Ignore monitoring errors
                 }
-            }, null, 0, 100); // Check every 100ms
+            }, null, 0, 100);
         }
         catch (Exception ex)
         {
@@ -350,8 +341,7 @@
         }
     }
 
-    // Zoom Control Methods
-    private async Task OnZoomChange(ChangeEventArgs e)
+    async Task OnZoomChange(ChangeEventArgs e)
     {
         if (double.TryParse(e.Value?.ToString(), out double newZoom))
         {
@@ -360,7 +350,7 @@
         }
     }
 
-    private async Task ZoomIn()
+    async Task ZoomIn()
     {
         if (canZoomIn)
         {
@@ -369,7 +359,7 @@
         }
     }
 
-    private async Task ZoomOut()
+    async Task ZoomOut()
     {
         if (canZoomOut)
         {
@@ -378,20 +368,21 @@
         }
     }
 
-    private async Task ResetZoom()
+    async Task ResetZoom()
     {
         currentZoom = 1.0;
         await ApplyZoom();
     }
 
-    private async Task ApplyZoom()
+    async Task ApplyZoom()
     {
         try
         {
+            var zoomValue = currentZoom.ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
             await JSRuntime.InvokeVoidAsync("eval", $@"
                 const video = document.querySelector('.video-container video');
                 if (video) {{
-                    video.style.transform = 'translate3d(-50%, -50%, 0) scale({currentZoom.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)})';
+                    video.style.transform = 'translate3d(-50%, -50%, 0) scale({zoomValue})';
                 }}
             ");
             StateHasChanged();
@@ -402,7 +393,7 @@
         }
     }
 
-    private async Task OnQrCodeScan(string code)
+    async Task OnQrCodeScan(string code)
     {
         if (!string.IsNullOrEmpty(code) && CanProcessAttendance())
         {
@@ -451,7 +442,7 @@
         }
     }
 
-    private async Task ProcessAttendanceWithNewPayload(string qrCode)
+    async Task ProcessAttendanceWithNewPayload(string qrCode)
     {
         try
         {
@@ -498,7 +489,7 @@
         }
     }
 
-    private void ShowResultPopup(bool success, string title, string message)
+    void ShowResultPopup(bool success, string title, string message)
     {
         scanSuccess = success;
         popupTitle = title;
@@ -507,20 +498,20 @@
         StateHasChanged();
     }
 
-    private async Task ClosePopup()
+    async Task ClosePopup()
     {
         showResultPopup = false;
         StateHasChanged();
         await ResumeScanning();
     }
 
-    private void TogglePerformanceInfo()
+    void TogglePerformanceInfo()
     {
         showPerformanceInfo = !showPerformanceInfo;
         StateHasChanged();
     }
 
-    private string GetUserFriendlyErrorMessage(string errorCode, string originalMessage)
+    string GetUserFriendlyErrorMessage(string errorCode, string originalMessage)
     {
         return errorCode switch
         {
@@ -541,7 +532,7 @@
         };
     }
 
-    private bool CanProcessAttendance()
+    bool CanProcessAttendance()
     {
         if (isProcessing)
         {
@@ -558,7 +549,7 @@
         return true;
     }
 
-    private async Task PauseScanning()
+    async Task PauseScanning()
     {
         if (_qrCodeScannerJsInterop != null && isScanning)
         {
@@ -575,7 +566,7 @@
         }
     }
 
-    private async Task ResumeScanning()
+    async Task ResumeScanning()
     {
         if (_qrCodeScannerJsInterop != null && !isScanning)
         {
@@ -592,12 +583,12 @@
         }
     }
 
-    private async Task StartScanning()
+    async Task StartScanning()
     {
         await ResumeScanning();
     }
 
-    private async Task StopScanning()
+    async Task StopScanning()
     {
         await PauseScanning();
     }
