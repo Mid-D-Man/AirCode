@@ -41,15 +41,15 @@
             </div>
         </div>
 
-        <!-- Zoom Controls -->
+        <!-- Simple Zoom Controls -->
         <div class="zoom-controls">
             <div class="zoom-slider-container">
                 <button class="zoom-btn" @onclick="ZoomOut" disabled="@(!canZoomOut)">-</button>
                 <input type="range" 
                        class="zoom-slider" 
                        min="1" 
-                       max="@maxZoom" 
-                       step="0.1" 
+                       max="3" 
+                       step="0.2" 
                        value="@currentZoom" 
                        @oninput="OnZoomChange" />
                 <button class="zoom-btn" @onclick="ZoomIn" disabled="@(!canZoomIn)">+</button>
@@ -95,22 +95,18 @@
         </div>
     }
 
-    <!-- Performance Info -->
+    <!-- Simple Performance Info -->
     @if (showPerformanceInfo)
     {
         <div class="performance-info">
             <div class="perf-row">
-                <small>GPU: @(gpuAccelerated ? "✓" : "✗")</small>
                 <small>FPS: @currentFPS</small>
+                <small>Quality: High</small>
             </div>
             <div class="perf-row">
-                <small>Device: @deviceInfo</small>
                 <small>Zoom: @currentZoom.ToString("F1")x</small>
+                <small>@(isScanning ? "Scanning" : "Stopped")</small>
             </div>
-            @if (!string.IsNullOrEmpty(performanceWarning))
-            {
-                <div class="perf-warning">⚠️ @performanceWarning</div>
-            }
         </div>
     }
 
@@ -152,22 +148,17 @@
     bool isProcessing = false;
     bool scanComplete = false;
     
-    // Performance monitoring
-    bool gpuAccelerated = false;
+    // Simplified performance monitoring
     bool showPerformanceInfo = false;
     int currentFPS = 0;
-    string deviceInfo = "Unknown";
-    string performanceWarning = "";
     Timer? performanceTimer;
     int frameCount = 0;
     DateTime lastFpsCheck = DateTime.Now;
     
-    // Zoom controls
+    // Simplified zoom controls
     double currentZoom = 1.0;
-    double maxZoom = 3.0;
-    bool canZoomIn => currentZoom < maxZoom;
+    bool canZoomIn => currentZoom < 3.0;
     bool canZoomOut => currentZoom > 1.0;
-    bool isAndroidDevice = false;
     
     // Popup state
     bool showResultPopup = false;
@@ -176,8 +167,8 @@
     string popupMessage = "";
 
     // User data
-    string currentUserMatricNumber = "SukaBlak";
-    string deviceGUID = "N";
+    string currentUserMatricNumber = "";
+    string deviceGUID = "";
     
     protected override async Task OnInitializedAsync()
     {
@@ -186,13 +177,6 @@
         
         try
         {
-            isAndroidDevice = await JSRuntime.InvokeAsync<bool>("eval", "/Android/i.test(navigator.userAgent)");
-            
-            if (isAndroidDevice)
-            {
-                await InitializeAndroidOptimizations();
-            }
-            
             await _qrCodeScannerJsInterop.Init(_onQrCodeScanAction);
             MID_HelperFunctions.DebugMessage("QR Scanner initialized successfully", DebugClass.Info);
 
@@ -209,92 +193,39 @@
     {
         if (firstRender)
         {
-            await OptimizePerformance();
-            await StartPerformanceMonitoring();
+            await InitializeQualityCamera();
+            await StartSimplePerformanceMonitoring();
         }
     }
 
-    async Task InitializeAndroidOptimizations()
+    async Task InitializeQualityCamera()
     {
         try
         {
+            // Use our enhanced camera utilities
             await JSRuntime.InvokeVoidAsync("eval", @"
-                if (window.ReactorQRScanner && window.ReactorQRScanner.getUserMedia) {
-                    const originalGetUserMedia = window.ReactorQRScanner.getUserMedia.bind(window.ReactorQRScanner);
-                    window.ReactorQRScanner.getUserMedia = async function(constraints) {
-                        const androidConstraints = {
-                            video: {
-                                width: { exact: 640 },
-                                height: { exact: 480 },
-                                frameRate: { exact: 15 },
-                                facingMode: 'environment',
-                                focusMode: 'continuous'
-                            }
-                        };
-                        try {
-                            return await navigator.mediaDevices.getUserMedia(androidConstraints);
-                        } catch (e) {
-                            console.warn('Android constraints failed, falling back:', e);
-                            return await originalGetUserMedia(constraints);
-                        }
-                    };
+                if (window.CameraUtilities && window.ReactorQRScannerEnhanced) {
+                    // Enhance the Reactor QR Scanner
+                    window.ReactorQRScannerEnhanced.enhanceReactorScanner();
+                    
+                    // Apply video optimizations after a delay
+                    setTimeout(() => {
+                        window.ReactorQRScannerEnhanced.optimizeReactorVideo();
+                    }, 1000);
+                    
+                    console.log('Quality camera initialization completed');
+                } else {
+                    console.warn('Camera utilities not loaded yet');
                 }
             ");
-
-            MID_HelperFunctions.DebugMessage("Android optimizations applied", DebugClass.Info);
         }
         catch (Exception ex)
         {
-            MID_HelperFunctions.DebugMessage($"Android optimization failed: {ex.Message}", DebugClass.Warning);
+            MID_HelperFunctions.DebugMessage($"Quality camera setup failed: {ex.Message}", DebugClass.Warning);
         }
     }
 
-    async Task OptimizePerformance()
-    {
-        try
-        {
-            await JSRuntime.InvokeVoidAsync("eval", @"
-                setTimeout(() => {
-                    const video = document.querySelector('.video-container video');
-                    if (video) {
-                        video.style.transform = 'translate3d(-50%, -50%, 0)';
-                        video.style.willChange = 'transform';
-                        video.style.backfaceVisibility = 'hidden';
-                        
-                        if (/Android/i.test(navigator.userAgent)) {
-                            video.style.imageRendering = 'crisp-edges';
-                            video.style.filter = 'contrast(1.15) brightness(1.1)';
-                        }
-                    }
-                }, 500);
-            ");
-
-            gpuAccelerated = await JSRuntime.InvokeAsync<bool>("eval", @"
-                (() => {
-                    const video = document.querySelector('.video-container video');
-                    if (!video) return false;
-                    const style = getComputedStyle(video);
-                    return style.transform && style.transform !== 'none';
-                })()
-            ");
-            
-            deviceInfo = await JSRuntime.InvokeAsync<string>("eval", @"
-                (() => {
-                    const ratio = window.devicePixelRatio || 1;
-                    const cores = navigator.hardwareConcurrency || 'Unknown';
-                    return `DPR:${ratio} Cores:${cores}`;
-                })()
-            ");
-            
-            MID_HelperFunctions.DebugMessage($"Performance optimized - GPU: {gpuAccelerated}", DebugClass.Info);
-        }
-        catch (Exception ex)
-        {
-            MID_HelperFunctions.DebugMessage($"Performance optimization failed: {ex.Message}", DebugClass.Warning);
-        }
-    }
-
-    async Task StartPerformanceMonitoring()
+    async Task StartSimplePerformanceMonitoring()
     {
         try
         {
@@ -311,19 +242,6 @@
                         frameCount = 0;
                         lastFpsCheck = now;
                         
-                        if (currentFPS > 0 && currentFPS < 8)
-                        {
-                            performanceWarning = "Low FPS detected";
-                        }
-                        else if (!gpuAccelerated)
-                        {
-                            performanceWarning = "GPU acceleration unavailable";
-                        }
-                        else
-                        {
-                            performanceWarning = "";
-                        }
-                        
                         await InvokeAsync(StateHasChanged);
                     }
                     
@@ -333,7 +251,7 @@
                 {
                     // Ignore monitoring errors
                 }
-            }, null, 0, 100);
+            }, null, 0, 250); // Check 4 times per second
         }
         catch (Exception ex)
         {
@@ -354,7 +272,7 @@
     {
         if (canZoomIn)
         {
-            currentZoom = Math.Min(maxZoom, Math.Round(currentZoom + 0.2, 1));
+            currentZoom = Math.Min(3.0, Math.Round(currentZoom + 0.2, 1));
             await ApplyZoom();
         }
     }
@@ -378,11 +296,18 @@
     {
         try
         {
-            var zoomValue = currentZoom.ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
             await JSRuntime.InvokeVoidAsync("eval", $@"
-                const video = document.querySelector('.video-container video');
-                if (video) {{
-                    video.style.transform = 'translate3d(-50%, -50%, 0) scale({zoomValue})';
+                if (window.CameraUtilities) {{
+                    const video = document.querySelector('.video-container video');
+                    if (video) {{
+                        window.CameraUtilities.applyZoom(video, {currentZoom.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)});
+                    }}
+                }} else {{
+                    // Fallback direct CSS application
+                    const video = document.querySelector('.video-container video');
+                    if (video) {{
+                        video.style.transform = 'translate(-50%, -50%) scale({currentZoom.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)})';
+                    }}
                 }}
             ");
             StateHasChanged();
