@@ -1,4 +1,4 @@
-/* ScanPage.razor.css - Enhanced with zoom controls and performance fixes */
+/* ScanPage.razor.css - Focused on Image Clarity and Proper Zoom */
 
 /* Main page container */
 .scan-page {
@@ -49,7 +49,7 @@
     background: #000;
 }
 
-/* Video container */
+/* Video container - CLARITY FOCUSED */
 .video-container {
     position: absolute;
     inset: 0;
@@ -60,30 +60,33 @@
     z-index: 1;
 }
 
+/* Video element - NO BLUR, HIGH QUALITY */
 .video-container video {
     position: absolute !important;
     top: 50% !important;
     left: 50% !important;
-    transform: translate3d(-50%, -50%, 0) !important;
+    /* Simple, clear transform - no blur */
+    transform: translate(-50%, -50%) !important;
+    
+    /* Fill container properly */
     min-width: 100% !important;
     min-height: 100% !important;
     width: auto !important;
     height: auto !important;
     object-fit: cover !important;
+    
+    /* QUALITY FIRST - Remove blur-causing optimizations */
+    image-rendering: auto !important;
+    image-rendering: -webkit-optimize-contrast !important;
+    
+    /* NO FILTERS that cause blur */
+    filter: none !important;
+    -webkit-filter: none !important;
+    
+    /* Simple hardware acceleration */
     will-change: transform !important;
     backface-visibility: hidden !important;
-}
-
-/* Android-specific video optimizations */
-@supports (-webkit-appearance: none) {
-    .video-container video {
-        -webkit-transform: translate3d(-50%, -50%, 0) !important;
-        image-rendering: -webkit-optimize-contrast !important;
-        image-rendering: crisp-edges !important;
-        -webkit-filter: contrast(1.15) brightness(1.1) !important;
-        filter: contrast(1.15) brightness(1.1) !important;
-        -webkit-backface-visibility: hidden !important;
-    }
+    -webkit-backface-visibility: hidden !important;
 }
 
 /* Scan overlay - perfectly centered */
@@ -100,8 +103,8 @@
 /* Scan frame */
 .scan-frame {
     position: relative;
-    width: min(280px, 70vw, 70vh);
-    height: min(280px, 70vw, 70vh);
+    width: min(300px, 75vw, 75vh);
+    height: min(300px, 75vw, 75vh);
     border: 2px solid rgba(255, 255, 255, 0.3);
     border-radius: 16px;
     background: rgba(255, 255, 255, 0.02);
@@ -173,7 +176,7 @@
         opacity: 0.8;
     }
     50% {
-        transform: translateY(calc(100% + 260px));
+        transform: translateY(calc(100% + 270px));
         opacity: 1;
     }
     100% {
@@ -182,7 +185,7 @@
     }
 }
 
-/* Zoom Controls */
+/* Zoom Controls - FIXED FOR PROPER FUNCTIONALITY */
 .zoom-controls {
     position: absolute;
     top: 20px;
@@ -222,6 +225,11 @@
 .zoom-btn:hover:not(:disabled) {
     background: rgba(255, 255, 255, 0.2);
     border-color: rgba(255, 255, 255, 0.5);
+    transform: scale(1.05);
+}
+
+.zoom-btn:active:not(:disabled) {
+    transform: scale(0.95);
 }
 
 .zoom-btn:disabled {
@@ -229,34 +237,54 @@
     cursor: not-allowed;
 }
 
+/* FIXED ZOOM SLIDER */
 .zoom-slider {
     width: 100px;
-    height: 4px;
+    height: 6px;
     background: rgba(255, 255, 255, 0.2);
-    border-radius: 2px;
+    border-radius: 3px;
     outline: none;
     appearance: none;
     cursor: pointer;
+    border: none;
 }
 
 .zoom-slider::-webkit-slider-thumb {
     appearance: none;
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
     border-radius: 50%;
     background: #ffffff;
     cursor: pointer;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+    transition: transform 0.1s ease;
+}
+
+.zoom-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.1);
+}
+
+.zoom-slider::-webkit-slider-thumb:active {
+    transform: scale(1.2);
 }
 
 .zoom-slider::-moz-range-thumb {
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
     border-radius: 50%;
     background: #ffffff;
     cursor: pointer;
     border: none;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+.zoom-slider::-moz-range-track {
+    width: 100%;
+    height: 6px;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+    border: none;
 }
 
 .zoom-indicator {
@@ -300,8 +328,8 @@
     border-radius: 16px;
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
     width: min(400px, 90vw);
-    max-width: 33.333%;
-    min-width: 320px;
+    max-width: 400px;
+    min-width: 280px;
     overflow: hidden;
     border: 1px solid rgba(255, 255, 255, 0.1);
     animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -383,10 +411,10 @@
     justify-content: center;
 }
 
-/* Performance Info - Fixed Layout */
+/* Performance Info - Simplified */
 .performance-info {
     position: fixed;
-    top: 120px;
+    top: 100px;
     left: 20px;
     background: rgba(0, 0, 0, 0.85);
     backdrop-filter: blur(16px);
@@ -394,7 +422,7 @@
     padding: 12px 16px;
     border: 1px solid rgba(255, 255, 255, 0.2);
     z-index: 15;
-    min-width: 160px;
+    min-width: 140px;
 }
 
 .perf-row {
@@ -413,17 +441,6 @@
     font-size: 11px;
     font-weight: 500;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
-}
-
-.perf-warning {
-    margin-top: 8px;
-    padding: 4px 8px;
-    background: rgba(239, 68, 68, 0.2);
-    border: 1px solid rgba(239, 68, 68, 0.3);
-    border-radius: 6px;
-    color: #fca5a5;
-    font-size: 10px;
-    text-align: center;
 }
 
 /* Controls */
@@ -535,15 +552,10 @@ body.dark-mode .result-message {
     }
 
     .performance-info {
-        top: 100px;
+        top: 90px;
         left: 15px;
         padding: 10px 12px;
-        min-width: 140px;
-    }
-
-    .result-popup {
-        max-width: 90vw;
-        min-width: 280px;
+        min-width: 120px;
     }
 
     .control-buttons {
@@ -705,4 +717,4 @@ body.dark-mode .result-message {
 .performance-info {
     will-change: transform;
     backface-visibility: hidden;
-                           }
+               }
