@@ -136,7 +136,7 @@
 <!-- Authentication Service -->
 <script src="_content/Microsoft.AspNetCore.Components.WebAssembly.Authentication/AuthenticationService.js"></script>
 
-<!-- App Scripts -->
+<!-- Essential App Scripts -->
 <script src="js/pwaManager.js"></script>
 <script src="js/connectivityServices.js"></script>
 <script src="js/debug.js"></script>
@@ -145,28 +145,38 @@
 <script src="js/cryptographyHandler.js"></script>
 <script src="js/site.js"></script>
 <script src="js/offlineCredentialsHandler.js"></script>
-<script src="js/cameraUtil.js"></script>
 <script src="js/firestoreModule.js"></script>
 <script src="js/firestoreNotificationModule.js"></script>
 <script src="js/qrCodeModule.js"></script>
-<script src="js/gpuPerformance.js"></script>
 <script src="js/search-helpers.js"></script>
 <script src="js/PwaDiagnostics.js"></script>
-<script src="js/scannerPerformance.js"></script>
+
+<!-- ONLY TWO CAMERA/SCANNER SCRIPTS - CONSOLIDATED -->
+<script src="js/cameraUtilities.js"></script>
+<script src="js/gpuPerformance.js"></script>
+
 <!-- PDF Library -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"
         integrity="sha512-qZvrmS2ekKPF2mSznTQsxqPgnpkI4DNTlrdUmTzrDgektczlKNRRhy5X5AAOnx5S09ydFYWWNSfcEqDTTHgtNA=="
         crossorigin="anonymous"></script>
 <script src="js/pdf-service.js"></script>
-<!-- Add this line BEFORE the existing scripts in index.html -->
-<script src="js/androidCameraOptimization.js"></script>
 
-<!-- Place it right after gpuPerformance.js and before scannerPerformance.js -->
-<!-- Camera utilities -->
+<!-- Simplified Camera utilities -->
 <script>
     window.getCameraStream = async (constraints) => {
         try {
-            return await navigator.mediaDevices.getUserMedia(constraints);
+            // Use our enhanced camera utilities if available
+            if (window.CameraUtilities) {
+                return await window.CameraUtilities.getQualityCameraStream();
+            }
+            // Fallback to standard getUserMedia
+            return await navigator.mediaDevices.getUserMedia(constraints || {
+                video: {
+                    width: { ideal: 1920, min: 1280 },
+                    height: { ideal: 1080, min: 720 },
+                    facingMode: 'environment'
+                }
+            });
         } catch (error) {
             console.error('Camera access error:', error);
             throw error;
@@ -216,4 +226,4 @@
 </script>
 
 </body>
-</html>
+    </html>
