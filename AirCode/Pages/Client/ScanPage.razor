@@ -296,17 +296,18 @@
     {
         try
         {
+            var zoomValue = currentZoom.ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
             await JSRuntime.InvokeVoidAsync("eval", $@"
                 if (window.CameraUtilities) {{
                     const video = document.querySelector('.video-container video');
                     if (video) {{
-                        window.CameraUtilities.applyZoom(video, {currentZoom.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)});
+                        window.CameraUtilities.applyZoom(video, {zoomValue});
                     }}
                 }} else {{
                     // Fallback direct CSS application
                     const video = document.querySelector('.video-container video');
                     if (video) {{
-                        video.style.transform = 'translate(-50%, -50%) scale({currentZoom.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)})';
+                        video.style.transform = 'translate(-50%, -50%) scale({zoomValue})';
                     }}
                 }}
             ");
