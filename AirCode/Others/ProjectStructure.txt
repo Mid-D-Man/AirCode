@@ -1,7 +1,7 @@
 Project Structure Documentation
-Generated: Tue Aug 19 14:30:01 UTC 2025
+Generated: Tue Aug 19 14:35:37 UTC 2025
 Repository: Mid-D-Man/AirCode
-Commit: d3de9d057a7f08a779ecd4bb32d1796acac24174
+Commit: 0f6b0aa5d33c5091f9a360957dac867351918ed0
 ==================================
 
 Source Files:
@@ -302,7 +302,6 @@ wwwroot/css/responsive.css
 wwwroot/css/scaner-optimization.css
 wwwroot/index.html
 wwwroot/js/PwaDiagnostics.js
-wwwroot/js/androidCameraOptimization.js
 wwwroot/js/attendanceSSE.js
 wwwroot/js/authHelper.js
 wwwroot/js/cameraUtilities.js
@@ -317,7 +316,6 @@ wwwroot/js/pageNavigator.js
 wwwroot/js/pdf-service.js
 wwwroot/js/pwaManager.js
 wwwroot/js/qrCodeModule.js
-wwwroot/js/scannerPerformance.js
 wwwroot/js/search-helpers.js
 wwwroot/js/shaderRenderer1.js
 wwwroot/js/site.js
@@ -343,5 +341,5 @@ File Count Summary:
 .csproj   : 1 files
 .json     : 12 files
 .css      : 78 files
-.js       : 49 files
+.js       : 47 files
 .html     : 3 files
