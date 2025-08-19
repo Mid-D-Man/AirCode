@@ -1,7 +1,7 @@
 Project Structure Documentation
-Generated: Sat Aug 16 12:49:17 UTC 2025
+Generated: Tue Aug 19 14:30:01 UTC 2025
 Repository: Mid-D-Man/AirCode
-Commit: fe7ee7fa78d7a15e2f8193ba994e53c655cc7469
+Commit: d3de9d057a7f08a779ecd4bb32d1796acac24174
 ==================================
 
 Source Files:
@@ -305,7 +305,7 @@ wwwroot/js/PwaDiagnostics.js
 wwwroot/js/androidCameraOptimization.js
 wwwroot/js/attendanceSSE.js
 wwwroot/js/authHelper.js
-wwwroot/js/cameraUtil.js
+wwwroot/js/cameraUtilities.js
 wwwroot/js/connectivityServices.js
 wwwroot/js/cryptographyHandler.js
 wwwroot/js/debug.js
