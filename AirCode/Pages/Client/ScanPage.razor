@@ -170,24 +170,73 @@
     string currentUserMatricNumber = "";
     string deviceGUID = "";
     
-    protected override async Task OnInitializedAsync()
+ // Enhanced ReactorBlazor Configuration
+protected override async Task OnInitializedAsync()
+{
+    // High-resolution configuration for ReactorBlazor
+    var enhancedOptions = new QRCodeScannerOptions
     {
-        _onQrCodeScanAction = (code) => OnQrCodeScan(code);
-        _qrCodeScannerJsInterop = new QRCodeScannerJsInterop(JSRuntime);
+        // High resolution settings
+        Video = new VideoConstraints
+        {
+            Width = new ConstraintLong { Ideal = 1920, Min = 1280 },
+            Height = new ConstraintLong { Ideal = 1080, Min = 720 },
+            FrameRate = new ConstraintDouble { Ideal = 30 },
+            FacingMode = "environment",
+            
+            // Quality optimizations
+            FocusMode = "continuous",
+            ExposureMode = "continuous",
+            WhiteBalanceMode = "continuous"
+        },
         
-        try
+        // Scanner performance
+        ScanInterval = 100,  // Faster scanning (ms)
+        DecodeHints = new Dictionary<DecodeHintType, object>
         {
-            await _qrCodeScannerJsInterop.Init(_onQrCodeScanAction);
-            MID_HelperFunctions.DebugMessage("QR Scanner initialized successfully", DebugClass.Info);
+            { DecodeHintType.TRY_HARDER, true },
+            { DecodeHintType.POSSIBLE_FORMATS, new[] { BarcodeFormat.QR_CODE } }
+        }
+    };
 
-            currentUserMatricNumber = await AuthService.GetMatricNumberAsync();
-            deviceGUID = await AuthService.GetDeviceIdAsync();
-        }
-        catch (Exception ex)
-        {
-            MID_HelperFunctions.DebugMessage($"Failed to initialize scanner: {ex.Message}", DebugClass.Exception);
-        }
+    _onQrCodeScanAction = (code) => OnQrCodeScan(code);
+    _qrCodeScannerJsInterop = new QRCodeScannerJsInterop(JSRuntime, enhancedOptions);
+    
+    try
+    {
+        await _qrCodeScannerJsInterop.Init(_onQrCodeScanAction);
+        
+        // Apply additional video optimizations
+        await JSRuntime.InvokeVoidAsync("eval", @"
+            setTimeout(() => {
+                const video = document.querySelector('.video-container video');
+                if (video && video.srcObject) {
+                    const track = video.srcObject.getVideoTracks()[0];
+                    if (track) {
+                        // Apply high-quality constraints
+                        track.applyConstraints({
+                            width: { ideal: 1920 },
+                            height: { ideal: 1080 },
+                            frameRate: { ideal: 30 },
+                            focusMode: 'continuous'
+                        });
+                    }
+                    
+                    // CSS quality optimizations
+                    video.style.imageRendering = 'crisp-edges';
+                    video.style.filter = 'contrast(1.1) brightness(1.05)';
+                }
+            }, 2000);
+        ");
+
+        currentUserMatricNumber = await AuthService.GetMatricNumberAsync();
+        deviceGUID = await AuthService.GetDeviceIdAsync();
     }
+    catch (Exception ex)
+    {
+        MID_HelperFunctions.DebugMessage($"Enhanced scanner initialization failed: {ex.Message}", DebugClass.Exception);
+    }
+}
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
