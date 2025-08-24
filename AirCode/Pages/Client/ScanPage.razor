@@ -5,10 +5,7 @@
 @using AirCode.Services.Auth
 @using AirCode.Services.Courses
 @using AirCode.Services.SupaBase
-@using ReactorBlazorQRCodeScanner
 @using AirCode.Utilities.HelperScripts
-@using AirCode.Components.SharedPrefabs.Spinner
-@using AirCode.Components.SharedPrefabs.Buttons
 @inject ISupabaseEdgeFunctionService EdgeService
 @inject QRCodeDecoder QRDecoder
 @inject IAuthService AuthService
@@ -23,361 +20,131 @@
 
     <!-- Main Scanner Area -->
     <main class="scanner-main">
-        <!-- QR Scanner Video -->
-        <div class="video-container" id="videoContainer">
-            <QRCodeScanner ShowOutput="false" Width="100%" />
+        <!-- Pure JavaScript QR Scanner (Ultra Fast) -->
+        <div class="video-container" id="qr-video-container">
+            <video id="qr-video" autoplay muted playsinline></video>
+            <canvas id="qr-canvas" style="display: none;"></canvas>
         </div>
 
         <!-- Scan Frame Overlay -->
         <div class="scan-overlay">
-            <div class="scan-frame" id="scanFrame">
+            <div class="scan-frame">
                 <div class="frame-corners">
                     <div class="corner tl"></div>
                     <div class="corner tr"></div>
                     <div class="corner bl"></div>
                     <div class="corner br"></div>
                 </div>
-                <div class="scan-line"></div>
+                @if (isScanning && !isProcessing)
+                {
+                    <div class="scan-line"></div>
+                }
             </div>
-        </div>
-
-        <!-- Simple Zoom Controls -->
-        <div class="zoom-controls">
-            <div class="zoom-slider-container">
-                <button class="zoom-btn" @onclick="ZoomOut" disabled="@(!canZoomOut)">-</button>
-                <input type="range" 
-                       class="zoom-slider" 
-                       min="1" 
-                       max="3" 
-                       step="0.2" 
-                       value="@currentZoom" 
-                       @oninput="OnZoomChange" />
-                <button class="zoom-btn" @onclick="ZoomIn" disabled="@(!canZoomIn)">+</button>
-            </div>
-            <div class="zoom-indicator">@currentZoom.ToString("F1")x</div>
         </div>
 
         <!-- Processing State -->
         @if (isProcessing)
         {
             <div class="processing-state">
-                <LoadingSpinner Title="Processing QR Code..." Subtitle="Please wait while we verify your attendance" />
+                <div class="spinner"></div>
+                <span>Processing QR Code...</span>
+            </div>
+        }
+
+        <!-- Status Messages -->
+        @if (!string.IsNullOrEmpty(statusMessage))
+        {
+            <div class="status-message @(isSuccess ? "success" : "error")">
+                <span class="status-icon">@(isSuccess ? "✅" : "⚠️")</span>
+                <span>@statusMessage</span>
+                <button class="close-btn" @onclick="ClearStatus">×</button>
             </div>
         }
     </main>
 
-    <!-- Scan Result Popup -->
-    @if (showResultPopup)
-    {
-        <div class="popup-overlay" @onclick="ClosePopup">
-            <div class="result-popup" @onclick:stopPropagation="true">
-                <div class="popup-header">
-                    <h4>@popupTitle</h4>
-                    <button class="close-btn" @onclick="ClosePopup">×</button>
-                </div>
-                <div class="popup-content">
-                    <div class="result-icon @(scanSuccess ? "success" : "error")">
-                        @if (scanSuccess)
-                        {
-                            <span>✓</span>
-                        }
-                        else
-                        {
-                            <span>✗</span>
-                        }
-                    </div>
-                    <p class="result-message">@popupMessage</p>
-                </div>
-                <div class="popup-footer">
-                    <PrimaryButton Text="Continue" OnClick="ClosePopup" />
-                </div>
-            </div>
-        </div>
-    }
-
-    <!-- Simple Performance Info -->
-    @if (showPerformanceInfo)
-    {
-        <div class="performance-info">
-            <div class="perf-row">
-                <small>FPS: @currentFPS</small>
-                <small>Quality: High</small>
-            </div>
-            <div class="perf-row">
-                <small>Zoom: @currentZoom.ToString("F1")x</small>
-                <small>@(isScanning ? "Scanning" : "Stopped")</small>
-            </div>
-        </div>
-    }
-
     <!-- Controls -->
     <footer class="scan-controls">
-        <div class="control-buttons">
-            @if (isScanning)
-            {
-                <button class="control-btn stop" @onclick="StopScanning">
-                    <span class="icon">⏸</span>
-                    Stop
-                </button>
-            }
-            else
-            {
-                <button class="control-btn start" @onclick="StartScanning">
-                    <span class="icon">▶</span>
-                    Start
-                </button>
-            }
-            
-            <button class="control-btn settings" @onclick="TogglePerformanceInfo">
-                <span class="icon">⚙️</span>
-                Stats
+        @if (isScanning)
+        {
+            <button class="control-btn stop" @onclick="StopScanning" disabled="@isProcessing">
+                <span class="icon">⏸</span>
+                Stop Scanner
             </button>
-
-            <button class="control-btn zoom-reset" @onclick="ResetZoom" disabled="@(Math.Abs(currentZoom - 1.0) < 0.1)">
-                <span class="icon">🔍</span>
-                Reset
+        }
+        else
+        {
+            <button class="control-btn start" @onclick="StartScanning">
+                <span class="icon">▶</span>
+                Start Scanner
             </button>
-        </div>
+        }
+        
+        @if (isScanning && hasTorch)
+        {
+            <button class="control-btn torch @(torchEnabled ? "active" : "")" @onclick="ToggleTorch">
+                <span class="icon">💡</span>
+                @(torchEnabled ? "Turn Off" : "Turn On") Torch
+            </button>
+        }
+        
+        <button class="control-btn camera" @onclick="SwitchCamera">
+            <span class="icon">🔄</span>
+            Switch Camera
+        </button>
     </footer>
 </div>
 
 @code {
-    QRCodeScannerJsInterop? _qrCodeScannerJsInterop;
-    Action<string>? _onQrCodeScanAction;
-    bool isScanning = true;
-    bool isProcessing = false;
-    bool scanComplete = false;
-    
-    // Simplified performance monitoring
-    bool showPerformanceInfo = false;
-    int currentFPS = 0;
-    Timer? performanceTimer;
-    int frameCount = 0;
-    DateTime lastFpsCheck = DateTime.Now;
-    
-    // Simplified zoom controls
-    double currentZoom = 1.0;
-    bool canZoomIn => currentZoom < 3.0;
-    bool canZoomOut => currentZoom > 1.0;
-    
-    // Popup state
-    bool showResultPopup = false;
-    bool scanSuccess = false;
-    string popupTitle = "";
-    string popupMessage = "";
+    private bool isScanning = false;
+    private bool isProcessing = false;
+    private string statusMessage = string.Empty;
+    private bool isSuccess = false;
+    private bool hasTorch = false;
+    private bool torchEnabled = false;
+    private DotNetObjectReference<ScanPage>? objRef;
 
     // User data
-    string currentUserMatricNumber = "";
-    string deviceGUID = "";
+    private string currentUserMatricNumber = "SukaBlak";
+    private string deviceGUID = "N";
     
- // Enhanced ReactorBlazor Configuration
-protected override async Task OnInitializedAsync()
-{
-    // High-resolution configuration for ReactorBlazor
-    var enhancedOptions = new QRCodeScannerOptions
+    protected override async Task OnInitializedAsync()
     {
-        // High resolution settings
-        Video = new VideoConstraints
+        try
         {
-            Width = new ConstraintLong { Ideal = 1920, Min = 1280 },
-            Height = new ConstraintLong { Ideal = 1080, Min = 720 },
-            FrameRate = new ConstraintDouble { Ideal = 30 },
-            FacingMode = "environment",
+            currentUserMatricNumber = await AuthService.GetMatricNumberAsync();
+            deviceGUID = await AuthService.GetDeviceIdAsync();
             
-            // Quality optimizations
-            FocusMode = "continuous",
-            ExposureMode = "continuous",
-            WhiteBalanceMode = "continuous"
-        },
-        
-        // Scanner performance
-        ScanInterval = 100,  // Faster scanning (ms)
-        DecodeHints = new Dictionary<DecodeHintType, object>
-        {
-            { DecodeHintType.TRY_HARDER, true },
-            { DecodeHintType.POSSIBLE_FORMATS, new[] { BarcodeFormat.QR_CODE } }
+            objRef = DotNetObjectReference.Create(this);
+            
+            MID_HelperFunctions.DebugMessage("Fast QR Scanner initialized successfully", DebugClass.Info);
         }
-    };
-
-    _onQrCodeScanAction = (code) => OnQrCodeScan(code);
-    _qrCodeScannerJsInterop = new QRCodeScannerJsInterop(JSRuntime, enhancedOptions);
-    
-    try
-    {
-        await _qrCodeScannerJsInterop.Init(_onQrCodeScanAction);
-        
-        // Apply additional video optimizations
-        await JSRuntime.InvokeVoidAsync("eval", @"
-            setTimeout(() => {
-                const video = document.querySelector('.video-container video');
-                if (video && video.srcObject) {
-                    const track = video.srcObject.getVideoTracks()[0];
-                    if (track) {
-                        // Apply high-quality constraints
-                        track.applyConstraints({
-                            width: { ideal: 1920 },
-                            height: { ideal: 1080 },
-                            frameRate: { ideal: 30 },
-                            focusMode: 'continuous'
-                        });
-                    }
-                    
-                    // CSS quality optimizations
-                    video.style.imageRendering = 'crisp-edges';
-                    video.style.filter = 'contrast(1.1) brightness(1.05)';
-                }
-            }, 2000);
-        ");
-
-        currentUserMatricNumber = await AuthService.GetMatricNumberAsync();
-        deviceGUID = await AuthService.GetDeviceIdAsync();
+        catch (Exception ex)
+        {
+            statusMessage = "Failed to initialize scanner";
+            isSuccess = false;
+            MID_HelperFunctions.DebugMessage($"Failed to initialize scanner: {ex.Message}", DebugClass.Exception);
+        }
     }
-    catch (Exception ex)
-    {
-        MID_HelperFunctions.DebugMessage($"Enhanced scanner initialization failed: {ex.Message}", DebugClass.Exception);
-    }
-}
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        if (firstRender && objRef != null)
         {
-            await InitializeQualityCamera();
-            await StartSimplePerformanceMonitoring();
+            await JSRuntime.InvokeVoidAsync("initFastQRScanner", objRef);
+            await StartScanning();
         }
     }
 
-    async Task InitializeQualityCamera()
-    {
-        try
-        {
-            // Use our enhanced camera utilities
-            await JSRuntime.InvokeVoidAsync("eval", @"
-                if (window.CameraUtilities && window.ReactorQRScannerEnhanced) {
-                    // Enhance the Reactor QR Scanner
-                    window.ReactorQRScannerEnhanced.enhanceReactorScanner();
-                    
-                    // Apply video optimizations after a delay
-                    setTimeout(() => {
-                        window.ReactorQRScannerEnhanced.optimizeReactorVideo();
-                    }, 1000);
-                    
-                    console.log('Quality camera initialization completed');
-                } else {
-                    console.warn('Camera utilities not loaded yet');
-                }
-            ");
-        }
-        catch (Exception ex)
-        {
-            MID_HelperFunctions.DebugMessage($"Quality camera setup failed: {ex.Message}", DebugClass.Warning);
-        }
-    }
-
-    async Task StartSimplePerformanceMonitoring()
-    {
-        try
-        {
-            performanceTimer = new Timer(async _ => 
-            {
-                try
-                {
-                    var now = DateTime.Now;
-                    var elapsed = (now - lastFpsCheck).TotalSeconds;
-                    
-                    if (elapsed >= 1.0)
-                    {
-                        currentFPS = (int)(frameCount / elapsed);
-                        frameCount = 0;
-                        lastFpsCheck = now;
-                        
-                        await InvokeAsync(StateHasChanged);
-                    }
-                    
-                    frameCount++;
-                }
-                catch
-                {
-                    // Ignore monitoring errors
-                }
-            }, null, 0, 250); // Check 4 times per second
-        }
-        catch (Exception ex)
-        {
-            MID_HelperFunctions.DebugMessage($"Performance monitoring setup failed: {ex.Message}", DebugClass.Warning);
-        }
-    }
-
-    async Task OnZoomChange(ChangeEventArgs e)
-    {
-        if (double.TryParse(e.Value?.ToString(), out double newZoom))
-        {
-            currentZoom = Math.Round(newZoom, 1);
-            await ApplyZoom();
-        }
-    }
-
-    async Task ZoomIn()
-    {
-        if (canZoomIn)
-        {
-            currentZoom = Math.Min(3.0, Math.Round(currentZoom + 0.2, 1));
-            await ApplyZoom();
-        }
-    }
-
-    async Task ZoomOut()
-    {
-        if (canZoomOut)
-        {
-            currentZoom = Math.Max(1.0, Math.Round(currentZoom - 0.2, 1));
-            await ApplyZoom();
-        }
-    }
-
-    async Task ResetZoom()
-    {
-        currentZoom = 1.0;
-        await ApplyZoom();
-    }
-
-    async Task ApplyZoom()
-    {
-        try
-        {
-            var zoomValue = currentZoom.ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
-            await JSRuntime.InvokeVoidAsync("eval", $@"
-                if (window.CameraUtilities) {{
-                    const video = document.querySelector('.video-container video');
-                    if (video) {{
-                        window.CameraUtilities.applyZoom(video, {zoomValue});
-                    }}
-                }} else {{
-                    // Fallback direct CSS application
-                    const video = document.querySelector('.video-container video');
-                    if (video) {{
-                        video.style.transform = 'translate(-50%, -50%) scale({zoomValue})';
-                    }}
-                }}
-            ");
-            StateHasChanged();
-        }
-        catch (Exception ex)
-        {
-            MID_HelperFunctions.DebugMessage($"Zoom application failed: {ex.Message}", DebugClass.Warning);
-        }
-    }
-
-    async Task OnQrCodeScan(string code)
+    [JSInvokable]
+    public async Task OnQrCodeDetected(string code)
     {
         if (!string.IsNullOrEmpty(code) && CanProcessAttendance())
         {
             MID_HelperFunctions.DebugMessage($"QR Code detected: {code}", DebugClass.Info);
         
-            await PauseScanning();
             isProcessing = true;
-            scanComplete = true;
-            StateHasChanged();
+            statusMessage = string.Empty;
+            await InvokeAsync(StateHasChanged);
         
             try
             {
@@ -397,31 +164,44 @@ protected override async Task OnInitializedAsync()
                     }
                     else
                     {
-                        ShowResultPopup(false, "Course Not Found", "You are not enrolled in this course. Please contact your instructor if this is incorrect.");
+                        statusMessage = "You are not enrolled in this course";
+                        isSuccess = false;
+                        MID_HelperFunctions.DebugMessage("You are not taking this course", DebugClass.Warning);
                     }
                 }
                 else
                 {
-                    ShowResultPopup(false, "Invalid QR Code", "This QR code is not a valid AirCode attendance QR. Please scan the correct QR code from your instructor.");
+                    statusMessage = "Invalid QR code format";
+                    isSuccess = false;
+                    MID_HelperFunctions.DebugMessage("QR code is not a valid AirCode attendance QR", DebugClass.Warning);
                 }
             }
             catch (Exception ex)
             {
+                statusMessage = "Error processing QR code";
+                isSuccess = false;
                 MID_HelperFunctions.DebugMessage($"Error processing QR code: {ex.Message}", DebugClass.Exception);
-                ShowResultPopup(false, "Processing Error", "An error occurred while processing the QR code. Please try again.");
             }
-        
-            isProcessing = false;
-            scanComplete = false;
-            await InvokeAsync(StateHasChanged);
+            finally
+            {
+                isProcessing = false;
+                await InvokeAsync(StateHasChanged);
+            }
         }
     }
 
-    async Task ProcessAttendanceWithNewPayload(string qrCode)
+    [JSInvokable]
+    public async Task OnTorchCapabilityDetected(bool hasTorchSupport)
+    {
+        hasTorch = hasTorchSupport;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ProcessAttendanceWithNewPayload(string qrCode)
     {
         try
         {
-            MID_HelperFunctions.DebugMessage($"Processing attendance with new payload structure for QR: {qrCode}", DebugClass.Info);
+            MID_HelperFunctions.DebugMessage($"Processing attendance with payload for QR: {qrCode}", DebugClass.Info);
         
             var attendanceRecord = new AttendanceRecord
             {
@@ -431,158 +211,134 @@ protected override async Task OnInitializedAsync()
                 DeviceGUID = deviceGUID
             };
         
-            MID_HelperFunctions.DebugMessage($"Attendance record: {MID_HelperFunctions.ToJson(attendanceRecord)}", DebugClass.Log);
-        
             var edgeFunctionRequest = await QRDecoder.CreateEdgeFunctionRequestAsync(qrCode, attendanceRecord);
             
             if (edgeFunctionRequest == null)
             {
-                ShowResultPopup(false, "Request Failed", "Failed to create a valid attendance request. Please try scanning again.");
+                statusMessage = "Failed to create valid request";
+                isSuccess = false;
                 return;
             }
-
-            MID_HelperFunctions.DebugMessage($"Edge function request: {MID_HelperFunctions.ToJson(edgeFunctionRequest)}", DebugClass.Log);
         
             var result = await EdgeService.ProcessAttendanceWithPayloadAsync(edgeFunctionRequest);
         
-            MID_HelperFunctions.DebugMessage($"Edge function result: {MID_HelperFunctions.ToJson(result)}", DebugClass.Log);
-        
             if (result.Success)
             {
-                ShowResultPopup(true, "Attendance Recorded", "Your attendance has been successfully recorded for this session.");
+                statusMessage = "Attendance recorded successfully!";
+                isSuccess = true;
+                MID_HelperFunctions.DebugMessage("Attendance recorded successfully!", DebugClass.Info);
+                
+                // Pause scanning briefly after successful scan
+                await JSRuntime.InvokeVoidAsync("pauseScanning", 2000);
             }
             else
             {
                 var userFriendlyMessage = GetUserFriendlyErrorMessage(result.ErrorCode, result.Message);
-                ShowResultPopup(false, "Attendance Failed", userFriendlyMessage);
+                statusMessage = userFriendlyMessage;
+                isSuccess = false;
+                MID_HelperFunctions.DebugMessage($"Attendance processing failed: {result.Message}", DebugClass.Warning);
             }
         }
         catch (Exception ex)
         {
+            statusMessage = "Failed to process attendance";
+            isSuccess = false;
             MID_HelperFunctions.DebugMessage($"Exception in ProcessAttendanceWithNewPayload: {ex}", DebugClass.Exception);
-            ShowResultPopup(false, "System Error", "A system error occurred. Please try again or contact support.");
         }
     }
 
-    void ShowResultPopup(bool success, string title, string message)
-    {
-        scanSuccess = success;
-        popupTitle = title;
-        popupMessage = message;
-        showResultPopup = true;
-        StateHasChanged();
-    }
-
-    async Task ClosePopup()
-    {
-        showResultPopup = false;
-        StateHasChanged();
-        await ResumeScanning();
-    }
-
-    void TogglePerformanceInfo()
-    {
-        showPerformanceInfo = !showPerformanceInfo;
-        StateHasChanged();
-    }
-
-    string GetUserFriendlyErrorMessage(string errorCode, string originalMessage)
+    private string GetUserFriendlyErrorMessage(string errorCode, string originalMessage)
     {
         return errorCode switch
         {
-            "DUPLICATE_ATTENDANCE" => "You have already marked attendance for this session. Multiple submissions are not allowed.",
-            "SESSION_NOT_FOUND" => "This attendance session does not exist or has been removed. Please check with your instructor.",
-            "TEMPORAL_KEY_EXPIRED" => "Your QR code has expired. Please scan the latest QR code displayed by your instructor.",
-            "TEMPORAL_KEY_MISSING" => "This session requires a temporal security key. Please scan a fresh QR code.",
-            "DEVICE_SECURITY_VIOLATION" => "This device has already been used by another student for attendance. Please use your own device or contact your instructor.",
-            "DEVICE_GUID_MISSING" => "Device identification is required for this secure session.",
-            "MATRIC_NUMBER_MISSING" => "Student identification number is required for attendance.",
-            "SESSION_QUERY_ERROR" => "Database connection failed. Please check your internet connection and try again.",
-            "ATTENDANCE_UPDATE_ERROR" => "Failed to save attendance record. Please try again or contact support.",
-            "NETWORK_ERROR" => "Network connection failed. Please check your internet connection.",
-            "SUPABASE_CONFIG_ERROR" => "Server configuration error. Please contact technical support.",
-            "INVALID_JSON" => "Invalid request format. Please try scanning the QR code again.",
-            "MISSING_PARAMETERS" => "Required information is missing. Please try scanning the QR code again.",
+            "DUPLICATE_ATTENDANCE" => "You have already marked attendance for this session",
+            "SESSION_NOT_FOUND" => "This attendance session does not exist",
+            "TEMPORAL_KEY_EXPIRED" => "QR code has expired. Please scan the latest code",
+            "TEMPORAL_KEY_MISSING" => "Please scan a fresh QR code",
+            "DEVICE_SECURITY_VIOLATION" => "This device has already been used by another student",
+            "DEVICE_GUID_MISSING" => "Device identification is required",
+            "MATRIC_NUMBER_MISSING" => "Student identification number is required",
+            "SESSION_QUERY_ERROR" => "Database connection failed. Check your connection",
+            "ATTENDANCE_UPDATE_ERROR" => "Failed to save attendance. Please try again",
+            "NETWORK_ERROR" => "Network connection failed. Check your internet",
+            "INVALID_JSON" => "Invalid request format. Please try scanning again",
+            "MISSING_PARAMETERS" => "Required information missing. Please try again",
             _ => originalMessage
         };
     }
 
-    bool CanProcessAttendance()
+    private bool CanProcessAttendance()
     {
         if (isProcessing)
         {
-            MID_HelperFunctions.DebugMessage("Attendance processing already in progress", DebugClass.Warning);
             return false;
         }
 
         if (string.IsNullOrWhiteSpace(currentUserMatricNumber))
         {
-            MID_HelperFunctions.DebugMessage("User identification not available. Please ensure you are logged in.", DebugClass.Warning);
+            statusMessage = "User not logged in";
+            isSuccess = false;
             return false;
         }
 
         return true;
     }
 
-    async Task PauseScanning()
+    private async Task StartScanning()
     {
-        if (_qrCodeScannerJsInterop != null && isScanning)
+        if (objRef != null)
         {
-            try
-            {
-                await _qrCodeScannerJsInterop.StopRecording();
-                isScanning = false;
-                MID_HelperFunctions.DebugMessage("Scanner paused", DebugClass.Log);
-            }
-            catch (Exception ex)
-            {
-                MID_HelperFunctions.DebugMessage($"Failed to pause scanner: {ex.Message}", DebugClass.Exception);
-            }
+            isScanning = true;
+            statusMessage = string.Empty;
+            await JSRuntime.InvokeVoidAsync("startScanning");
+            StateHasChanged();
         }
     }
 
-    async Task ResumeScanning()
+    private async Task StopScanning()
     {
-        if (_qrCodeScannerJsInterop != null && !isScanning)
+        if (objRef != null)
         {
-            try
-            {
-                await _qrCodeScannerJsInterop.Init(_onQrCodeScanAction);
-                isScanning = true;
-                MID_HelperFunctions.DebugMessage("Scanner resumed", DebugClass.Log);
-            }
-            catch (Exception ex)
-            {
-                MID_HelperFunctions.DebugMessage($"Failed to resume scanner: {ex.Message}", DebugClass.Exception);
-            }
+            isScanning = false;
+            await JSRuntime.InvokeVoidAsync("stopScanning");
+            StateHasChanged();
         }
     }
 
-    async Task StartScanning()
+    private async Task ToggleTorch()
     {
-        await ResumeScanning();
+        if (hasTorch)
+        {
+            torchEnabled = !torchEnabled;
+            await JSRuntime.InvokeVoidAsync("toggleTorch", torchEnabled);
+            StateHasChanged();
+        }
     }
 
-    async Task StopScanning()
+    private async Task SwitchCamera()
     {
-        await PauseScanning();
+        await JSRuntime.InvokeVoidAsync("switchCamera");
+    }
+
+    private void ClearStatus()
+    {
+        statusMessage = string.Empty;
+        StateHasChanged();
     }
 
     public async ValueTask DisposeAsync()
     {
-        performanceTimer?.Dispose();
-        
-        if (_qrCodeScannerJsInterop != null && isScanning)
+        try
         {
-            try
+            if (objRef != null)
             {
-                await _qrCodeScannerJsInterop.StopRecording();
-                MID_HelperFunctions.DebugMessage("Scanner disposed", DebugClass.Log);
+                await JSRuntime.InvokeVoidAsync("stopScanning");
+                objRef.Dispose();
             }
-            catch
-            {
-                // Ignore disposal errors
-            }
+        }
+        catch
+        {
+            // Ignore disposal errors
         }
     }
 }
