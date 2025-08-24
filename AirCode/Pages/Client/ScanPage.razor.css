@@ -52,16 +52,6 @@
     background: #000;
 }
 
-/* FIXED: Proper video sizing without cropping */
-#qrScanner {
-    width: 100%;
-    height: 100%;
-    /* CRITICAL: Use contain instead of cover to prevent zoom */
-    object-fit: contain;
-    border-radius: 20px;
-    background: #000;
-}
-
 /* FIXED: Larger scan overlay - 80% of video container */
 .scan-overlay {
     position: absolute;
@@ -128,24 +118,29 @@
     border-bottom-right-radius: 15px;
 }
 
+/* FIXED: Full height scan line animation */
 .scan-line {
     position: absolute;
     top: 0;
     left: 10px;
     right: 10px;
-    height: 3px; /* Thicker scan line */
+    height: 3px;
     background: linear-gradient(90deg, transparent, #00ff88, transparent);
     animation: scan-animation 2s ease-in-out infinite;
 }
 
 @keyframes scan-animation {
-    0%, 100% {
+    0% {
         transform: translateY(0);
         opacity: 0.3;
     }
     50% {
-        transform: translateY(calc(100% + 150px)); /* Adjusted for larger area */
         opacity: 1;
+    }
+    100% {
+        /* FIXED: Use calc(100% - 3px) to account for line height */
+        transform: translateY(calc(100% - 3px));
+        opacity: 0.3;
     }
 }
 
@@ -308,25 +303,6 @@
 .control-btn.stop:hover:not(:disabled) {
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
-}
-
-.control-btn.torch {
-    background: rgba(255, 255, 255, 0.1);
-    color: white;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    transition: all 0.3s ease;
-}
-
-.control-btn.torch:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.2);
-    transform: translateY(-1px);
-}
-
-.control-btn.torch.active {
-    background: linear-gradient(135deg, #ffd700, #ffb347);
-    color: #333;
-    border: 1px solid rgba(255, 215, 0, 0.3);
-    box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3);
 }
 
 .control-btn.camera {

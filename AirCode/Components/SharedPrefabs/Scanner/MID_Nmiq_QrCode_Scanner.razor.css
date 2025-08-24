@@ -1,0 +1,13 @@
+.mid-qr-scanner {
+    position: relative;
+    overflow: hidden;
+    border-radius: 8px;
+    background: #000;
+}
+
+.mid-qr-scanner video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: 8px;
+}

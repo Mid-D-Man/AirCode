@@ -1,33 +1,52 @@
-// wwwroot/js/qrScanHelper.js - Based on the working YouTube example
-var qrScanner;
+// wwwroot/js/qrScanHelper.js - Enhanced for multiple scanner instances
+var qrScanners = new Map(); // Store multiple scanner instances
 
 window.qrScanHelper = {
+    // Original single scanner methods (backward compatibility)
     startScan: function (dotNetObject) {
         const videoElement = document.getElementById("qrScanner");
-
         if (!videoElement) {
             console.error('Video element with id "qrScanner" not found');
             return;
         }
+        this.startScanWithId("qrScanner", dotNetObject);
+    },
 
-        // Create QR Scanner instance using the UMD library
-        qrScanner = new QrScanner(
+    stopScan: function () {
+        this.stopScanWithId("qrScanner");
+    },
+
+    switchCamera: function() {
+        this.switchCameraWithId("qrScanner");
+    },
+
+    // Enhanced methods with ID support
+    startScanWithId: function (videoId, dotNetObject) {
+        const videoElement = document.getElementById(videoId);
+
+        if (!videoElement) {
+            console.error(`Video element with id "${videoId}" not found`);
+            return;
+        }
+
+        // Stop existing scanner if present
+        if (qrScanners.has(videoId)) {
+            qrScanners.get(videoId).stop();
+        }
+
+        // Create QR Scanner instance
+        const scanner = new QrScanner(
             videoElement,
             result => {
                 console.log('decoded qr code:', result);
-                // Call back to Blazor component
                 dotNetObject.invokeMethodAsync('OnQrCodeScanned', result.data);
             },
             {
-                highlightScanRegion: false, // Turn off built-in highlighting (we have custom overlay)
+                highlightScanRegion: false,
                 highlightCodeOutline: false,
-                // FIXED: Better camera settings to prevent zoom
                 preferredCamera: 'environment',
                 maxScansPerSecond: 8,
-
-                // CRITICAL: Custom scan region calculation for larger area
                 calculateScanRegion: function(video) {
-                    // Use 80% of the video area for scanning (much larger)
                     const scanSize = Math.min(video.videoWidth, video.videoHeight) * 0.8;
                     return {
                         x: Math.round((video.videoWidth - scanSize) / 2),
@@ -39,65 +58,68 @@ window.qrScanHelper = {
             }
         );
 
-        // FIXED: Better camera constraints to prevent zoom
-        qrScanner.start()
-            .then(async () => {
-                console.log('QR Scanner started successfully');
+        // Store scanner instance
+        qrScanners.set(videoId, scanner);
 
-                // Apply better video constraints after start
+        // Start scanner with enhanced constraints
+        scanner.start()
+            .then(async () => {
+                console.log(`QR Scanner ${videoId} started successfully`);
+
                 const stream = videoElement.srcObject;
                 if (stream) {
                     const videoTrack = stream.getVideoTracks()[0];
                     if (videoTrack && videoTrack.applyConstraints) {
                         try {
                             await videoTrack.applyConstraints({
-                                // FIXED: Constraints that prevent excessive zoom
-                                width: { ideal: 1280, min: 640, max: 1920 },
-                                height: { ideal: 720, min: 480, max: 1080 },
+                                // UPDATED: Slight zoom in from -1 to -0.5
+                                width: { ideal: 1600, min: 800, max: 1920 },
+                                height: { ideal: 900, min: 600, max: 1080 },
                                 facingMode: 'environment',
-                                // CRITICAL: Zoom control
-                                zoom: { ideal: 1.0, min: 1.0, max: 2.0 }
+                                // CRITICAL: Zoom control - adjusted for slight zoom in
+                                zoom: { ideal: 1.25, min: 1.0, max: 2.0 }
                             });
-                            console.log('Applied better camera constraints');
+                            console.log(`Applied enhanced constraints to ${videoId}`);
                         } catch (e) {
-                            console.log('Could not apply zoom constraints, using defaults:', e.message);
+                            console.log(`Constraints fallback for ${videoId}:`, e.message);
                         }
                     }
                 }
             })
             .catch(error => {
-                console.error('Failed to start QR scanner:', error);
+                console.error(`Failed to start QR scanner ${videoId}:`, error);
+                qrScanners.delete(videoId);
             });
     },
 
-    stopScan: function () {
-        if (qrScanner) {
-            qrScanner.stop();
-            console.log('QR Scanner stopped');
+    stopScanWithId: function (videoId) {
+        const scanner = qrScanners.get(videoId);
+        if (scanner) {
+            scanner.stop();
+            qrScanners.delete(videoId);
+            console.log(`QR Scanner ${videoId} stopped`);
         }
     },
 
-    // Additional methods for enhanced functionality
-    toggleTorch: function(enable) {
-        if (qrScanner) {
-            if (enable) {
-                qrScanner.turnFlashOn();
-            } else {
-                qrScanner.turnFlashOff();
-            }
-        }
-    },
-
-    switchCamera: function() {
-        if (qrScanner) {
+    switchCameraWithId: function(videoId) {
+        const scanner = qrScanners.get(videoId);
+        if (scanner) {
             QrScanner.listCameras().then(cameras => {
                 if (cameras.length > 1) {
-                    // Switch to next available camera
-                    const currentCameraId = qrScanner.getCamera()?.id;
+                    const currentCameraId = scanner.getCamera()?.id;
                     const nextCamera = cameras.find(cam => cam.id !== currentCameraId) || cameras[0];
-                    qrScanner.setCamera(nextCamera.id);
+                    scanner.setCamera(nextCamera.id);
                 }
             });
         }
+    },
+
+    // Cleanup all scanners
+    stopAllScanners: function() {
+        qrScanners.forEach((scanner, videoId) => {
+            scanner.stop();
+            console.log(`Stopped scanner: ${videoId}`);
+        });
+        qrScanners.clear();
     }
 };
