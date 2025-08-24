@@ -4,16 +4,49 @@
     <label for="@FieldId" class="@(IsRequired ? "required" : "")">
         @Label
     </label>
-    <input
-        id="@FieldId"
-        type="@Type"
-        class="form-input @(IsInvalid ? "invalid" : "")"
-        placeholder="@Placeholder"
-        value="@Value"
-        maxlength="@MaxLength"
-        @oninput="OnInputHandler"
-        @onblur="OnBlurHandler"
-        @onfocus="OnFocusHandler" />
+    
+    @if (Type == "textarea")
+    {
+        <textarea
+            id="@FieldId"
+            class="form-input @(IsInvalid ? "invalid" : "")"
+            placeholder="@Placeholder"
+            value="@Value"
+            maxlength="@MaxLength"
+            rows="@Rows"
+            @oninput="OnInputHandler"
+            @onblur="OnBlurHandler"
+            @onfocus="OnFocusHandler"></textarea>
+    }
+    else if (Type == "select" && Options != null)
+    {
+        <select
+            id="@FieldId"
+            class="form-input @(IsInvalid ? "invalid" : "")"
+            value="@Value"
+            @onchange="OnInputHandler"
+            @onblur="OnBlurHandler"
+            @onfocus="OnFocusHandler">
+            <option value="">Select @Label...</option>
+            @foreach (var option in Options)
+            {
+                <option value="@option.Key">@option.Value</option>
+            }
+        </select>
+    }
+    else
+    {
+        <input
+            id="@FieldId"
+            type="@Type"
+            class="form-input @(IsInvalid ? "invalid" : "")"
+            placeholder="@Placeholder"
+            value="@Value"
+            maxlength="@MaxLength"
+            @oninput="OnInputHandler"
+            @onblur="OnBlurHandler"
+            @onfocus="OnFocusHandler" />
+    }
 
     @if (IsInvalid && !string.IsNullOrEmpty(ErrorMessage))
     {
@@ -22,7 +55,6 @@
 </div>
 
 @code {
-    //ok we not using this enough, use it were we have input fields as it has adv feautures like text limit and what not
     [Parameter] public string Label { get; set; } = "";
     [Parameter] public string Placeholder { get; set; } = "";
     [Parameter] public string Type { get; set; } = "text";
@@ -35,12 +67,14 @@
     [Parameter] public EventCallback<FocusEventArgs> OnFocus { get; set; }
     [Parameter] public RenderFragment ChildContent { get; set; }
     [Parameter] public string Id { get; set; } = "";
-    [Parameter] public int MaxLength { get; set; } = 200; // Default max length
+    [Parameter] public int MaxLength { get; set; } = 200;
     [Parameter] public EventCallback<ValidationEventArgs> OnValidate { get; set; }
+    
+    // New parameters for select and textarea
+    [Parameter] public Dictionary<string, string>? Options { get; set; }
+    [Parameter] public int Rows { get; set; } = 3;
 
-    //  a stable field for the ID as it remains consistent across renders.
     private string _fieldId;
-
     private string FieldId => _fieldId;
 
     protected override void OnInitialized()
@@ -60,7 +94,6 @@
 
     private async Task OnBlurHandler(FocusEventArgs args)
     {
-        // Trigger validation when field loses focus (if there's a value)
         if (!string.IsNullOrEmpty(Value))
         {
             var validationArgs = new ValidationEventArgs
@@ -70,7 +103,6 @@
             };
             await OnValidate.InvokeAsync(validationArgs);
         }
-
         await OnBlur.InvokeAsync(args);
     }
 
@@ -78,5 +110,4 @@
     {
         await OnFocus.InvokeAsync(args);
     }
-
 }

@@ -838,3 +838,108 @@ body.dark-mode .difficulty.advanced {
         animation: none;
     }
 }
+/* Additional CSS to add to ContactUs.razor.css */
+
+/* Guide Modal Styles */
+.guide-modal {
+    background: var(--bg-secondary);
+    border-radius: 12px;
+    width: 100%;
+    max-width: 800px;
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: modalSlideIn 0.3s ease;
+}
+
+.guide-header-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.guide-modal-icon {
+    font-size: 1.5rem;
+}
+
+.guide-content {
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.guide-meta-info {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.guide-full-content {
+    line-height: 1.6;
+    color: var(--text-primary);
+}
+
+.guide-full-content h1 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 1.5rem 0 1rem 0;
+    color: var(--text-primary);
+    border-bottom: 2px solid var(--primary-500);
+    padding-bottom: 0.5rem;
+}
+
+.guide-full-content h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 1.25rem 0 0.75rem 0;
+    color: var(--text-primary);
+}
+
+.guide-full-content h3 {
+    font-size: 1.125rem;
+    font-weight: 500;
+    margin: 1rem 0 0.5rem 0;
+    color: var(--text-secondary);
+}
+
+.guide-full-content p {
+    margin-bottom: 1rem;
+    color: var(--text-secondary);
+}
+
+.guide-full-content ul, .guide-full-content ol {
+    margin: 1rem 0;
+    padding-left: 2rem;
+}
+
+.guide-full-content li {
+    margin-bottom: 0.5rem;
+    color: var(--text-secondary);
+}
+
+.guide-full-content code {
+    background: var(--bg-tertiary);
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 0.875rem;
+}
+
+/* Mobile responsiveness for guide modal */
+@media (max-width: 768px) {
+    .guide-modal {
+        max-width: 95vw;
+        margin: 0.5rem;
+    }
+
+    .guide-header-info {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    .guide-meta-info {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+}

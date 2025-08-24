@@ -5,9 +5,10 @@
 @using AirCode.Components.SharedPrefabs.Cards
 @using AirCode.Layout.FullScreen
 @inject IJSRuntime JSRuntime
+
 @layout FullScreenLayout
 <div class="contact-container">
-    <!-- Header Section  -->
+    <!-- Header Section -->
     <div class="contact-header">
         <div class="header-content">
             <h1 class="contact-title">Get Help & Support</h1>
@@ -134,22 +135,15 @@
                         <div class="contact-method" @onclick="() => HandleContactMethod(EMAIL_CONTACT)">
                             <div class="method-icon">📧</div>
                             <h3>Email Support</h3>
-                            <p>Get detailed help via email</p>
-                            <span class="response-time">Response within 24 hours</span>
-                        </div>
-                        
-                        <div class="contact-method" @onclick="() => HandleContactMethod(LIVE_CHAT)">
-                            <div class="method-icon">💬</div>
-                            <h3>Live Chat</h3>
-                            <p>Chat with our support team</p>
-                            <span class="response-time">Available 9 AM - 6 PM</span>
+                            <p>Send us a detailed message</p>
+                            <span class="response-time">We'll respond via email</span>
                         </div>
                         
                         <div class="contact-method" @onclick="() => HandleContactMethod(REPORT_BUG)">
                             <div class="method-icon">🐛</div>
                             <h3>Report Bug</h3>
                             <p>Found a technical issue?</p>
-                            <span class="response-time">Priority handling</span>
+                            <span class="response-time">Report on GitHub</span>
                         </div>
                     </div>
                     
@@ -237,6 +231,31 @@
         }
     </div>
 
+    <!-- Guide Modal -->
+    @if (showGuideModal && selectedGuide != null)
+    {
+        <div class="modal-overlay" @onclick="CloseGuideModal">
+            <div class="guide-modal" @onclick:stopPropagation="true">
+                <div class="modal-header">
+                    <div class="guide-header-info">
+                        <span class="guide-modal-icon">@selectedGuide.Icon</span>
+                        <h3>@selectedGuide.Title</h3>
+                    </div>
+                    <button class="close-btn" @onclick="CloseGuideModal">×</button>
+                </div>
+                <div class="modal-content guide-content">
+                    <div class="guide-meta-info">
+                        <span class="difficulty @selectedGuide.Difficulty.ToLower()">@selectedGuide.Difficulty</span>
+                        <span class="duration">@selectedGuide.EstimatedTime</span>
+                    </div>
+                    <div class="guide-full-content">
+                        @((MarkupString)selectedGuide.FullContent.Replace("\n", "<br>").Replace("##", "<h2>").Replace("###", "<h3>").Replace("# ", "<h1>"))
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
     <!-- Error Reporting Modal -->
     @if (showErrorModal)
     {
@@ -247,7 +266,7 @@
                     <button class="close-btn" @onclick="CloseErrorModal">×</button>
                 </div>
                 <div class="modal-content">
-                    <p>Help us improve by reporting the error you encountered.</p>
+                    <p>This will redirect you to our GitHub issues page where you can report bugs and technical issues.</p>
                     <FormField 
                         Label="Error Description"
                         @bind-Value="errorReport.Description"
@@ -263,7 +282,7 @@
                 </div>
                 <div class="modal-actions">
                     <PrimaryButton 
-                        Text="Submit Report" 
+                        Text="Report on GitHub" 
                         OnClick="SubmitErrorReport"
                         IsLoading="@isSubmittingError" />
                     <SecondaryButton 
@@ -275,7 +294,7 @@
     }
 </div>
 
-<!-- Success/Error Notifications  -->
+<!-- Success/Error Notifications -->
 @if (showNotification)
 {
     <NotificationComponent 

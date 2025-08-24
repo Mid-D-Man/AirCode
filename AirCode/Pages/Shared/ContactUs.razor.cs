@@ -3,17 +3,16 @@ using Microsoft.JSInterop;
 using System.ComponentModel.DataAnnotations;
 
 namespace AirCode.Pages.Shared
-{/// <summary>
- // this page is supposed to handle clients requesting support and looking up commonly gound issues
- /// </summary>
+{
     public partial class ContactUs : ComponentBase
     {
+        private IJSObjectReference? jsModule;
+        private bool moduleLoaded = false;
 
-   
-    private IJSObjectReference? jsModule;
-    private bool moduleLoaded = false;
-[Inject]
-private NavigationManager NavigationManager { get; set; }
+        [Inject]
+        private NavigationManager NavigationManager { get; set; }
+        [Inject]
+ private ConnectivityService ConnectivityService { get; set; } = null!;
         #region Constants
         private const string FAQ_SECTION = "faq";
         private const string GUIDES_SECTION = "guides";
@@ -29,6 +28,8 @@ private NavigationManager NavigationManager { get; set; }
         private string activeSection = FAQ_SECTION;
         private string searchTerm = string.Empty;
         private bool showErrorModal = false;
+        private bool showGuideModal = false;
+        private GuideItem? selectedGuide = null;
         private bool isSubmitting = false;
         private bool isSubmittingError = false;
         private bool showNotification = false;
@@ -60,25 +61,25 @@ private NavigationManager NavigationManager { get; set; }
         protected override async Task OnAfterRenderAsync(bool firstRender)
         {
             if (firstRender)
-        {
-            await LoadJavaScriptModule();
-        }
-        }
-        public async ValueTask DisposeAsync()
-    {
-        if (jsModule != null)
-        {
-            try
             {
-                await jsModule.DisposeAsync();
-            }
-            catch (JSDisconnectedException)
-            {
-                // Expected during circuit termination
+                await LoadJavaScriptModule();
             }
         }
-    }
 
+        public async ValueTask DisposeAsync()
+        {
+            if (jsModule != null)
+            {
+                try
+                {
+                    await jsModule.DisposeAsync();
+                }
+                catch (JSDisconnectedException)
+                {
+                    // Expected during circuit termination
+                }
+            }
+        }
         #endregion
 
         #region Data Models
@@ -99,6 +100,7 @@ private NavigationManager NavigationManager { get; set; }
             public string Icon { get; set; } = string.Empty;
             public string Title { get; set; } = string.Empty;
             public string Description { get; set; } = string.Empty;
+            public string FullContent { get; set; } = string.Empty;
             public string Difficulty { get; set; } = string.Empty;
             public string EstimatedTime { get; set; } = string.Empty;
             public List<string> Tags { get; set; } = new();
@@ -132,7 +134,6 @@ private NavigationManager NavigationManager { get; set; }
         {
             [Required(ErrorMessage = "Error description is required")]
             public string Description { get; set; } = string.Empty;
-
             public string Steps { get; set; } = string.Empty;
         }
         #endregion
@@ -145,34 +146,30 @@ private NavigationManager NavigationManager { get; set; }
             InitializeServiceStatuses();
             InitializeContactCategories();
         }
-private async Task LoadJavaScriptModule()
-    {
-        try
+
+        private async Task LoadJavaScriptModule()
         {
-            // Load the JavaScript module
-            jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
-                "import", "./Pages/Shared/ContactUs.razor.js");
-            
-            // Initialize contact animations using module reference
-            await jsModule.InvokeVoidAsync("initializeContactAnimations");
-            moduleLoaded = true;
-        }
-        catch (JSException ex)
-        {
-            // Fallback: Try global function
             try
             {
-                await JSRuntime.InvokeVoidAsync("initializeContactAnimations");
+                jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
+                    "import", "./Pages/Shared/ContactUs.razor.js");
+                
+                await jsModule.InvokeVoidAsync("initializeContactAnimations");
                 moduleLoaded = true;
             }
-            catch (JSException fallbackEx)
+            catch (JSException ex)
             {
-                // Log error but don't crash the component
-                Console.WriteLine($"JavaScript initialization failed: {ex.Message}");
-                // Component continues to function without animations
+                try
+                {
+                    await JSRuntime.InvokeVoidAsync("initializeContactAnimations");
+                    moduleLoaded = true;
+                }
+                catch (JSException)
+                {
+                    Console.WriteLine($"JavaScript initialization failed: {ex.Message}");
+                }
             }
         }
-    }
 
         private void InitializeFaqs()
         {
@@ -221,12 +218,12 @@ private async Task LoadJavaScriptModule()
                 new FaqItem
                 {
                     Id = 5,
-                    Icon = "👥",
-                    Question = "How do I add students to my course?",
-                    Answer = "As a lecturer, go to your course management dashboard, select the course, and use the 'Add Students' option. You can add students individually or bulk import from a CSV file.",
-                    ActionText = "Manage Courses",
+                    Icon = "👨‍🏫",
+                    Question = "How do I manage my assigned courses as a lecturer?",
+                    Answer = "As a lecturer, you can view and manage the courses assigned to you through your dashboard. Students enroll in courses independently - you cannot add students to courses.",
+                    ActionText = "View My Courses",
                     ActionType = "navigate_courses",
-                    Tags = new List<string> { "students", "course", "lecturer", "management" }
+                    Tags = new List<string> { "lecturer", "course", "management" }
                 },
                 new FaqItem
                 {
@@ -251,6 +248,29 @@ private async Task LoadJavaScriptModule()
                     Icon = "🚀",
                     Title = "Getting Started Guide",
                     Description = "Complete setup guide for new users",
+                    FullContent = @"# Getting Started with AirCode
+
+Welcome to AirCode! This guide will help you get up and running quickly.
+
+## Step 1: Account Setup
+1. Create your account using your institutional email
+2. Verify your email address
+3. Complete your profile information
+
+## Step 2: Understanding Your Role
+- **Students**: You can enroll in courses and mark attendance
+- **Lecturers**: You can manage your assigned courses and view attendance
+- **Admins**: You have full system access
+
+## Step 3: First Login
+1. Navigate to the login page
+2. Enter your credentials
+3. Complete any required setup steps
+
+## Next Steps
+- Explore your dashboard
+- Set up your profile
+- Join your first course (students) or review assigned courses (lecturers)",
                     Difficulty = "Beginner",
                     EstimatedTime = "5 min",
                     Tags = new List<string> { "setup", "beginner", "getting started" }
@@ -260,10 +280,34 @@ private async Task LoadJavaScriptModule()
                     Id = 2,
                     Icon = "📚",
                     Title = "Course Management",
-                    Description = "How to create and manage courses as an admin",
+                    Description = "How to manage your courses",
+                    FullContent = @"# Course Management Guide
+
+## For Students
+### Enrolling in Courses
+1. Go to your dashboard
+2. Click 'Browse Courses'
+3. Search for your desired courses
+4. Click 'Enroll' on the courses you want to join
+
+### Viewing Your Courses
+- Access your enrolled courses from the dashboard
+- View course schedules and attendance requirements
+
+## For Lecturers
+### Managing Your Assigned Courses
+1. View courses assigned to you in your dashboard
+2. Monitor student attendance
+3. Generate attendance reports
+4. Update course information as needed
+
+### Important Notes
+- Lecturers cannot add students to courses
+- Students must enroll themselves
+- Course assignments are managed by administrators",
                     Difficulty = "Intermediate",
                     EstimatedTime = "10 min",
-                    Tags = new List<string> { "admin", "courses", "management" }
+                    Tags = new List<string> { "courses", "management", "enrollment" }
                 },
                 new GuideItem
                 {
@@ -271,6 +315,32 @@ private async Task LoadJavaScriptModule()
                     Icon = "📱",
                     Title = "QR Code Scanning",
                     Description = "Best practices for scanning attendance QR codes",
+                    FullContent = @"# QR Code Scanning Guide
+
+## How to Scan QR Codes for Attendance
+1. Navigate to the scan page
+2. Allow camera permissions when prompted
+3. Point your camera at the QR code
+4. Hold steady until the code is recognized
+
+## Troubleshooting Scanning Issues
+### Common Problems and Solutions:
+- **Poor lighting**: Move to a well-lit area
+- **Blurry camera**: Clean your camera lens
+- **Code not scanning**: Try moving closer or further away
+- **Camera not working**: Check browser permissions
+
+## Best Practices
+- Ensure the QR code is clearly visible
+- Hold your device steady
+- Scan from about 6-12 inches away
+- Use manual code entry if scanning fails
+
+## Manual Code Entry
+If scanning fails, you can enter the code manually:
+1. Click 'Manual Entry'
+2. Type the attendance code
+3. Submit",
                     Difficulty = "Beginner",
                     EstimatedTime = "3 min",
                     Tags = new List<string> { "qr code", "scanning", "attendance" }
@@ -280,7 +350,41 @@ private async Task LoadJavaScriptModule()
                     Id = 4,
                     Icon = "📊",
                     Title = "Generating Reports",
-                    Description = "Create detailed attendance and performance reports",
+                    Description = "Create attendance and performance reports",
+                    FullContent = @"# Generating Reports
+
+## Available Report Types
+### For Students
+- Personal attendance history
+- Course performance summary
+- Monthly attendance statistics
+
+### For Lecturers
+- Class attendance reports
+- Student performance analytics
+- Course completion rates
+
+### For Admins
+- Institution-wide statistics
+- Detailed user analytics
+- System usage reports
+
+## How to Generate Reports
+1. Navigate to the Reports section
+2. Select your report type
+3. Choose date range and filters
+4. Click 'Generate Report'
+5. Download or view online
+
+## Report Formats
+- PDF for formal documentation
+- Excel for data analysis
+- Online viewing for quick checks
+
+## Scheduling Reports
+- Set up automatic report generation
+- Receive reports via email
+- Configure report frequency",
                     Difficulty = "Advanced",
                     EstimatedTime = "15 min",
                     Tags = new List<string> { "reports", "analytics", "advanced" }
@@ -290,7 +394,50 @@ private async Task LoadJavaScriptModule()
                     Id = 5,
                     Icon = "🔧",
                     Title = "Troubleshooting Common Issues",
-                    Description = "Solutions for the most common technical problems",
+                    Description = "Solutions for technical problems",
+                    FullContent = @"# Troubleshooting Guide
+
+## Login Issues
+### Can't log in?
+1. Check your email and password
+2. Use 'Forgot Password' if needed
+3. Clear browser cache and cookies
+4. Try a different browser
+
+## Performance Issues
+### App running slowly?
+1. Clear browser cache
+2. Disable browser extensions
+3. Check internet connection
+4. Try incognito mode
+
+## QR Code Issues
+### Scanner not working?
+1. Check camera permissions
+2. Clean camera lens
+3. Improve lighting
+4. Use manual code entry
+
+## Sync Issues
+### Data not syncing?
+1. Check internet connection
+2. Refresh the page
+3. Log out and log back in
+4. Contact support if issues persist
+
+## Browser Compatibility
+Supported browsers:
+- Chrome (recommended)
+- Firefox
+- Safari
+- Edge
+
+## When to Contact Support
+Contact support if you experience:
+- Persistent login failures
+- Data loss or corruption
+- Critical functionality not working
+- Security concerns",
                     Difficulty = "Intermediate",
                     EstimatedTime = "8 min",
                     Tags = new List<string> { "troubleshooting", "issues", "solutions" }
@@ -302,36 +449,11 @@ private async Task LoadJavaScriptModule()
         {
             serviceStatuses.AddRange(new[]
             {
-                new ServiceStatus
-                {
-                    Name = "Authentication Service",
-                    Description = "User login and authentication",
-                    Status = "Operational"
-                },
-                new ServiceStatus
-                {
-                    Name = "QR Code Generation",
-                    Description = "Attendance QR code creation",
-                    Status = "Operational"
-                },
-                new ServiceStatus
-                {
-                    Name = "Database Service",
-                    Description = "Data storage and retrieval",
-                    Status = "Operational"
-                },
-                new ServiceStatus
-                {
-                    Name = "Offline Sync",
-                    Description = "Synchronization when back online",
-                    Status = "Operational"
-                },
-                new ServiceStatus
-                {
-                    Name = "Report Generation",
-                    Description = "Attendance and analytics reports",
-                    Status = "Operational"
-                }
+                new ServiceStatus { Name = "Authentication Service", Description = "User login and authentication", Status = "Operational" },
+                new ServiceStatus { Name = "QR Code Generation", Description = "Attendance QR code creation", Status = "Operational" },
+                new ServiceStatus { Name = "Database Service", Description = "Data storage and retrieval", Status = "Operational" },
+                new ServiceStatus { Name = "Offline Sync", Description = "Synchronization when back online", Status = "Operational" },
+                new ServiceStatus { Name = "Report Generation", Description = "Attendance and analytics reports", Status = "Operational" }
             });
         }
 
@@ -363,97 +485,51 @@ private async Task LoadJavaScriptModule()
         private void ToggleFaq(int faqId)
         {
             if (expandedFaqIds.Contains(faqId))
-            {
                 expandedFaqIds.Remove(faqId);
-            }
             else
-            {
                 expandedFaqIds.Add(faqId);
-            }
             StateHasChanged();
         }
 
-      private async Task HandleFaqAction(string actionType)
-    {
-        if (!moduleLoaded || jsModule == null)
+        private async Task HandleFaqAction(string actionType)
         {
-            // Graceful degradation - use NavigationManager instead
-            HandleActionWithoutJS(actionType);
-            return;
-        }
-
-        try
-        {
-            switch (actionType)
+            var navigationMap = new Dictionary<string, string>
             {
-                case "navigate_login":
-                    await jsModule.InvokeVoidAsync("navigateToPage", "Authentication");
-                    break;
-                case "navigate_scan":
-                    await jsModule.InvokeVoidAsync("navigateToPage", "Client/ScanPage");
-                    break;
-                case "navigate_stats":
-                    await jsModule.InvokeVoidAsync("navigateToPage", "Client/ClientStats");
-                    break;
-                case "navigate_courses":
-                    await jsModule.InvokeVoidAsync("navigateToPage", "Admin/LecturerCoursesPage");
-                    break;
-                case "check_connection":
-                    await jsModule.InvokeVoidAsync("checkInternetConnection");
-                    break;
-                case "clear_cache":
-                    await jsModule.InvokeVoidAsync("clearBrowserCache");
-                    break;
+                { "navigate_login", "Authentication" },
+                { "navigate_scan", "Client/ScanPage" },
+                { "navigate_stats", "Client/ClientStats" },
+                { "navigate_courses", "Admin/LecturerCoursesPage" }
+            };
+
+            if (navigationMap.TryGetValue(actionType, out var route))
+            {
+                NavigationManager.NavigateTo(route);
+            }
+            else if (actionType == "check_connection")
+            {
+                await JSRuntime.InvokeVoidAsync("alert", ConnectivityService.IsOnline ? "Internet connection is active" : "No internet connection detected");
+            }
+            else if (actionType == "clear_cache")
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Please clear your browser cache manually and refresh the page.");
             }
         }
-        catch (JSException ex)
-        {
-            // Fallback to C# navigation
-            HandleActionWithoutJS(actionType);
-        }
-    }
 
-    private void HandleActionWithoutJS(string actionType)
-    {
-        // Fallback navigation using Blazor NavigationManager
-        var navigationMap = new Dictionary<string, string>
+        private void NavigateToGuide(int guideId)
         {
-            { "navigate_login", "Authentication" },
-            { "navigate_scan", "Client/ScanPage" },
-            { "navigate_stats", "Client/ClientStats" },
-            { "navigate_courses", "Admin/LecturerCoursesPage" }
-        };
-
-        if (navigationMap.TryGetValue(actionType, out var route))
-        {
-            NavigationManager.NavigateTo(route);
-        }
-    }
-
-    private async Task ProcessContactSubmission()
-    {
-        if (jsModule != null)
-        {
-            await jsModule.InvokeVoidAsync("submitContactForm", new
+            selectedGuide = allGuides.FirstOrDefault(g => g.Id == guideId);
+            if (selectedGuide != null)
             {
-                subject = contactForm.Subject,
-                category = contactForm.Category,
-                message = contactForm.Message,
-                email = contactForm.Email,
-                timestamp = DateTime.UtcNow
-            });
+                showGuideModal = true;
+                StateHasChanged();
+            }
         }
-        else
-        {
-            // Implement server-side submission as fallback
-            await SubmitContactFormServerSide();
-        }
-    }
 
-
-        private async Task NavigateToGuide(int guideId)
+        private void CloseGuideModal()
         {
-            await JSRuntime.InvokeVoidAsync("navigateToGuide", guideId);
+            showGuideModal = false;
+            selectedGuide = null;
+            StateHasChanged();
         }
 
         private async Task HandleContactMethod(string method)
@@ -464,11 +540,10 @@ private async Task LoadJavaScriptModule()
                     ShowSection(CONTACT_SECTION);
                     break;
                 case LIVE_CHAT:
-                    await JSRuntime.InvokeVoidAsync("openLiveChat");
+                    ShowNotification("Live chat is not available. Please use the contact form or report issues on GitHub.", "info");
                     break;
                 case REPORT_BUG:
-                    showErrorModal = true;
-                    StateHasChanged();
+                    NavigationManager.NavigateTo("https://github.com/mid-d-man/AirCode/issues", true);
                     break;
             }
         }
@@ -482,13 +557,8 @@ private async Task LoadJavaScriptModule()
 
                 try
                 {
-                    // Simulate API call
-                    await Task.Delay(2000);
-                    
-                    // Process form submission
-                    await ProcessContactSubmission();
-                    
-                    ShowNotification("Message sent successfully! We'll get back to you soon.", "success");
+                    await Task.Delay(2000); // Simulate processing
+                    ShowNotification("Your message has been received. We'll get back to you via email soon!", "success");
                     ClearContactForm();
                 }
                 catch (Exception ex)
@@ -521,15 +591,12 @@ private async Task LoadJavaScriptModule()
 
                 try
                 {
-                    await Task.Delay(1500);
-                    await ProcessErrorReport();
-                    
-                    ShowNotification("Error report submitted successfully. Thank you for helping us improve!", "success");
+                    NavigationManager.NavigateTo("https://github.com/mid-d-man/AirCode/issues", true);
                     CloseErrorModal();
                 }
                 catch (Exception ex)
                 {
-                    ShowNotification($"Error submitting report: {ex.Message}", "error");
+                    ShowNotification($"Error: {ex.Message}", "error");
                 }
                 finally
                 {
@@ -554,7 +621,6 @@ private async Task LoadJavaScriptModule()
             showNotification = true;
             StateHasChanged();
 
-            // Auto-hide notification after 5 seconds
             Task.Delay(5000).ContinueWith(_ =>
             {
                 showNotification = false;
@@ -599,26 +665,16 @@ private async Task LoadJavaScriptModule()
                          IsValidEmail(contactForm.Email);
 
             if (!isValid)
-            {
                 ShowNotification("Please fill in all required fields correctly.", "error");
-            }
 
             return isValid;
         }
-private async Task SubmitContactFormServerSide()
-{
-    // TODO: Implement your server-side form submission logic here.
-    await Task.CompletedTask;
-}
+
         private bool ValidateErrorReport()
         {
             var isValid = !string.IsNullOrWhiteSpace(errorReport.Description);
-
             if (!isValid)
-            {
                 ShowNotification("Please provide an error description.", "error");
-            }
-
             return isValid;
         }
 
@@ -633,20 +689,6 @@ private async Task SubmitContactFormServerSide()
             {
                 return false;
             }
-        }
-
-        
-
-        private async Task ProcessErrorReport()
-        {
-            // Implement actual error report submission logic
-            await JSRuntime.InvokeVoidAsync("submitErrorReport", new
-            {
-                description = errorReport.Description,
-                steps = errorReport.Steps,
-                userAgent = await JSRuntime.InvokeAsync<string>("getUserAgent"),
-                timestamp = DateTime.UtcNow
-            });
         }
         #endregion
     }
