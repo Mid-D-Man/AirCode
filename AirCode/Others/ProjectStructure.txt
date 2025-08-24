@@ -1,7 +1,7 @@
 Project Structure Documentation
-Generated: Sun Aug 24 18:19:35 UTC 2025
+Generated: Sun Aug 24 19:44:19 UTC 2025
 Repository: Mid-D-Man/AirCode
-Commit: db60a7bea09eeb248f84fa3ebacd599244e2ad6a
+Commit: 2bfe83a92a4831867c009ff24abc02bcaba01d9f
 ==================================
 
 Source Files:
@@ -73,6 +73,9 @@ Components/SharedPrefabs/QrCode/QRCodeCompo.razor
 Components/SharedPrefabs/QrCode/QRCodeCompo.razor.css
 Components/SharedPrefabs/Scanner/BasicQRCodeScanner.razor
 Components/SharedPrefabs/Scanner/BasicQRCodeScanner.razor.css
+Components/SharedPrefabs/Scanner/MID_Nmiq_QrCode_Scanner.razor
+Components/SharedPrefabs/Scanner/MID_Nmiq_QrCode_Scanner.razor.cs
+Components/SharedPrefabs/Scanner/MID_Nmiq_QrCode_Scanner.razor.css
 Components/SharedPrefabs/Spinner/LoadingSpinner.razor
 Components/SharedPrefabs/Spinner/LoadingSpinner.razor.css
 CustomAccountFactory.cs
@@ -163,6 +166,7 @@ Pages/Client/OfflineScanPage.razor
 Pages/Client/OfflineScanPage.razor.cs
 Pages/Client/OfflineScanPage.razor.css
 Pages/Client/ScanPage.razor
+Pages/Client/ScanPage.razor.cs
 Pages/Client/ScanPage.razor.css
 Pages/Main/Index.razor
 Pages/Main/Index.razor.css
@@ -308,7 +312,6 @@ wwwroot/js/cameraUtilities.js
 wwwroot/js/connectivityServices.js
 wwwroot/js/cryptographyHandler.js
 wwwroot/js/debug.js
-wwwroot/js/fast-qr-scanner.js
 wwwroot/js/firestoreModule.js
 wwwroot/js/firestoreNotificationModule.js
 wwwroot/js/gpuPerformance.js
@@ -341,10 +344,10 @@ Directory Structure:
 
 File Count Summary:
 ==================
-.cs       : 110 files
-.razor    : 67 files
+.cs       : 112 files
+.razor    : 68 files
 .csproj   : 1 files
 .json     : 12 files
-.css      : 78 files
-.js       : 52 files
+.css      : 79 files
+.js       : 51 files
 .html     : 3 files
