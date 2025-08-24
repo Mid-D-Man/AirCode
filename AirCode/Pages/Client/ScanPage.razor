@@ -26,6 +26,21 @@
         <!-- Video element for QR scanning -->
         <div class="video-container">
             <video id="qrScanner" autoplay muted playsinline></video>
+            <!-- Scan overlay frame -->
+            <div class="scan-overlay">
+                <div class="scan-frame">
+                    <div class="frame-corners">
+                        <div class="corner tl"></div>
+                        <div class="corner tr"></div>
+                        <div class="corner bl"></div>
+                        <div class="corner br"></div>
+                    </div>
+                    @if (isScanning && !isProcessing)
+                    {
+                        <div class="scan-line"></div>
+                    }
+                </div>
+            </div>
         </div>
 
         <!-- Status Messages -->

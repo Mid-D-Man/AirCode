@@ -19,18 +19,51 @@ window.qrScanHelper = {
                 dotNetObject.invokeMethodAsync('OnQrCodeScanned', result.data);
             },
             {
-                highlightScanRegion: true,
-                highlightCodeOutline: true,
-                // Additional optimizations for mobile
+                highlightScanRegion: false, // Turn off built-in highlighting (we have custom overlay)
+                highlightCodeOutline: false,
+                // FIXED: Better camera settings to prevent zoom
                 preferredCamera: 'environment',
-                maxScansPerSecond: 5
+                maxScansPerSecond: 8,
+
+                // CRITICAL: Custom scan region calculation for larger area
+                calculateScanRegion: function(video) {
+                    // Use 80% of the video area for scanning (much larger)
+                    const scanSize = Math.min(video.videoWidth, video.videoHeight) * 0.8;
+                    return {
+                        x: Math.round((video.videoWidth - scanSize) / 2),
+                        y: Math.round((video.videoHeight - scanSize) / 2),
+                        width: Math.round(scanSize),
+                        height: Math.round(scanSize),
+                    };
+                }
             }
         );
 
-        // Start scanning
+        // FIXED: Better camera constraints to prevent zoom
         qrScanner.start()
-            .then(() => {
+            .then(async () => {
                 console.log('QR Scanner started successfully');
+
+                // Apply better video constraints after start
+                const stream = videoElement.srcObject;
+                if (stream) {
+                    const videoTrack = stream.getVideoTracks()[0];
+                    if (videoTrack && videoTrack.applyConstraints) {
+                        try {
+                            await videoTrack.applyConstraints({
+                                // FIXED: Constraints that prevent excessive zoom
+                                width: { ideal: 1280, min: 640, max: 1920 },
+                                height: { ideal: 720, min: 480, max: 1080 },
+                                facingMode: 'environment',
+                                // CRITICAL: Zoom control
+                                zoom: { ideal: 1.0, min: 1.0, max: 2.0 }
+                            });
+                            console.log('Applied better camera constraints');
+                        } catch (e) {
+                            console.log('Could not apply zoom constraints, using defaults:', e.message);
+                        }
+                    }
+                }
             })
             .catch(error => {
                 console.error('Failed to start QR scanner:', error);

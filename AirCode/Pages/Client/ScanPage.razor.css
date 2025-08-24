@@ -1,4 +1,4 @@
-/* Ultra-Fast QR Scanner Styles - Optimized for Mobile Performance */
+/* Fixed QR Scanner Styles - Large scan area + proper camera zoom */
 .scan-page {
     display: flex;
     flex-direction: column;
@@ -6,9 +6,6 @@
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
     overflow: hidden;
-    /* Hardware acceleration */
-    transform: translateZ(0);
-    will-change: transform;
 }
 
 .scan-header {
@@ -16,8 +13,8 @@
     padding: 1rem;
     background: rgba(0, 0, 0, 0.1);
     backdrop-filter: blur(10px);
-    /* Prevent layout shifts */
     min-height: 80px;
+    flex-shrink: 0;
 }
 
 .scan-header h3 {
@@ -39,54 +36,42 @@
     align-items: center;
     justify-content: center;
     padding: 1rem;
-    min-height: 0; /* Important for flex */
+    min-height: 0;
 }
 
+/* FIXED: Much larger video container - 80% of viewport */
 .video-container {
     position: relative;
-    width: 100%;
-    max-width: 400px;
-    aspect-ratio: 1; /* Square container */
+    width: 90%;
+    height: 80%;
+    max-width: none; /* Remove width restrictions */
+    max-height: none; /* Remove height restrictions */
     border-radius: 20px;
     overflow: hidden;
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
     background: #000;
-
-    /* Hardware acceleration for smooth video */
-    transform: translateZ(0);
-    will-change: transform;
 }
 
-#qr-video {
+/* FIXED: Proper video sizing without cropping */
+#qrScanner {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    /* CRITICAL: Use contain instead of cover to prevent zoom */
+    object-fit: contain;
     border-radius: 20px;
-    /* Optimize video rendering */
-    transform: translateZ(0);
-    will-change: transform;
+    background: #000;
 }
 
-#qr-canvas {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-}
-
+/* FIXED: Larger scan overlay - 80% of video container */
 .scan-overlay {
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 70%;
-    height: 70%;
+    width: 80%; /* Increased from 70% */
+    height: 80%; /* Increased from 70% */
     pointer-events: none;
     z-index: 10;
-    /* Hardware acceleration */
-    will-change: transform;
 }
 
 .scan-frame {
@@ -105,40 +90,39 @@
 
 .corner {
     position: absolute;
-    width: 25px;
-    height: 25px;
-    border: 3px solid #00ff88;
-    /* Smooth animations */
+    width: 30px; /* Larger corners */
+    height: 30px;
+    border: 4px solid #00ff88; /* Thicker borders */
     transition: all 0.3s ease;
 }
 
 .corner.tl {
-    top: -3px;
-    left: -3px;
+    top: -4px;
+    left: -4px;
     border-right: none;
     border-bottom: none;
     border-top-left-radius: 15px;
 }
 
 .corner.tr {
-    top: -3px;
-    right: -3px;
+    top: -4px;
+    right: -4px;
     border-left: none;
     border-bottom: none;
     border-top-right-radius: 15px;
 }
 
 .corner.bl {
-    bottom: -3px;
-    left: -3px;
+    bottom: -4px;
+    left: -4px;
     border-right: none;
     border-top: none;
     border-bottom-left-radius: 15px;
 }
 
 .corner.br {
-    bottom: -3px;
-    right: -3px;
+    bottom: -4px;
+    right: -4px;
     border-left: none;
     border-top: none;
     border-bottom-right-radius: 15px;
@@ -149,11 +133,9 @@
     top: 0;
     left: 10px;
     right: 10px;
-    height: 2px;
+    height: 3px; /* Thicker scan line */
     background: linear-gradient(90deg, transparent, #00ff88, transparent);
     animation: scan-animation 2s ease-in-out infinite;
-    /* Hardware acceleration */
-    will-change: transform;
 }
 
 @keyframes scan-animation {
@@ -162,7 +144,7 @@
         opacity: 0.3;
     }
     50% {
-        transform: translateY(calc(100% + 100px));
+        transform: translateY(calc(100% + 150px)); /* Adjusted for larger area */
         opacity: 1;
     }
 }
@@ -191,8 +173,6 @@
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
     margin-bottom: 0.8rem;
-    /* Hardware acceleration */
-    will-change: transform;
 }
 
 @keyframes spin {
@@ -271,10 +251,10 @@
     gap: 0.75rem;
     background: rgba(0, 0, 0, 0.1);
     backdrop-filter: blur(10px);
-    /* Prevent layout shifts */
     min-height: 80px;
     align-items: center;
     flex-wrap: wrap;
+    flex-shrink: 0;
 }
 
 .control-btn {
@@ -291,12 +271,8 @@
     font-size: 0.85rem;
     min-width: 100px;
     justify-content: center;
-    /* Hardware acceleration */
-    will-change: transform;
-    /* Prevent text selection */
     user-select: none;
     -webkit-user-select: none;
-    /* Prevent tap highlight on mobile */
     -webkit-tap-highlight-color: transparent;
 }
 
@@ -366,31 +342,29 @@
 
 .icon {
     font-size: 1rem;
-    /* Prevent icon from shifting */
     line-height: 1;
 }
 
-/* Mobile-specific optimizations */
+/* Mobile optimizations */
 @media (max-width: 768px) {
     .scan-page {
-        /* Use full viewport on mobile */
         height: 100dvh;
     }
 
     .video-container {
-        max-width: calc(100vw - 2rem);
-        max-height: calc(100vh - 200px);
+        width: 95%; /* Even larger on mobile */
+        height: 85%; /* Even larger on mobile */
     }
 
     .scan-overlay {
-        width: 75%;
-        height: 75%;
+        width: 85%; /* Larger scan area on mobile */
+        height: 85%;
     }
 
     .corner {
-        width: 20px;
-        height: 20px;
-        border-width: 2px;
+        width: 25px;
+        height: 25px;
+        border-width: 3px;
     }
 
     .scan-controls {
@@ -436,68 +410,9 @@
         width: 100%;
         min-width: auto;
     }
-}
 
-/* High-DPI display optimizations */
-@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
-    .scan-line {
-        height: 1px;
-    }
-
-    .corner {
-        border-width: 2px;
-    }
-}
-
-/* Dark mode support */
-@media (prefers-color-scheme: dark) {
-    .scan-page {
-        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-    }
-
-    .control-btn.torch,
-    .control-btn.camera {
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-    }
-}
-
-/* Reduced motion support */
-@media (prefers-reduced-motion: reduce) {
-    .scan-line {
-        animation: none;
-        opacity: 0.5;
-        top: 50%;
-        transform: translateY(-50%);
-    }
-
-    .spinner {
-        animation-duration: 2s;
-    }
-
-    .control-btn {
-        transition: none;
-    }
-
-    .status-message {
-        animation: none;
-    }
-}
-
-/* Performance optimization for older devices */
-@media (max-width: 480px) {
-    .scan-page {
-        backdrop-filter: none;
-    }
-
-    .scan-header,
-    .scan-controls {
-        backdrop-filter: none;
-        background: rgba(0, 0, 0, 0.3);
-    }
-
-    .processing-state {
-        backdrop-filter: none;
-        background: rgba(0, 0, 0, 0.9);
+    .video-container {
+        width: 85%;
+        height: 90%;
     }
 }
