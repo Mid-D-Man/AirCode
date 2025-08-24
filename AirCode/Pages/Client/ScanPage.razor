@@ -1,6 +1,10 @@
 @page "/Client/ScanAttendance"
 @layout AirCode.Layout.ClientLayout.ClientLayout
 @using AirCode.Components.SharedPrefabs.Scanner
+@using AirCode.Models.Supabase
+@using AirCode.Services.Auth
+@using AirCode.Services.Courses
+@using AirCode.Services.SupaBase
 <NavigationLock ConfirmExternalNavigation="false" OnBeforeInternalNavigation="@OnBeforeInternalNavigation"></NavigationLock>
 
 <div class="scan-page">
@@ -13,10 +17,7 @@
     <!-- Main Scanner Area -->
     <main class="scanner-main">
         <div class="video-container">
-            <MID_Nmiq_QrCode_Scanner @ref="qrScanner" 
-                                     Width="100%" 
-                                     Height="100%" 
-                                     OnQrCodeDetected="OnQrCodeScanned" />
+            <video id="qrScanner" autoplay muted playsinline style="width: 100%; height: 100%; object-fit: contain; border-radius: 20px;"></video>
             
             <!-- Scan overlay frame -->
             <div class="scan-overlay">
