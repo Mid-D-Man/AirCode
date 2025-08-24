@@ -10,6 +10,9 @@
 @inject QRCodeDecoder QRDecoder
 @inject IAuthService AuthService
 @inject ICourseService CourseService
+@implements IAsyncDisposable
+
+<NavigationLock ConfirmExternalNavigation="false" OnBeforeInternalNavigation="@OnBeforeInternalNavigation"></NavigationLock>
 
 <div class="scan-page">
     <!-- Header -->
@@ -20,36 +23,10 @@
 
     <!-- Main Scanner Area -->
     <main class="scanner-main">
-        <!-- Pure JavaScript QR Scanner (Ultra Fast) -->
-        <div class="video-container" id="qr-video-container">
-            <video id="qr-video" autoplay muted playsinline></video>
-            <canvas id="qr-canvas" style="display: none;"></canvas>
+        <!-- Video element for QR scanning -->
+        <div class="video-container">
+            <video id="qrScanner" autoplay muted playsinline></video>
         </div>
-
-        <!-- Scan Frame Overlay -->
-        <div class="scan-overlay">
-            <div class="scan-frame">
-                <div class="frame-corners">
-                    <div class="corner tl"></div>
-                    <div class="corner tr"></div>
-                    <div class="corner bl"></div>
-                    <div class="corner br"></div>
-                </div>
-                @if (isScanning && !isProcessing)
-                {
-                    <div class="scan-line"></div>
-                }
-            </div>
-        </div>
-
-        <!-- Processing State -->
-        @if (isProcessing)
-        {
-            <div class="processing-state">
-                <div class="spinner"></div>
-                <span>Processing QR Code...</span>
-            </div>
-        }
 
         <!-- Status Messages -->
         @if (!string.IsNullOrEmpty(statusMessage))
@@ -58,6 +35,15 @@
                 <span class="status-icon">@(isSuccess ? "✅" : "⚠️")</span>
                 <span>@statusMessage</span>
                 <button class="close-btn" @onclick="ClearStatus">×</button>
+            </div>
+        }
+
+        <!-- Processing State -->
+        @if (isProcessing)
+        {
+            <div class="processing-state">
+                <div class="spinner"></div>
+                <span>Processing QR Code...</span>
             </div>
         }
     </main>
@@ -79,18 +65,18 @@
             </button>
         }
         
-        @if (isScanning && hasTorch)
+        @if (isScanning)
         {
             <button class="control-btn torch @(torchEnabled ? "active" : "")" @onclick="ToggleTorch">
                 <span class="icon">💡</span>
                 @(torchEnabled ? "Turn Off" : "Turn On") Torch
             </button>
+            
+            <button class="control-btn camera" @onclick="SwitchCamera">
+                <span class="icon">🔄</span>
+                Switch Camera
+            </button>
         }
-        
-        <button class="control-btn camera" @onclick="SwitchCamera">
-            <span class="icon">🔄</span>
-            Switch Camera
-        </button>
     </footer>
 </div>
 
@@ -99,7 +85,6 @@
     private bool isProcessing = false;
     private string statusMessage = string.Empty;
     private bool isSuccess = false;
-    private bool hasTorch = false;
     private bool torchEnabled = false;
     private DotNetObjectReference<ScanPage>? objRef;
 
@@ -116,7 +101,7 @@
             
             objRef = DotNetObjectReference.Create(this);
             
-            MID_HelperFunctions.DebugMessage("Fast QR Scanner initialized successfully", DebugClass.Info);
+            MID_HelperFunctions.DebugMessage("QR Scanner initialized successfully", DebugClass.Info);
         }
         catch (Exception ex)
         {
@@ -128,19 +113,24 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && objRef != null)
+        if (firstRender)
         {
-            await JSRuntime.InvokeVoidAsync("initFastQRScanner", objRef);
+            // Auto-start scanning on first render
             await StartScanning();
         }
     }
 
-    [JSInvokable]
-    public async Task OnQrCodeDetected(string code)
+    private async Task OnBeforeInternalNavigation(LocationChangingContext context)
     {
-        if (!string.IsNullOrEmpty(code) && CanProcessAttendance())
+        await StopScanning();
+    }
+
+    [JSInvokable]
+    public async Task OnQrCodeScanned(string qrCodeData)
+    {
+        if (!string.IsNullOrEmpty(qrCodeData) && CanProcessAttendance())
         {
-            MID_HelperFunctions.DebugMessage($"QR Code detected: {code}", DebugClass.Info);
+            MID_HelperFunctions.DebugMessage($"QR Code detected: {qrCodeData}", DebugClass.Info);
         
             isProcessing = true;
             statusMessage = string.Empty;
@@ -148,7 +138,7 @@
         
             try
             {
-                var decodedSessionData = await QRDecoder.DecodeSessionDataAsync(code);
+                var decodedSessionData = await QRDecoder.DecodeSessionDataAsync(qrCodeData);
 
                 if (decodedSessionData != null)
                 {
@@ -160,7 +150,7 @@
 
                     if (isTakingCourse)
                     {
-                        await ProcessAttendanceWithNewPayload(code);
+                        await ProcessAttendanceWithNewPayload(qrCodeData);
                     }
                     else
                     {
@@ -188,13 +178,6 @@
                 await InvokeAsync(StateHasChanged);
             }
         }
-    }
-
-    [JSInvokable]
-    public async Task OnTorchCapabilityDetected(bool hasTorchSupport)
-    {
-        hasTorch = hasTorchSupport;
-        await InvokeAsync(StateHasChanged);
     }
 
     private async Task ProcessAttendanceWithNewPayload(string qrCode)
@@ -228,8 +211,8 @@
                 isSuccess = true;
                 MID_HelperFunctions.DebugMessage("Attendance recorded successfully!", DebugClass.Info);
                 
-                // Pause scanning briefly after successful scan
-                await JSRuntime.InvokeVoidAsync("pauseScanning", 2000);
+                // Brief pause after successful scan
+                await Task.Delay(2000);
             }
             else
             {
@@ -290,7 +273,7 @@
         {
             isScanning = true;
             statusMessage = string.Empty;
-            await JSRuntime.InvokeVoidAsync("startScanning");
+            await JSRuntime.InvokeVoidAsync("qrScanHelper.startScan", objRef);
             StateHasChanged();
         }
     }
@@ -300,24 +283,21 @@
         if (objRef != null)
         {
             isScanning = false;
-            await JSRuntime.InvokeVoidAsync("stopScanning");
+            await JSRuntime.InvokeVoidAsync("qrScanHelper.stopScan");
             StateHasChanged();
         }
     }
 
     private async Task ToggleTorch()
     {
-        if (hasTorch)
-        {
-            torchEnabled = !torchEnabled;
-            await JSRuntime.InvokeVoidAsync("toggleTorch", torchEnabled);
-            StateHasChanged();
-        }
+        torchEnabled = !torchEnabled;
+        await JSRuntime.InvokeVoidAsync("qrScanHelper.toggleTorch", torchEnabled);
+        StateHasChanged();
     }
 
     private async Task SwitchCamera()
     {
-        await JSRuntime.InvokeVoidAsync("switchCamera");
+        await JSRuntime.InvokeVoidAsync("qrScanHelper.switchCamera");
     }
 
     private void ClearStatus()
@@ -332,7 +312,7 @@
         {
             if (objRef != null)
             {
-                await JSRuntime.InvokeVoidAsync("stopScanning");
+                await JSRuntime.InvokeVoidAsync("qrScanHelper.stopScan");
                 objRef.Dispose();
             }
         }
