@@ -138,8 +138,8 @@
         opacity: 1;
     }
     100% {
-        /* FIXED: Use calc(100% - 3px) to account for line height */
-        transform: translateY(calc(100% - 3px));
+        /* FIXED: Full traversal within scan frame */
+        transform: translateY(calc(100vh * 0.8 * 0.8 - 150px));
         opacity: 0.3;
     }
 }

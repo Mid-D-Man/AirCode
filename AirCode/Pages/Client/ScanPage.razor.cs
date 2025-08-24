@@ -45,7 +45,7 @@ public partial class ScanPage : ComponentBase
     {
         if (firstRender)
         {
-            await StartScanning();
+            // Scanner OFF by default - wait for user action
         }
     }
 

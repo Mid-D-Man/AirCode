@@ -1,6 +1,11 @@
 @page "/Client/ScanAttendance"
 @layout AirCode.Layout.ClientLayout.ClientLayout
 @using AirCode.Components.SharedPrefabs.Scanner
+@using AirCode.Models.Supabase
+@using AirCode.Services.Auth
+@using AirCode.Services.Courses
+@using AirCode.Services.SupaBase
+@using AirCode.Utilities.HelperScripts
 <NavigationLock ConfirmExternalNavigation="false" OnBeforeInternalNavigation="@OnBeforeInternalNavigation"></NavigationLock>
 
 <div class="scan-page">
