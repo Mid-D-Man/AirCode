@@ -1,6 +1,11 @@
 using AirCode.Models.PWA;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
+using AirCode.Models.PWA;
+using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
+using AirCode.Components.SharedPrefabs.Cards;
+using AirCode.Domain.Enums;
 
 namespace AirCode.Components.SharedPrefabs.Others;
 
@@ -15,10 +20,10 @@ public partial class PWAComponent : ComponentBase, IAsyncDisposable
     private IJSObjectReference? _airCodePWA;
     private DotNetObjectReference<PWAComponent>? _dotNetRef;
     private CancellationTokenSource? _cancellationTokenSource;
+    private NotificationComponent? _notificationComponent;
 
     // State
     private PWAStatus _status = new();
-    private string _statusMessage = string.Empty;
     private readonly List<OfflineRoute> _offlineRoutes = new()
     {
         new() { Url = "/", DisplayName = "Dashboard" },
@@ -30,8 +35,6 @@ public partial class PWAComponent : ComponentBase, IAsyncDisposable
         IsOnBasePage && 
         _status.IsInstallable && 
         !_status.IsInstalled;
-
-    private Timer? _statusTimer;
 
     private bool IsOnBasePage
     {
@@ -105,7 +108,7 @@ public partial class PWAComponent : ComponentBase, IAsyncDisposable
             
             if (_airCodePWA == null)
             {
-                SetStatusWithTimeout("PWA not available - running in fallback mode");
+                _notificationComponent?.ShowInfo("PWA not available - running in fallback mode");
                 Console.WriteLine("[PWA Component] PWA manager not available after retries");
                 return;
             }
@@ -122,7 +125,7 @@ public partial class PWAComponent : ComponentBase, IAsyncDisposable
             }
             
             await UpdateStatus();
-            SetStatusWithTimeout("PWA ready");
+            _notificationComponent?.ShowSuccess("PWA ready");
             await InvokeAsync(StateHasChanged);
         }
         catch (OperationCanceledException)
@@ -131,7 +134,7 @@ public partial class PWAComponent : ComponentBase, IAsyncDisposable
         }
         catch (Exception ex)
         {
-            SetStatusWithTimeout($"PWA init failed: {ex.Message}");
+            _notificationComponent?.ShowError($"PWA init failed: {ex.Message}");
             Console.WriteLine($"[PWA Component] Initialization error: {ex}");
         }
     }
@@ -189,21 +192,21 @@ public partial class PWAComponent : ComponentBase, IAsyncDisposable
             {
                 using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
                 var success = await _airCodePWA.InvokeAsync<bool>("install", timeoutCts.Token);
-                SetStatusWithTimeout(success ? "Installing..." : "Install cancelled");
+                _notificationComponent?.ShowInfo(success ? "Installing..." : "Install cancelled");
             }
             catch (OperationCanceledException)
             {
-                SetStatusWithTimeout("Install timed out");
+                _notificationComponent?.ShowWarning("Install timed out");
             }
             catch (Exception ex)
             {
-                SetStatusWithTimeout($"Install failed: {ex.Message}");
+                _notificationComponent?.ShowError($"Install failed: {ex.Message}");
                 Console.WriteLine($"[PWA Component] Install error: {ex}");
             }
         }
         else
         {
-            SetStatusWithTimeout("PWA not available");
+            _notificationComponent?.ShowError("PWA not available");
         }
     }
 
@@ -215,28 +218,28 @@ public partial class PWAComponent : ComponentBase, IAsyncDisposable
             {
                 using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
                 await _airCodePWA.InvokeVoidAsync("applyUpdate", timeoutCts.Token);
-                SetStatusWithTimeout("Updating...");
+                _notificationComponent?.ShowInfo("Updating...");
             }
             catch (OperationCanceledException)
             {
-                SetStatusWithTimeout("Update timed out");
+                _notificationComponent?.ShowWarning("Update timed out");
             }
             catch (Exception ex)
             {
-                SetStatusWithTimeout($"Update failed: {ex.Message}");
+                _notificationComponent?.ShowError($"Update failed: {ex.Message}");
                 Console.WriteLine($"[PWA Component] Update error: {ex}");
             }
         }
         else
         {
-            SetStatusWithTimeout("PWA not available");
+            _notificationComponent?.ShowError("PWA not available");
         }
     }
 
     private async Task CheckForUpdates()
     {
         await UpdateStatus();
-        SetStatusWithTimeout(_status.UpdateAvailable ? "Update available!" : "No updates");
+        _notificationComponent?.ShowInfo(_status.UpdateAvailable ? "Update available!" : "No updates");
     }
 
     // Event handlers - now protected against disposal
@@ -246,7 +249,7 @@ public partial class PWAComponent : ComponentBase, IAsyncDisposable
         if (_cancellationTokenSource?.IsCancellationRequested == true) return;
         
         _status.IsInstallable = true;
-        SetStatusWithTimeout("App can be installed!");
+        _notificationComponent?.ShowSuccess("App can be installed!");
         await InvokeAsync(StateHasChanged);
     }
 
@@ -256,7 +259,7 @@ public partial class PWAComponent : ComponentBase, IAsyncDisposable
         if (_cancellationTokenSource?.IsCancellationRequested == true) return;
         
         _status.UpdateAvailable = true;
-        SetStatusWithTimeout("Update available!");
+        _notificationComponent?.ShowInfo("Update available!");
         await InvokeAsync(StateHasChanged);
     }
 
@@ -267,7 +270,7 @@ public partial class PWAComponent : ComponentBase, IAsyncDisposable
         
         _status.IsInstalled = true;
         _status.IsInstallable = false;
-        SetStatusWithTimeout("App installed successfully!");
+        _notificationComponent?.ShowSuccess("App installed successfully!");
         await InvokeAsync(StateHasChanged);
     }
 
@@ -282,42 +285,15 @@ public partial class PWAComponent : ComponentBase, IAsyncDisposable
         if (wasOffline != !isOnline)
         {
             await OnOfflineStatusChanged.InvokeAsync(!isOnline);
-            SetStatusWithTimeout(isOnline ? "Back online" : "Offline mode");
+            _notificationComponent?.ShowNotification(isOnline ? "Back online" : "Offline mode", 
+                isOnline ? NotificationType.Success : NotificationType.Warning);
         }
         await InvokeAsync(StateHasChanged);
-    }
-
-    private void SetStatusWithTimeout(string message)
-    {
-        if (_cancellationTokenSource?.IsCancellationRequested == true) return;
-        
-        _statusMessage = message;
-        InvokeAsync(StateHasChanged);
-    
-        _statusTimer?.Dispose();
-        _statusTimer = new Timer(ClearStatusCallback, null, 3500, Timeout.Infinite);
-    }
-
-    private void ClearStatusCallback(object? state)
-    {
-        if (_cancellationTokenSource?.IsCancellationRequested == true) return;
-        
-        _statusMessage = string.Empty;
-        InvokeAsync(StateHasChanged);
-        _statusTimer?.Dispose();
-    }
-
-    private void ClearStatus()
-    {
-        _statusMessage = string.Empty;
-        _statusTimer?.Dispose();
-        StateHasChanged();
     }
 
     public async ValueTask DisposeAsync()
     {
         _cancellationTokenSource?.Cancel();
-        _statusTimer?.Dispose();
         
         if (_airCodePWA != null) 
         {

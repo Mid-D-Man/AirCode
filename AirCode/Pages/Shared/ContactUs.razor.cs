@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using System.ComponentModel.DataAnnotations;
+using AirCode.Components.SharedPrefabs.Cards;
+using AirCode.Domain.Enums;
 
 namespace AirCode.Pages.Shared
 {
@@ -12,7 +14,14 @@ namespace AirCode.Pages.Shared
         [Inject]
         private NavigationManager NavigationManager { get; set; }
         [Inject]
- private ConnectivityService ConnectivityService { get; set; } = null!;
+        private ConnectivityService ConnectivityService { get; set; } = null!;
+        
+        // Email configuration
+        private const string SUPPORT_EMAIL = "abdulhamid.m.321@gmail.com";
+        
+        // Notification component reference
+        private NotificationComponent? notificationComponent;
+
         #region Constants
         private const string FAQ_SECTION = "faq";
         private const string GUIDES_SECTION = "guides";
@@ -32,9 +41,6 @@ namespace AirCode.Pages.Shared
         private GuideItem? selectedGuide = null;
         private bool isSubmitting = false;
         private bool isSubmittingError = false;
-        private bool showNotification = false;
-        private string notificationMessage = string.Empty;
-        private string notificationType = "success";
         private string systemStatus = "All Systems Operational";
         private DateTime lastStatusUpdate = DateTime.Now;
 
@@ -507,11 +513,12 @@ Contact support if you experience:
             }
             else if (actionType == "check_connection")
             {
-                await JSRuntime.InvokeVoidAsync("alert", ConnectivityService.IsOnline ? "Internet connection is active" : "No internet connection detected");
+                var message = ConnectivityService.IsOnline ? "Internet connection is active" : "No internet connection detected";
+                notificationComponent?.ShowInfo(message);
             }
             else if (actionType == "clear_cache")
             {
-                await JSRuntime.InvokeVoidAsync("alert", "Please clear your browser cache manually and refresh the page.");
+                notificationComponent?.ShowInfo("Please clear your browser cache manually and refresh the page.");
             }
         }
 
@@ -540,7 +547,7 @@ Contact support if you experience:
                     ShowSection(CONTACT_SECTION);
                     break;
                 case LIVE_CHAT:
-                    ShowNotification("Live chat is not available. Please use the contact form or report issues on GitHub.", "info");
+                    notificationComponent?.ShowInfo("Live chat is not available. Please use the contact form or report issues on GitHub.");
                     break;
                 case REPORT_BUG:
                     NavigationManager.NavigateTo("https://github.com/mid-d-man/AirCode/issues", true);
@@ -557,13 +564,27 @@ Contact support if you experience:
 
                 try
                 {
-                    await Task.Delay(2000); // Simulate processing
-                    ShowNotification("Your message has been received. We'll get back to you via email soon!", "success");
+                    // Simulate email sending process
+                    await Task.Delay(2000);
+                    
+                    // In a real implementation, you would send the email here
+                    // For now, we'll just show a success message
+                    var emailContent = $@"
+Subject: {contactForm.Subject}
+Category: {contactCategories[contactForm.Category]}
+From: {contactForm.Email}
+Message: {contactForm.Message}
+                    ";
+                    
+                    // Log the email content for development purposes
+                    Console.WriteLine($"Email would be sent to {SUPPORT_EMAIL}: {emailContent}");
+                    
+                    notificationComponent?.ShowSuccess("Your message has been received. We'll get back to you via email soon!");
                     ClearContactForm();
                 }
                 catch (Exception ex)
                 {
-                    ShowNotification($"Error sending message: {ex.Message}", "error");
+                    notificationComponent?.ShowError($"Error sending message: {ex.Message}");
                 }
                 finally
                 {
@@ -596,7 +617,7 @@ Contact support if you experience:
                 }
                 catch (Exception ex)
                 {
-                    ShowNotification($"Error: {ex.Message}", "error");
+                    notificationComponent?.ShowError($"Error: {ex.Message}");
                 }
                 finally
                 {
@@ -612,20 +633,6 @@ Contact support if you experience:
             errorReport.Description = string.Empty;
             errorReport.Steps = string.Empty;
             StateHasChanged();
-        }
-
-        private void ShowNotification(string message, string type)
-        {
-            notificationMessage = message;
-            notificationType = type;
-            showNotification = true;
-            StateHasChanged();
-
-            Task.Delay(5000).ContinueWith(_ =>
-            {
-                showNotification = false;
-                InvokeAsync(StateHasChanged);
-            });
         }
         #endregion
 
@@ -665,7 +672,7 @@ Contact support if you experience:
                          IsValidEmail(contactForm.Email);
 
             if (!isValid)
-                ShowNotification("Please fill in all required fields correctly.", "error");
+                notificationComponent?.ShowError("Please fill in all required fields correctly.");
 
             return isValid;
         }
@@ -674,7 +681,7 @@ Contact support if you experience:
         {
             var isValid = !string.IsNullOrWhiteSpace(errorReport.Description);
             if (!isValid)
-                ShowNotification("Please provide an error description.", "error");
+                notificationComponent?.ShowError("Please provide an error description.");
             return isValid;
         }
 

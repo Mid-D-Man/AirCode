@@ -1,8 +1,11 @@
 @* PWAComponent.razor *@
 @using Microsoft.JSInterop
+@using AirCode.Components.SharedPrefabs.Cards
 @implements IAsyncDisposable
 
 <div class="pwa-container">
+    <NotificationComponent @ref="_notificationComponent" />
+    
     @if (!_status.IsOnline)
     {
         <div class="pwa-status offline">
@@ -49,13 +52,5 @@
                 <span>🔍</span> Check Updates
             </button>
         </div>
-    }
-
-    @if (!string.IsNullOrEmpty(_statusMessage))
-    {
-    <div class="pwa-message fade-in">
-        <span class="message-text">@_statusMessage</span>
-        <button class="close-btn" @onclick="ClearStatus">×</button>
-    </div>
     }
 </div>

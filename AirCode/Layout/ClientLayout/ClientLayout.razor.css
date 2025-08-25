@@ -5,7 +5,7 @@
     flex-direction: column;
     height: 100vh;
     width: 100%;
-    background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%); 
+    background: linear-gradient(135deg, #0a142e 0%, #1e40af 100%);
     color: var(--dark-text-color);
     position: relative;
     overflow: hidden;
@@ -91,14 +91,18 @@
     flex: 1;
     padding: 0.75rem;
     overflow-y: auto;
-    background: rgba(255, 255, 255, 0.95);
+    /* Dark gradient background instead of light */
+    background: linear-gradient(135deg, #0f1419 0%, #1a2332 100%);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border-radius: 24px 24px 0 0;
     margin-top: 6px;
     position: relative;
     animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    /* Ensure text is visible on dark background */
+    color: #ffffff;
 }
+
 body:not(.dark-mode) .nav-buttons .circular-button {
     background: rgba(30, 58, 138, 0.9); /* Cobalt blue base */
     color: white;
@@ -116,7 +120,8 @@ body:not(.dark-mode) .nav-buttons .button-content svg {
 body:not(.dark-mode) .nav-buttons .button-text {
     color: white; /* Force white text */
     font-weight: 600;
-    }
+}
+
 .content-bottom::before {
     content: '';
     position: absolute;
@@ -125,9 +130,44 @@ body:not(.dark-mode) .nav-buttons .button-text {
     transform: translateX(-50%);
     width: 32px;
     height: 3px;
-    background: rgba(0, 0, 0, 0.1);
+    background: rgba(255, 255, 255, 0.3); /* Light handle on dark background */
     border-radius: 2px;
     margin-top: 6px;
+}
+
+/* Ensure all content in the dark area is properly styled */
+.content-bottom * {
+    color: inherit;
+}
+
+.content-bottom .card,
+.content-bottom .component {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: white;
+}
+
+.content-bottom input,
+.content-bottom textarea,
+.content-bottom select {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+}
+
+.content-bottom input::placeholder,
+.content-bottom textarea::placeholder {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.content-bottom button {
+    background: rgba(30, 58, 138, 0.8);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.content-bottom button:hover {
+    background: rgba(30, 64, 175, 0.9);
 }
 
 @keyframes slideUp {

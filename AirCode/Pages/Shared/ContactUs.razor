@@ -295,10 +295,7 @@
 </div>
 
 <!-- Success/Error Notifications -->
-@if (showNotification)
-{
     <NotificationComponent 
-        Message="@notificationMessage"
-        Type="@notificationType"
+        Message=""
+        Type=""
         OnClose="() => showNotification = false" />
-}
