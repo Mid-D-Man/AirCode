@@ -1,13 +1,43 @@
 # _headers file for GitHub Pages
 /*
   X-Frame-Options: DENY
-  X-Content-Type-Options: nosniff  
+  X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=()
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdnjs.cloudflare.com https://www.gstatic.com https://firebase.googleapis.com https://www.gstatic.com/firebasejs/ https://*.firebaseio.com https://*.googleapis.com https://*.auth0.com https://*.supabase.co https://*.supabase.io; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://firestore.googleapis.com https://firebase.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com https://*.googleapis.com https://*.supabase.co https://*.supabase.io https://functions.supabase.co https://*.auth0.com wss: ws:; frame-src 'self' https://*.auth0.com https://*.supabase.co https://*.supabase.io https://*.firebaseio.com https://*.firebaseapp.com; worker-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self' https://*.auth0.com; frame-ancestors 'none'; media-src 'self' blob:; child-src 'self' blob:; manifest-src 'self'
 
 /404.html
   X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
   Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; img-src data:; connect-src 'self'; frame-ancestors 'none'
 
-/AirCode/*
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdnjs.cloudflare.com https://www.gstatic.com https://firebase.googleapis.com https://www.gstatic.com/firebasejs/ https://*.auth0.com https://*.supabase.co https://*.supabase.io; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://firestore.googleapis.com https://firebase.googleapis.com https://aircode-4d07c-default-rtdb.firebaseio.com https://aircode-4d07c.firebaseapp.com https://*.googleapis.com https://*.supabase.co https://*.supabase.io https://*.auth0.com https://functions.supabase.co wss: ws:; frame-src 'self' https://*.auth0.com https://*.supabase.co https://*.supabase.io; object-src 'none'; base-uri 'self'; form-action 'self' https://*.auth0.com
+# PWA files
+/manifest.json
+  Content-Type: application/manifest+json
+  Cache-Control: max-age=86400
+
+/service-worker.js
+  Content-Type: application/javascript
+  Cache-Control: no-cache
+
+# Static assets caching
+/css/*
+  Cache-Control: max-age=31536000
+
+/js/*
+  Cache-Control: max-age=31536000
+
+/icons/*
+  Cache-Control: max-age=31536000
+
+/_framework/*
+  Cache-Control: max-age=31536000
+
+# Specific file handling
+/favicon.ico
+  Content-Type: image/x-icon
+  Cache-Control: max-age=86400
+
+*.wasm
+  Content-Type: application/wasm
+  Cache-Control: max-age=31536000
