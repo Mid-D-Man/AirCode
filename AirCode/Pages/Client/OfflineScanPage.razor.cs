@@ -19,7 +19,7 @@ namespace AirCode.Pages.Client
     {
         [Inject] private IOfflineCredentialsService OfllineCredentialsService { get; set; }
         [Inject] private IOfflineAttendanceClientService OfflineAttendanceService { get; set; }
-        [Inject] private ConnectivityService ConnectivityService { get; set; }
+    
         
         private MID_Nmiq_QrCode_Scanner? qrScanner;
         private NotificationComponent? notificationComponent;
