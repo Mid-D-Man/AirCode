@@ -1,40 +1,47 @@
-/* OfflineScanPage - Restructured 3-tier vertical layout */
+/* Mobile-First Responsive QR Scanner - OfflineScanPage.razor.css - COMPLETE DARK THEME */
 
-.offline-scan-page {
-    position: fixed;
-    inset: 0;
-    background: #000;
-    display: grid;
-    grid-template-rows: 10vh 70vh 20vh;
+/* =================================================
+   MOBILE-FIRST BASE STYLES (320px+)
+   ================================================= */
+
+.scan-page {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    background: #000000 !important;
+    color: #ffffff;
     overflow: hidden;
-    z-index: 1000;
+    position: relative;
 }
 
-/* TOP SECTION - 10% */
+/* Header with Status Indicators */
 .scan-header {
-    grid-row: 1;
-    padding: max(env(safe-area-inset-top), 0.5rem) 1rem 0.5rem;
-    background: linear-gradient(180deg, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.3) 100%);
     text-align: center;
-    z-index: 20;
+    padding: 1rem;
+    background: #000000 !important;
+    backdrop-filter: none;
+    min-height: 80px;
+    flex-shrink: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     display: flex;
     flex-direction: column;
     justify-content: center;
 }
 
 .scan-header h3 {
-    color: #ffffff;
-    margin: 0 0 0.25rem;
-    font-size: clamp(1rem, 3vw, 1.2rem);
-    font-weight: 700;
-    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+    margin: 0 0 0.5rem 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #ffffff !important;
+    line-height: 1.2;
 }
 
 .scan-header p {
-    color: rgba(255, 255, 255, 0.8);
-    margin: 0;
-    font-size: clamp(0.7rem, 2.5vw, 0.85rem);
-    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+    margin: 0 0 0.5rem 0;
+    opacity: 0.8;
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.7) !important;
+    line-height: 1.3;
 }
 
 .status-indicators {
@@ -67,149 +74,164 @@
     color: #ffffff;
 }
 
-/* MIDDLE SECTION - 70% - SCANNER ONLY */
-.scan-container {
-    grid-row: 2;
+/* Main Scanner Container - Complete Black */
+.scanner-main {
+    flex: 1;
     position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #000;
+    padding: 0;
+    min-height: 0;
+    background: #000000 !important;
 }
 
-.qr-scanner-container {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #000;
-    z-index: 1;
+/* Video Container - Full black coverage */
+.video-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+    overflow: hidden;
+    background: #000000 !important;
 }
 
-.qr-scanner-container video {
-    position: absolute !important;
-    top: 50% !important;
-    left: 50% !important;
-    transform: translate(-50%, -50%) !important;
-    min-width: 100% !important;
-    min-height: 100% !important;
-    width: auto !important;
-    height: auto !important;
-    object-fit: cover !important;
-}
-
-/* SCANNER FRAME - DEAD CENTER */
-.scan-frame {
+/* Scan Overlay - Optimized for mobile touch */
+.scan-overlay {
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: min(300px, 60vw, 40vh);
-    height: min(300px, 60vw, 40vh);
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    border-radius: 16px;
-    background: rgba(255, 255, 255, 0.02);
-    z-index: 10;
+    width: min(85vw, 85vh);
+    height: min(85vw, 85vh);
     pointer-events: none;
+    z-index: 10;
+}
+
+.scan-frame {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    background: transparent;
+}
+
+.frame-corners {
+    position: absolute;
+    width: 100%;
+    height: 100%;
 }
 
 .corner {
     position: absolute;
     width: 24px;
     height: 24px;
-    border: 3px solid #ffffff;
-    border-radius: 4px;
+    border: 3px solid #4fc3f7;
+    transition: all 0.3s ease;
 }
 
-.corner.top-left {
-    top: -12px;
-    left: -12px;
+.corner.tl {
+    top: -3px;
+    left: -3px;
     border-right: none;
     border-bottom: none;
+    border-top-left-radius: 12px;
 }
 
-.corner.top-right {
-    top: -12px;
-    right: -12px;
+.corner.tr {
+    top: -3px;
+    right: -3px;
     border-left: none;
     border-bottom: none;
+    border-top-right-radius: 12px;
 }
 
-.corner.bottom-left {
-    bottom: -12px;
-    left: -12px;
+.corner.bl {
+    bottom: -3px;
+    left: -3px;
     border-right: none;
     border-top: none;
+    border-bottom-left-radius: 12px;
 }
 
-.corner.bottom-right {
-    bottom: -12px;
-    right: -12px;
+.corner.br {
+    bottom: -3px;
+    right: -3px;
     border-left: none;
     border-top: none;
+    border-bottom-right-radius: 12px;
 }
 
+/* Scan Line Animation - Bright blue on black */
 .scan-line {
     position: absolute;
-    top: 0;
-    left: 12px;
-    right: 12px;
+    top: 8px;
+    left: 8px;
+    right: 8px;
     height: 2px;
-    background: linear-gradient(90deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.4) 20%,
-    #ffffff 50%,
-    rgba(255, 255, 255, 0.4) 80%,
-    transparent 100%);
-    border-radius: 1px;
-    box-shadow: 0 0 12px rgba(255, 255, 255, 0.8);
-    animation: scanMove 2.5s ease-in-out infinite;
+    background: linear-gradient(90deg, transparent, #4fc3f7, transparent);
+    animation: scan-animation 2s ease-in-out infinite;
 }
 
-@keyframes scanMove {
-    0%, 100% {
-        transform: translateY(12px);
-        opacity: 0.8;
+@keyframes scan-animation {
+    0% {
+        transform: translateY(0);
+        opacity: 0.3;
     }
     50% {
-        transform: translateY(calc(100% + 260px));
         opacity: 1;
+    }
+    100% {
+        transform: translateY(calc(min(85vw, 85vh) - 24px));
+        opacity: 0.3;
     }
 }
 
-.processing-overlay {
+/* Processing State - Black background */
+.processing-state {
     position: absolute;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.85);
-    backdrop-filter: blur(16px);
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    z-index: 15;
-}
-
-.processing-overlay span {
-    color: #ffffff;
-    font-size: clamp(1rem, 3vw, 1.2rem);
-    font-weight: 600;
-    margin-top: 1.5rem;
+    background: rgba(0, 0, 0, 0.95) !important;
+    padding: 1rem 1.5rem;
+    border-radius: 12px;
+    backdrop-filter: blur(15px);
+    z-index: 20;
+    border: 1px solid #4fc3f7;
+    min-width: 140px;
 }
 
 .spinner {
-    width: 48px;
-    height: 48px;
-    border: 3px solid rgba(255, 255, 255, 0.2);
-    border-top: 3px solid #ffffff;
+    width: 28px;
+    height: 28px;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-left: 2px solid #4fc3f7;
     border-radius: 50%;
-    animation: spin 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    animation: spin 0.8s linear infinite;
+    margin-bottom: 0.5rem;
 }
 
 @keyframes spin {
-    to { transform: rotate(360deg); }
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
 }
 
+.processing-state span {
+    font-size: 0.85rem;
+    color: #ffffff !important;
+    font-weight: 500;
+}
+
+/* Result Overlay */
 .result-overlay {
     position: absolute;
     top: 50%;
@@ -287,74 +309,138 @@
     transform: translateY(-1px);
 }
 
-/* BOTTOM SECTION - 20% */
-.scan-bottom {
-    grid-row: 3;
+/* Controls and Status - Complete Black Background */
+.scan-controls {
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    background: #000000 !important;
+    backdrop-filter: none;
+    min-height: 120px;
+    justify-content: center;
+    flex-shrink: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.control-buttons {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-    padding: 0.5rem;
-    background: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(16px);
-}
-
-.scan-controls {
-    display: flex;
-    justify-content: center;
-    margin-bottom: 0.5rem;
 }
 
 .control-btn {
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 0.5rem;
-    padding: 0.6rem 1.2rem;
-    background: rgba(255, 255, 255, 0.15);
-    backdrop-filter: blur(20px);
-    color: #ffffff;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 12px;
-    font-size: 0.85rem;
+    padding: 0.75rem 1rem;
+    border: none;
+    border-radius: 8px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.3s ease;
-    min-width: 140px;
-    justify-content: center;
+    transition: all 0.25s ease;
+    backdrop-filter: none;
+    font-size: 0.85rem;
+    min-height: 44px;
+    width: 100%;
+    user-select: none;
+    text-align: center;
 }
 
-.control-btn:hover {
-    background: rgba(255, 255, 255, 0.25);
-    border-color: rgba(255, 255, 255, 0.4);
+.control-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none !important;
 }
 
-.btn-icon { font-size: 0.9rem; }
+.control-btn.start {
+    background: #4fc3f7 !important;
+    color: #000000 !important;
+    box-shadow: 0 2px 8px rgba(79, 195, 247, 0.3);
+    border: 1px solid #4fc3f7;
+}
 
+.control-btn.start:hover:not(:disabled) {
+    background: #38bdf8 !important;
+    transform: translateY(-1px);
+}
+
+.control-btn.start:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.control-btn.stop {
+    background: #f87171 !important;
+    color: #000000 !important;
+    box-shadow: 0 2px 8px rgba(248, 113, 113, 0.3);
+    border: 1px solid #f87171;
+}
+
+.control-btn.stop:hover:not(:disabled) {
+    background: #ef4444 !important;
+    transform: translateY(-1px);
+}
+
+.control-btn.stop:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.control-btn.camera {
+    background: rgba(255, 255, 255, 0.1) !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.control-btn.camera:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.2) !important;
+    transform: translateY(-1px);
+}
+
+.control-btn.camera:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+/* Icon colors */
+.control-btn .icon {
+    color: inherit;
+}
+
+/* Sync Status Panel */
 .sync-status-panel {
     background: rgba(255, 255, 255, 0.08);
     backdrop-filter: blur(16px);
     border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 12px;
-    padding: 0.5rem;
+    padding: 0.75rem;
     color: #ffffff;
     font-size: 0.7rem;
+    margin-top: 0.5rem;
 }
 
-.sync-status-panel.online-mode { border-color: rgba(76, 175, 80, 0.3); }
-.sync-status-panel.offline-mode { border-color: rgba(255, 152, 0, 0.3); }
+.sync-status-panel.online-mode { 
+    border-color: rgba(76, 175, 80, 0.3);
+    background: rgba(76, 175, 80, 0.05);
+}
+
+.sync-status-panel.offline-mode { 
+    border-color: rgba(255, 152, 0, 0.3);
+    background: rgba(255, 152, 0, 0.05);
+}
 
 .status-header {
     display: flex;
     align-items: center;
-    gap: 0.3rem;
+    gap: 0.5rem;
     font-weight: 700;
-    margin-bottom: 0.3rem;
-    font-size: 0.75rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.8rem;
 }
 
 .status-info {
     display: flex;
-    gap: 0.75rem;
-    margin-bottom: 0.3rem;
+    gap: 1rem;
+    margin-bottom: 0.5rem;
     flex-wrap: wrap;
 }
 
@@ -363,18 +449,19 @@
     flex-direction: column;
     gap: 0.1rem;
     flex: 1;
-    min-width: 60px;
+    min-width: 80px;
 }
 
 .label {
     opacity: 0.7;
-    font-size: 0.6rem;
+    font-size: 0.65rem;
     font-weight: 500;
+    text-transform: uppercase;
 }
 
 .value {
     font-weight: 700;
-    font-size: 0.7rem;
+    font-size: 0.75rem;
 }
 
 .value.online-text { color: #90EE90; }
@@ -383,13 +470,14 @@
 
 .sync-btn, .sync-info {
     width: 100%;
-    padding: 0.4rem;
+    padding: 0.6rem;
     border-radius: 8px;
-    font-size: 0.65rem;
+    font-size: 0.7rem;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.3rem;
+    gap: 0.4rem;
+    margin-top: 0.25rem;
 }
 
 .sync-btn {
@@ -398,81 +486,430 @@
     color: #ffffff;
     cursor: pointer;
     transition: all 0.3s ease;
+    font-weight: 600;
 }
 
 .sync-btn:hover:not(:disabled) {
     background: rgba(76, 175, 80, 0.35);
+    transform: translateY(-1px);
+}
+
+.sync-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none !important;
 }
 
 .sync-info {
     background: rgba(255, 255, 255, 0.08);
-    border: none;
+    border: 1px solid rgba(255, 255, 255, 0.1);
     opacity: 0.9;
 }
 
 .sync-info.success {
     background: rgba(76, 175, 80, 0.15);
+    border-color: rgba(76, 175, 80, 0.3);
     color: #E8F5E8;
 }
 
 .spinner-small {
-    width: 10px;
-    height: 10px;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    border-top: 1px solid #fff;
+    width: 12px;
+    height: 12px;
+    border: 1.5px solid rgba(255, 255, 255, 0.3);
+    border-top: 1.5px solid #fff;
     border-radius: 50%;
     animation: spin 1s linear infinite;
 }
 
-/* RESPONSIVE */
-@media (max-width: 480px) {
-    .offline-scan-page {
-        grid-template-rows: 12vh 68vh 20vh;
+/* =================================================
+   SMALL MOBILE LANDSCAPE (481px+)
+   ================================================= */
+
+@media (min-width: 481px) {
+    .scan-header {
+        padding: 1.25rem;
+        min-height: 90px;
     }
 
-    .scan-frame {
-        width: min(260px, 75vw, 35vh);
-        height: min(260px, 75vw, 35vh);
+    .scan-header h3 {
+        font-size: 1.2rem;
+    }
+
+    .scan-header p {
+        font-size: 0.85rem;
+    }
+
+    .scan-overlay {
+        width: min(80vw, 80vh);
+        height: min(80vw, 80vh);
     }
 
     .corner {
-        width: 20px;
-        height: 20px;
+        width: 28px;
+        height: 28px;
+        border-width: 3px;
+    }
+
+    .scan-line {
+        top: 10px;
+        left: 10px;
+        right: 10px;
+        height: 2px;
+    }
+
+    @keyframes scan-animation {
+        0% {
+            transform: translateY(0);
+            opacity: 0.3;
+        }
+        50% {
+            opacity: 1;
+        }
+        100% {
+            transform: translateY(calc(min(80vw, 80vh) - 28px));
+            opacity: 0.3;
+        }
+    }
+
+    .control-buttons {
+        flex-direction: row;
+        gap: 0.75rem;
+    }
+
+    .control-btn {
+        flex: 1;
+        max-width: 160px;
+    }
+
+    .processing-state {
+        padding: 1.5rem 2rem;
+        min-width: 160px;
+    }
+
+    .spinner {
+        width: 32px;
+        height: 32px;
+        border-width: 3px;
+    }
+}
+
+/* =================================================
+   TABLET PORTRAIT (768px+)
+   ================================================= */
+
+@media (min-width: 768px) {
+    .scan-header {
+        min-height: 100px;
+    }
+
+    .scan-header h3 {
+        font-size: 1.4rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .scan-header p {
+        font-size: 0.9rem;
+    }
+
+    .scan-overlay {
+        width: min(70vw, 70vh);
+        height: min(70vw, 70vh);
+    }
+
+    .corner {
+        width: 32px;
+        height: 32px;
+        border-width: 4px;
+    }
+
+    .corner.tl, .corner.tr {
+        top: -4px;
+    }
+
+    .corner.bl, .corner.br {
+        bottom: -4px;
+    }
+
+    .corner.tl, .corner.bl {
+        left: -4px;
+    }
+
+    .corner.tr, .corner.br {
+        right: -4px;
+    }
+
+    .scan-line {
+        height: 3px;
+        top: 12px;
+        left: 12px;
+        right: 12px;
+    }
+
+    @keyframes scan-animation {
+        100% {
+            transform: translateY(calc(min(70vw, 70vh) - 32px));
+        }
+    }
+
+    .scan-controls {
+        padding: 1.5rem;
+        gap: 1rem;
+        min-height: 140px;
+    }
+
+    .control-btn {
+        font-size: 0.9rem;
+        padding: 1rem 1.5rem;
+        min-height: 48px;
+        max-width: 180px;
+    }
+
+    .sync-status-panel {
+        padding: 1rem;
+        font-size: 0.75rem;
+    }
+
+    .status-header {
+        font-size: 0.85rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .status-info {
+        gap: 1.5rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .status-item {
+        min-width: 100px;
+    }
+
+    .label {
+        font-size: 0.7rem;
+    }
+
+    .value {
+        font-size: 0.8rem;
+    }
+}
+
+/* =================================================
+   TABLET LANDSCAPE / SMALL DESKTOP (1025px+)
+   ================================================= */
+
+@media (min-width: 1025px) {
+    .scan-header {
+        min-height: 110px;
+        padding: 1.5rem;
+    }
+
+    .scan-header h3 {
+        font-size: 1.6rem;
+    }
+
+    .scan-header p {
+        font-size: 1rem;
+    }
+
+    .scan-overlay {
+        width: min(60vw, 60vh);
+        height: min(60vw, 60vh);
+    }
+
+    .corner {
+        width: 36px;
+        height: 36px;
+    }
+
+    .scan-line {
+        top: 15px;
+        left: 15px;
+        right: 15px;
+    }
+
+    @keyframes scan-animation {
+        100% {
+            transform: translateY(calc(min(60vw, 60vh) - 36px));
+        }
+    }
+
+    .scan-controls {
+        padding: 2rem;
+        gap: 1.5rem;
+        min-height: 160px;
+    }
+
+    .control-btn {
+        font-size: 1rem;
+        padding: 1.5rem 2rem;
+        min-height: 52px;
+        max-width: 200px;
+        border-radius: 12px;
+    }
+
+    .processing-state {
+        padding: 2rem 2.5rem;
+        border-radius: 15px;
+        min-width: 200px;
+    }
+
+    .processing-state span {
+        font-size: 1rem;
+    }
+
+    .spinner {
+        width: 40px;
+        height: 40px;
+    }
+
+    .sync-status-panel {
+        font-size: 0.8rem;
+    }
+}
+
+/* =================================================
+   LARGE DESKTOP (1280px+)
+   ================================================= */
+
+@media (min-width: 1280px) {
+    .scan-page {
+        max-width: 1200px;
+        margin: 0 auto;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+    }
+
+    .scan-header {
+        min-height: 120px;
+    }
+
+    .scan-header h3 {
+        font-size: 1.8rem;
+    }
+
+    .scan-overlay {
+        width: min(50vw, 50vh);
+        height: min(50vw, 50vh);
+    }
+
+    @keyframes scan-animation {
+        100% {
+            transform: translateY(calc(min(50vw, 50vh) - 36px));
+        }
+    }
+
+    .control-btn:hover:not(:disabled) {
+        transform: translateY(-2px);
+    }
+}
+
+/* =================================================
+   HIGH-DPI DISPLAYS
+   ================================================= */
+
+@media (min-resolution: 192dpi), (min-resolution: 2dppx) {
+    .corner {
         border-width: 2px;
     }
 
-    .corner.top-left { top: -10px; left: -10px; }
-    .corner.top-right { top: -10px; right: -10px; }
-    .corner.bottom-left { bottom: -10px; left: -10px; }
-    .corner.bottom-right { bottom: -10px; right: -10px; }
-
     .scan-line {
-        left: 10px;
-        right: 10px;
+        height: 1px;
     }
 
-    @keyframes scanMove {
-        0%, 100% { transform: translateY(10px); opacity: 0.8; }
-        50% { transform: translateY(240px); opacity: 1; }
+    .processing-state {
+        border-width: 0.5px;
     }
 }
 
-@media (orientation: landscape) and (max-height: 500px) {
-    .offline-scan-page {
-        grid-template-rows: 15% 70% 15%;
-    }
+/* =================================================
+   ACCESSIBILITY & MOTION PREFERENCES
+   ================================================= */
 
-    .scan-frame {
-        width: min(200px, 40vw, 60vh);
-        height: min(200px, 40vw, 60vh);
-    }
-}
-
-/* PERFORMANCE */
 @media (prefers-reduced-motion: reduce) {
-    .scan-line { animation: none; opacity: 0.6; }
-    * { transition: none !important; animation: none !important; }
-    .spinner { animation: spin 2s linear infinite; }
+    .scan-line {
+        animation: none;
+    }
+
+    .spinner, .spinner-small {
+        animation: none;
+    }
+
+    .corner {
+        transition: none;
+    }
+
+    .control-btn, .sync-btn {
+        transition: background-color 0.2s ease;
+    }
 }
 
-.scan-line, .spinner { will-change: transform; backface-visibility: hidden; }
+/* Focus indicators for accessibility */
+.control-btn:focus-visible,
+.sync-btn:focus-visible,
+.continue-btn:focus-visible {
+    outline: 2px solid #4fc3f7;
+    outline-offset: 2px;
+}
+
+/* =================================================
+   ENSURE ALL ELEMENTS ARE DARK
+   ================================================= */
+
+/* Override any light theme styles */
+body:not(.dark-mode) .scan-page,
+body:not(.dark-mode) .scan-header,
+body:not(.dark-mode) .scanner-main,
+body:not(.dark-mode) .video-container,
+body:not(.dark-mode) .scan-controls {
+    background: #000000 !important;
+    color: #ffffff !important;
+}
+
+body:not(.dark-mode) .scan-header h3,
+body:not(.dark-mode) .scan-header p {
+    color: #ffffff !important;
+}
+
+body:not(.dark-mode) .control-btn.camera {
+    background: rgba(255, 255, 255, 0.1) !important;
+    color: #ffffff !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+body:not(.dark-mode) .control-btn.camera:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Make sure video element doesn't show light backgrounds */
+video {
+    background: #000000 !important;
+}
+
+/* Ensure any other elements are dark */
+.scan-page *,
+.scan-page *:before,
+.scan-page *:after {
+    box-sizing: border-box;
+}
+
+/* Force dark backgrounds on any containers */
+.scan-page > *,
+.scan-page div,
+.scan-page section,
+.scan-page article,
+.scan-page main,
+.scan-page header,
+.scan-page footer {
+    background-color: transparent;
+}
+
+/* Only allow specific colored elements */
+.control-btn.start,
+.control-btn.stop,
+.corner,
+.scan-line,
+.processing-state,
+.sync-btn,
+.connection-indicator {
+    /* These elements can have colors as defined above */
+    }
