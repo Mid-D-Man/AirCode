@@ -1,6 +1,7 @@
 @using AirCode.Domain.Entities
 @using AirCode.Services.Courses
 @using AirCode.Components.SharedPrefabs.Cards
+@using AirCode.Components.SharedPrefabs.Spinner
 @using AirCode.Domain.Enums
 @inject ICourseService CourseService
 
@@ -70,7 +71,7 @@
     <!-- Add Course Modal -->
     @if (ShowModal)
     {
-        <div class="modal-overlay" @onclick="HideAddCourseModal">
+        <div class="modal-overlay @(ShowModal ? "visible" : "")" @onclick="HideAddCourseModal">
             <div class="modal-content" @onclick:stopPropagation="true">
                 <div class="modal-header">
                     <h4>
@@ -83,9 +84,9 @@
                 <div class="modal-body">
                     @if (IsLoadingCourses)
                     {
-                        <div style="text-align: center; padding: 2rem;">
-                            <div class="loading-spinner" style="width: 40px; height: 40px; border-width: 4px; margin-bottom: 1rem;"></div>
-                            <p style="color: var(--text-secondary);">Loading available courses...</p>
+                        <div class="loading-container">
+                            <LoadingSpinner Title="Loading Courses" 
+                                          Subtitle="Fetching available courses..." />
                         </div>
                     }
                     else if (AvailableCourses?.Any() == true)
@@ -103,8 +104,10 @@
                                 {
                                     <div class="selectable-course-item" @onclick="() => ShowAddConfirmation(course.CourseCode, course.Name)">
                                         <div class="course-info">
-                                            <span class="course-code">@course.CourseCode</span>
-                                            <span class="course-name">@course.Name</span>
+                                            <div class="course-primary">
+                                                <span class="course-code">@course.CourseCode</span>
+                                                <span class="course-name">@course.Name</span>
+                                            </div>
                                             <div class="course-details">
                                                 <span>@course.DepartmentId</span>
                                                 <span>Level @((int)course.Level + 100)</span>
@@ -116,8 +119,8 @@
                             }
                             else
                             {
-                                <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
-                                    <i class="fas fa-search" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+                                <div class="no-results">
+                                    <i class="fas fa-search" style="font-size: 2rem; margin-bottom: 1rem; opacity: 0.5;"></i>
                                     <p>No courses match your search criteria.</p>
                                 </div>
                             }
@@ -125,8 +128,8 @@
                     }
                     else
                     {
-                        <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
-                            <i class="fas fa-exclamation-circle" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+                        <div class="no-results">
+                            <i class="fas fa-exclamation-circle" style="font-size: 2rem; margin-bottom: 1rem; opacity: 0.5;"></i>
                             <p>No available courses found.</p>
                         </div>
                     }
@@ -138,207 +141,11 @@
     <!-- Confirmation Dialogs -->
     @if (ShowAddConfirmationDialog)
     {
-        <div class="modal-overlay">
+        <div class="modal-overlay visible">
             <div class="confirmation-dialog">
                 <h4>
                     <i class="fas fa-plus-circle" style="color: var(--success); margin-right: 0.5rem;"></i>
                     Confirm Add Course
                 </h4>
                 <p>Are you sure you want to add <strong>@_confirmationCourseName (@_confirmationCourseCode)</strong>?</p>
-                <div class="confirmation-buttons">
-                    <button class="btn-cancel" @onclick="HideAddConfirmation">Cancel</button>
-                    <button class="btn-confirm" @onclick="ConfirmAddCourse" disabled="@IsLoading" 
-                            style="background-color: var(--success);">
-                        @if (IsLoading)
-                        {
-                            <div class="loading-spinner" style="width: 16px; height: 16px; border-width: 2px; margin-right: 0.5rem;"></div>
-                        }
-                        Add Course
-                    </button>
-                </div>
-            </div>
-        </div>
-    }
-
-    @if (ShowRemoveConfirmationDialog)
-    {
-        <div class="modal-overlay">
-            <div class="confirmation-dialog">
-                <h4>
-                    <i class="fas fa-exclamation-triangle" style="color: var(--warning); margin-right: 0.5rem;"></i>
-                    Confirm Remove Course
-                </h4>
-                <p>Are you sure you want to remove <strong>@_confirmationCourseName (@_confirmationCourseCode)</strong>?</p>
-                <div class="confirmation-buttons">
-                    <button class="btn-cancel" @onclick="HideRemoveConfirmation">Cancel</button>
-                    <button class="btn-confirm" @onclick="ConfirmRemoveCourse" disabled="@IsLoading">
-                        @if (IsLoading)
-                        {
-                            <div class="loading-spinner" style="width: 16px; height: 16px; border-width: 2px; margin-right: 0.5rem;"></div>
-                        }
-                        Remove Course
-                    </button>
-                </div>
-            </div>
-        </div>
-    }
-</div>
-
-<!-- Notification Component -->
-<NotificationComponent @ref="NotificationRef" Position="NotificationPosition.TopRight" AutoDismissTime="4000" />
-
-@code {
-    //course managment for lecturers
-    [Parameter] public List<Course> AssignedCourses { get; set; } = new();
-    [Parameter] public string UserId { get; set; } = "";
-    [Parameter] public string SectionTitle { get; set; } = "Assigned Courses";
-    [Parameter] public string AddButtonText { get; set; } = "Add Course";
-    [Parameter] public EventCallback<string> OnCourseAdded { get; set; }
-    [Parameter] public EventCallback<string> OnCourseRemoved { get; set; }
-
-    private NotificationComponent NotificationRef;
-    private List<Course> AvailableCourses = new();
-    private List<Course> FilteredCourses = new();
-    private bool ShowModal = false;
-    private bool ShowAddConfirmationDialog = false;
-    private bool ShowRemoveConfirmationDialog = false;
-    private bool IsLoading = false;
-    private bool IsLoadingCourses = false;
-    private string SearchTerm = "";
-    private string _confirmationCourseCode = "";
-    private string _confirmationCourseName = "";
-    private string _loadingCourseCode = null;
-
-    private async Task ShowAddCourseModal()
-    {
-        ShowModal = true;
-        IsLoadingCourses = true;
-        StateHasChanged();
-
-        try
-        {
-            var allCourses = await CourseService.GetAllCoursesAsync();
-            var assignedCourseIds = AssignedCourses?.Select(c => c.CourseCode).ToHashSet() ?? new HashSet<string>();
-
-            AvailableCourses = allCourses?.Where(c => !assignedCourseIds.Contains(c.CourseCode)).ToList() ?? new();
-            FilteredCourses = new List<Course>(AvailableCourses);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error loading available courses: {ex.Message}");
-            NotificationRef?.ShowError("Failed to load available courses. Please try again.");
-            AvailableCourses = new();
-            FilteredCourses = new();
-        }
-        finally
-        {
-            IsLoadingCourses = false;
-            StateHasChanged();
-        }
-    }
-
-    private void HideAddCourseModal()
-    {
-        ShowModal = false;
-        SearchTerm = "";
-        FilteredCourses.Clear();
-        AvailableCourses.Clear();
-    }
-
-    private void ShowAddConfirmation(string courseCode, string courseName)
-    {
-        _confirmationCourseCode = courseCode;
-        _confirmationCourseName = courseName;
-        ShowAddConfirmationDialog = true;
-        HideAddCourseModal();
-    }
-
-    private void HideAddConfirmation()
-    {
-        ShowAddConfirmationDialog = false;
-        _confirmationCourseCode = "";
-        _confirmationCourseName = "";
-    }
-
-    private void ShowRemoveConfirmation(string courseCode, string courseName)
-    {
-        _confirmationCourseCode = courseCode;
-        _confirmationCourseName = courseName;
-        ShowRemoveConfirmationDialog = true;
-    }
-
-    private void HideRemoveConfirmation()
-    {
-        ShowRemoveConfirmationDialog = false;
-        _confirmationCourseCode = "";
-        _confirmationCourseName = "";
-    }
-
-    private void FilterCourses(ChangeEventArgs e)
-    {
-        SearchTerm = e.Value?.ToString() ?? "";
-
-        if (string.IsNullOrWhiteSpace(SearchTerm))
-        {
-            FilteredCourses = new List<Course>(AvailableCourses);
-        }
-        else
-        {
-            FilteredCourses = AvailableCourses.Where(c =>
-                c.CourseCode.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase) ||
-                c.Name.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase) ||
-                c.DepartmentId.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase)
-            ).ToList();
-        }
-    }
-
-    private async Task ConfirmAddCourse()
-    {
-        IsLoading = true;
-        _loadingCourseCode = null;
-        StateHasChanged();
-
-        try
-        {
-            await OnCourseAdded.InvokeAsync(_confirmationCourseCode);
-            NotificationRef?.ShowSuccess($"Successfully added {_confirmationCourseName} ({_confirmationCourseCode})");
-        }
-        catch (Exception ex)
-        {
-            NotificationRef?.ShowError($"Failed to add course {_confirmationCourseCode}. Please try again.");
-            Console.WriteLine($"Error adding course: {ex.Message}");
-        }
-        finally
-        {
-            IsLoading = false;
-            _loadingCourseCode = null;
-            HideAddConfirmation();
-            StateHasChanged();
-        }
-    }
-
-    private async Task ConfirmRemoveCourse()
-    {
-        IsLoading = true;
-        _loadingCourseCode = _confirmationCourseCode;
-        StateHasChanged();
-
-        try
-        {
-            await OnCourseRemoved.InvokeAsync(_confirmationCourseCode);
-            NotificationRef?.ShowSuccess($"Successfully removed {_confirmationCourseName} ({_confirmationCourseCode})");
-        }
-        catch (Exception ex)
-        {
-            NotificationRef?.ShowError($"Failed to remove course {_confirmationCourseCode}. Please try again.");
-            Console.WriteLine($"Error removing course: {ex.Message}");
-        }
-        finally
-        {
-            IsLoading = false;
-            _loadingCourseCode = null;
-            HideRemoveConfirmation();
-            StateHasChanged();
-        }
-    }
-}
+                <div
