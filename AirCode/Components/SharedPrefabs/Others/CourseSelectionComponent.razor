@@ -1,6 +1,7 @@
 @using AirCode.Domain.Entities
 @using AirCode.Domain.Enums
 @using AirCode.Services.Courses
+@using AirCode.Components.SharedPrefabs.Spinner
 @inject ICourseService CourseService
 
 @if (IsVisible)
@@ -60,8 +61,8 @@
                     @if (IsLoadingCourses)
                     {
                         <div class="loading-indicator">
-                            <div class="loading-spinner" style="width: 40px; height: 40px; border-width: 4px; margin-bottom: 1rem;"></div>
-                            <p style="color: var(--text-secondary);">Loading available courses...</p>
+                            <LoadingSpinner Title="Loading Courses" 
+                                          Subtitle="Fetching available courses..." />
                         </div>
                     }
                     else if (FilteredCourses?.Any() == true)
@@ -113,7 +114,11 @@
                         disabled="@(SelectedCourse == null || IsLoading)">
                     @if (IsLoading)
                     {
-                        <div class="loading-spinner" style="width: 16px; height: 16px; border-width: 2px; margin-right: 0.5rem;"></div>
+                        <LoadingSpinner Title="" Subtitle="" />
+                    }
+                    else
+                    {
+                        <i class="fas fa-check"></i>
                     }
                     Select Course
                 </button>
