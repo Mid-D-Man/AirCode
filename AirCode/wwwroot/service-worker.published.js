@@ -7,7 +7,7 @@ const offlineAssetsInclude = [
     /\.dll$/, /\.pdb$/, /\.wasm/, /\.html/, /\.js$/,
     /\.json$/, /\.css$/, /\.woff$/, /\.woff2$/,
     /\.png$/, /\.jpe?g$/, /\.gif$/, /\.ico$/,
-    /\.blat$/, /\.dat$/, /\.svg$/
+    /\.blat$/, /\.dat$/, /\.svg$/, /\.map$/  
 ];
 const offlineAssetsExclude = [ /^service-worker\.js$/ ];
 
