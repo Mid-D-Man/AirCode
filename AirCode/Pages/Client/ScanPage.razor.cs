@@ -1,11 +1,13 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Routing;
 using AirCode.Components.SharedPrefabs.Scanner;
+using AirCode.Components.SharedPrefabs.Cards;
 using AirCode.Models.Supabase;
 using AirCode.Services.Auth;
 using AirCode.Services.Courses;
 using AirCode.Services.SupaBase;
 using AirCode.Utilities.HelperScripts;
+using AirCode.Domain.Enums;
 
 namespace AirCode.Pages.Client;
 
@@ -17,10 +19,9 @@ public partial class ScanPage : ComponentBase
     [Inject] public ICourseService CourseService { get; set; } = null!;
 
     private MID_Nmiq_QrCode_Scanner? qrScanner;
+    private NotificationComponent? notificationComponent;
     private bool isScanning = false;
     private bool isProcessing = false;
-    private string statusMessage = string.Empty;
-    private bool isSuccess = false;
     private string currentUserMatricNumber = "SukaBlak";
     private string deviceGUID = "N";
     
@@ -35,8 +36,6 @@ public partial class ScanPage : ComponentBase
         }
         catch (Exception ex)
         {
-            statusMessage = "Failed to initialize scanner";
-            isSuccess = false;
             MID_HelperFunctions.DebugMessage($"Failed to initialize scanner: {ex.Message}", DebugClass.Exception);
         }
     }
@@ -61,7 +60,6 @@ public partial class ScanPage : ComponentBase
             MID_HelperFunctions.DebugMessage($"QR Code detected: {qrCodeData}", DebugClass.Info);
         
             isProcessing = true;
-            statusMessage = string.Empty;
             await InvokeAsync(StateHasChanged);
         
             try
@@ -82,22 +80,19 @@ public partial class ScanPage : ComponentBase
                     }
                     else
                     {
-                        statusMessage = "You are not enrolled in this course";
-                        isSuccess = false;
+                        ShowNotification("You are not enrolled in this course", NotificationType.Warning);
                         MID_HelperFunctions.DebugMessage("You are not taking this course", DebugClass.Warning);
                     }
                 }
                 else
                 {
-                    statusMessage = "Invalid QR code format";
-                    isSuccess = false;
+                    ShowNotification("Invalid QR code format", NotificationType.Error);
                     MID_HelperFunctions.DebugMessage("QR code is not a valid AirCode attendance QR", DebugClass.Warning);
                 }
             }
             catch (Exception ex)
             {
-                statusMessage = "Error processing QR code";
-                isSuccess = false;
+                ShowNotification("Error processing QR code", NotificationType.Error);
                 MID_HelperFunctions.DebugMessage($"Error processing QR code: {ex.Message}", DebugClass.Exception);
             }
             finally
@@ -126,8 +121,7 @@ public partial class ScanPage : ComponentBase
             
             if (edgeFunctionRequest == null)
             {
-                statusMessage = "Failed to create valid request";
-                isSuccess = false;
+                ShowNotification("Failed to create valid request", NotificationType.Error);
                 return;
             }
         
@@ -135,26 +129,26 @@ public partial class ScanPage : ComponentBase
         
             if (result.Success)
             {
-                statusMessage = "Attendance recorded successfully!";
-                isSuccess = true;
+                ShowNotification("Attendance recorded successfully!", NotificationType.Success);
                 MID_HelperFunctions.DebugMessage("Attendance recorded successfully!", DebugClass.Info);
-                
-                await Task.Delay(2000);
             }
             else
             {
                 var userFriendlyMessage = GetUserFriendlyErrorMessage(result.ErrorCode, result.Message);
-                statusMessage = userFriendlyMessage;
-                isSuccess = false;
+                ShowNotification(userFriendlyMessage, NotificationType.Error);
                 MID_HelperFunctions.DebugMessage($"Attendance processing failed: {result.Message}", DebugClass.Warning);
             }
         }
         catch (Exception ex)
         {
-            statusMessage = "Failed to process attendance";
-            isSuccess = false;
+            ShowNotification("Failed to process attendance", NotificationType.Error);
             MID_HelperFunctions.DebugMessage($"Exception in ProcessAttendanceWithNewPayload: {ex}", DebugClass.Exception);
         }
+    }
+
+    private void ShowNotification(string message, NotificationType type)
+    {
+        notificationComponent?.ShowNotification(message, type);
     }
 
     private string GetUserFriendlyErrorMessage(string errorCode, string originalMessage)
@@ -183,8 +177,7 @@ public partial class ScanPage : ComponentBase
         
         if (string.IsNullOrWhiteSpace(currentUserMatricNumber))
         {
-            statusMessage = "User not logged in";
-            isSuccess = false;
+            ShowNotification("User not logged in", NotificationType.Error);
             return false;
         }
 
@@ -196,7 +189,6 @@ public partial class ScanPage : ComponentBase
         if (qrScanner != null)
         {
             isScanning = true;
-            statusMessage = string.Empty;
             await qrScanner.StartScanningAsync();
             StateHasChanged();
         }
@@ -218,11 +210,5 @@ public partial class ScanPage : ComponentBase
         {
             await qrScanner.SwitchCameraAsync();
         }
-    }
-
-    private void ClearStatus()
-    {
-        statusMessage = string.Empty;
-        StateHasChanged();
     }
 }
