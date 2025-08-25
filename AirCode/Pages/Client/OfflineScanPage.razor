@@ -3,15 +3,21 @@
 @using AirCode.Layout.FullScreen
 @using AirCode.Models.Supabase
 @using AirCode.Services.SupaBase
-@using ReactorBlazorQRCodeScanner
+@using AirCode.Components.SharedPrefabs.Scanner
+@using AirCode.Components.SharedPrefabs.Cards
 @using AirCode.Utilities.HelperScripts
 @using AirCode.Services.Attendance
+@using AirCode.Domain.Enums
 @inject QRCodeDecoder QRDecoder
 @inject IOfflineSyncService OfflineSyncService
+@inject ConnectivityService ConnectivityService
 @layout FullScreenLayout
 
-<div class="offline-scan-page">
-    <div class="scan-header">
+<NavigationLock ConfirmExternalNavigation="false" OnBeforeInternalNavigation="@OnBeforeInternalNavigation"></NavigationLock>
+
+<div class="scan-page">
+    <!-- Header -->
+    <header class="scan-header">
         <h3>Smart Attendance Scan</h3>
         <p>Scan QR codes for automatic online/offline attendance recording</p>
         <div class="status-indicators">
@@ -20,26 +26,37 @@
                 <span class="status-text">@(isOnline ? "Online" : "Offline") Mode</span>
             </div>
         </div>
-    </div>
-    
-    <div class="scan-container @(isProcessing ? "processing" : "") @(scanComplete ? "scan-complete" : "")">
-        <div class="qr-scanner-container">
-            <QRCodeScanner ShowOutput="false" Width="100%" />
+    </header>
+
+    <!-- Main Scanner Area -->
+    <main class="scanner-main">
+        <div class="video-container">
+            <MID_Nmiq_QrCode_Scanner @ref="qrScanner" 
+                                     Width="100%" 
+                                     Height="100%" 
+                                     OnQrCodeDetected="OnQrCodeScanned" />
+            
+            <!-- Scan overlay frame -->
+            <div class="scan-overlay">
+                <div class="scan-frame">
+                    <div class="frame-corners">
+                        <div class="corner tl"></div>
+                        <div class="corner tr"></div>
+                        <div class="corner bl"></div>
+                        <div class="corner br"></div>
+                    </div>
+                    @if (isScanning && !isProcessing)
+                    {
+                        <div class="scan-line"></div>
+                    }
+                </div>
+            </div>
         </div>
 
-        <!-- Scan frame overlay -->
-        <div class="scan-frame">
-            <div class="corner top-left"></div>
-            <div class="corner top-right"></div>
-            <div class="corner bottom-left"></div>
-            <div class="corner bottom-right"></div>
-            <div class="scan-line"></div>
-        </div>
-
-        <!-- Processing overlay -->
+        <!-- Processing State -->
         @if (isProcessing)
         {
-            <div class="processing-overlay">
+            <div class="processing-state">
                 <div class="spinner"></div>
                 <span>Processing QR Code...</span>
             </div>
@@ -63,20 +80,32 @@
                 <button class="continue-btn" @onclick="ContinueScanning">Continue Scanning</button>
             </div>
         }
+    </main>
 
-        <div class="scan-controls">
+    <!-- Controls and Status -->
+    <footer class="scan-controls">
+        <!-- Scanner Controls -->
+        <div class="control-buttons">
             @if (isScanning)
             {
-                <button class="control-btn" @onclick="StopScanning">
-                    <span class="btn-icon">⏸</span>
+                <button class="control-btn stop" @onclick="StopScanning" disabled="@isProcessing">
+                    <span class="icon">⏸</span>
                     Stop Scanner
                 </button>
             }
             else
             {
-                <button class="control-btn" @onclick="StartScanning">
-                    <span class="btn-icon">▶</span>
+                <button class="control-btn start" @onclick="StartScanning">
+                    <span class="icon">▶</span>
                     Start Scanner
+                </button>
+            }
+            
+            @if (isScanning)
+            {
+                <button class="control-btn camera" @onclick="SwitchCamera">
+                    <span class="icon">🔄</span>
+                    Switch Camera
                 </button>
             }
         </div>
@@ -89,20 +118,10 @@
             </div>
             
             <div class="status-info">
-                @if (isOnline)
-                {
-                    <div class="status-item">
-                        <span class="label">Connection:</span>
-                        <span class="value online-text">✅ Online</span>
-                    </div>
-                }
-                else
-                {
-                    <div class="status-item">
-                        <span class="label">Connection:</span>
-                        <span class="value offline-text">📴 Offline</span>
-                    </div>
-                }
+                <div class="status-item">
+                    <span class="label">Connection:</span>
+                    <span class="value @(isOnline ? "online-text" : "offline-text")">@(isOnline ? "✅ Online" : "📴 Offline")</span>
+                </div>
                 
                 <div class="status-item">
                     <span class="label">Pending Records:</span>
@@ -147,5 +166,13 @@
                 </div>
             }
         </div>
-    </div>
+    </footer>
 </div>
+
+<!-- Notification Component -->
+<NotificationComponent @ref="notificationComponent" 
+                      Position="NotificationPosition.TopRight" 
+                      AutoDismissTime="4000" 
+                      ShowProgressBar="true" 
+                      ShowCloseButton="true" 
+                      PauseOnHover="true" />
