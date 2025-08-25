@@ -1,11 +1,13 @@
 @page "/Client/ScanAttendance"
 @layout AirCode.Layout.ClientLayout.ClientLayout
 @using AirCode.Components.SharedPrefabs.Scanner
+@using AirCode.Components.SharedPrefabs.Cards
 @using AirCode.Models.Supabase
 @using AirCode.Services.Auth
 @using AirCode.Services.Courses
 @using AirCode.Services.SupaBase
 @using AirCode.Utilities.HelperScripts
+@using AirCode.Domain.Enums
 <NavigationLock ConfirmExternalNavigation="false" OnBeforeInternalNavigation="@OnBeforeInternalNavigation"></NavigationLock>
 
 <div class="scan-page">
@@ -39,16 +41,6 @@
                 </div>
             </div>
         </div>
-
-        <!-- Status Messages -->
-        @if (!string.IsNullOrEmpty(statusMessage))
-        {
-            <div class="status-message @(isSuccess ? "success" : "error")">
-                <span class="status-icon">@(isSuccess ? "✅" : "⚠️")</span>
-                <span>@statusMessage</span>
-                <button class="close-btn" @onclick="ClearStatus">×</button>
-            </div>
-        }
 
         <!-- Processing State -->
         @if (isProcessing)
@@ -86,3 +78,11 @@
         }
     </footer>
 </div>
+
+<!-- Notification Component -->
+<NotificationComponent @ref="notificationComponent" 
+                      Position="NotificationPosition.TopRight" 
+                      AutoDismissTime="4000" 
+                      ShowProgressBar="true" 
+                      ShowCloseButton="true" 
+                      PauseOnHover="true" />
