@@ -201,69 +201,6 @@
     font-weight: 500;
 }
 
-/* Status Messages - Dark with colored accents */
-.status-message {
-    position: absolute;
-    top: 0.5rem;
-    left: 0.5rem;
-    right: 0.5rem;
-    padding: 0.75rem 1rem;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
-    z-index: 15;
-    backdrop-filter: blur(10px);
-    animation: slideDown 0.3s ease-out;
-    font-size: 0.85rem;
-    font-weight: 500;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
-}
-
-.status-message.success {
-    background: rgba(0, 0, 0, 0.9) !important;
-    color: #4ade80 !important;
-    border: 1px solid #4ade80;
-}
-
-.status-message.error {
-    background: rgba(0, 0, 0, 0.9) !important;
-    color: #f87171 !important;
-    border: 1px solid #f87171;
-}
-
-.status-message .close-btn {
-    background: none;
-    border: none;
-    color: inherit;
-    font-size: 1.2rem;
-    cursor: pointer;
-    padding: 0;
-    width: 20px;
-    height: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 0.8;
-    transition: opacity 0.2s ease;
-}
-
-.status-message .close-btn:hover {
-    opacity: 1;
-}
-
-@keyframes slideDown {
-    from {
-        transform: translateY(-100%);
-        opacity: 0;
-    }
-    to {
-        transform: translateY(0);
-        opacity: 1;
-    }
-}
-
 /* Controls - Complete Black Background */
 .scan-controls {
     padding: 1rem;
@@ -498,15 +435,6 @@
         min-height: 48px;
         max-width: 180px;
     }
-
-    .status-message {
-        top: 1rem;
-        left: 1.5rem;
-        right: 1.5rem;
-        font-size: 0.9rem;
-        padding: 1rem 1.5rem;
-        border-radius: 10px;
-    }
 }
 
 /* =================================================
@@ -613,13 +541,6 @@
     .control-btn:hover:not(:disabled) {
         transform: translateY(-2px);
     }
-
-    .status-message {
-        max-width: 400px;
-        left: 50%;
-        right: auto;
-        transform: translateX(-50%);
-    }
 }
 
 /* =================================================
@@ -660,21 +581,12 @@
     .control-btn {
         transition: background-color 0.2s ease;
     }
-
-    .status-message {
-        animation: none;
-    }
 }
 
 /* Focus indicators for accessibility */
 .control-btn:focus-visible {
     outline: 2px solid #4fc3f7;
     outline-offset: 2px;
-}
-
-.status-message .close-btn:focus-visible {
-    outline: 1px solid currentColor;
-    outline-offset: 1px;
 }
 
 /* =================================================
@@ -734,8 +646,6 @@ video {
 .control-btn.stop,
 .corner,
 .scan-line,
-.status-message.success,
-.status-message.error,
 .processing-state {
     /* These elements can have colors as defined above */
-}
+   }
