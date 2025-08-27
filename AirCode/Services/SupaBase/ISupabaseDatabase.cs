@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Supabase.Postgrest;
 using Supabase.Postgrest.Models;
+using AirCode.Models.Supabase;
 
 namespace AirCode.Services.SupaBase
 {
@@ -52,5 +53,25 @@ namespace AirCode.Services.SupaBase
         /// Execute a custom RPC function
         /// </summary>
         Task<T> ExecuteRpcAsync<T>(string functionName, object? parameters);
+
+        // Security Violation Logs
+        Task<bool> LogSecurityViolationAsync(string userId, string userEmail, List<SecurityViolation> violations, Dictionary<string, object>? metadata = null);
+        Task<List<SecurityViolationLog>> GetSecurityViolationsAsync(string? userId = null);
+        Task<bool> CleanExpiredSecurityViolationsAsync();
+
+        // Messages to Superior Admin
+        Task<bool> SendMessageToAdminAsync(string userId, string userEmail, List<AdminMessage> messages, Dictionary<string, object>? metadata = null);
+        Task<List<MessageToSuperiorAdmin>> GetAdminMessagesAsync(string? userId = null);
+        Task<bool> CleanExpiredAdminMessagesAsync();
+
+        // User Notification Messages
+        Task<bool> SendNotificationAsync(string senderUserId, string senderEmail, string receiverUserId, string receiverEmail, List<NotificationMessage> messages, bool isSystemMessage = false, Dictionary<string, object>? metadata = null);
+        Task<List<UserNotificationMessage>> GetUserNotificationsAsync(string userId, bool unreadOnly = false);
+        Task<bool> MarkNotificationAsReadAsync(long notificationId);
+        Task<bool> CleanExpiredNotificationsAsync();
+        
+        // Local Storage Backup for Critical Messages
+        Task BackupCriticalDataLocallyAsync(object data, string dataType);
+        Task<List<T>> GetLocalBackupsAsync<T>(string dataType);
     }
 }
