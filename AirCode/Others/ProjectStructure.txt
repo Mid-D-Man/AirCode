@@ -1,7 +1,7 @@
 Project Structure Documentation
-Generated: Wed Aug 27 22:37:53 UTC 2025
+Generated: Wed Aug 27 22:58:33 UTC 2025
 Repository: Mid-D-Man/AirCode
-Commit: 858fb113eb21e007758cd918b846629792d6bcf0
+Commit: a4b7cf619330a9d771cb29b5dc15edf9efa21e41
 ==================================
 
 Source Files:
@@ -126,6 +126,7 @@ Models/PWA/PWAModels.cs
 Models/QRCode/QRCodePayloadData.cs
 Models/Search/SearchModels.cs
 Models/Supabase/SupabaseAttendanceSession.cs
+Models/Supabase/SupabaseMessageModel.cs
 Models/Supabase/TestData.cs
 Models/UI/NavigationModels.cs
 Pages/Admin/Shared/CreateAttendanceEvent.razor
@@ -344,7 +345,7 @@ Directory Structure:
 
 File Count Summary:
 ==================
-.cs       : 112 files
+.cs       : 113 files
 .razor    : 68 files
 .csproj   : 1 files
 .json     : 12 files
