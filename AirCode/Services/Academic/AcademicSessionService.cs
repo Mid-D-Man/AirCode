@@ -385,35 +385,7 @@ namespace AirCode.Services.Academic
             return startedSemesters;
         }
 
-        public async Task ProcessSessionEndAsync(AcademicSession endedSession, string triggeredBy)
-        {
-            try
-            {
-                _logger.LogInformation($"Processing session end for: {endedSession.SessionId}");
-
-                // Mark transition as processed first to prevent duplicate processing
-                await MarkTransitionProcessedAsync(endedSession.SessionId, TransitionType.SessionEnd, triggeredBy);
-
-                // Perform session end logic here:
-                // 1. Archive session data
-                // 2. Generate final reports
-                // 3. Send notifications
-                // 4. Clean up temporary data
-                // 5. Update student records
-
-                // Example session end tasks:
-                await ArchiveSessionDataAsync(endedSession);
-                await GenerateSessionReportsAsync(endedSession);
-                await NotifySessionEndAsync(endedSession);
-
-                _logger.LogInformation($"Session end processing completed for: {endedSession.SessionId}");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Error processing session end for: {endedSession.SessionId}");
-                throw;
-            }
-        }
+       
 
         public async Task ProcessSemesterEndAsync(Semester endedSemester, string triggeredBy)
         {
@@ -1137,6 +1109,148 @@ namespace AirCode.Services.Academic
         }
 
         #endregion
+
+        // Add to AcademicSessionService.cs
+
+#region Student Level Management
+
+/// <summary>
+/// Process student level promotions at session end
+/// </summary>
+private async Task ProcessStudentLevelPromotionsAsync(AcademicSession endedSession)
+{
+    try
+    {
+        _logger.LogInformation($"Processing level promotions for session: {endedSession.SessionId}");
+        
+        // Get students eligible for promotion based on session completion
+        var eligibleStudents = await GetPromotionEligibleStudentsAsync(endedSession);
+        
+        if (!eligibleStudents.Any())
+        {
+            _logger.LogInformation("No students eligible for promotion");
+            return;
+        }
+        
+        // Build promotion map: matricNumber -> newLevel
+        var promotionMap = new Dictionary<string, string>();
+        foreach (var student in eligibleStudents)
+        {
+            var currentLevel = await _firestoreService.GetStudentLevelAsync(student.MatricNumber);
+            if (currentLevel != null)
+            {
+                var nextLevel = CalculateNextLevel(currentLevel.Level);
+                promotionMap[student.MatricNumber] = nextLevel;
+            }
+        }
+        
+        // Batch update levels
+        var success = await _firestoreService.BatchUpdateStudentLevelsAsync(promotionMap);
+        
+        if (success)
+        {
+            _logger.LogInformation($"Successfully promoted {promotionMap.Count} students");
+            await LogPromotionActivityAsync(endedSession.SessionId, promotionMap);
+        }
+        else
+        {
+            _logger.LogError("Failed to process some student promotions");
+        }
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, $"Error processing student level promotions for session: {endedSession.SessionId}");
+    }
+}
+
+/// <summary>
+/// Get students eligible for level promotion
+/// </summary>
+private async Task<List<PromotionEligibleStudent>> GetPromotionEligibleStudentsAsync(AcademicSession session)
+{
+    // Implementation to fetch students who completed session requirements
+    // This would integrate with your existing student/enrollment system
+    
+    // Placeholder - replace with actual implementation
+    return new List<PromotionEligibleStudent>();
+}
+
+/// <summary>
+/// Calculate next academic level
+/// </summary>
+private string CalculateNextLevel(string currentLevel)
+{
+    return currentLevel switch
+    {
+        "100" => "200",
+        "200" => "300", 
+        "300" => "400",
+        "400" => "500", // Graduate level
+        _ => currentLevel // No change for unknown levels
+    };
+}
+
+/// <summary>
+/// Log promotion activity for audit trail
+/// </summary>
+private async Task LogPromotionActivityAsync(string sessionId, Dictionary<string, string> promotions)
+{
+    try
+    {
+        var promotionLog = new
+        {
+            SessionId = sessionId,
+            ProcessedAt = await _serverTimeService.GetCurrentServerTimeAsync(),
+            PromotionCount = promotions.Count,
+            Promotions = promotions
+        };
+        
+        await _firestoreService.AddDocumentAsync("PROMOTION_LOGS", promotionLog);
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Failed to log promotion activity");
+    }
+}
+
+#endregion
+
+// Update ProcessSessionEndAsync method to include promotions
+public async Task ProcessSessionEndAsync(AcademicSession endedSession, string triggeredBy)
+{
+    try
+    {
+        _logger.LogInformation($"Processing session end for: {endedSession.SessionId}");
+
+        // Mark transition as processed first to prevent duplicate processing
+        await MarkTransitionProcessedAsync(endedSession.SessionId, TransitionType.SessionEnd, triggeredBy);
+
+        // Existing session end logic
+        await ArchiveSessionDataAsync(endedSession);
+        await GenerateSessionReportsAsync(endedSession);
+        
+        // ADD: Process student level promotions
+        await ProcessStudentLevelPromotionsAsync(endedSession);
+        
+        await NotifySessionEndAsync(endedSession);
+
+        _logger.LogInformation($"Session end processing completed for: {endedSession.SessionId}");
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, $"Error processing session end for: {endedSession.SessionId}");
+        throw;
+    }
+}
+
+// Supporting model
+public class PromotionEligibleStudent
+{
+    public string MatricNumber { get; set; }
+    public string Email { get; set; }
+    public string CurrentLevel { get; set; }
+    public bool MeetsPromotionCriteria { get; set; }
+}
 
 }
 }

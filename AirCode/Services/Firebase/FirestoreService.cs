@@ -3,7 +3,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using AirCode.Domain.Entities;
 using AirCode.Models.Firebase;
+using AirCode.Services.Storage;
 using Microsoft.JSInterop;
 using AirCode.Utilities.HelperScripts;
 using Newtonsoft.Json;
@@ -17,6 +19,7 @@ namespace AirCode.Services.Firebase
         private readonly IJSRuntime _jsRuntime;
         private bool _isInitialized = false;
         
+        private readonly IBlazorAppLocalStorageService _localStorage;
         // Document size tracking (approximate)
         private const int MAX_DOCUMENT_SIZE_BYTES = 900000; // 900KB to leave buffer
         private const int ESTIMATED_STUDENT_ENTRY_SIZE = 2000; // ~2KB per student entry
@@ -34,9 +37,10 @@ namespace AirCode.Services.Firebase
             ObjectCreationHandling = ObjectCreationHandling.Replace
         };
 
-        public FirestoreService(IJSRuntime jsRuntime)
+        public FirestoreService(IJSRuntime jsRuntime,IBlazorAppLocalStorageService localStorage)
         {
             _jsRuntime = jsRuntime;
+            _localStorage = localStorage;
             InitializeAsync();
         }
 
@@ -500,6 +504,151 @@ namespace AirCode.Services.Firebase
                 MID_HelperFunctions.DebugMessage($"Error processing pending operations: {ex.Message}", DebugClass.Exception);
             }
         }
+        
+        // Add to FirestoreService.cs implementation
+        
+        #region Student Level Operations
+        
+        private const string STUDENTS_LEVEL_COLLECTION = "STUDENTS_LEVEL_TRACKER";
+        private const string LEVEL_CACHE_KEY = "student_levels_cache";
+        private const string BASE_LEVEL_DOCUMENT = "STUDENT_LEVELS_NO";
+        
+        public async Task<StudentLevelInfo> GetStudentLevelAsync(string matricNumber)
+        {
+            try
+            {
+                if (!_isInitialized) await InitializeAsync();
+                
+                // Try local cache first
+                var cachedLevels = await _localStorage?.GetItemAsync<Dictionary<string, StudentLevelInfo>>(LEVEL_CACHE_KEY);
+                if (cachedLevels?.ContainsKey(matricNumber) == true)
+                {
+                    return cachedLevels[matricNumber];
+                }
+                
+                // Find document containing this matric number
+                string targetDocument = await FindDocumentContainingKeyAsync(
+                    STUDENTS_LEVEL_COLLECTION, BASE_LEVEL_DOCUMENT, matricNumber);
+                
+                if (string.IsNullOrEmpty(targetDocument))
+                {
+                    return null;
+                }
+                
+                // Get student data
+                var studentData = await GetFieldAsync<Dictionary<string, object>>(
+                    STUDENTS_LEVEL_COLLECTION, targetDocument, matricNumber);
+                
+                if (studentData == null) return null;
+                
+                var studentInfo = new StudentLevelInfo
+                {
+                    MatricNumber = matricNumber,
+                    Email = studentData.GetValueOrDefault("email")?.ToString(),
+                    Level = studentData.GetValueOrDefault("level")?.ToString(),
+                    RegistrationDate = DateTime.TryParse(studentData.GetValueOrDefault("registrationDate")?.ToString(), out var date) 
+                        ? date : DateTime.MinValue
+                };
+                
+                // Cache locally
+                await CacheStudentLevelAsync(matricNumber, studentInfo);
+                
+                return studentInfo;
+            }
+            catch (Exception ex)
+            {
+                MID_HelperFunctions.DebugMessage($"Error getting student level for {matricNumber}: {ex.Message}", DebugClass.Exception);
+                return null;
+            }
+        }
+        
+        public async Task<bool> UpdateStudentLevelAsync(string matricNumber, string newLevel)
+        {
+            try
+            {
+                if (!_isInitialized) await InitializeAsync();
+                
+                // Find document containing this student
+                string targetDocument = await FindDocumentContainingKeyAsync(
+                    STUDENTS_LEVEL_COLLECTION, BASE_LEVEL_DOCUMENT, matricNumber);
+                
+                if (string.IsNullOrEmpty(targetDocument))
+                {
+                    return false;
+                }
+                
+                // Update level field only
+                var updateData = new Dictionary<string, object> { { "level", newLevel } };
+                var json = JsonConvert.SerializeObject(updateData, _jsonSettings);
+                
+                bool result = await UpdateFieldInDistributedDocumentAsync(
+                    STUDENTS_LEVEL_COLLECTION, targetDocument, matricNumber, json);
+                
+                if (result)
+                {
+                    // Update local cache
+                    var cachedLevels = await _localStorage?.GetItemAsync<Dictionary<string, StudentLevelInfo>>(LEVEL_CACHE_KEY) 
+                        ?? new Dictionary<string, StudentLevelInfo>();
+                    
+                    if (cachedLevels.ContainsKey(matricNumber))
+                    {
+                        cachedLevels[matricNumber].Level = newLevel;
+                        await _localStorage?.SetItemAsync(LEVEL_CACHE_KEY, cachedLevels);
+                    }
+                }
+                
+                return result;
+            }
+            catch (Exception ex)
+            {
+                MID_HelperFunctions.DebugMessage($"Error updating student level for {matricNumber}: {ex.Message}", DebugClass.Exception);
+                return false;
+            }
+        }
+        
+        public async Task<bool> BatchUpdateStudentLevelsAsync(Dictionary<string, string> matricToLevelMap)
+        {
+            try
+            {
+                if (!_isInitialized) await InitializeAsync();
+                
+                var successCount = 0;
+                foreach (var kvp in matricToLevelMap)
+                {
+                    if (await UpdateStudentLevelAsync(kvp.Key, kvp.Value))
+                    {
+                        successCount++;
+                    }
+                }
+                
+                return successCount == matricToLevelMap.Count;
+            }
+            catch (Exception ex)
+            {
+                MID_HelperFunctions.DebugMessage($"Error batch updating student levels: {ex.Message}", DebugClass.Exception);
+                return false;
+            }
+        }
+        
+        private async Task CacheStudentLevelAsync(string matricNumber, StudentLevelInfo studentInfo)
+        {
+            try
+            {
+                if (_localStorage == null) return;
+                
+                var cachedLevels = await _localStorage.GetItemAsync<Dictionary<string, StudentLevelInfo>>(LEVEL_CACHE_KEY) 
+                    ?? new Dictionary<string, StudentLevelInfo>();
+                
+                cachedLevels[matricNumber] = studentInfo;
+                await _localStorage.SetItemAsync(LEVEL_CACHE_KEY, cachedLevels);
+            }
+            catch (Exception ex)
+            {
+                MID_HelperFunctions.DebugMessage($"Error caching student level: {ex.Message}", DebugClass.Exception);
+            }
+        }
+        
+        #endregion
         
         #region Distributed Storage
         

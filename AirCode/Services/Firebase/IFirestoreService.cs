@@ -1,6 +1,7 @@
 // // Services/Firebase/IFirestoreService.cs
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using AirCode.Domain.Entities;
 
 namespace AirCode.Services.Firebase
 {
@@ -51,12 +52,6 @@ namespace AirCode.Services.Firebase
         Task<bool> DeleteFromSpecificCollectionAsync(string collection, string courseCode);
         Task<bool> SyncCollectionWithLocalAsync<T>(string collection, List<T> localData) where T : class;
         
-        // Add these methods to IFirestoreService interface
-
-        // Add these missing interface members to IFirestoreService
-
-        // Add these methods to IFirestoreService interface
-
         #region Distributed Document Operations
 
         /// <summary>
@@ -85,5 +80,27 @@ namespace AirCode.Services.Firebase
         Task<bool> DocumentExistsAsync(string collection, string documentId);
 
         #endregion
+        
+        #region Student Level Operations
+
+        /// <summary>
+        /// Get student level by matric number from distributed documents
+        /// </summary>
+        Task<StudentLevelInfo> GetStudentLevelAsync(string matricNumber);
+
+        /// <summary>
+        /// Update student level in distributed documents
+        /// </summary>
+        Task<bool> UpdateStudentLevelAsync(string matricNumber, string newLevel);
+
+        /// <summary>
+        /// Batch update student levels for promotion
+        /// </summary>
+        Task<bool> BatchUpdateStudentLevelsAsync(Dictionary<string, string> matricToLevelMap);
+
+        #endregion
+
+       
+        
     }
 }
