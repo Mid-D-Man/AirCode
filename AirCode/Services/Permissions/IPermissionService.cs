@@ -9,5 +9,8 @@ namespace AirCode.Services.Permissions
         Task<bool> CanViewCourseAttendanceAsync(string userId, string courseId);
         Task<bool> CanEditCourseInfoAsync(string userId, string courseId);
         Task<bool> CanGenerateAdminIdAsync(string userId);
+
+        Task<bool> CanCacheAllStudentsLevel(string userId);
+        Task<bool> CanCachePersonalStudentsLevel(string userId);
     }
 }

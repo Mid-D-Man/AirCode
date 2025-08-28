@@ -137,6 +137,46 @@ namespace AirCode.Services.Permissions
             }
         }
 
+        public async Task<bool> CanCacheAllStudentsLevel(string userId)
+        {
+            try
+            {
+                if (!await _authService.IsAuthenticatedAsync()) 
+                    return false;
+
+                var userRole = await _authService.GetUserRoleAsync();
+                return userRole == "superioradmin";
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking admin ID caching permission for user {UserId}", userId);
+                return false;
+            }
+        }
+
+        public async Task<bool> CanCachePersonalStudentsLevel(string userId)
+        {
+          
+            try
+            {
+                if (!await _authService.IsAuthenticatedAsync()) 
+                    return false;
+
+                var userRole = await _authService.GetUserRoleAsync();
+                if (userRole == "courserepadmin" || userRole == "student")
+                {
+                    return true;
+                }
+
+                return false;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking admin ID caching permission for user {UserId}", userId);
+                return false;
+            }
+        }
+
         // Enhanced permission methods
         public async Task<bool> CanAccessOfflineModeAsync(string userId)
         {

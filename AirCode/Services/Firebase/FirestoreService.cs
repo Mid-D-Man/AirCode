@@ -5,6 +5,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using AirCode.Domain.Entities;
 using AirCode.Models.Firebase;
+using AirCode.Services.Auth;
+using AirCode.Services.Permissions;
 using AirCode.Services.Storage;
 using Microsoft.JSInterop;
 using AirCode.Utilities.HelperScripts;
@@ -20,6 +22,9 @@ namespace AirCode.Services.Firebase
         private bool _isInitialized = false;
         
         private readonly IBlazorAppLocalStorageService _localStorage;
+
+        private readonly IPermissionService _permissionService;
+        private readonly IAuthService _authService;
         // Document size tracking (approximate)
         private const int MAX_DOCUMENT_SIZE_BYTES = 900000; // 900KB to leave buffer
         private const int ESTIMATED_STUDENT_ENTRY_SIZE = 2000; // ~2KB per student entry
@@ -37,10 +42,15 @@ namespace AirCode.Services.Firebase
             ObjectCreationHandling = ObjectCreationHandling.Replace
         };
 
-        public FirestoreService(IJSRuntime jsRuntime,IBlazorAppLocalStorageService localStorage)
+        public FirestoreService(IJSRuntime jsRuntime,IBlazorAppLocalStorageService localStorage,IPermissionService permissionService, IAuthService authService)
         {
             _jsRuntime = jsRuntime;
-            _localStorage = localStorage;
+            _localStorage = localStorage ??
+                            throw new NullReferenceException("Missing localStorage service refrence");
+            _permissionService = permissionService ??
+                                 throw new NullReferenceException("Missing permission service refrence");
+            _authService = authService ??
+                                 throw new NullReferenceException("Missing auth service refrence");
             InitializeAsync();
         }
 
@@ -567,42 +577,51 @@ namespace AirCode.Services.Firebase
             try
             {
                 if (!_isInitialized) await InitializeAsync();
-                
+
                 // Find document containing this student
                 string targetDocument = await FindDocumentContainingKeyAsync(
                     STUDENTS_LEVEL_COLLECTION, BASE_LEVEL_DOCUMENT, matricNumber);
-                
+
                 if (string.IsNullOrEmpty(targetDocument))
                 {
                     return false;
                 }
-                
+
                 // Update level field only
                 var updateData = new Dictionary<string, object> { { "level", newLevel } };
                 var json = JsonConvert.SerializeObject(updateData, _jsonSettings);
-                
+
                 bool result = await UpdateFieldInDistributedDocumentAsync(
                     STUDENTS_LEVEL_COLLECTION, targetDocument, matricNumber, json);
-                
+
+
                 if (result)
                 {
-                    // Update local cache
-                    var cachedLevels = await _localStorage?.GetItemAsync<Dictionary<string, StudentLevelInfo>>(LEVEL_CACHE_KEY) 
-                        ?? new Dictionary<string, StudentLevelInfo>();
-                    
-                    if (cachedLevels.ContainsKey(matricNumber))
+                    if (_permissionService.CanCacheAllStudentsLevel(await _authService.GetUserIdAsync()).Result)
                     {
-                        cachedLevels[matricNumber].Level = newLevel;
-                        await _localStorage?.SetItemAsync(LEVEL_CACHE_KEY, cachedLevels);
-                        
+                        // Update local cache
+                        var cachedLevels =
+                            await _localStorage?.GetItemAsync<Dictionary<string, StudentLevelInfo>>(LEVEL_CACHE_KEY)
+                            ?? new Dictionary<string, StudentLevelInfo>();
+
+                        if (cachedLevels.ContainsKey(matricNumber))
+                        {
+                            cachedLevels[matricNumber].Level = newLevel;
+                            await _localStorage?.SetItemAsync(LEVEL_CACHE_KEY, cachedLevels);
+
+                            await _localStorage?.SetItemAsync("M_Personal_Level", cachedLevels[matricNumber].Level);
+
+                        }
                     }
                 }
-                
+
                 return result;
-            }
+                }
+            
             catch (Exception ex)
             {
-                MID_HelperFunctions.DebugMessage($"Error updating student level for {matricNumber}: {ex.Message}", DebugClass.Exception);
+                MID_HelperFunctions.DebugMessage($"Error updating student level for {matricNumber}: {ex.Message}",
+                    DebugClass.Exception);
                 return false;
             }
         }
@@ -636,7 +655,7 @@ namespace AirCode.Services.Firebase
             try
             {
                 if (_localStorage == null) return;
-                
+               
                 var cachedLevels = await _localStorage.GetItemAsync<Dictionary<string, StudentLevelInfo>>(LEVEL_CACHE_KEY) 
                     ?? new Dictionary<string, StudentLevelInfo>();
                 
