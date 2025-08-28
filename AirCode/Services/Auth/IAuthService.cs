@@ -33,7 +33,10 @@ namespace AirCode.Services.Auth
         /// Gets the authenticated user's ID from their claims
         /// </summary>
         Task<string> GetUserIdAsync();
-
+        /// <summary>
+        /// Gets the authenticated user's Email from their claims
+        /// </summary>
+        Task<string> GetUserEmailAsync();
         /// <summary>
         /// Gets the lecturer ID for lecturer admin users
         /// </summary>

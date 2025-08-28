@@ -1,7 +1,9 @@
 @page "/Client/Profile"
+@using AirCode.Domain.Entities
 @using AirCode.Services.Auth
 @using AirCode.Utilities.HelperScripts
 @using AirCode.Domain.Enums
+@using AirCode.Services.Firebase
 @using ILocalStorageService = AirCode.Services.Storage.IBlazorAppLocalStorageService
 @layout AirCode.Layout.ClientLayout.ClientLayout
 @inject NavigationManager NavigationManager
@@ -189,23 +191,27 @@
                 if (!string.IsNullOrEmpty(MatricNumber))
                 {
                     // Use helper function to determine student level
-                    StudentLevel = MID_HelperFunctions.DetermineStudentLevel(MatricNumber);
+                    var level = await BlazorAppLocalStorage.GetItemAsync<StudentLevelInfo>("student_levels_cache");
+                    if (level != null)
+                    {
+                        StudentLevel = Enum.Parse<LevelType>(level?.Level);
+                    }
+                    else
+                    {
+                        StudentLevel = MID_HelperFunctions.DetermineStudentLevel(MatricNumber);
+                    }
+                   
                     UserName = $"Student {MatricNumber}";
                 }
             }
 
-            if (UserRole?.Contains("Lecturer") == true)
-            {
-                LecturerId = await AuthService.GetLecturerIdAsync() ?? "";
-                UserName = !string.IsNullOrEmpty(LecturerId) ? $"Lecturer {LecturerId}" : "Lecturer";
-            }
-
+         
             if (string.IsNullOrEmpty(UserName) || UserName == "Loading...")
             {
                 UserName = "User";
             }
 
-            UserEmail = "user@aircode.edu";
+            UserEmail = await AuthService.GetUserEmailAsync();
             isDarkModeEnabled = await BlazorAppLocalStorage.GetItemAsync<bool>("darkMode");
 
             StateHasChanged();

@@ -50,6 +50,7 @@ namespace AirCode.Services.Auth
         {
             try
             {
+                
                 var tokenResult = await _tokenProvider.RequestAccessToken();
                 if (tokenResult.TryGetToken(out var token))
                 {
@@ -246,9 +247,10 @@ private async Task<string> GenerateGravatarUrlAsync(string email, int size = 80)
         {
             try
             {
+              
                 var authState = await _authStateProvider.GetAuthenticationStateAsync();
                 var user = authState.User;
-                
+               
                 if (!user.Identity.IsAuthenticated)
                 {
                     _logger.LogDebug("User not authenticated, returning empty user ID");
@@ -261,6 +263,31 @@ private async Task<string> GenerateGravatarUrlAsync(string email, int size = 80)
                 
                 _logger.LogDebug("Retrieved user ID: {UserId}", userId);
                 return userId;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving user ID");
+                return string.Empty;
+            }
+        }
+        public async Task<string> GetUserEmailAsync()
+        {
+            try
+            {
+              
+                var authState = await _authStateProvider.GetAuthenticationStateAsync();
+                var user = authState.User;
+               
+                if (!user.Identity.IsAuthenticated)
+                {
+                    _logger.LogDebug("User not authenticated, returning empty user ID");
+                    return string.Empty;
+                }
+                    
+                // Get user ID from sub claim
+                var userEmail = user.FindFirst(ClaimTypes.Email)?.Value;
+                _logger.LogDebug("Retrieved user Email: {userEmail}", userEmail);
+                return userEmail;
             }
             catch (Exception ex)
             {
