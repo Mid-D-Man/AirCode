@@ -134,11 +134,7 @@
     }
     
     <div class="content-container @(isSessionStarted ? "session-active" : "")">
-        <!-- Course Selection Modal -->
-        <CourseSelectionComponent
-            IsVisible="showCourseSelection"
-            OnCourseSelected="HandleCourseSelected"
-            OnClosed="HideCourseSelection" />
+      
         @if (!isSessionStarted)
         {
             <div class="form-container">
@@ -421,8 +417,6 @@
     IsVisible="showInfoPopup"
     CurrentInfoType="currentInfoType"
     OnClose="CloseInfoPopup" />
-<!-- Got rif of this one cause i dont like it anymore Floating QR Code Component -->
-
 
 <!-- Manual Attendance Popup -->
 <ManualAttendancePopup 
@@ -431,3 +425,8 @@
     OnClose="CloseManualAttendancePopup" 
     OnAttendanceSigned="HandleManualAttendanceSigned" />
 
+<!-- Course Selection Modal -->
+<CourseSelectionComponent
+    IsVisible="showCourseSelection"
+    OnCourseSelected="HandleCourseSelected"
+    OnClosed="HideCourseSelection" />
