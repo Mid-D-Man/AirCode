@@ -594,6 +594,7 @@ namespace AirCode.Services.Firebase
                     {
                         cachedLevels[matricNumber].Level = newLevel;
                         await _localStorage?.SetItemAsync(LEVEL_CACHE_KEY, cachedLevels);
+                        
                     }
                 }
                 
