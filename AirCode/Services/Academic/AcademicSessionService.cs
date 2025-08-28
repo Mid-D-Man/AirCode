@@ -8,6 +8,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using AirCode.Models.Supabase;
+using AirCode.Services.Courses;
+using AirCode.Services.SupaBase;
 
 namespace AirCode.Services.Academic
 {
@@ -17,6 +20,8 @@ namespace AirCode.Services.Academic
         private readonly IBlazorAppLocalStorageService _localStorage;
         private readonly IServerTimeService _serverTimeService;
         private readonly ILogger<AcademicSessionService> _logger;
+        private readonly ISupabaseDatabase _supabaseDatabase;
+        private readonly ICourseService _courseService;
 
         // Constants
         private const string ACADEMIC_SESSIONS_COLLECTION = "ACADEMIC_SESSIONS";
@@ -37,15 +42,20 @@ namespace AirCode.Services.Academic
         public event Func<SessionStartEvent, Task> SessionStarted;
         public event Func<SemesterStartEvent, Task> SemesterStarted;
 
+       
         public AcademicSessionService(
             IFirestoreService firestoreService,
             IBlazorAppLocalStorageService localStorage,
             IServerTimeService serverTimeService,
+            ISupabaseDatabase supabaseDatabase,
+            ICourseService courseService,
             ILogger<AcademicSessionService> logger)
         {
             _firestoreService = firestoreService;
             _localStorage = localStorage;
             _serverTimeService = serverTimeService;
+            _supabaseDatabase = supabaseDatabase;
+            _courseService = courseService;
             _logger = logger;
         }
 
@@ -396,15 +406,12 @@ namespace AirCode.Services.Academic
                 // Mark transition as processed
                 await MarkTransitionProcessedAsync($"{endedSemester.SessionId}_{endedSemester.SemesterId}", TransitionType.SemesterEnd, triggeredBy);
 
-                // Perform semester end logic:
-                // 1. Finalize grades
-                // 2. Generate transcripts
-                // 3. Calculate GPA
-                // 4. Send semester reports
-                // 5. Process course evaluations
-
-                await FinalizeSemesterGradesAsync(endedSemester);
-                await GenerateSemesterReportsAsync(endedSemester);
+                //  Clear all student courses
+                await ClearAllStudentCoursesAsync();
+        
+                //  Send notifications
+                await SendSemesterEndNotificationsAsync(endedSemester);
+        
                 await NotifySemesterEndAsync(endedSemester);
 
                 _logger.LogInformation($"Semester end processing completed for: {endedSemester.SemesterId}");
@@ -473,6 +480,33 @@ namespace AirCode.Services.Academic
             }
         }
 
+        
+        public async Task ProcessSessionEndAsync(AcademicSession endedSession, string triggeredBy)
+        {
+            try
+            {
+                _logger.LogInformation($"Processing session end for: {endedSession.SessionId}");
+
+                // Mark transition as processed first to prevent duplicate processing
+                await MarkTransitionProcessedAsync(endedSession.SessionId, TransitionType.SessionEnd, triggeredBy);
+
+                // Existing session end logic
+                await ArchiveSessionDataAsync(endedSession);
+                await GenerateSessionReportsAsync(endedSession);
+        
+                // ADD: Process student level promotions
+                await ProcessStudentLevelPromotionsAsync(endedSession);
+        
+                await NotifySessionEndAsync(endedSession);
+
+                _logger.LogInformation($"Session end processing completed for: {endedSession.SessionId}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error processing session end for: {endedSession.SessionId}");
+                throw;
+            }
+        }
         #endregion
 
         #region Validation & Edge Cases
@@ -893,54 +927,6 @@ namespace AirCode.Services.Academic
                 throw;
             }
         }
-
-        private async Task FinalizeSemesterGradesAsync(Semester semester)
-        {
-            try
-            {
-                _logger.LogInformation($"Finalizing semester grades for: {semester.SemesterId}");
-                
-                // Implementation placeholder:
-                // 1. Lock grade entry
-                // 2. Calculate final grades
-                // 3. Process incomplete grades
-                // 4. Generate grade reports
-                // 5. Update student transcripts
-                
-                await Task.Delay(100); // Placeholder for actual implementation
-                
-                _logger.LogInformation($"Semester grades finalized successfully: {semester.SemesterId}");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Failed to finalize semester grades for: {semester.SemesterId}");
-                throw;
-            }
-        }
-
-        private async Task GenerateSemesterReportsAsync(Semester semester)
-        {
-            try
-            {
-                _logger.LogInformation($"Generating semester reports for: {semester.SemesterId}");
-                
-                // Implementation placeholder:
-                // 1. Generate grade distribution reports
-                // 2. Create attendance summaries
-                // 3. Generate course evaluation reports
-                // 4. Create dean's list reports
-                
-                await Task.Delay(100); // Placeholder for actual implementation
-                
-                _logger.LogInformation($"Semester reports generated successfully: {semester.SemesterId}");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Failed to generate semester reports for: {semester.SemesterId}");
-                throw;
-            }
-        }
-
         private async Task NotifySemesterEndAsync(Semester semester)
         {
             try
@@ -1168,9 +1154,7 @@ private async Task ProcessStudentLevelPromotionsAsync(AcademicSession endedSessi
 /// </summary>
 private async Task<List<PromotionEligibleStudent>> GetPromotionEligibleStudentsAsync(AcademicSession session)
 {
-    // Implementation to fetch students who completed session requirements
-    // This would integrate with your existing student/enrollment system
-    
+    //all students eligable for uni so hmmmmmmmmm
     // Placeholder - replace with actual implementation
     return new List<PromotionEligibleStudent>();
 }
@@ -1215,42 +1199,129 @@ private async Task LogPromotionActivityAsync(string sessionId, Dictionary<string
 
 #endregion
 
-// Update ProcessSessionEndAsync method to include promotions
-public async Task ProcessSessionEndAsync(AcademicSession endedSession, string triggeredBy)
+ #region Student Course Management
+
+private async Task ClearAllStudentCoursesAsync()
 {
     try
     {
-        _logger.LogInformation($"Processing session end for: {endedSession.SessionId}");
-
-        // Mark transition as processed first to prevent duplicate processing
-        await MarkTransitionProcessedAsync(endedSession.SessionId, TransitionType.SessionEnd, triggeredBy);
-
-        // Existing session end logic
-        await ArchiveSessionDataAsync(endedSession);
-        await GenerateSessionReportsAsync(endedSession);
+        _logger.LogInformation("Clearing all student course references");
         
-        // ADD: Process student level promotions
-        await ProcessStudentLevelPromotionsAsync(endedSession);
+        var success = await _courseService.ClearAllStudentCourseReferencesAsync();
         
-        await NotifySessionEndAsync(endedSession);
-
-        _logger.LogInformation($"Session end processing completed for: {endedSession.SessionId}");
+        if (success)
+        {
+            _logger.LogInformation("Successfully cleared all student course references");
+        }
+        else
+        {
+            _logger.LogError("Failed to clear some student course references");
+        }
     }
     catch (Exception ex)
     {
-        _logger.LogError(ex, $"Error processing session end for: {endedSession.SessionId}");
+        _logger.LogError(ex, "Error clearing student courses");
         throw;
     }
 }
 
-// Supporting model
-public class PromotionEligibleStudent
+private async Task SendSemesterEndNotificationsAsync(Semester endedSemester)
 {
-    public string MatricNumber { get; set; }
-    public string Email { get; set; }
-    public string CurrentLevel { get; set; }
-    public bool MeetsPromotionCriteria { get; set; }
+    try
+    {
+        _logger.LogInformation($"Sending semester end notifications for: {endedSemester.SemesterId}");
+        
+        // Get all students from the semester level
+        var allStudentCourses = await _courseService.GetAllStudentCoursesAsync();
+        
+        var messages = new List<NotificationMessage>
+        {
+            new NotificationMessage
+            {
+                Header = "Semester Ended",
+                Content = $"Semester {endedSemester.SessionId} has officially ended. Course registrations have been cleared.",
+                Type = "Academic",
+                Timestamp = DateTime.Now
+            }
+        };
+//ok get student email hmmm,that might be tricky maybe, we can since only superior admin can do transition,use the user roles with students roles,yeah that will work
+        var notifications = allStudentCourses.Select(async student =>
+        {
+            return await _supabaseDatabase.SendNotificationAsync(
+                senderUserId: "SYSTEM",
+                senderEmail: "system@aircode.edu",
+                receiverUserId: student.StudentMatricNumber,
+                receiverEmail: $"{student.StudentMatricNumber}@student.aircode.edu",
+                messages: messages,
+                isSystemMessage: true,
+                metadata: new Dictionary<string, object>
+                {
+                    ["semester_id"] = endedSemester.SemesterId,
+                    ["session_id"] = endedSemester.SessionId,
+                    ["event_type"] = "semester_end"
+                }
+            );
+        });
+
+        await Task.WhenAll(notifications);
+        
+        _logger.LogInformation($"Semester end notifications sent to {allStudentCourses.Count} students");
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Error sending semester end notifications");
+    }
 }
+
+#endregion
+
+#region Notifications
+
+// Update ProcessSessionEndAsync to include session notifications
+private async Task SendSessionEndNotificationsAsync(AcademicSession endedSession)
+{
+    try
+    {
+        var allStudentCourses = await _courseService.GetAllStudentCoursesAsync();
+        
+        var messages = new List<NotificationMessage>
+        {
+            new NotificationMessage
+            {
+                Header = "Academic Session Ended", 
+                Content = $"Academic session {endedSession.SessionId} has ended. Student level promotions have been processed.",
+                Type = "Academic",
+                Timestamp = DateTime.Now
+            }
+        };
+
+        var notifications = allStudentCourses.Select(async student =>
+        {
+            return await _supabaseDatabase.SendNotificationAsync(
+                senderUserId: "SYSTEM",
+                senderEmail: "system@aircode.edu", 
+                receiverUserId: student.StudentMatricNumber,
+                receiverEmail: $"{student.StudentMatricNumber}@student.aircode.edu",
+                messages: messages,
+                isSystemMessage: true,
+                metadata: new Dictionary<string, object>
+                {
+                    ["session_id"] = endedSession.SessionId,
+                    ["event_type"] = "session_end"
+                }
+            );
+        });
+
+        await Task.WhenAll(notifications);
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Error sending session end notifications");
+    }
+}
+
+#endregion
+// Supporting model
 
 }
 }

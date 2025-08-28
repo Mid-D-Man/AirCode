@@ -11,7 +11,9 @@
 @using AirCode.Domain.Enums
 <div class="create-session-page">
     <h1>Create Attendance Event</h1>
-
+    
+    
+    
     <!-- Session Restoration Dialog -->
     @if (showSessionRestoreDialog && !isRestoringSession)
     {
@@ -132,6 +134,11 @@
     }
     
     <div class="content-container @(isSessionStarted ? "session-active" : "")">
+        <!-- Course Selection Modal -->
+        <CourseSelectionComponent
+            IsVisible="showCourseSelection"
+            OnCourseSelected="HandleCourseSelected"
+            OnClosed="HideCourseSelection" />
         @if (!isSessionStarted)
         {
             <div class="form-container">
@@ -405,19 +412,15 @@
         </div>
     }
 
-    <!-- Info Popup Component  -->
-    <InfoPopup
-        IsVisible="showInfoPopup"
-        CurrentInfoType="currentInfoType"
-        OnClose="CloseInfoPopup" />
+  
 </div>
 
-<!-- Course Selection Modal -->
-<CourseSelectionComponent 
-    IsVisible="showCourseSelection" 
-    OnCourseSelected="HandleCourseSelected"
-    OnClosed="HideCourseSelection" />
 
+<!-- Info Popup Component  -->
+<InfoPopup
+    IsVisible="showInfoPopup"
+    CurrentInfoType="currentInfoType"
+    OnClose="CloseInfoPopup" />
 <!-- Got rif of this one cause i dont like it anymore Floating QR Code Component -->
 
 

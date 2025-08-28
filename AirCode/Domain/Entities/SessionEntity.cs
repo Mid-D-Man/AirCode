@@ -76,6 +76,14 @@ namespace AirCode.Domain.Entities
         public DateTime LastLoginTime { get; set; }
         public DateTime UpdatedAt { get; set; }
     }
+    
+    public class PromotionEligibleStudent
+    {
+        public string MatricNumber { get; set; }
+        public string Email { get; set; }
+        public string CurrentLevel { get; set; }
+        public bool MeetsPromotionCriteria { get; set; }
+    }
      #region Result Models
     public class SessionTransitionResult
     {
