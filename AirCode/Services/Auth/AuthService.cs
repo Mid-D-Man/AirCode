@@ -44,7 +44,7 @@ namespace AirCode.Services.Auth
         {
             _logger.LogInformation("[Auth] {Message}", message);
             await _jsRuntime.InvokeVoidAsync("console.log", $"[Auth] {message}");
-        }
+         }
 
         public async Task<string> GetJwtTokenAsync()
         {
