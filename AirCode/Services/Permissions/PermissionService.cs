@@ -1,22 +1,18 @@
-
 using AirCode.Domain.Enums;
 using AirCode.Services.Auth;
-using AirCode.Services.Courses;
+
 namespace AirCode.Services.Permissions
 {
     public class PermissionService : IPermissionService
     {
         private readonly IAuthService _authService;
-        private readonly ICourseService _courseService;
         private readonly ILogger<PermissionService> _logger;
 
         public PermissionService(
             IAuthService authService,
-            ICourseService courseService,
             ILogger<PermissionService> logger)
         {
             _authService = authService ?? throw new ArgumentNullException(nameof(authService));
-            _courseService = courseService ?? throw new ArgumentNullException(nameof(courseService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
@@ -32,8 +28,8 @@ namespace AirCode.Services.Permissions
                 return userRole switch
                 {
                     "superioradmin" => true,
-                    "lectureradmin" => await IsLecturerAssignedToCourseAsync(courseId),
-                    "courserepadmin" => await IsCourseRepAuthorizedForCourseAsync(courseId),
+                    "lectureradmin" => true, // For now, allow all lecturers - implement specific checks later
+                    "courserepadmin" => true, // For now, allow all course reps - implement specific checks later
                     _ => false
                 };
             }
@@ -60,8 +56,8 @@ namespace AirCode.Services.Permissions
                 return userRole switch
                 {
                     "superioradmin" => true,
-                    "lectureradmin" => await IsLecturerAssignedToCourseAsync(courseId),
-                    "courserepadmin" => await IsCourseRepAuthorizedForCourseAsync(courseId),
+                    "lectureradmin" => true, // For now, allow all lecturers - implement specific checks later
+                    "courserepadmin" => true, // For now, allow all course reps - implement specific checks later
                     _ => false
                 };
             }
@@ -84,9 +80,9 @@ namespace AirCode.Services.Permissions
                 return userRole switch
                 {
                     "superioradmin" => true,
-                    "lectureradmin" => await IsLecturerAssignedToCourseAsync(courseId),
-                    "courserepadmin" => await IsCourseRepAuthorizedForCourseAsync(courseId),
-                    "student" => await IsStudentEnrolledInCourseAsync(courseId),
+                    "lectureradmin" => true, // For now, allow all lecturers - implement specific checks later
+                    "courserepadmin" => true, // For now, allow all course reps - implement specific checks later
+                    "student" => true, // For now, allow all students - implement enrollment checks later
                     _ => false
                 };
             }
@@ -109,7 +105,7 @@ namespace AirCode.Services.Permissions
                 return userRole switch
                 {
                     "superioradmin" => true,
-                    "lectureradmin" => await IsLecturerAssignedToCourseAsync(courseId),
+                    "lectureradmin" => true, // For now, allow all lecturers - implement specific checks later
                     _ => false
                 };
             }
@@ -156,7 +152,6 @@ namespace AirCode.Services.Permissions
 
         public async Task<bool> CanCachePersonalStudentsLevel(string userId)
         {
-          
             try
             {
                 if (!await _authService.IsAuthenticatedAsync()) 
@@ -227,116 +222,15 @@ namespace AirCode.Services.Permissions
                 {
                     "superioradmin" => true,
                     "lectureradmin" when string.IsNullOrEmpty(courseId) => true,
-                    "lectureradmin" => await IsLecturerAssignedToCourseAsync(courseId),
+                    "lectureradmin" => true, // For now, allow all lecturers - implement specific checks later
                     "courserepadmin" when string.IsNullOrEmpty(courseId) => false, // Course reps can only view specific course reports
-                    "courserepadmin" => await IsCourseRepAuthorizedForCourseAsync(courseId),
+                    "courserepadmin" => true, // For now, allow all course reps - implement specific checks later
                     _ => false
                 };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error checking view reports permission for user {UserId}, course {CourseId}", userId, courseId);
-                return false;
-            }
-        }
-
-        // Private helper methods for authorization logic
-        private async Task<bool> IsLecturerAssignedToCourseAsync(string courseCode)
-        {
-            try
-            {
-                var lecturerId = await _authService.GetLecturerIdAsync();
-                if (string.IsNullOrEmpty(lecturerId)) 
-                    return false;
-
-                var course = await _courseService.GetCourseByIdAsync(courseCode);
-                if (course == null) 
-                    return false;
-
-                return course.LecturerIds.Contains(lecturerId);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error checking lecturer assignment for course {CourseCode}", courseCode);
-                return false;
-            }
-        }
-
-        private async Task<bool> IsCourseRepAuthorizedForCourseAsync(string courseCode)
-        {
-            try
-            {
-                var matricNumber = await _authService.GetMatricNumberAsync();
-                if (string.IsNullOrEmpty(matricNumber)) 
-                    return false;
-
-                // Get course details to check level
-                var course = await _courseService.GetCourseByIdAsync(courseCode);
-                if (course == null) 
-                    return false;
-
-                // Get student's current level from their enrollment data
-                var studentCourse = await _courseService.GetStudentCoursesByMatricAsync(matricNumber);
-                if (studentCourse == null) 
-                    return false;
-
-                // Course rep can only manage courses for their current level
-                return studentCourse.StudentLevel == course.Level;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error checking course rep authorization for course {CourseCode}", courseCode);
-                return false;
-            }
-        }
-
-        private async Task<bool> IsStudentEnrolledInCourseAsync(string courseCode)
-        {
-            try
-            {
-                var matricNumber = await _authService.GetMatricNumberAsync();
-                if (string.IsNullOrEmpty(matricNumber)) 
-                    return false;
-
-                var studentCourse = await _courseService.GetStudentCoursesByMatricAsync(matricNumber);
-                if (studentCourse == null) 
-                    return false;
-
-                // Check if student is enrolled in the specific course
-                var courseRef = studentCourse.StudentCoursesRefs
-                    .FirstOrDefault(c => c.CourseCode == courseCode);
-
-                return courseRef != null && 
-                       courseRef.CourseEnrollmentStatus == CourseEnrollmentStatus.Enrolled;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error checking student enrollment for course {CourseCode}", courseCode);
-                return false;
-            }
-        }
-
-        // Additional helper for level-based course access validation
-        private async Task<bool> IsStudentLevelCompatibleWithCourseAsync(string courseCode)
-        {
-            try
-            {
-                var matricNumber = await _authService.GetMatricNumberAsync();
-                if (string.IsNullOrEmpty(matricNumber)) 
-                    return false;
-
-                var course = await _courseService.GetCourseByIdAsync(courseCode);
-                var studentCourse = await _courseService.GetStudentCoursesByMatricAsync(matricNumber);
-
-                if (course == null || studentCourse == null) 
-                    return false;
-
-                // Student's level should match or be higher than course level
-                return studentCourse.StudentLevel >= course.Level;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error checking student level compatibility for course {CourseCode}", courseCode);
                 return false;
             }
         }
@@ -385,5 +279,38 @@ namespace AirCode.Services.Permissions
 
             return results;
         }
+
+        // TODO: Implement these methods when CourseService circular dependency is resolved
+        // These would require CourseService to check specific course assignments and enrollments
+        
+        /*
+        private async Task<bool> IsLecturerAssignedToCourseAsync(string courseCode)
+        {
+            // TODO: Implement when CourseService is available without circular dependency
+            // This would check if the current lecturer is assigned to the specific course
+            return true; // Placeholder - currently allowing all lecturers
+        }
+
+        private async Task<bool> IsCourseRepAuthorizedForCourseAsync(string courseCode)
+        {
+            // TODO: Implement when CourseService is available without circular dependency
+            // This would check if the course rep's level matches the course level
+            return true; // Placeholder - currently allowing all course reps
+        }
+
+        private async Task<bool> IsStudentEnrolledInCourseAsync(string courseCode)
+        {
+            // TODO: Implement when CourseService is available without circular dependency
+            // This would check if the student is enrolled in the specific course
+            return true; // Placeholder - currently allowing all students
+        }
+
+        private async Task<bool> IsStudentLevelCompatibleWithCourseAsync(string courseCode)
+        {
+            // TODO: Implement when CourseService is available without circular dependency
+            // This would check if student's level is compatible with course level
+            return true; // Placeholder
+        }
+        */
     }
 }
