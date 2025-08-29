@@ -6,8 +6,10 @@
 
 @if (IsVisible)
 {
-
-    <div class="global-backdrop" @onclick="HandleBackdropClick">
+    <div id="manual-attendance-modal-@InstanceId" 
+         class="modal-overlay @(IsVisible ? "visible" : "")" 
+         @onclick="HandleBackdropClick"
+         @ref="modalOverlayRef">
         <div class="manual-attendance-popup" @onclick:stopPropagation="true">
             <div class="popup-header">
                 <h3>Manual Attendance Sign</h3>
