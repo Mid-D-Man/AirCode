@@ -1,16 +1,20 @@
 using Microsoft.AspNetCore.Components;
 using AirCode.Services.Attendance;
 using AirCode.Components.SharedPrefabs.Fields;
+using AirCode.Services.VisualElements;
 using System.Text.RegularExpressions;
 using AirCode.Domain.Entities;
 using AirCode.Domain.ValueObjects;
 
 namespace AirCode.Components.Admin.Shared
 {
-    public partial class ManualAttendancePopup : ComponentBase
+    public partial class ManualAttendancePopup : ComponentBase, IDisposable
     {
         [Inject]
         public IFirestoreAttendanceService FirestoreAttendanceService { get; set; } = default!;
+
+        [Inject]
+        public IBackdropService BackdropService { get; set; } = default!;
 
         [Parameter]
         public bool IsVisible { get; set; } = false;
@@ -32,27 +36,66 @@ namespace AirCode.Components.Admin.Shared
         private string successMessage = string.Empty;
         private Timer? successTimer;
         private bool _previousVisibleState = false;
+        
+        // Portal management
+        private ElementReference modalOverlayRef;
+        private string InstanceId = Guid.NewGuid().ToString("N")[..8];
+        private string ModalSelector => $"#manual-attendance-modal-{InstanceId}";
+        private bool _isInPortal = false;
 
         public string SpinnerSubtitle => $"Signing attendance for {matricNumber}...";
 
-        // FIXED: Corrected regex pattern - removed extra digit from year
-        // Format: U21CYS1083, U22CS1083, U24CYS1094
+        // Regex pattern for matric number validation
         private static readonly Regex MatricNumberPattern = new(
             @"^U[0-9]{2}[A-Z]{2,3}[0-9]{4}$",
             RegexOptions.Compiled | RegexOptions.IgnoreCase
         );
 
-        protected override void OnParametersSet()
+        protected override async Task OnParametersSetAsync()
         {
-            // Only reset when popup becomes visible (state change)
             if (IsVisible && !_previousVisibleState)
             {
+                await ShowModalAsync();
                 ResetForm();
             }
+            else if (!IsVisible && _previousVisibleState)
+            {
+                await HideModalAsync();
+            }
+            
             _previousVisibleState = IsVisible;
         }
 
-        // FIXED: Removed async to prevent clearing behavior
+        private async Task ShowModalAsync()
+        {
+            try
+            {
+                await Task.Delay(50);
+                await BackdropService.MoveElementToPortalAsync(ModalSelector);
+                _isInPortal = true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error showing modal: {ex.Message}");
+            }
+        }
+
+        private async Task HideModalAsync()
+        {
+            try
+            {
+                if (_isInPortal)
+                {
+                    await BackdropService.ReturnElementFromPortalAsync(ModalSelector);
+                    _isInPortal = false;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error hiding modal: {ex.Message}");
+            }
+        }
+
         private void HandleMatricInput(string value)
         {
             matricNumber = value.ToUpper();
@@ -173,6 +216,7 @@ namespace AirCode.Components.Admin.Shared
 
         private async Task ClosePopup()
         {
+            await HideModalAsync();
             ResetForm();
             await OnClose.InvokeAsync();
         }
@@ -188,7 +232,19 @@ namespace AirCode.Components.Admin.Shared
         public void Dispose()
         {
             successTimer?.Dispose();
+            
+            // Ensure we return from portal on disposal
+            if (_isInPortal)
+            {
+                try
+                {
+                    _ = BackdropService.ReturnElementFromPortalAsync(ModalSelector);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error during disposal: {ex.Message}");
+                }
+            }
         }
     }
-
 }
