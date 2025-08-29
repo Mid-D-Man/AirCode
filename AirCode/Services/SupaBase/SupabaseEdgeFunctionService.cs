@@ -304,6 +304,59 @@ namespace AirCode.Services.SupaBase
                 };
             }
         }
+/// <summary>
+/// Calls the Supabase Edge Function to delete a user both in Auth0 and in Postgres.
+/// </summary>
+public async Task<DeleteUserResponse> DeleteUserAsync(DeleteUserRequest requestModel)
+{
+    try
+    {
+        if (string.IsNullOrWhiteSpace(requestModel.Auth0UserId) && string.IsNullOrWhiteSpace(requestModel.UserEmail))
+        {
+            return new DeleteUserResponse
+            {
+                Success = false,
+                Message = "Either Auth0UserId or UserEmail must be provided."
+            };
+        }
+
+        // Name of our deployed Edge Function
+        const string functionName = "delete-user";
+
+        var response = await SendEdgeFunctionRequestAsync(functionName, requestModel);
+
+        var content = await response.Content.ReadAsStringAsync();
+        Console.WriteLine($"DeleteUser Response Status: {response.StatusCode}");
+        Console.WriteLine($"DeleteUser Response Content: {content}");
+
+        if (response.IsSuccessStatusCode)
+        {
+            var result = JsonSerializer.Deserialize<DeleteUserResponse>(content, _jsonOptions);
+            return result ?? new DeleteUserResponse
+            {
+                Success = false,
+                Message = "Invalid response format from delete-user function."
+            };
+        }
+
+        return new DeleteUserResponse
+        {
+            Success = false,
+            Message = $"Delete failed with HTTP {response.StatusCode}",
+            Error = content
+        };
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error in DeleteUserAsync: {ex}");
+        return new DeleteUserResponse
+        {
+            Success = false,
+            Message = $"Unexpected error: {ex.Message}",
+            Error = ex.ToString()
+        };
+    }
+}
 
         public async Task<string> GetRandomCatImageAsync()
         {

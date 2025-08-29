@@ -121,4 +121,18 @@ namespace AirCode.Models.EdgeFunction
         public override string ToString() => 
             MID_HelperFunctions.GetStructOrClassMemberValues(this);
     }
+    
+    public class DeleteUserRequest
+    {
+        public string Auth0UserId { get; set; } = string.Empty;
+        public string UserEmail { get; set; } = string.Empty;
+    }
+
+    public class DeleteUserResponse
+    {
+        public bool Success { get; set; }
+        public string Message { get; set; } = string.Empty;
+        public string Error { get; set; } = string.Empty;
+    }
+
 }

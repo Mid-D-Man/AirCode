@@ -62,6 +62,12 @@ namespace AirCode.Services.SupaBase
         Task<string> GetRandomCatImageAsync();
         
         #endregion
+        
+        #region User Ops(admin only stuff)
+
+        Task<DeleteUserResponse> DeleteUserAsync(DeleteUserRequest requestModel);
+        
+        #endregion
 
         #region Legacy Methods (Deprecated)
         

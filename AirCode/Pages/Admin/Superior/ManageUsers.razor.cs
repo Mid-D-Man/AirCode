@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using AirCode.Components.SharedPrefabs.Cards;
 using AirCode.Services.Firebase;
 using AirCode.Domain.ValueObjects;
+using AirCode.Services.SupaBase;
 using AirCode.Utilities.HelperScripts;
 using AirCode.Utilities.ObjectPooling;
 using AirCode.Services.VisualElements;
@@ -17,6 +18,8 @@ public partial class ManageUsers : ComponentBase
     [Inject] private IFirestoreService FirestoreService { get; set; }
     [Inject] private ISvgIconService SvgIconService { get; set; }
     [Inject] private IJSRuntime JSRuntime { get; set; }
+    
+    [Inject] private ISupabaseEdgeFunctionService SupabaseEdgefunctionService { get; set; }
     #endregion
 
     #region Object Pooling
@@ -1073,7 +1076,7 @@ private async Task<OperationResult> DeleteLecturerSkeleton(LecturerSkeletonUser 
 
 #endregion
 
-#region Remove User Operations
+    #region Remove User Operations
 
 private async Task RemoveAssignedUser()
 {
@@ -1250,7 +1253,7 @@ private async Task<OperationResult> RemoveUserFromCourseRep(CourseRepAdminInfo c
 
 #endregion
 
-#region Helper Classes
+    #region Helper Classes
 
 public class OperationResult
 {
