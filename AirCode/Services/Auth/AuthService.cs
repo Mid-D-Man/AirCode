@@ -271,30 +271,60 @@ private async Task<string> GenerateGravatarUrlAsync(string email, int size = 80)
             }
         }
         public async Task<string> GetUserEmailAsync()
+{
+    try
+    {
+        var authState = await _authStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+       
+        if (!user.Identity.IsAuthenticated)
         {
-            try
-            {
-              
-                var authState = await _authStateProvider.GetAuthenticationStateAsync();
-                var user = authState.User;
-               
-                if (!user.Identity.IsAuthenticated)
-                {
-                    _logger.LogDebug("User not authenticated, returning empty user ID");
-                    return string.Empty;
-                }
-                    
-                // Get user ID from sub claim
-                var userEmail = user.FindFirst(ClaimTypes.Email)?.Value;
-                _logger.LogDebug("Retrieved user Email: {userEmail}", userEmail);
-                return userEmail;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving user ID");
-                return string.Empty;
-            }
+            _logger.LogDebug("User not authenticated, returning empty user email");
+            return string.Empty;
         }
+            
+        // Get user email from claims
+        var userEmail = user.FindFirst(ClaimTypes.Email)?.Value;
+        
+        // Log sanitized version for security - only log domain and partial info
+        if (!string.IsNullOrEmpty(userEmail))
+        {
+            var sanitizedEmail = SanitizeEmailForLogging(userEmail);
+            _logger.LogDebug("Retrieved user email: {SanitizedEmail}", sanitizedEmail);
+        }
+        else
+        {
+            _logger.LogDebug("No email found in user claims");
+        }
+        
+        return userEmail ?? string.Empty;
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Error retrieving user email");
+        return string.Empty;
+    }
+}
+
+private string SanitizeEmailForLogging(string email)
+{
+    if (string.IsNullOrEmpty(email) || !email.Contains('@'))
+        return "[invalid_email]";
+        
+    var parts = email.Split('@');
+    if (parts.Length != 2)
+        return "[malformed_email]";
+        
+    var localPart = parts[0];
+    var domain = parts[1];
+    
+    // Show first 2 chars of local part + *** + @domain
+    var sanitizedLocal = localPart.Length > 2 
+        ? $"{localPart.Substring(0, 2)}***" 
+        : "***";
+        
+    return $"{sanitizedLocal}@{domain}";
+}
 
         public async Task<string> GetLecturerIdAsync()
         {
