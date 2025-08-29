@@ -6,7 +6,7 @@
     bottom: 0 !important;
     width: 100vw !important;
     height: 100vh !important;
-    z-index: 10000; /* Higher than portal root */
+    z-index: 10000;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -15,8 +15,6 @@
     opacity: 0;
     visibility: hidden;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-
-    /* Ensure it's not affected by parent transforms */
     transform: none !important;
     contain: none !important;
 }
@@ -30,41 +28,45 @@
     position: relative;
     background: var(--bg-secondary);
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: 16px;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-    width: 72vw;
-    max-width: 560px;
+    width: 85vw;
+    max-width: 700px;
     max-height: 85vh;
     display: flex;
     flex-direction: column;
     transform: scale(0.9) translateY(20px);
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    margin: auto; /* Additional centering insurance */
+    margin: auto;
+    overflow: hidden;
 }
 
 .modal-overlay.visible .modal-content {
     transform: scale(1) translateY(0);
 }
 
+/* Fixed header with solid background */
 .modal-header {
-    padding: var(--spacing-xl) var(--spacing-xl) var(--spacing-lg);
+    padding: 1.5rem 2rem;
     border-bottom: 1px solid var(--border);
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: linear-gradient(135deg, var(--primary-50) 0%, var(--primary-100) 100%);
+    background: var(--bg-secondary);
     border-radius: 16px 16px 0 0;
+    flex-shrink: 0;
 }
 
 .modal-header h3 {
     margin: 0;
     font-size: 1.25rem;
     font-weight: 600;
-    color: var(--primary-700);
+    color: var(--text-primary);
     display: flex;
     align-items: center;
 }
 
+/* Fixed close button that stays as X */
 .close-btn {
     background: none;
     border: none;
@@ -78,29 +80,32 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: transform 0.2s ease;
-    transform: rotate(0deg);
+    transition: all 0.2s ease;
+    line-height: 1;
 }
 
 .close-btn:hover {
-    transform: rotate(45deg);
+    background: rgba(var(--text-secondary-rgb, 107, 114, 128), 0.1);
+    color: var(--text-primary);
 }
 
 .modal-body {
-    padding: var(--spacing-xl);
+    padding: 1.5rem 2rem;
     flex: 1;
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    min-height: 0;
 }
 
 .search-container {
-    margin-bottom: var(--spacing-lg);
+    margin-bottom: 1rem;
+    flex-shrink: 0;
 }
 
 .search-input {
     width: 100%;
-    padding: var(--spacing-md);
+    padding: 0.875rem 1rem;
     border: 2px solid var(--border);
     border-radius: 12px;
     font-size: 1rem;
@@ -120,15 +125,19 @@
     color: var(--text-tertiary);
 }
 
+/* Better arranged filters */
 .filters-container {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: var(--spacing-md);
-    margin-bottom: var(--spacing-lg);
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    flex-shrink: 0;
+    flex-wrap: wrap;
 }
 
 .filter-select {
-    padding: var(--spacing-sm) var(--spacing-md);
+    flex: 1;
+    min-width: 140px;
+    padding: 0.75rem 1rem;
     border: 1px solid var(--border);
     border-radius: 8px;
     font-size: 0.875rem;
@@ -142,13 +151,15 @@
     box-shadow: 0 0 0 3px var(--primary-100);
 }
 
+/* Larger courses list with proper curved borders */
 .courses-list {
     flex: 1;
     overflow-y: auto;
-    max-height: 600px;
+    min-height: 400px;
+    max-height: none;
     border: 1px solid var(--border);
     border-radius: 12px;
-    padding: var(--spacing-md);
+    padding: 1rem;
     background: var(--bg-primary);
 }
 
@@ -171,10 +182,10 @@
 }
 
 .course-item {
-    padding: var(--spacing-lg);
+    padding: 1rem 1.25rem;
     border: 1px solid var(--border);
-    border-radius: 6px;
-    margin-bottom: var(--spacing-sm);
+    border-radius: 8px;
+    margin-bottom: 0.75rem;
     cursor: pointer;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     background: var(--bg-secondary);
@@ -199,11 +210,20 @@
     border-color: var(--primary-300);
     transform: translateY(-2px);
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-    color:var(--text-primary);
 }
 
 .course-item:hover::before {
     transform: scaleY(1);
+}
+
+/* Fix dark mode text color on hover */
+.course-item:hover .course-name {
+    color: var(--text-primary-dark, #1f2937) !important;
+}
+
+/* Force black text in light mode hover, keep original in dark mode */
+body:not(.dark-mode) .course-item:hover .course-name {
+    color: #1f2937 !important;
 }
 
 .course-item.selected {
@@ -221,7 +241,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: var(--spacing-xs);
+    margin-bottom: 0.5rem;
 }
 
 .course-code {
@@ -235,7 +255,7 @@
 .course-level {
     background: var(--bg-tertiary);
     color: var(--text-secondary);
-    padding: var(--spacing-xs) var(--spacing-sm);
+    padding: 0.25rem 0.5rem;
     border-radius: 20px;
     font-size: 0.75rem;
     font-weight: 600;
@@ -250,14 +270,15 @@
 .course-name {
     font-size: 0.95rem;
     color: var(--text-primary);
-    margin-bottom: var(--spacing-sm);
+    margin-bottom: 0.75rem;
     font-weight: 500;
     line-height: 1.4;
+    transition: color 0.2s ease;
 }
 
 .course-details {
     display: flex;
-    gap: var(--spacing-md);
+    gap: 0.75rem;
     font-size: 0.8rem;
     color: var(--text-secondary);
     flex-wrap: wrap;
@@ -265,7 +286,7 @@
 
 .course-details span {
     background: var(--bg-tertiary);
-    padding: var(--spacing-xs) var(--spacing-sm);
+    padding: 0.25rem 0.5rem;
     border-radius: 6px;
     transition: all 0.2s ease;
 }
@@ -276,7 +297,7 @@
 }
 
 .course-schedule {
-    margin-top: var(--spacing-sm);
+    margin-top: 0.75rem;
     font-size: 0.75rem;
     color: var(--text-tertiary);
     font-style: italic;
@@ -287,13 +308,13 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: var(--spacing-xxl);
+    padding: 2rem;
     color: var(--text-secondary);
 }
 
 .no-results {
     text-align: center;
-    padding: var(--spacing-xxl);
+    padding: 2rem;
     color: var(--text-secondary);
     animation: fadeIn 0.5s ease-in;
 }
@@ -304,7 +325,7 @@
 }
 
 .no-results i {
-    margin-bottom: var(--spacing-lg);
+    margin-bottom: 1rem;
     opacity: 0.5;
     animation: pulse 2s infinite;
 }
@@ -316,7 +337,7 @@
 
 .more-results {
     text-align: center;
-    padding: var(--spacing-lg);
+    padding: 1rem;
     color: var(--text-secondary);
     font-size: 0.875rem;
     font-style: italic;
@@ -328,18 +349,20 @@
     to { transform: translateY(0); opacity: 1; }
 }
 
+/* Reduced footer height */
 .modal-footer {
-    padding: var(--spacing-lg) var(--spacing-xl) var(--spacing-xl);
+    padding: 1rem 2rem;
     border-top: 1px solid var(--border);
     display: flex;
-    gap: var(--spacing-md);
+    gap: 1rem;
     justify-content: flex-end;
     background: var(--bg-primary);
     border-radius: 0 0 16px 16px;
+    flex-shrink: 0;
 }
 
 .btn-secondary, .btn-primary {
-    padding: var(--spacing-md) var(--spacing-xl);
+    padding: 0.75rem 1.5rem;
     border-radius: 8px;
     font-size: 0.9rem;
     font-weight: 600;
@@ -350,7 +373,7 @@
     overflow: hidden;
     display: flex;
     align-items: center;
-    gap: var(--spacing-xs);
+    gap: 0.5rem;
 }
 
 .btn-secondary {
@@ -389,9 +412,7 @@
 .course-item {
     animation: slideInLeft 0.3s ease-out;
 }
-body:not(.dark-mode) .course-item:hover {
-    color: var(--text-dark-primary); /* Black text for light mode hover */
-}
+
 .course-item:nth-child(1) { animation-delay: 0.05s; }
 .course-item:nth-child(2) { animation-delay: 0.1s; }
 .course-item:nth-child(3) { animation-delay: 0.15s; }
@@ -414,12 +435,12 @@ body:not(.dark-mode) .course-item:hover {
     .modal-content {
         width: 95vw;
         max-height: 90vh;
-        margin: var(--spacing-md);
+        margin: 0.5rem;
         border-radius: 12px;
     }
 
     .modal-header {
-        padding: var(--spacing-lg);
+        padding: 1rem 1.5rem;
         border-radius: 12px 12px 0 0;
     }
 
@@ -428,21 +449,29 @@ body:not(.dark-mode) .course-item:hover {
     }
 
     .modal-body {
-        padding: var(--spacing-md);
+        padding: 1rem 1.5rem;
     }
 
     .search-input {
-        padding: var(--spacing-sm);
+        padding: 0.75rem;
         font-size: 0.9rem;
     }
 
     .filters-container {
-        grid-template-columns: 1fr;
-        gap: var(--spacing-sm);
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .filter-select {
+        min-width: unset;
+    }
+
+    .courses-list {
+        min-height: 300px;
     }
 
     .course-details {
-        gap: var(--spacing-sm);
+        gap: 0.5rem;
     }
 
     .course-item:hover {
@@ -450,19 +479,15 @@ body:not(.dark-mode) .course-item:hover {
     }
 
     .modal-footer {
-        padding: var(--spacing-md);
+        padding: 1rem 1.5rem;
         flex-direction: column;
-        gap: var(--spacing-sm);
+        gap: 0.75rem;
     }
 
     .btn-secondary, .btn-primary {
         width: 100%;
         justify-content: center;
-        padding: var(--spacing-md);
-    }
-
-    .courses-list {
-        max-height: 350px;
+        padding: 0.875rem;
     }
 }
 
@@ -470,12 +495,12 @@ body:not(.dark-mode) .course-item:hover {
     .modal-content {
         width: 98vw;
         max-height: 95vh;
-        margin: var(--spacing-sm);
+        margin: 0.25rem;
         border-radius: 8px;
     }
 
     .modal-header {
-        padding: var(--spacing-md);
+        padding: 1rem;
         border-radius: 8px 8px 0 0;
     }
 
@@ -484,13 +509,18 @@ body:not(.dark-mode) .course-item:hover {
     }
 
     .modal-body {
-        padding: var(--spacing-sm);
+        padding: 1rem;
+    }
+
+    .courses-list {
+        min-height: 250px;
+        border-radius: 8px;
     }
 
     .course-item {
-        padding: var(--spacing-md);
-        margin-bottom: var(--spacing-xs);
-        border-radius: 8px;
+        padding: 0.875rem;
+        margin-bottom: 0.5rem;
+        border-radius: 6px;
     }
 
     .course-code {
@@ -504,26 +534,22 @@ body:not(.dark-mode) .course-item:hover {
 
     .course-details {
         font-size: 0.75rem;
-        gap: var(--spacing-xs);
+        gap: 0.25rem;
     }
 
     .course-details span {
-        padding: 2px var(--spacing-xs);
+        padding: 0.125rem 0.375rem;
         font-size: 0.7rem;
     }
 
     .course-level {
         font-size: 0.7rem;
-        padding: 2px var(--spacing-xs);
+        padding: 0.125rem 0.375rem;
     }
 
     .modal-footer {
         border-radius: 0 0 8px 8px;
-    }
-
-    .courses-list {
-        max-height: 300px;
-        border-radius: 8px;
+        padding: 0.875rem 1rem;
     }
 }
 
@@ -551,4 +577,4 @@ body:not(.dark-mode) .course-item:hover {
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
-}
+    }
