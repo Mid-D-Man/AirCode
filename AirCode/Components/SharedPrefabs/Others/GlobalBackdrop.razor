@@ -3,7 +3,7 @@
 @inject IBackdropService BackdropService
 @implements IDisposable
 
-@* GlobalBackdrop.razor *@
+@* Keep the existing GlobalBackdrop for backward compatibility *@
 @if (BackdropService.IsVisible)
 {
     <div class="global-backdrop-portal" @onclick="HandleBackdropClick">
@@ -19,7 +19,7 @@
 
     private void HandleBackdropClick()
     {
-        BackdropService.Hide();
+        _ = BackdropService.HideAsync();
     }
 
     public void Dispose()

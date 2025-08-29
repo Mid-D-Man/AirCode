@@ -19,7 +19,6 @@
     </div>
 }
 
-<GlobalBackdrop />
 
 @code {
     [Parameter] public bool IsVisible { get; set; }
@@ -63,17 +62,17 @@
         };
     }
 
-    protected override void OnParametersSet()
+    protected async override void OnParametersSet()
     {
         if (IsVisible)
-            BackdropService.Show();
+           await BackdropService.ShowAsync();
         else
-            BackdropService.Hide();
+           await BackdropService.HideAsync();
     }
 
-    public void Dispose()
+    public async void Dispose()
     {
-        BackdropService.Hide();
+     await   BackdropService.HideAsync();
     }
 
     public enum InfoType

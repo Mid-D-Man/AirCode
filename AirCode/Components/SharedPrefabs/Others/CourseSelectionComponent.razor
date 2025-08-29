@@ -2,11 +2,17 @@
 @using AirCode.Domain.Enums
 @using AirCode.Services.Courses
 @using AirCode.Components.SharedPrefabs.Spinner
+@using AirCode.Services.VisualElements
 @inject ICourseService CourseService
+@inject IBackdropService BackdropService
+@inject IJSRuntime JSRuntime
 
 @if (IsVisible)
 {
-    <div class="modal-overlay @(IsVisible ? "visible" : "")" @onclick="HandleBackdropClick">
+    <div id="course-selection-modal-@InstanceId" 
+         class="modal-overlay @(IsVisible ? "visible" : "")" 
+         @onclick="HandleBackdropClick"
+         @ref="modalOverlayRef">
         <div class="modal-content" @onclick:stopPropagation="true">
             <div class="modal-header">
                 <h3>
@@ -128,12 +134,10 @@
 }
 
 @code {
-    //course management for students... works
     [Parameter] public bool IsVisible { get; set; }
     [Parameter] public EventCallback<Course> OnCourseSelected { get; set; }
     [Parameter] public EventCallback OnClosed { get; set; }
-    [Parameter]
-    public bool IsOfflineMode { get; set; }
+    [Parameter] public bool IsOfflineMode { get; set; }
 
     private List<Course> AllCourses = new();
     private List<Course> FilteredCourses = new();
@@ -148,9 +152,26 @@
     private bool IsLoadingCourses = false;
     private bool IsLoading = false;
     private Timer _debounceTimer;
+    
+    // Portal management
+    private ElementReference modalOverlayRef;
+    private string InstanceId = Guid.NewGuid().ToString("N")[..8];
+    private string ModalSelector => $"#course-selection-modal-{InstanceId}";
+    private bool _isInPortal = false;
 
     protected override async Task OnParametersSetAsync()
     {
+        if (IsVisible && !_wasVisible)
+        {
+            await ShowModalAsync();
+        }
+        else if (!IsVisible && _wasVisible)
+        {
+            await HideModalAsync();
+        }
+        
+        _wasVisible = IsVisible;
+
         if (IsVisible)
         {
             IsLoadingCourses = true;
@@ -182,7 +203,41 @@
             }
         }
     }
+    
+    private bool _wasVisible = false;
 
+    private async Task ShowModalAsync()
+    {
+        try
+        {
+            // Give the DOM time to render
+            await Task.Delay(50);
+            await BackdropService.MoveElementToPortalAsync(ModalSelector);
+            _isInPortal = true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error showing modal: {ex.Message}");
+        }
+    }
+
+    private async Task HideModalAsync()
+    {
+        try
+        {
+            if (_isInPortal)
+            {
+                await BackdropService.ReturnElementFromPortalAsync(ModalSelector);
+                _isInPortal = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error hiding modal: {ex.Message}");
+        }
+    }
+
+    // Rest of your existing methods stay the same...
     private string GetLevelDisplay(LevelType level)
     {
         return level switch
@@ -239,7 +294,6 @@
 
         FilteredCourses = AllCourses.Where(course =>
         {
-            // Search query filter
             if (!string.IsNullOrWhiteSpace(SearchTerm))
             {
                 var query = SearchTerm.ToLowerInvariant();
@@ -251,20 +305,17 @@
                 }
             }
 
-            // Department filter
             if (!string.IsNullOrEmpty(SelectedDepartment) &&
                 course.DepartmentId != SelectedDepartment)
             {
                 return false;
             }
 
-            // Level filter
             if (SelectedLevel.HasValue && course.Level != SelectedLevel.Value)
             {
                 return false;
             }
 
-            // Semester filter
             if (SelectedSemester.HasValue && course.Semester != SelectedSemester.Value)
             {
                 return false;
@@ -346,7 +397,6 @@
 
     private void HandleBackdropClick()
     {
-        // Only close if not loading
         if (!IsLoading && !IsLoadingCourses)
         {
             _ = CloseModal();
@@ -355,6 +405,9 @@
 
     private async Task CloseModal()
     {
+        // Return from portal before closing
+        await HideModalAsync();
+        
         // Reset all state
         SelectedCourse = null;
         SearchTerm = "";
@@ -368,8 +421,21 @@
         await OnClosed.InvokeAsync();
     }
 
-    public void Dispose()
+    public async void Dispose()
     {
         _debounceTimer?.Dispose();
+        
+        // Ensure we return from portal on disposal
+        if (_isInPortal)
+        {
+            try
+            {
+                await BackdropService.ReturnElementFromPortalAsync(ModalSelector);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error during disposal: {ex.Message}");
+            }
+        }
     }
 }

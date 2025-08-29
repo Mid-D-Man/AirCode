@@ -6,7 +6,7 @@
 
 @if (IsVisible)
 {
-    <GlobalBackdrop />
+  
     <div class="popup-container">
         <div class="popup-content">
             @if (IsLoading)
@@ -59,15 +59,15 @@
     [Parameter] public EventCallback OnConfirm { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
 
-    protected override void OnParametersSet()
+    protected async override void OnParametersSet()
     {
         if (IsVisible)
         {
-            BackdropService.Show();
+          await  BackdropService.ShowAsync();
         }
         else
         {
-            BackdropService.Hide();
+          await  BackdropService.HideAsync();
         }
     }
 }

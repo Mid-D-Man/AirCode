@@ -127,6 +127,48 @@
     background: linear-gradient(180deg, var(--text-secondary), var(--text-primary));
 }
 
+.modal-portal-root {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    z-index: 9999;
+}
+
+.modal-portal-root > * {
+    pointer-events: all;
+}
+::global(.modal-portal-root) {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    pointer-events: none !important;
+    z-index: 99999 !important;
+    contain: none !important;
+    transform: none !important;
+}
+
+::global(.modal-portal-root > *) {
+    pointer-events: all !important;
+}
+
+/* Ensure any portal children override all containment */
+::global(.modal-portal-root .modal-overlay) {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    transform: none !important;
+    contain: none !important;
+    z-index: 10001 !important;
+}
 /* Responsive adjustments for collapsed menu - UNCHANGED (perfect as is) */
 @media (min-width: 1025px) {
     .nav-menu.collapsed ~ .main-content {
