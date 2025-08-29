@@ -39,8 +39,7 @@ namespace AirCode.Services.Courses
                 Task<bool> ClearAllStudentCourseReferencesAsync();
                 Task<bool> PromoteAllStudentsToNextLevelAsync();
                 
-                // Add these methods to ICourseService interface
-
+                 Task<List<Course>> GetCoursesFromLocalStorageAsync();
                 #region Distributed Storage Operations
 
                 /// <summary>

@@ -23,6 +23,44 @@ public class Collections
     public List<CourseRepSkeletonUser> CourseReps { get; } = new();
 }
 
+// Violation and Suspension Structures
+public class UserViolation
+{
+    public string ViolationId { get; set; } = Guid.NewGuid().ToString();
+    public string Reason { get; set; } = "";
+    public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+    public TimeSpan Duration { get; set; }
+    public DateTime ExpiryDate => Timestamp.Add(Duration);
+    public string IssuedBy { get; set; } = "";
+    public bool IsActive => DateTime.UtcNow < ExpiryDate;
+}
+
+public class UserSuspension
+{
+    public bool IsSuspended { get; set; } = false;
+    public List<UserViolation> Violations { get; set; } = new();
+    public DateTime? LastSuspensionDate { get; set; }
+    public string CurrentSuspensionReason => GetActiveSuspension()?.Reason ?? "";
+    
+    public UserViolation? GetActiveSuspension()
+    {
+        return Violations.FirstOrDefault(v => v.IsActive);
+    }
+    
+    public void AddViolation(UserViolation violation)
+    {
+        Violations.Add(violation);
+        IsSuspended = violation.IsActive;
+        LastSuspensionDate = violation.Timestamp;
+    }
+    
+    public void UpdateSuspensionStatus()
+    {
+        var activeSuspension = GetActiveSuspension();
+        IsSuspended = activeSuspension != null;
+    }
+}
+
 // Domain Models
 public class StudentSkeletonUser
 {
@@ -30,6 +68,7 @@ public class StudentSkeletonUser
     public bool IsCurrentlyInUse { get; set; } = false;
     public string Level { get; set; } = "";
     public string MatricNumber { get; set; } = "";
+    public UserSuspension Suspension { get; set; } = new();
 }
 
 public class LecturerSkeletonUser
@@ -39,6 +78,7 @@ public class LecturerSkeletonUser
     public int CurrentUsage { get; set; } = 0;
     public int MaxUsage { get; set; } = 1;
     public List<string> UserIds { get; set; } = new();
+    public UserSuspension Suspension { get; set; } = new();
 }
 
 public class CourseRepSkeletonUser
@@ -54,6 +94,7 @@ public class CourseRepAdminInfo
     public int CurrentUsage { get; set; } = 0;
     public int MaxUsage { get; set; } = 2;
     public List<string> UserIds { get; set; } = new();
+    public UserSuspension Suspension { get; set; } = new();
 }
 
 // Firebase Document Models
@@ -74,12 +115,14 @@ public class LecturerAdminInfo
     public int CurrentUsage { get; set; } = 0;
     public int MaxUsage { get; set; } = 1;
     public List<string> UserIds { get; set; } = new();
+    public UserSuspension Suspension { get; set; } = new();
 }
 
 public class CourseRepAdminDocument
 {
     public List<CourseRepAdminInfo> Ids { get; set; } = new();
 }
+
 public class PooledTaskWrapper<T> : IDisposable where T : class
 {
     private readonly MID_ComponentObjectPool<T> _pool;

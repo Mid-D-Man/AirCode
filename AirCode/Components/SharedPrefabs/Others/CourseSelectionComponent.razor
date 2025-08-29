@@ -132,6 +132,8 @@
     [Parameter] public bool IsVisible { get; set; }
     [Parameter] public EventCallback<Course> OnCourseSelected { get; set; }
     [Parameter] public EventCallback OnClosed { get; set; }
+    [Parameter]
+    public bool IsOfflineMode { get; set; }
 
     private List<Course> AllCourses = new();
     private List<Course> FilteredCourses = new();
@@ -149,9 +151,35 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        if (IsVisible && !AllCourses.Any())
+        if (IsVisible)
         {
-            await LoadCourses();
+            IsLoadingCourses = true;
+            StateHasChanged();
+
+            try
+            {
+                AllCourses = IsOfflineMode
+                    ? await CourseService.GetCoursesFromLocalStorageAsync()
+                    : await CourseService.GetAllCoursesAsync();
+
+                AvailableDepartments = AllCourses
+                    .Where(c => !string.IsNullOrEmpty(c.DepartmentId))
+                    .Select(c => c.DepartmentId)
+                    .Distinct()
+                    .OrderBy(d => d)
+                    .ToList();
+
+                FilterCourses();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error loading courses: {ex.Message}");
+            }
+            finally
+            {
+                IsLoadingCourses = false;
+                StateHasChanged();
+            }
         }
     }
 

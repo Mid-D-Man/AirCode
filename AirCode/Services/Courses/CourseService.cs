@@ -66,7 +66,7 @@ namespace AirCode.Services.Courses
                 maxPoolSize: 50,
                 cleanupInterval: TimeSpan.FromMinutes(10)
             );
-
+            
         }
 
         public async Task<List<Course>> GetAllCoursesAsync()
@@ -1035,7 +1035,7 @@ private async Task SaveLevelStudentCoursesToLocalStorageAsync(LevelType level, L
 }
 
 // Optional: Methods to retrieve from local storage (for offline scenarios)
-private async Task<List<Course>> GetCoursesFromLocalStorageAsync()
+        public async Task<List<Course>> GetCoursesFromLocalStorageAsync()
 {
     try
     {

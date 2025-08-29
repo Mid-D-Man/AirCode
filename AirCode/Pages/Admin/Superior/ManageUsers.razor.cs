@@ -6,6 +6,7 @@ using AirCode.Services.Firebase;
 using AirCode.Domain.ValueObjects;
 using AirCode.Utilities.HelperScripts;
 using AirCode.Utilities.ObjectPooling;
+using AirCode.Services.VisualElements;
 using Microsoft.JSInterop;
 
 namespace AirCode.Pages.Admin.Superior;
@@ -14,6 +15,7 @@ public partial class ManageUsers : ComponentBase
 {
     #region Dependency Injection
     [Inject] private IFirestoreService FirestoreService { get; set; }
+    [Inject] private ISvgIconService SvgIconService { get; set; }
     [Inject] private IJSRuntime JSRuntime { get; set; }
     #endregion
 
@@ -50,12 +52,18 @@ public partial class ManageUsers : ComponentBase
     #region UI State Variables
     private bool loading = true;
     private string activeTab = "students";
+    private string settingsIcon = "";
     
     // Modal states
     private bool showCreateModal = false;
     private bool showMaxUsageModal = false;
     private bool showDeleteModal = false;
     private bool showRemoveUserModal = false;
+    private bool showUserManagementModal = false;
+    
+    // User Management Modal sections
+    private bool showRemoveUserSection = false;
+    private bool showSuspendUserSection = false;
     
     // Form fields
     private string newUserType = "Student";
@@ -63,6 +71,10 @@ public partial class ManageUsers : ComponentBase
     private string newLevel = "100";
     private int newMaxUsage = 1;
     private int updateMaxUsage = 1;
+    
+    // Suspension fields
+    private string suspensionReason = "";
+    private int suspensionDurationHours = 24;
     
     // Selected items
     private object selectedUser;
@@ -76,7 +88,20 @@ public partial class ManageUsers : ComponentBase
     #region Lifecycle Methods
     protected override async Task OnInitializedAsync()
     {
+        await LoadSettingsIcon();
         await LoadAllUsers();
+    }
+
+    private async Task LoadSettingsIcon()
+    {
+        try
+        {
+            settingsIcon = await SvgIconService.GetSettingsIconAsync();
+        }
+        catch
+        {
+            settingsIcon = "⚙️"; // Fallback emoji
+        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -92,6 +117,20 @@ public partial class ManageUsers : ComponentBase
     {
         return !loading && _collections != null && 
                (_collections.Students != null || _collections.Lecturers != null || _collections.CourseReps != null);
+    }
+    #endregion
+
+    #region Status Helper Methods
+    private string GetUserStatusClass(bool inUse, bool suspended)
+    {
+        if (suspended) return "text-danger";
+        return inUse ? "text-success" : "text-secondary";
+    }
+
+    private string GetUserStatusText(bool inUse, bool suspended)
+    {
+        if (suspended) return "Suspended";
+        return inUse ? "In Use" : "Available";
     }
     #endregion
 
@@ -141,6 +180,7 @@ public partial class ManageUsers : ComponentBase
                             {
                                 if (!courseRepMatricNumbers.Contains(student.MatricNumber))
                                 {
+                                    student.Suspension.UpdateSuspensionStatus();
                                     pooledList.Add(student);
                                 }
                             }
@@ -173,13 +213,15 @@ public partial class ManageUsers : ComponentBase
                     {
                         foreach (var adminData in lecturerDoc.Ids)
                         {
+                            adminData.Suspension.UpdateSuspensionStatus();
                             pooledList.Add(new LecturerSkeletonUser
                             {
                                 AdminId = adminData.AdminId,
                                 LecturerId = adminData.LecturerId,
                                 CurrentUsage = adminData.CurrentUsage,
                                 MaxUsage = adminData.MaxUsage,
-                                UserIds = adminData.UserIds
+                                UserIds = adminData.UserIds,
+                                Suspension = adminData.Suspension
                             });
                         }
                     }
@@ -210,19 +252,13 @@ public partial class ManageUsers : ComponentBase
                     {
                         foreach (var adminData in courseRepDoc.Ids)
                         {
+                            adminData.Suspension.UpdateSuspensionStatus();
                             var studentInfo = await FindStudentByMatricNumberAsync(adminData.MatricNumber);
                             if (studentInfo != null)
                             {
                                 pooledList.Add(new CourseRepSkeletonUser
                                 {
-                                    AdminInfo = new CourseRepAdminInfo
-                                    {
-                                        AdminId = adminData.AdminId,
-                                        MatricNumber = adminData.MatricNumber,
-                                        CurrentUsage = adminData.CurrentUsage,
-                                        MaxUsage = adminData.MaxUsage,
-                                        UserIds = adminData.UserIds
-                                    },
+                                    AdminInfo = adminData,
                                     StudentInfo = studentInfo
                                 });
                             }
@@ -305,18 +341,20 @@ public partial class ManageUsers : ComponentBase
 
     private string GetStatusClass(StudentSkeletonUser student)
     {
-        return student?.IsCurrentlyInUse == true ? "user-card in-use" : "user-card";
+        var baseClass = "user-card";
+        if (student?.IsCurrentlyInUse == true) baseClass += " in-use";
+        if (student?.Suspension?.IsSuspended == true) baseClass += " suspended";
+        return baseClass;
     }
 
     private void OnUserTypeChanged(ChangeEventArgs e)
     {
         newUserType = e.Value?.ToString() ?? "Student";
     
-        // Updated max usage logic - Course Reps now default to 1
         newMaxUsage = newUserType switch
         {
             "Lecturer" => 1,
-            "CourseRep" => 1, // Changed from 2 to 1
+            "CourseRep" => 1,
             _ => 1
         };
     
@@ -327,6 +365,161 @@ public partial class ManageUsers : ComponentBase
     {
         newUserType = e.Value?.ToString() ?? "Student";
         OnUserTypeChanged(e);
+    }
+    #endregion
+
+    #region User Management Modal Methods
+    private void ShowUserManagementModal(object user, string userType)
+    {
+        selectedUser = user;
+        selectedUserType = userType;
+        showUserManagementModal = true;
+        HideAllSections();
+    }
+
+    private bool HasAssignedUsers()
+    {
+        return selectedUser switch
+        {
+            StudentSkeletonUser student => !string.IsNullOrEmpty(student.CurrentUserId),
+            LecturerSkeletonUser lecturer => lecturer.UserIds.Any(),
+            CourseRepSkeletonUser courseRep => !string.IsNullOrEmpty(courseRep.StudentInfo.CurrentUserId) || 
+                                               courseRep.AdminInfo.UserIds.Any(),
+            _ => false
+        };
+    }
+
+    private bool IsUserSuspended()
+    {
+        return selectedUser switch
+        {
+            StudentSkeletonUser student => student.Suspension.IsSuspended,
+            LecturerSkeletonUser lecturer => lecturer.Suspension.IsSuspended,
+            CourseRepSkeletonUser courseRep => courseRep.AdminInfo.Suspension.IsSuspended,
+            _ => false
+        };
+    }
+
+    private void ShowRemoveCurrentUserSection()
+    {
+        HideAllSections();
+        showRemoveUserSection = true;
+    }
+
+    private void ShowSuspendUserSection()
+    {
+        HideAllSections();
+        showSuspendUserSection = true;
+        
+        // Pre-fill current suspension data if exists
+        if (IsUserSuspended())
+        {
+            var activeSuspension = selectedUser switch
+            {
+                StudentSkeletonUser student => student.Suspension.GetActiveSuspension(),
+                LecturerSkeletonUser lecturer => lecturer.Suspension.GetActiveSuspension(),
+                CourseRepSkeletonUser courseRep => courseRep.AdminInfo.Suspension.GetActiveSuspension(),
+                _ => null
+            };
+            
+            if (activeSuspension != null)
+            {
+                suspensionReason = activeSuspension.Reason;
+                suspensionDurationHours = (int)activeSuspension.Duration.TotalHours;
+            }
+        }
+    }
+
+    private void HideAllSections()
+    {
+        showRemoveUserSection = false;
+        showSuspendUserSection = false;
+    }
+
+    private async Task RemoveCurrentUser()
+    {
+        try
+        {
+            var result = await RemoveUserFromSelected();
+            
+            if (result.Success)
+            {
+                notificationComponent?.ShowSuccess("User removed successfully!");
+                CloseModals();
+                await LoadAllUsers();
+            }
+            else
+            {
+                notificationComponent?.ShowError($"Failed to remove user: {result.ErrorMessage}");
+            }
+        }
+        catch (Exception ex)
+        {
+            notificationComponent?.ShowError($"Error removing user: {ex.Message}");
+        }
+    }
+
+    private async Task SuspendUser()
+    {
+        if (string.IsNullOrWhiteSpace(suspensionReason) || suspensionDurationHours <= 0)
+        {
+            notificationComponent?.ShowError("Please provide a valid reason and duration.");
+            return;
+        }
+
+        try
+        {
+            var violation = new UserViolation
+            {
+                Reason = suspensionReason.Trim(),
+                Duration = TimeSpan.FromHours(suspensionDurationHours),
+                IssuedBy = "Admin" // TODO: Get current user ID
+            };
+
+            var result = await ApplySuspension(violation);
+            
+            if (result.Success)
+            {
+                notificationComponent?.ShowSuccess("User suspension applied successfully!");
+                CloseModals();
+                await LoadAllUsers();
+            }
+            else
+            {
+                notificationComponent?.ShowError($"Failed to suspend user: {result.ErrorMessage}");
+            }
+        }
+        catch (Exception ex)
+        {
+            notificationComponent?.ShowError($"Error suspending user: {ex.Message}");
+        }
+    }
+
+    private async Task<OperationResult> RemoveUserFromSelected()
+    {
+        return selectedUser switch
+        {
+            StudentSkeletonUser student when !string.IsNullOrEmpty(student.CurrentUserId) 
+                => await RemoveUserFromStudent(student, student.CurrentUserId),
+            LecturerSkeletonUser lecturer when lecturer.UserIds.Any() 
+                => await RemoveUserFromLecturer(lecturer, lecturer.UserIds.First()),
+            CourseRepSkeletonUser courseRep when !string.IsNullOrEmpty(courseRep.StudentInfo.CurrentUserId)
+                => await RemoveUserFromStudent(courseRep.StudentInfo, courseRep.StudentInfo.CurrentUserId),
+            CourseRepSkeletonUser courseRep when courseRep.AdminInfo.UserIds.Any()
+                => await RemoveUserFromCourseRep(courseRep.AdminInfo, courseRep.AdminInfo.UserIds.First()),
+            _ => new OperationResult { Success = false, ErrorMessage = "No users to remove" }
+        };
+    }
+
+    private async Task<OperationResult> ApplySuspension(UserViolation violation)
+    {
+        return selectedUser switch
+        {
+            StudentSkeletonUser student => await SuspendStudent(student, violation),
+            LecturerSkeletonUser lecturer => await SuspendLecturer(lecturer, violation),
+            CourseRepSkeletonUser courseRep => await SuspendCourseRep(courseRep.AdminInfo, violation),
+            _ => new OperationResult { Success = false, ErrorMessage = "Invalid user type for suspension" }
+        };
     }
     #endregion
 
@@ -371,8 +564,12 @@ public partial class ManageUsers : ComponentBase
         showMaxUsageModal = false;
         showDeleteModal = false;
         showRemoveUserModal = false;
+        showUserManagementModal = false;
     
+        HideAllSections();
         newMatricNumber = "";
+        suspensionReason = "";
+        suspensionDurationHours = 24;
         selectedUser = null;
         selectedUserType = null;
         selectedAssignedUserId = null;
@@ -406,12 +603,11 @@ public partial class ManageUsers : ComponentBase
             rng.GetBytes(randomBytes);
         }
     
-        // Ensure consistent 16-character length
         var base64String = Convert.ToBase64String(randomBytes)
             .Replace("+", "")
             .Replace("/", "")
             .Replace("=", "")
-            .PadRight(16, '0'); // Guarantee 16 characters
+            .PadRight(16, '0');
 
         sb.Append("AIRCODE_")
             .Append(saltString)
@@ -423,10 +619,8 @@ public partial class ManageUsers : ComponentBase
 
     private string GenerateLecturerId()
     {
-      
         var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
-        var randomBytes =   MID_HelperFunctions.GenerateRandomString(3);
-      
+        var randomBytes = MID_HelperFunctions.GenerateRandomString(3);
         var randomString = randomBytes.ToLower();
         return $"LEC_{timestamp}_{randomString}";
     }
@@ -483,7 +677,8 @@ public partial class ManageUsers : ComponentBase
             CurrentUserId = "",
             IsCurrentlyInUse = false,
             Level = newLevel,
-            MatricNumber = matricNumber
+            MatricNumber = matricNumber,
+            Suspension = new UserSuspension()
         };
 
         var docName = $"StudentLevel{newLevel}";
@@ -519,7 +714,8 @@ public partial class ManageUsers : ComponentBase
             MatricNumber = matricNumber,
             CurrentUsage = 0,
             MaxUsage = newMaxUsage,
-            UserIds = new List<string>()
+            UserIds = new List<string>(),
+            Suspension = new UserSuspension()
         };
 
         var existingDoc = await FirestoreService.GetDocumentAsync<CourseRepAdminDocument>(ADMIN_IDS_COLLECTION, COURSEREP_ADMIN_DOC);
@@ -544,7 +740,8 @@ public partial class ManageUsers : ComponentBase
             LecturerId = lecturerId,
             CurrentUsage = 0,
             MaxUsage = newMaxUsage,
-            UserIds = new List<string>()
+            UserIds = new List<string>(),
+            Suspension = new UserSuspension()
         };
         
         var existingDoc = await FirestoreService.GetDocumentAsync<LecturerAdminDocument>(ADMIN_IDS_COLLECTION, LECTURER_ADMIN_DOC);
@@ -608,6 +805,81 @@ public partial class ManageUsers : ComponentBase
                 courseRepToUpdate.MaxUsage = newMaxUsage;
                 await FirestoreService.UpdateDocumentAsync(ADMIN_IDS_COLLECTION, COURSEREP_ADMIN_DOC, courseRepDoc);
             }
+        }
+    }
+    #endregion
+
+    #region Suspension Operations
+    private async Task<OperationResult> SuspendStudent(StudentSkeletonUser student, UserViolation violation)
+    {
+        try
+        {
+            var docName = $"StudentLevel{student.Level}";
+            var levelDoc = await FirestoreService.GetDocumentAsync<StudentLevelDocument>(STUDENTS_COLLECTION, docName);
+            
+            if (levelDoc?.ValidStudentMatricNumbers == null)
+                return new OperationResult { Success = false, ErrorMessage = "Student document not found" };
+
+            var studentToUpdate = levelDoc.ValidStudentMatricNumbers
+                .FirstOrDefault(s => s.MatricNumber.Equals(student.MatricNumber, StringComparison.OrdinalIgnoreCase));
+            
+            if (studentToUpdate == null)
+                return new OperationResult { Success = false, ErrorMessage = "Student not found" };
+
+            studentToUpdate.Suspension.AddViolation(violation);
+            
+            var updateSuccess = await FirestoreService.UpdateDocumentAsync(STUDENTS_COLLECTION, docName, levelDoc);
+            return new OperationResult { Success = updateSuccess };
+        }
+        catch (Exception ex)
+        {
+            return new OperationResult { Success = false, ErrorMessage = ex.Message };
+        }
+    }
+
+    private async Task<OperationResult> SuspendLecturer(LecturerSkeletonUser lecturer, UserViolation violation)
+    {
+        try
+        {
+            var lecturerDoc = await FirestoreService.GetDocumentAsync<LecturerAdminDocument>(ADMIN_IDS_COLLECTION, LECTURER_ADMIN_DOC);
+            if (lecturerDoc?.Ids == null)
+                return new OperationResult { Success = false, ErrorMessage = "Lecturer document not found" };
+
+            var lecturerToUpdate = lecturerDoc.Ids.FirstOrDefault(l => l.AdminId == lecturer.AdminId);
+            if (lecturerToUpdate == null)
+                return new OperationResult { Success = false, ErrorMessage = "Lecturer not found" };
+
+            lecturerToUpdate.Suspension.AddViolation(violation);
+            
+            var updateSuccess = await FirestoreService.UpdateDocumentAsync(ADMIN_IDS_COLLECTION, LECTURER_ADMIN_DOC, lecturerDoc);
+            return new OperationResult { Success = updateSuccess };
+        }
+        catch (Exception ex)
+        {
+            return new OperationResult { Success = false, ErrorMessage = ex.Message };
+        }
+    }
+
+    private async Task<OperationResult> SuspendCourseRep(CourseRepAdminInfo courseRepAdmin, UserViolation violation)
+    {
+        try
+        {
+            var courseRepDoc = await FirestoreService.GetDocumentAsync<CourseRepAdminDocument>(ADMIN_IDS_COLLECTION, COURSEREP_ADMIN_DOC);
+            if (courseRepDoc?.Ids == null)
+                return new OperationResult { Success = false, ErrorMessage = "Course rep document not found" };
+
+            var courseRepToUpdate = courseRepDoc.Ids.FirstOrDefault(cr => cr.AdminId == courseRepAdmin.AdminId);
+            if (courseRepToUpdate == null)
+                return new OperationResult { Success = false, ErrorMessage = "Course rep not found" };
+
+            courseRepToUpdate.Suspension.AddViolation(violation);
+            
+            var updateSuccess = await FirestoreService.UpdateDocumentAsync(ADMIN_IDS_COLLECTION, COURSEREP_ADMIN_DOC, courseRepDoc);
+            return new OperationResult { Success = updateSuccess };
+        }
+        catch (Exception ex)
+        {
+            return new OperationResult { Success = false, ErrorMessage = ex.Message };
         }
     }
     #endregion
@@ -816,7 +1088,8 @@ private async Task RemoveAssignedUser()
         var result = selectedUserType switch
         {
             LECTURER_ID when selectedUser is LecturerSkeletonUser lecturer => await RemoveUserFromLecturer(lecturer, selectedAssignedUserId),
-            COURSEREP_ID when selectedUser is CourseRepSkeletonUser courseRep => await RemoveUserFromCourseRep(courseRep.AdminInfo, selectedAssignedUserId),
+            COURSEREP_ID when selectedUser is CourseRepAdminInfo courseRepAdmin => await RemoveUserFromCourseRep(courseRepAdmin, selectedAssignedUserId),
+            STUDENT_ID when selectedUser is StudentSkeletonUser student => await RemoveUserFromStudent(student, selectedAssignedUserId),
             _ => new OperationResult { Success = false, ErrorMessage = $"Unsupported user type '{selectedUserType}' for removal" }
         };
 
@@ -834,6 +1107,54 @@ private async Task RemoveAssignedUser()
     catch (Exception ex)
     {
         notificationComponent?.ShowError($"Error removing user: {ex.Message}");
+    }
+}
+
+private async Task<OperationResult> RemoveUserFromStudent(StudentSkeletonUser student, string userId)
+{
+    if (student?.MatricNumber == null || string.IsNullOrWhiteSpace(userId))
+    {
+        return new OperationResult { Success = false, ErrorMessage = "Invalid parameters for student user removal" };
+    }
+
+    try
+    {
+        var docName = $"StudentLevel{student.Level}";
+        var levelDoc = await FirestoreService.GetDocumentAsync<StudentLevelDocument>(STUDENTS_COLLECTION, docName);
+        
+        if (levelDoc?.ValidStudentMatricNumbers == null)
+        {
+            return new OperationResult { Success = false, ErrorMessage = "Student document not found" };
+        }
+
+        var studentToUpdate = levelDoc.ValidStudentMatricNumbers
+            .FirstOrDefault(s => s.MatricNumber.Equals(student.MatricNumber, StringComparison.OrdinalIgnoreCase));
+        
+        if (studentToUpdate == null)
+        {
+            return new OperationResult { Success = false, ErrorMessage = $"Student '{student.MatricNumber}' not found in document" };
+        }
+
+        if (studentToUpdate.CurrentUserId != userId)
+        {
+            return new OperationResult { Success = false, ErrorMessage = $"User '{userId}' not assigned to student" };
+        }
+
+        // Update the student's user assignment
+        studentToUpdate.CurrentUserId = "";
+        studentToUpdate.IsCurrentlyInUse = false;
+
+        var updateSuccess = await FirestoreService.UpdateDocumentAsync(STUDENTS_COLLECTION, docName, levelDoc);
+        
+        return new OperationResult 
+        { 
+            Success = updateSuccess, 
+            ErrorMessage = updateSuccess ? null : "Failed to update student document" 
+        };
+    }
+    catch (Exception ex)
+    {
+        return new OperationResult { Success = false, ErrorMessage = ex.Message };
     }
 }
 

@@ -509,19 +509,19 @@
     private async Task ManageUsers()
     {
         if (_disposed) return;
-        await JSRuntime.InvokeVoidAsync("location.assign", "/Admin/Users");
+        await JSRuntime.InvokeVoidAsync("location.assign", "Admin/Users");
     }
 
     private async Task ViewCourses()
     {
         if (_disposed) return;
-        await JSRuntime.InvokeVoidAsync("location.assign", "/Admin/Courses");
+        await JSRuntime.InvokeVoidAsync("location.assign", "Admin/Courses");
     }
 
     private async Task ViewAttendance()
     {
         if (_disposed) return;
-        await JSRuntime.InvokeVoidAsync("location.assign", "/Admin/Attendance");
+        await JSRuntime.InvokeVoidAsync("location.assign", "Admin/Attendance");
     }
 
     public void Dispose()
