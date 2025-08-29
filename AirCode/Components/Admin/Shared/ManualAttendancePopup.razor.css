@@ -12,6 +12,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(6px);
     opacity: 0;
     visibility: hidden;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -50,7 +52,7 @@
     justify-content: space-between;
     align-items: center;
     padding: 1.5rem;
-    background: linear-gradient(135deg, var(--primary-50) 0%, var(--primary-100) 100%);
+    background: var(--bg-secondary);
     border-bottom: 1px solid var(--border);
     border-radius: 16px 16px 0 0;
 }
@@ -59,7 +61,7 @@
     margin: 0;
     font-size: 1.25rem;
     font-weight: 600;
-    color: var(--primary-700);
+    color: var(--text-primary);
 }
 
 .close-button {
@@ -76,10 +78,11 @@
     align-items: center;
     justify-content: center;
     transition: all 0.2s ease;
+    line-height: 1;
 }
 
 .close-button:hover {
-    background: rgba(0, 0, 0, 0.1);
+    background: rgba(var(--text-secondary-rgb, 107, 114, 128), 0.1);
     color: var(--text-primary);
 }
 
