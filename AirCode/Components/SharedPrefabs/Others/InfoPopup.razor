@@ -1,29 +1,93 @@
 @namespace AirCode.Components.SharedPrefabs.Others
 @using AirCode.Services.VisualElements
 @inject IBackdropService BackdropService
+@inject IJSRuntime JSRuntime
 @implements IDisposable
 
-@* InfoPopup.razor - FIXED: Removed overlay duplication *@
 @if (IsVisible)
 {
-    <div class="info-popup-modal" @onclick:stopPropagation="true">
-        <div class="info-popup-header">
-            <h4>@GetInfoTitle()</h4>
-            <button class="close-btn" @onclick="OnClose">
-                <span>&times;</span>
-            </button>
-        </div>
-        <div class="info-popup-content">
-            <p>@GetInfoContent()</p>
+    <div id="info-popup-modal-@InstanceId" 
+         class="modal-overlay @(IsVisible ? "visible" : "")" 
+         @onclick="HandleBackdropClick"
+         @ref="modalOverlayRef">
+        <div class="info-popup-modal" @onclick:stopPropagation="true">
+            <div class="info-popup-header">
+                <h4>@GetInfoTitle()</h4>
+                <button class="close-btn" @onclick="OnClose">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="info-popup-content">
+                <p>@GetInfoContent()</p>
+            </div>
         </div>
     </div>
 }
-
 
 @code {
     [Parameter] public bool IsVisible { get; set; }
     [Parameter] public InfoType CurrentInfoType { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
+
+    // Portal management
+    private ElementReference modalOverlayRef;
+    private string InstanceId = Guid.NewGuid().ToString("N")[..8];
+    private string ModalSelector => $"#info-popup-modal-{InstanceId}";
+    private bool _isInPortal = false;
+    private bool _wasVisible = false;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (IsVisible && !_wasVisible)
+        {
+            await ShowModalAsync();
+        }
+        else if (!IsVisible && _wasVisible)
+        {
+            await HideModalAsync();
+        }
+        
+        _wasVisible = IsVisible;
+    }
+
+    private async Task ShowModalAsync()
+    {
+        try
+        {
+            await BackdropService.ShowAsync();
+            // Give the DOM time to render
+            await Task.Delay(50);
+            await BackdropService.MoveElementToPortalAsync(ModalSelector);
+            _isInPortal = true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error showing modal: {ex.Message}");
+        }
+    }
+
+    private async Task HideModalAsync()
+    {
+        try
+        {
+            if (_isInPortal)
+            {
+                await BackdropService.ReturnElementFromPortalAsync(ModalSelector);
+                _isInPortal = false;
+            }
+            await BackdropService.HideAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error hiding modal: {ex.Message}");
+        }
+    }
+
+    private async Task HandleBackdropClick()
+    {
+        await HideModalAsync();
+        await OnClose.InvokeAsync();
+    }
 
     private string GetInfoTitle()
     {
@@ -62,17 +126,20 @@
         };
     }
 
-    protected async override void OnParametersSet()
-    {
-        if (IsVisible)
-           await BackdropService.ShowAsync();
-        else
-           await BackdropService.HideAsync();
-    }
-
     public async void Dispose()
     {
-     await   BackdropService.HideAsync();
+        // Ensure we return from portal on disposal
+        if (_isInPortal)
+        {
+            try
+            {
+                await BackdropService.ReturnElementFromPortalAsync(ModalSelector);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error during disposal: {ex.Message}");
+            }
+        }
     }
 
     public enum InfoType
