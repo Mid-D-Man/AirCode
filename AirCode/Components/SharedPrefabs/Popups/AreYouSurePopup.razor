@@ -3,44 +3,49 @@
 @using AirCode.Components.SharedPrefabs.Spinner
 @using AirCode.Services.VisualElements
 @inject IBackdropService BackdropService
+@inject IJSRuntime JSRuntime
 
 @if (IsVisible)
 {
-  
-    <div class="popup-container">
-        <div class="popup-content">
-            @if (IsLoading)
-            {
-                <div class="popup-loading">
-                    <LoadingSpinner Title="@LoadingTitle" Subtitle="@LoadingSubtitle" />
-                </div>
-            }
-            else
-            {
-                <div class="popup-header">
-                    <h3 class="popup-title">@Title</h3>
-                </div>
+    <div id="are-you-sure-modal-@InstanceId" 
+         class="modal-overlay @(IsVisible ? "visible" : "")" 
+         @onclick="HandleBackdropClick"
+         @ref="modalOverlayRef">
+        <div class="popup-container" @onclick:stopPropagation="true">
+            <div class="popup-content">
+                @if (IsLoading)
+                {
+                    <div class="popup-loading">
+                        <LoadingSpinner Title="@LoadingTitle" Subtitle="@LoadingSubtitle" />
+                    </div>
+                }
+                else
+                {
+                    <div class="popup-header">
+                        <h3 class="popup-title">@Title</h3>
+                    </div>
 
-                <div class="popup-body">
-                    <p class="popup-message">@Message</p>
-                    @if (!string.IsNullOrEmpty(WarningText))
-                    {
-                        <div class="popup-warning">
-                            <i class="warning-icon"></i>
-                            <span>@WarningText</span>
-                        </div>
-                    }
-                </div>
+                    <div class="popup-body">
+                        <p class="popup-message">@Message</p>
+                        @if (!string.IsNullOrEmpty(WarningText))
+                        {
+                            <div class="popup-warning">
+                                <i class="warning-icon"></i>
+                                <span>@WarningText</span>
+                            </div>
+                        }
+                    </div>
 
-                <div class="popup-actions">
-                    <button class="btn btn-outline" @onclick="OnCancel" disabled="@IsLoading">
-                        Cancel
-                    </button>
-                    <button class="btn @ConfirmButtonClass" @onclick="OnConfirm" disabled="@IsLoading">
-                        @ConfirmButtonText
-                    </button>
-                </div>
-            }
+                    <div class="popup-actions">
+                        <button class="btn btn-outline" @onclick="OnCancel" disabled="@IsLoading">
+                            Cancel
+                        </button>
+                        <button class="btn @ConfirmButtonClass" @onclick="OnConfirm" disabled="@IsLoading">
+                            @ConfirmButtonText
+                        </button>
+                    </div>
+                }
+            </div>
         </div>
     </div>
 }
@@ -55,19 +60,85 @@
     [Parameter] public string ConfirmButtonClass { get; set; } = "btn-primary";
     [Parameter] public string LoadingTitle { get; set; } = "Processing...";
     [Parameter] public string LoadingSubtitle { get; set; } = "Please wait while we process your request.";
-
     [Parameter] public EventCallback OnConfirm { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
 
-    protected async override void OnParametersSet()
+    // Portal management
+    private ElementReference modalOverlayRef;
+    private string InstanceId = Guid.NewGuid().ToString("N")[..8];
+    private string ModalSelector => $"#are-you-sure-modal-{InstanceId}";
+    private bool _isInPortal = false;
+    private bool _wasVisible = false;
+
+    protected override async Task OnParametersSetAsync()
     {
-        if (IsVisible)
+        if (IsVisible && !_wasVisible)
         {
-          await  BackdropService.ShowAsync();
+            await ShowModalAsync();
         }
-        else
+        else if (!IsVisible && _wasVisible)
         {
-          await  BackdropService.HideAsync();
+            await HideModalAsync();
+        }
+        
+        _wasVisible = IsVisible;
+    }
+
+    private async Task ShowModalAsync()
+    {
+        try
+        {
+            await BackdropService.ShowAsync();
+            // Give the DOM time to render
+            await Task.Delay(50);
+            await BackdropService.MoveElementToPortalAsync(ModalSelector);
+            _isInPortal = true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error showing modal: {ex.Message}");
+        }
+    }
+
+    private async Task HideModalAsync()
+    {
+        try
+        {
+            if (_isInPortal)
+            {
+                await BackdropService.ReturnElementFromPortalAsync(ModalSelector);
+                _isInPortal = false;
+            }
+            await BackdropService.HideAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error hiding modal: {ex.Message}");
+        }
+    }
+
+    private async Task HandleBackdropClick()
+    {
+        if (!IsLoading)
+        {
+            await HideModalAsync();
+            await OnCancel.InvokeAsync();
+        }
+    }
+
+    public async void Dispose()
+    {
+        // Ensure we return from portal on disposal
+        if (_isInPortal)
+        {
+            try
+            {
+                await BackdropService.ReturnElementFromPortalAsync(ModalSelector);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error during disposal: {ex.Message}");
+            }
         }
     }
 }
