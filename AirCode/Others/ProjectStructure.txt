@@ -1,7 +1,7 @@
 Project Structure Documentation
-Generated: Sat Aug 30 19:40:28 UTC 2025
+Generated: Sat Aug 30 21:08:48 UTC 2025
 Repository: Mid-D-Man/AirCode
-Commit: 4b4fcafd8acc16bf5c41e57a5340342d0594710c
+Commit: 2e55432fea49fd78619f392cdb34f643cce0acd1
 ==================================
 
 Source Files:
@@ -95,7 +95,6 @@ Domain/ValueObjects/AttendanceData.cs
 Domain/ValueObjects/CourseSchedule.cs
 Domain/ValueObjects/PaginationData.cs
 Domain/ValueObjects/SystemData.cs
-Extensions/AuthExtensions.cs
 Extensions/BusinessHoursServiceExtensions.cs
 Extensions/ServiceExtensions.cs
 Extensions/Supabase.cs
@@ -344,7 +343,7 @@ Directory Structure:
 
 File Count Summary:
 ==================
-.cs       : 115 files
+.cs       : 114 files
 .razor    : 66 files
 .csproj   : 1 files
 .json     : 12 files
