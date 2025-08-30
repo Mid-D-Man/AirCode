@@ -142,11 +142,42 @@
 
 <!-- Essential App Scripts -->
 <script src="js/mid_HelperFunctions.js"></script>
+
 <script src="js/pwaManager.js"></script>
 <script src="js/connectivityServices.js"></script>
 <script src="js/debug.js"></script><!-- disable in prod -->
 <script src="js/themeSwitcher.js"></script>
-<script src="js/validateKeyAndIV.js"></script>
+
+<!-- 2. Wait for helper functions to be ready, then load validation -->
+<script>
+    // Wait for MID_HelperFunctions to be ready before loading validation script
+    window.addEventListener('midHelperFunctionsReady', function() {
+        console.log('MID_HelperFunctions ready, loading validation script');
+
+        // Dynamically load the validation script
+        const script = document.createElement('script');
+        script.src = 'js/validateKeyAndIV.js';
+        script.onload = function() {
+            console.log('validateKeyAndIV.js loaded successfully');
+        };
+        script.onerror = function() {
+            console.error('Failed to load validateKeyAndIV.js');
+        };
+        document.head.appendChild(script);
+    });
+
+    // Fallback: If custom event doesn't work, try after a delay
+    setTimeout(function() {
+        if (typeof window.midHelperFunctions === 'undefined') {
+            console.warn('MID_HelperFunctions not ready after timeout, trying to load validation anyway');
+            const script = document.createElement('script');
+            script.src = 'js/validateKeyAndIV.js';
+            document.head.appendChild(script);
+        }
+    }, 1000);
+</script>
+
+
 <script src="js/cryptographyHandler.js"></script>
 <script src="js/site.js"></script>
 <script src="js/offlineCredentialsHandler.js"></script>

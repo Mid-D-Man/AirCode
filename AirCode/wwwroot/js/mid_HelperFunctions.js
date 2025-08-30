@@ -1,5 +1,5 @@
 // mid_HelperFunctions.js - Production-ready JavaScript logging and utility helper
-// Similar to C# MID_HelperFunctions but for client-side JavaScript
+// Fixed version - removed ES6 exports that cause issues in non-module context
 
 /**
  * Debug message type enumeration
@@ -98,19 +98,6 @@ class MID_HelperFunctions {
      * @private
      */
     #detectEnvironment() {
-        // Check for explicit environment variable
-        if (typeof process !== 'undefined' && process.env) {
-            const nodeEnv = process.env.NODE_ENV?.toLowerCase();
-            if (nodeEnv === 'production') {
-                this.#environment = Environment.PRODUCTION;
-                return;
-            }
-            if (nodeEnv === 'staging') {
-                this.#environment = Environment.STAGING;
-                return;
-            }
-        }
-
         // Browser-based detection
         if (typeof window !== 'undefined') {
             const hostname = window.location?.hostname?.toLowerCase();
@@ -614,24 +601,16 @@ class MID_HelperFunctions {
     // #endregion
 }
 
-// Create and export global instance
+// Create and export global instance - ONLY browser globals, no ES6 exports
 const midHelperFunctions = new MID_HelperFunctions();
 
-// Export both the class and instance for different use cases
-if (typeof module !== 'undefined' && module.exports) {
-    // Node.js environment
-    module.exports = { MID_HelperFunctions, midHelperFunctions, DebugClass, Environment };
-} else if (typeof window !== 'undefined') {
-    // Browser environment
+// Browser environment - attach to window
+if (typeof window !== 'undefined') {
     window.MID_HelperFunctions = MID_HelperFunctions;
     window.midHelperFunctions = midHelperFunctions;
     window.DebugClass = DebugClass;
     window.Environment = Environment;
-}
 
-// ES6 module exports (only in module context)
-if (typeof exports !== 'undefined' && typeof module === 'undefined') {
-    // ES6 module environment
-    export { MID_HelperFunctions, midHelperFunctions, DebugClass, Environment };
-    export default midHelperFunctions;
+    // Signal that the helper functions are ready
+    window.dispatchEvent(new CustomEvent('midHelperFunctionsReady', { detail: midHelperFunctions }));
 }
