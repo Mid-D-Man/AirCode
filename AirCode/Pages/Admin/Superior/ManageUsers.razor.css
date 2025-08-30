@@ -381,13 +381,13 @@ body:not(.dark-mode) .btn-settings:hover {
     color: var(--button-text);
 }
 
-/* Modal System - Perfect Centering */
+/* FIXED Modal System - Perfect Centering */
 .modal-backdrop {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
     z-index: 1040;
     background-color: rgba(0, 0, 0, 0.6);
     backdrop-filter: blur(2px);
@@ -396,40 +396,44 @@ body:not(.dark-mode) .btn-settings:hover {
 }
 
 .modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
     z-index: 1050;
-    display: none;
+    display: none !important;
     overflow: hidden;
     outline: 0;
+    padding: 0 !important;
+    margin: 0 !important;
 }
 
 .modal.show {
     display: flex !important;
-    align-items: center;
-    justify-content: center;
+    align-items: center !important;
+    justify-content: center !important;
 }
 
 .modal-dialog {
     position: relative;
-    width: 100%;
-    max-width: 500px;
-    margin: 0 auto;
+    width: auto !important;
+    max-width: 500px !important;
+    margin: 1rem !important;
     pointer-events: none;
-    display: flex;
-    align-items: center;
-    min-height: calc(100vh - 3rem);
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-height: auto !important;
 }
 
 .modal-content {
     position: relative;
     display: flex;
     flex-direction: column;
-    width: 100%;
-    max-height: calc(100vh - 3rem);
+    width: 100% !important;
+    max-width: 500px !important;
+    max-height: calc(100vh - 2rem) !important;
     background-color: var(--bg-secondary);
     background-clip: padding-box;
     border: 1px solid var(--border);
@@ -513,7 +517,7 @@ body:not(.dark-mode) .btn-settings:hover {
     padding: var(--spacing-lg);
     overflow-y: auto;
     color: var(--text-primary);
-    max-height: calc(100vh - 10rem);
+    max-height: calc(100vh - 12rem);
 }
 
 .modal-footer {
@@ -831,13 +835,13 @@ body.dark-mode .form-text {
     }
 
     .modal-dialog {
-        max-width: calc(100vw - 2rem);
-        margin: 1rem;
-        min-height: calc(100vh - 2rem);
+        max-width: calc(100vw - 2rem) !important;
+        margin: 1rem !important;
     }
 
     .modal-content {
-        max-height: calc(100vh - 2rem);
+        max-height: calc(100vh - 2rem) !important;
+        max-width: none !important;
     }
 
     .modal-header,
@@ -884,14 +888,12 @@ body.dark-mode .form-text {
     }
 
     .modal-dialog {
-        width: calc(100vw - 1rem);
-        max-width: none;
-        margin: 0.5rem;
-        min-height: calc(100vh - 1rem);
+        max-width: calc(100vw - 1rem) !important;
+        margin: 0.5rem !important;
     }
 
     .modal-content {
-        max-height: calc(100vh - 1rem);
+        max-height: calc(100vh - 1rem) !important;
         border-radius: 8px;
     }
 
@@ -926,8 +928,7 @@ body.dark-mode .form-text {
 /* Ensure modal perfect centering on all screen sizes */
 @media (max-height: 600px) {
     .modal-dialog {
-        min-height: auto;
-        margin: 1rem auto;
+        margin: 1rem !important;
     }
 
     .modal-body {

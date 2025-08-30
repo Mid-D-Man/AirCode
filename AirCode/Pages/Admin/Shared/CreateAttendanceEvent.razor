@@ -336,24 +336,26 @@
                 </div>
                 
               <div class="session-actions">
-   
-    
-    <button class="manual-attendance-icon" @onclick="OpenManualAttendancePopup" title="Manual Attendance Sign">
-        <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/>
-        </svg>
-    </button>
-    
-    <div class="end-session-container">
-        <PrimaryButton Text="End Session" 
-                     OnClick="EndSession" 
-                     Disabled="@isEndingSession" />
-        @if (isEndingSession)
-        {
-            <LoadingSpinner Title="Ending Session" 
-                          Subtitle="Finalizing attendance data and cleaning up..." />
-        }
-    </div>
+
+
+                  <div class="session-actions">
+                      <button class="manual-attendance-icon" @onclick="OpenManualAttendancePopup" title="Manual Attendance Sign">
+                          <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/>
+                          </svg>
+                      </button>
+
+                      <div class="end-session-container">
+                          <PrimaryButton Text="End Session"
+                                         OnClick="EndSession"
+                                         Disabled="@isEndingSession" />
+                          @if (isEndingSession)
+                          {
+                              <LoadingSpinner Title="Ending Session"
+                                              Subtitle="Finalizing attendance data and cleaning up..." />
+                          }
+                      </div>
+                  </div>
 </div>
             </div>
         }

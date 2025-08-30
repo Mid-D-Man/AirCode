@@ -652,6 +652,13 @@ body.dark-mode .floating-qr-icon:hover {
 .status-dismiss:hover {
     opacity: 1;
 }
+.session-actions {
+    display: flex;
+    gap: var(--spacing-lg);
+    align-items: center;
+    justify-content: center;
+    margin-top: var(--spacing-lg);
+}
 
 /* Animation Keyframes */
 @keyframes fadeIn {

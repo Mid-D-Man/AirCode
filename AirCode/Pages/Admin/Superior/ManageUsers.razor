@@ -189,9 +189,6 @@
                                             {
                                                 <li class="user-item-compact">
                                                     <span class="user-id-compact">@userId</span>
-                                                    <button class="btn btn-sm btn-danger" @onclick="() => ShowRemoveUserModal(lecturer, userId, LECTURER_ID)" title="Remove assigned user">
-                                                        🗑️
-                                                    </button>
                                                 </li>
                                             }
                                         </ul>
@@ -199,7 +196,7 @@
                                 }
                             </div>
                             <div class="user-card-footer">
-                                <button class="btn btn-danger" @onclick="() => ShowDeleteUserModal(lecturer,LECTURER_ID)">
+                                <button class="btn btn-danger" @onclick="() => ShowDeleteUserModal(lecturer, LECTURER_ID)">
                                     <i class="fas fa-trash"></i> Delete
                                 </button>
                                 <button class="btn btn-secondary" @onclick="() => CopyToClipboard(lecturer.AdminId)">
@@ -292,9 +289,6 @@
                                             {
                                                 <li class="user-item-compact">
                                                     <span class="user-id-compact">@userId</span>
-                                                    <button class="btn btn-sm btn-danger" @onclick="() => ShowRemoveUserModal(courseRep.AdminInfo, userId, COURSEREP_ID)" title="Remove assigned admin user">
-                                                        🗑️
-                                                    </button>
                                                 </li>
                                             }
                                         </ul>
@@ -489,6 +483,10 @@
                 <p>Are you sure you want to delete this skeleton user?</p>
                 <div class="alert alert-warning">
                     <strong>Warning:</strong> This action cannot be undone. This will permanently remove the skeleton user from the system.
+                    @if (HasAuth0UserId())
+                    {
+                       
+                    }
                 </div>
             </div>
             <div class="modal-footer">
