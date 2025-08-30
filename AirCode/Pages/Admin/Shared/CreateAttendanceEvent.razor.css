@@ -1,3 +1,339 @@
+/* CreateAttendanceEvent.razor.css - Updated with Spinner Integration */
+.create-session-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: var(--spacing-lg);
+    background-color: var(--bg-primary);
+    min-height: 100vh;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.create-session-page h1 {
+    color: var(--text-primary);
+    font-size: 2rem;
+    font-weight: 600;
+    margin-bottom: var(--spacing-xl);
+    text-align: center;
+    line-height: 1.2;
+}
+
+.content-container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xl);
+    align-items: center;
+    width: 100%;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+/* Form Container */
+.form-container,
+.active-session-container {
+    background-color: var(--bg-secondary);
+    border-radius: 12px;
+    padding: var(--spacing-xl);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    border: 1px solid var(--border);
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.form-group {
+    margin-bottom: var(--spacing-lg);
+}
+
+.form-group label {
+    display: block;
+    color: var(--text-secondary);
+    font-weight: 500;
+    margin-bottom: var(--spacing-sm);
+    font-size: 0.95rem;
+}
+
+/* Form Sections */
+.form-section {
+    background: linear-gradient(135deg, rgba(33, 150, 243, 0.03), rgba(156, 39, 176, 0.03));
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: var(--spacing-lg);
+    margin: var(--spacing-lg) 0;
+}
+
+.section-title {
+    color: var(--text-primary);
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0 0 var(--spacing-lg) 0;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.section-title::before {
+    content: '🛡️';
+    font-size: 1.2rem;
+}
+
+/* Toggle Groups */
+.toggle-group {
+    background-color: var(--bg-tertiary);
+    border-radius: 8px;
+    padding: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+}
+
+.toggle-header,
+.field-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--spacing-sm);
+}
+
+.toggle-header label,
+.field-header label {
+    margin-bottom: 0;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.info-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 2px;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+}
+
+.info-btn:hover {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.toggle-switch {
+    position: relative;
+}
+
+.toggle-switch input[type="checkbox"] {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-label {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 24px;
+    background-color: var(--border);
+    border-radius: 24px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.toggle-label::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 20px;
+    height: 20px;
+    background-color: white;
+    border-radius: 50%;
+    transition: transform 0.3s;
+}
+
+input[type="checkbox"]:checked + .toggle-label {
+    background-color: var(--primary-500);
+}
+
+input[type="checkbox"]:checked + .toggle-label::after {
+    transform: translateX(26px);
+}
+
+/* Course Selection */
+.selected-course-display {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-md);
+    background-color: var(--bg-tertiary);
+    border: 2px solid var(--button-primary);
+    border-radius: 8px;
+    gap: var(--spacing-md);
+}
+
+.course-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.course-code {
+    font-weight: 600;
+    color: var(--primary-600);
+    font-size: 0.95rem;
+    display: block;
+    word-break: break-word;
+}
+
+.course-name {
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    margin-top: 2px;
+    word-break: break-word;
+}
+
+.change-course-btn,
+.select-course-btn {
+    background: var(--button-primary);
+    color: var(--button-text);
+    border: none;
+    padding: var(--spacing-sm) var(--spacing-md);
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.select-course-btn {
+    width: 100%;
+    padding: var(--spacing-md);
+    font-size: 0.95rem;
+    border-radius: 8px;
+    min-height: 50px;
+}
+
+.change-course-btn:hover,
+.select-course-btn:hover {
+    background: var(--button-primary-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Form Controls */
+.form-control {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: var(--font-size-base);
+    transition: border-color 0.2s ease;
+    box-sizing: border-box;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--button-primary);
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.1);
+}
+
+body.dark-mode .form-control:focus {
+    border-color: var(--button-primary);
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
+}
+body.dark-mode .change-course-btn:hover,
+body.dark-mode .select-course-btn:hover {
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
+body.dark-mode .floating-qr-icon:hover {
+    box-shadow: 0 6px 20px rgba(34, 197, 94, 0.3);
+}
+
+/* Button Container - Updated for LoadingSpinner Integration */
+.button-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: var(--spacing-lg);
+    margin-top: var(--spacing-xl);
+    position: relative;
+}
+
+/* Removed duplicate/conflicting spinner styles - now handled by LoadingSpinner component */
+
+/* Session Status Indicators - Enhanced */
+.session-status-indicators {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
+    padding: var(--spacing-lg);
+    background: linear-gradient(135deg, rgba(33, 150, 243, 0.05), rgba(156, 39, 176, 0.05));
+    border-radius: 12px;
+    border: 1px solid var(--border);
+}
+
+.countdown-timer {
+    background: linear-gradient(135deg, var(--button-primary), var(--primary-600));
+    color: var(--button-text);
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-radius: 25px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    text-align: center;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    position: relative;
+    overflow: hidden;
+}
+
+.countdown-timer::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
+}
+
+.countdown-timer:hover::before {
+    left: 100%;
+}
+
+.timer-label {
+    display: block;
+    font-size: 0.85rem;
+    opacity: 0.9;
+    margin-bottom: 4px;
+}
+
+.timer-value {
+    display: block;
+    font-size: 1.3rem;
+    font-weight: 700;
+}
+
+.critical-flash {
+    animation: critical-pulse 1s infinite alternate;
+}
+
+@keyframes critical-pulse {
+    0% {
+        background: linear-gradient(135deg, #dc3545, #c82333);
+        transform: scale(1);
+    }
+    100% {
+        background: linear-gradient(135deg, #e74c3c, #dc3545);
+        transform: scale(1.02);
+    }
+}
+
 /* Security and Feature Badges */
 .temporal-key-indicator,
 .security-level-indicator,
