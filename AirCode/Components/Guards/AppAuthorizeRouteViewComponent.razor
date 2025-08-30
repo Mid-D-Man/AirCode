@@ -45,71 +45,68 @@ else
     private bool IsRedirecting { get; set; }
     private bool IsLoading { get; set; } = true;
 
-    protected override async Task OnInitializedAsync()
+   protected override async Task OnInitializedAsync()
+{
+    MID_HelperFunctions.DebugMessage($"[AuthorizeRouteView] URI: {NavigationManager.Uri}", DebugClass.Info);
+    MID_HelperFunctions.DebugMessage($"[AuthorizeRouteView] Page Type: {RouteData?.PageType?.Name}", DebugClass.Info);
+
+    var currentPath = new Uri(NavigationManager.Uri).AbsolutePath;
+    MID_HelperFunctions.DebugMessage($"[AuthorizeRouteView] Current Path: {currentPath}", DebugClass.Info);
+
+    if (currentPath == "/" || currentPath == "/AirCode/" || currentPath.EndsWith("/index") ||
+        RouteData?.PageType?.Name == "Index")
     {
-        Console.WriteLine($"[AuthorizeRouteView] URI: {NavigationManager.Uri}");
-        Console.WriteLine($"[AuthorizeRouteView] Page Type: {RouteData?.PageType?.Name}");
-        
-        var currentPath = new Uri(NavigationManager.Uri).AbsolutePath;
-        Console.WriteLine($"[AuthorizeRouteView] Current Path: {currentPath}");
-        
-        // Allow access to index page without authentication
-        if (currentPath == "/" || currentPath == "/AirCode/" || currentPath.EndsWith("/index") || 
-            RouteData?.PageType?.Name == "Index")
-        {
-            Console.WriteLine("[AuthorizeRouteView] Index page detected - allowing access");
-            Authorized = true;
-            IsLoading = false;
-            StateHasChanged();
-            return;
-        }
-
-        Console.WriteLine("[AuthorizeRouteView] Not index page - checking authentication");
-
-        if (AuthenticationState == null) 
-        {
-            Console.WriteLine("[AuthorizeRouteView] AuthenticationState is null");
-            Authorized = false;
-            IsLoading = false;
-            StateHasChanged();
-            return;
-        }
-
-        try
-        {
-            var authState = await AuthenticationState;
-            var user = authState.User;
-            Console.WriteLine($"[AuthorizeRouteView] User authenticated: {user?.Identity?.IsAuthenticated}");
-
-            // Check authentication first
-            if (!user.Identity?.IsAuthenticated ?? true)
-            {
-                Console.WriteLine("[AuthorizeRouteView] User not authenticated - redirecting to login");
-                IsRedirecting = true;
-                IsLoading = false;
-                StateHasChanged();
-                
-                var returnUrl = Uri.EscapeDataString(NavigationManager.Uri);
-                NavigationManager.NavigateTo($"authentication/login?returnUrl={returnUrl}");
-                return;
-            }
-
-            // Check authorization
-            Console.WriteLine("[AuthorizeRouteView] Checking authorization");
-            Authorized = await CheckAuthorizationAsync(user);
-            Console.WriteLine($"[AuthorizeRouteView] Authorization result: {Authorized}");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[AuthorizeRouteView] Error during auth check: {ex.Message}");
-            Authorized = false;
-        }
-        finally
-        {
-            IsLoading = false;
-            StateHasChanged();
-        }
+        MID_HelperFunctions.DebugMessage("[AuthorizeRouteView] Index page detected - allowing access", DebugClass.Info);
+        Authorized = true;
+        IsLoading = false;
+        StateHasChanged();
+        return;
     }
+
+    MID_HelperFunctions.DebugMessage("[AuthorizeRouteView] Not index page - checking authentication", DebugClass.Info);
+
+    if (AuthenticationState == null)
+    {
+        MID_HelperFunctions.DebugMessage("[AuthorizeRouteView] AuthenticationState is null", DebugClass.Warning);
+        Authorized = false;
+        IsLoading = false;
+        StateHasChanged();
+        return;
+    }
+
+    try
+    {
+        var authState = await AuthenticationState;
+        var user = authState.User;
+        MID_HelperFunctions.DebugMessage($"[AuthorizeRouteView] User authenticated: {user?.Identity?.IsAuthenticated}", DebugClass.Info);
+
+        if (!user.Identity?.IsAuthenticated ?? true)
+        {
+            MID_HelperFunctions.DebugMessage("[AuthorizeRouteView] User not authenticated - redirecting to login", DebugClass.Warning);
+            IsRedirecting = true;
+            IsLoading = false;
+            StateHasChanged();
+
+            var returnUrl = Uri.EscapeDataString(NavigationManager.Uri);
+            NavigationManager.NavigateTo($"authentication/login?returnUrl={returnUrl}");
+            return;
+        }
+
+        MID_HelperFunctions.DebugMessage("[AuthorizeRouteView] Checking authorization", DebugClass.Info);
+        Authorized = await CheckAuthorizationAsync(user);
+        MID_HelperFunctions.DebugMessage($"[AuthorizeRouteView] Authorization result: {Authorized}", DebugClass.Info);
+    }
+    catch (Exception ex)
+    {
+        MID_HelperFunctions.DebugMessage($"[AuthorizeRouteView] Error during auth check: {ex.Message}", DebugClass.Exception);
+        Authorized = false;
+    }
+    finally
+    {
+        IsLoading = false;
+        StateHasChanged();
+    }
+}
 
     private async Task<bool> CheckAuthorizationAsync(ClaimsPrincipal user)
     {

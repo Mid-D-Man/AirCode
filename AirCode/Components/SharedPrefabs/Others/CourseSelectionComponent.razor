@@ -9,6 +9,7 @@
 
 @if (IsVisible)
 {
+    <!-- Course Selection for attendance events -->
     <div id="course-selection-modal-@InstanceId" 
          class="modal-overlay @(IsVisible ? "visible" : "")" 
          @onclick="HandleBackdropClick"
@@ -169,7 +170,7 @@
         {
             await HideModalAsync();
         }
-        
+
         _wasVisible = IsVisible;
 
         if (IsVisible)
@@ -180,7 +181,7 @@
             try
             {
                 AllCourses = IsOfflineMode
-                    ? await CourseService.GetCoursesFromLocalStorageAsync()
+                    ? await LoadOfflineCoursesAsync()
                     : await CourseService.GetAllCoursesAsync();
 
                 AvailableDepartments = AllCourses
@@ -194,7 +195,7 @@
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error loading courses: {ex.Message}");
+                await MID_HelperFunctions.DebugMessageAsync($"Error loading courses: {ex.Message}", DebugClass.Exception);
             }
             finally
             {
@@ -217,7 +218,7 @@
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error showing modal: {ex.Message}");
+            await MID_HelperFunctions.DebugMessageAsync($"Error showing modal: {ex.Message}", DebugClass.Exception);
         }
     }
 
@@ -233,7 +234,7 @@
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error hiding modal: {ex.Message}");
+            await MID_HelperFunctions.DebugMessageAsync($"Error hiding modal: {ex.Message}", DebugClass.Exception);
         }
     }
 
@@ -251,7 +252,24 @@
             _ => "Unknown"
         };
     }
-
+    private async Task<List<Course>> LoadOfflineCoursesAsync()
+    {
+        try
+        {
+            var courses = await CourseService.GetCoursesFromLocalStorageAsync();
+            if (courses == null || !courses.Any())
+            {
+                await MID_HelperFunctions.DebugMessageAsync("No courses found in local storage.", DebugClass.Warning);
+                return new List<Course>();
+            }
+            return courses;
+        }
+        catch (Exception ex)
+        {
+            await MID_HelperFunctions.DebugMessageAsync($"Error loading offline courses: {ex.Message}", DebugClass.Exception);
+            return new List<Course>();
+        }
+    }
     private async Task LoadCourses()
     {
         IsLoadingCourses = true;
@@ -261,7 +279,7 @@
         {
             var courses = await CourseService.GetAllCoursesAsync();
             AllCourses = courses ?? new List<Course>();
-            
+
             AvailableDepartments = AllCourses
                 .Where(c => !string.IsNullOrEmpty(c.DepartmentId))
                 .Select(c => c.DepartmentId)
@@ -273,7 +291,7 @@
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading courses: {ex.Message}");
+            await MID_HelperFunctions.DebugMessageAsync($"Error loading courses: {ex.Message}", DebugClass.Exception);
             AllCourses = new List<Course>();
             FilteredCourses = new List<Course>();
         }
@@ -293,38 +311,38 @@
         }
 
         FilteredCourses = AllCourses.Where(course =>
-        {
-            if (!string.IsNullOrWhiteSpace(SearchTerm))
             {
-                var query = SearchTerm.ToLowerInvariant();
-                if (!course.CourseCode.ToLowerInvariant().Contains(query) &&
-                    !course.Name.ToLowerInvariant().Contains(query) &&
-                    !course.DepartmentId.ToLowerInvariant().Contains(query))
+                if (!string.IsNullOrWhiteSpace(SearchTerm))
+                {
+                    var query = SearchTerm.ToLowerInvariant();
+                    if (!course.CourseCode.ToLowerInvariant().Contains(query) &&
+                        !course.Name.ToLowerInvariant().Contains(query) &&
+                        !course.DepartmentId.ToLowerInvariant().Contains(query))
+                    {
+                        return false;
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(SelectedDepartment) &&
+                    course.DepartmentId != SelectedDepartment)
                 {
                     return false;
                 }
-            }
 
-            if (!string.IsNullOrEmpty(SelectedDepartment) &&
-                course.DepartmentId != SelectedDepartment)
-            {
-                return false;
-            }
+                if (SelectedLevel.HasValue && course.Level != SelectedLevel.Value)
+                {
+                    return false;
+                }
 
-            if (SelectedLevel.HasValue && course.Level != SelectedLevel.Value)
-            {
-                return false;
-            }
+                if (SelectedSemester.HasValue && course.Semester != SelectedSemester.Value)
+                {
+                    return false;
+                }
 
-            if (SelectedSemester.HasValue && course.Semester != SelectedSemester.Value)
-            {
-                return false;
-            }
-
-            return true;
-        })
-        .OrderBy(c => c.CourseCode)
-        .ToList();
+                return true;
+            })
+            .OrderBy(c => c.CourseCode)
+            .ToList();
 
         StateHasChanged();
     }
@@ -385,7 +403,7 @@
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error selecting course: {ex.Message}");
+                await MID_HelperFunctions.DebugMessageAsync($"Error selecting course: {ex.Message}", DebugClass.Exception);
             }
             finally
             {
@@ -424,7 +442,7 @@
     public async void Dispose()
     {
         _debounceTimer?.Dispose();
-        
+
         // Ensure we return from portal on disposal
         if (_isInPortal)
         {
@@ -434,7 +452,7 @@
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error during disposal: {ex.Message}");
+                await MID_HelperFunctions.DebugMessageAsync($"Error during disposal: {ex.Message}", DebugClass.Exception);
             }
         }
     }

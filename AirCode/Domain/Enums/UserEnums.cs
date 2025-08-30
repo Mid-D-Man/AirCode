@@ -12,10 +12,4 @@ namespace AirCode.Domain.Enums
     }
 
 
-    public enum ClassRepStatus
-    {
-        None,
-        MainRep
-    }
-
 }

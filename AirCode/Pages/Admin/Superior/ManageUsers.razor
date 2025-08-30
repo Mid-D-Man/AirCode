@@ -3,7 +3,7 @@
 @using AirCode.Components.SharedPrefabs.Cards
 @using AirCode.Domain.Enums
 @using AirCode.Layout.AdminLayout.Superior
-
+@using AirCode.Components.SharedPrefabs.Buttons
 <div class="container">
     <!-- Notification component -->
     <NotificationComponent @ref="notificationComponent"
@@ -14,7 +14,8 @@
                             PauseOnHover="true" />
     <div class="admin-header">
         <h2 class="text-primary">User Management</h2>
-        <button class="btn btn-primary" @onclick="ShowCreateUserModal">Create New Skeleton User</button>
+        <CoolPrimaryButton Text="Create New Skeleton User" OnClick="() => new Task(ShowCreateUserModal)" />
+       
     </div>
 
     <!-- Tab Navigation -->

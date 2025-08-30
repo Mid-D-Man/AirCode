@@ -561,4 +561,3 @@ namespace AirCode.Domain.Expansion
             MID_HelperFunctions.GetStructOrClassMemberValues(this);
     }
 }
-// ==================

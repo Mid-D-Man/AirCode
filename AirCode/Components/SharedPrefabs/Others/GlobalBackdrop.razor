@@ -3,7 +3,6 @@
 @inject IBackdropService BackdropService
 @implements IDisposable
 
-@* Keep the existing GlobalBackdrop for backward compatibility *@
 @if (BackdropService.IsVisible)
 {
     <div class="global-backdrop-portal" @onclick="HandleBackdropClick">

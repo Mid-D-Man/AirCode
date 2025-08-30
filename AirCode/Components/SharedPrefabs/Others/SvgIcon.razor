@@ -112,17 +112,17 @@ else
                 }
 
                 _svgContent = content;
-                Console.WriteLine($"SVG loaded successfully for icon: {IconName}");
+                await MID_HelperFunctions.DebugMessageAsync($"SVG loaded successfully for icon: {IconName}", DebugClass.Info);
             }
             else
             {
-                Console.WriteLine($"SVG content empty for icon: {IconName}, using fallback");
+                await MID_HelperFunctions.DebugMessageAsync($"SVG content empty for icon: {IconName}, using fallback", DebugClass.Warning);
                 _svgContent = string.Empty;
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading SVG icon '{IconName}': {ex.Message}");
+            await MID_HelperFunctions.DebugMessageAsync($"Error loading SVG icon '{IconName}': {ex.Message}", DebugClass.Exception);
             _svgContent = string.Empty;
         }
 

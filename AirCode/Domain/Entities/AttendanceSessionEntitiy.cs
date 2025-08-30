@@ -16,7 +16,7 @@ namespace AirCode.Domain.Entities;
         public DateTime StartTime { get; set; }
         public DateTime EndTime { get; set; }
         public DateTime CreatedAt { get; set; }
-        public int Duration { get; set; }
+        public int Duration { get; set; } = 60; // Default duration in minutes
         public string QrCodePayload { get; init; } = string.Empty;
         public string Theme { get; set; } = string.Empty;
         public bool UseTemporalKeyRefresh { get; set; }

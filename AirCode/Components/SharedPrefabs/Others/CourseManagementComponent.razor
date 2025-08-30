@@ -236,7 +236,7 @@
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading available courses: {ex.Message}");
+           await MID_HelperFunctions.DebugMessageAsync($"Error loading available courses: {ex.Message}", DebugClass.Exception);
             NotificationRef?.ShowError("Failed to load available courses. Please try again.");
             AvailableCourses = new();
             FilteredCourses = new();
@@ -317,7 +317,7 @@
         catch (Exception ex)
         {
             NotificationRef?.ShowError($"Failed to add course {_confirmationCourseCode}. Please try again.");
-            Console.WriteLine($"Error adding course: {ex.Message}");
+           await MID_HelperFunctions.DebugMessageAsync($"Error adding course: {ex.Message}", DebugClass.Exception);
         }
         finally
         {
@@ -342,7 +342,7 @@
         catch (Exception ex)
         {
             NotificationRef?.ShowError($"Failed to remove course {_confirmationCourseCode}. Please try again.");
-            Console.WriteLine($"Error removing course: {ex.Message}");
+           await MID_HelperFunctions.DebugMessageAsync($"Error removing course: {ex.Message}", DebugClass.Exception);
         }
         finally
         {

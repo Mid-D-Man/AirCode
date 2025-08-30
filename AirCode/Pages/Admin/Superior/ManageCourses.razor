@@ -4,18 +4,13 @@
 @using AirCode.Domain.Enums
 @using AirCode.Components.SharedPrefabs.Cards
 @using AirCode.Components.SharedPrefabs.Spinner
+@using AirCode.Components.SharedPrefabs.Buttons
 @layout SuperiorAdminLayout
 
 <div class="page-container bg-primary">
     <div class="page-header">
         <h1 class="text-primary">Manage Courses</h1>
-        <button class="btn btn-primary" @onclick="ShowAddForm" disabled="@_isLoading">
-            @if (_isLoading)
-            {
-                <span class="spinner-border spinner-border-sm me-2"></span>
-            }
-            Add New Course
-        </button>
+        <CoolPrimaryButton Text="Add New Course" IsLoading="_isLoading" OnClick="ShowAddForm" />
     </div>
 
     <!-- Notification Component -->

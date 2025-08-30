@@ -4,7 +4,7 @@
 @inject IToastService ToastService
 
 @code {
-    //our wrapper for blazored toast with customizable styling and behaviour
+    //my wrapper for blazored toast with customizable styling and behaviour
     [Parameter] public NotificationPosition Position { get; set; } = NotificationPosition.TopRight;
     [Parameter] public int AutoDismissTime { get; set; } = 5000;
     [Parameter] public bool ShowProgressBar { get; set; } = true;

@@ -5,6 +5,7 @@ using AirCode.Services.VisualElements;
 using System.Text.RegularExpressions;
 using AirCode.Domain.Entities;
 using AirCode.Domain.ValueObjects;
+using AirCode.Utilities.HelperScripts;
 
 namespace AirCode.Components.Admin.Shared
 {
@@ -76,7 +77,7 @@ namespace AirCode.Components.Admin.Shared
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error showing modal: {ex.Message}");
+                MID_HelperFunctions.DebugMessageAsync($"Error showing modal: {ex.Message}",DebugClass.Exception);
             }
         }
 
@@ -92,7 +93,7 @@ namespace AirCode.Components.Admin.Shared
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error hiding modal: {ex.Message}");
+              await  MID_HelperFunctions.DebugMessageAsync($"Error hiding modal: {ex.Message}",DebugClass.Exception);
             }
         }
 
@@ -117,6 +118,7 @@ namespace AirCode.Components.Admin.Shared
         private bool IsValidMatricFormat(string matric)
         {
             return MatricNumberPattern.IsMatch(matric);
+            return MID_HelperFunctions.IsValidMatricNumber(matric);
         }
 
         private async Task SignAttendanceAsync()
@@ -233,7 +235,7 @@ namespace AirCode.Components.Admin.Shared
         {
             successTimer?.Dispose();
             
-            // Ensure we return from portal on disposal
+            // Ensure za modal is returned from portal on disposal
             if (_isInPortal)
             {
                 try
@@ -242,7 +244,7 @@ namespace AirCode.Components.Admin.Shared
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Error during disposal: {ex.Message}");
+                  MID_HelperFunctions.DebugMessage($"Error during disposal: {ex.Message}",DebugClass.Exception);
                 }
             }
         }

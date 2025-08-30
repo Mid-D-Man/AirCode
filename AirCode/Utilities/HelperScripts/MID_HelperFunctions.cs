@@ -370,6 +370,7 @@ public static bool IsValidMatricNumber(string matricNumber)
     if (string.IsNullOrEmpty(matricNumber)) return false;
     
     var matricPattern = @"^U(\d{2})([A-Z]{2,4})(\d{4})$";
+    
     var match = System.Text.RegularExpressions.Regex.Match(matricNumber.ToUpper(), matricPattern);
     
     if (!match.Success) return false;

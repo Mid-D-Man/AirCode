@@ -1,0 +1,33 @@
+@using AirCode.Components.SharedPrefabs.Buttons
+
+<button class="cool-primary-button @Class @(IsLoading ? "loading" : "")"
+        type="@Type"
+        title="@Title"
+        @onclick="OnClick"
+        disabled="@(IsLoading || Disabled)">
+    @if (IsLoading)
+    {
+        <div class="loading-indicator">
+            <span class="loading-line"></span>
+        </div>
+    }
+    @if (!string.IsNullOrEmpty(Icon))
+    {
+        <span class="button-icon">@Icon</span>
+    }
+    <span class="button-text">@Text</span>
+</button>
+
+@code {
+    /// <summary>
+    /// Cool primary button component with enhanced visual effects and loading state
+    /// </summary>
+    [Parameter] public string Text { get; set; }
+    [Parameter] public string Icon { get; set; }
+    [Parameter] public string Title { get; set; }
+    [Parameter] public EventCallback OnClick { get; set; }
+    [Parameter] public string Class { get; set; }
+    [Parameter] public string Type { get; set; } = "button";
+    [Parameter] public bool IsLoading { get; set; } = false;
+    [Parameter] public bool Disabled { get; set; } = false;
+}

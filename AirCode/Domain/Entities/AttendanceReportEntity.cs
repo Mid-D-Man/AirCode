@@ -1,4 +1,4 @@
-// Domain/Entities/ReportEntity.cs - Updated
+// Domain/Entities/ReportEntity.cs 
 
 using AirCode.Domain.Enums;
 using AirCode.Domain.Interfaces;

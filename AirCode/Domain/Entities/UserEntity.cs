@@ -6,7 +6,7 @@ using AirCode.Domain.Interfaces;
 
 namespace AirCode.Domain.Entities
 {
-    //and start off with courses please or semester , idon no any one ,flip the coin
+    // start off with courses  or semester , idon no any one ,flip the coin
     //no need for this  but keep for ref if needed,or even u can create this as offline credentials
     //but far less detailed yeah we made a buch of unnesessasry stuff remove them once ya done
     public record UserEntity : ISecureEntity

@@ -1,10 +1,4 @@
 
-
-
-
-
-
-
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -23,13 +17,6 @@ using AirCode.Domain.Enums;
 using AirCode.Models.QRCode;
 using Course = AirCode.Domain.Entities.Course;
 using AirCode.Components.SharedPrefabs.Others;
-
-
-
-
-
-
-
 
 namespace AirCode.Pages.Admin.Shared
 {
@@ -88,18 +75,7 @@ namespace AirCode.Pages.Admin.Shared
         #endregion
 
 
-
-
-
-
-
-
         #region Lifecycle Methods
-
-
-
-
-
 
 
 
@@ -110,14 +86,6 @@ namespace AirCode.Pages.Admin.Shared
             await CheckForStoredSessionsAsync();
         }
 
-
-
-
-
-
-
-
-        
 
         public async ValueTask DisposeAsync()
 
@@ -177,12 +145,6 @@ namespace AirCode.Pages.Admin.Shared
 
 
         #endregion
-
-
-
-
-
-
 
 
         #region Session Management

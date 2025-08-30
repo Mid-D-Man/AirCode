@@ -1,5 +1,4 @@
 @namespace AirCode.Components.SharedPrefabs.Popups
-@using AirCode.Components.SharedPrefabs.Others
 @using AirCode.Components.SharedPrefabs.Spinner
 @using AirCode.Services.VisualElements
 @inject IBackdropService BackdropService
@@ -96,7 +95,7 @@
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error showing modal: {ex.Message}");
+            await MID_HelperFunctions.DebugMessageAsync($"Error showing modal: {ex.Message}",DebugClass.Exception);
         }
     }
 
@@ -113,7 +112,7 @@
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error hiding modal: {ex.Message}");
+            await MID_HelperFunctions.DebugMessageAsync($"Error hiding modal: {ex.Message}",DebugClass.Exception);
         }
     }
 
@@ -137,7 +136,7 @@
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error during disposal: {ex.Message}");
+                await MID_HelperFunctions.DebugMessageAsync($"Error during disposal: {ex.Message}", DebugClass.Exception);
             }
         }
     }

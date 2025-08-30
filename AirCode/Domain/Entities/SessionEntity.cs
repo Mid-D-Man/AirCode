@@ -11,6 +11,7 @@ namespace AirCode.Domain.Entities
     //should it be possible to edit academic session  or not
     //cause something might happen we dont know that
     //ok leave it as record but make it copyable,deletable just incase of incasities
+    //comback and decide this later 
     public record AcademicSession : ISecureEntity
     {
         [Required]

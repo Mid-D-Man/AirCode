@@ -1,11 +1,9 @@
 using AirCode.Models.PWA;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
-using AirCode.Models.PWA;
-using Microsoft.AspNetCore.Components;
-using Microsoft.JSInterop;
 using AirCode.Components.SharedPrefabs.Cards;
 using AirCode.Domain.Enums;
+using AirCode.Utilities.HelperScripts;
 
 namespace AirCode.Components.SharedPrefabs.Others;
 
@@ -98,7 +96,7 @@ public partial class PWAComponent : ComponentBase, IAsyncDisposable
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"[PWA Component] Retry {retryCount + 1}: {ex.Message}");
+                    await MID_HelperFunctions.DebugMessageAsync($"[PWA Component] Retry {retryCount + 1}: {ex.Message}", DebugClass.Exception);
                 }
                 
                 retryCount++;
@@ -117,11 +115,11 @@ public partial class PWAComponent : ComponentBase, IAsyncDisposable
             try
             {
                 await JSRuntime.InvokeVoidAsync("setupConnectivityMonitoring", 
-                    _cancellationTokenSource.Token, _dotNetRef);
+                    _cancellationTokenSource?.Token, _dotNetRef);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[PWA Component] Connectivity monitoring setup failed: {ex.Message}");
+                await MID_HelperFunctions.DebugMessageAsync($"[PWA Component] Connectivity monitoring setup failed: {ex.Message}", DebugClass.Exception);
             }
             
             await UpdateStatus();
@@ -135,7 +133,7 @@ public partial class PWAComponent : ComponentBase, IAsyncDisposable
         catch (Exception ex)
         {
             _notificationComponent?.ShowError($"PWA init failed: {ex.Message}");
-            Console.WriteLine($"[PWA Component] Initialization error: {ex}");
+            await MID_HelperFunctions.DebugMessageAsync($"[PWA Component] Initialization error: {ex}", DebugClass.Exception);
         }
     }
 
@@ -157,7 +155,7 @@ public partial class PWAComponent : ComponentBase, IAsyncDisposable
             catch (OperationCanceledException)
             {
                 // Timeout or cancellation, use fallback
-                Console.WriteLine("[PWA Component] Status update timed out, using fallback");
+                await MID_HelperFunctions.DebugMessageAsync("[PWA Component] Status update timed out, using fallback");
                 try
                 {
                     _status.IsOnline = await JSRuntime.InvokeAsync<bool>("eval", "navigator.onLine");
@@ -169,7 +167,7 @@ public partial class PWAComponent : ComponentBase, IAsyncDisposable
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[PWA Component] Status update error: {ex.Message}");
+                await MID_HelperFunctions.DebugMessageAsync($"[PWA Component] Status update error: {ex.Message}", DebugClass.Exception);
                 // Fallback to basic online status
                 try
                 {
@@ -183,7 +181,7 @@ public partial class PWAComponent : ComponentBase, IAsyncDisposable
         }
     }
 
-    // User actions with better error handling and timeouts
+    // User actions 
     private async Task InstallApp()
     {
         if (_airCodePWA != null)
@@ -201,7 +199,7 @@ public partial class PWAComponent : ComponentBase, IAsyncDisposable
             catch (Exception ex)
             {
                 _notificationComponent?.ShowError($"Install failed: {ex.Message}");
-                Console.WriteLine($"[PWA Component] Install error: {ex}");
+                await MID_HelperFunctions.DebugMessageAsync($"[PWA Component] Install error: {ex}", DebugClass.Exception);
             }
         }
         else
@@ -227,7 +225,7 @@ public partial class PWAComponent : ComponentBase, IAsyncDisposable
             catch (Exception ex)
             {
                 _notificationComponent?.ShowError($"Update failed: {ex.Message}");
-                Console.WriteLine($"[PWA Component] Update error: {ex}");
+                await MID_HelperFunctions.DebugMessageAsync($"[PWA Component] Update error: {ex}", DebugClass.Exception);
             }
         }
         else
@@ -242,7 +240,7 @@ public partial class PWAComponent : ComponentBase, IAsyncDisposable
         _notificationComponent?.ShowInfo(_status.UpdateAvailable ? "Update available!" : "No updates");
     }
 
-    // Event handlers - now protected against disposal
+    // Event handlers - protected against disposal
     [JSInvokable] 
     public async Task OnInstallPromptReady()
     {
@@ -303,7 +301,7 @@ public partial class PWAComponent : ComponentBase, IAsyncDisposable
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[PWA Component] Error disposing PWA object: {ex.Message}");
+                await MID_HelperFunctions.DebugMessageAsync($"[PWA Component] Error disposing PWA object: {ex.Message}", DebugClass.Exception);
             }
         }
         

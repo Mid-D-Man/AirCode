@@ -5,6 +5,7 @@
 @using AirCode.Layout.AdminLayout.Superior
 @using AirCode.Components.SharedPrefabs.Cards
 @using Microsoft.AspNetCore.Authorization
+@using AirCode.Components.SharedPrefabs.Buttons
 
 @layout SuperiorAdminLayout
 
@@ -20,9 +21,7 @@
     <div class="page-header">
         <h2 class="text-secondary">Manage Academic Sessions</h2>
         <div class="actions">
-            <button class="btn-primary" @onclick="() => ShowModal(ModalType.CreateSession)">
-                <span class="icon">+</span> New Academic Session
-            </button>
+            <CoolPrimaryButton Text="New Academic Session" Icon="+" OnClick="() => ShowModal(ModalType.CreateSession)" />
         </div>
     </div>
 
@@ -152,9 +151,7 @@
     else if (currentSession != null)
     {
         <div class="create-next-session">
-            <button class="btn-primary" @onclick="() => ShowModal(ModalType.CreateSession)">
-                Create Next Academic Session
-            </button>
+            <CoolPrimaryButton Text="Create Next Academic Session" OnClick="() => ShowModal(ModalType.CreateSession)" />
             <p>Prepare for the upcoming academic year by creating the next session.</p>
         </div>
     }
@@ -246,9 +243,7 @@
                 <strong>Warning:</strong> No upcoming academic session has been configured. 
                 Please create a new session before the current one ends to ensure continuity.
             </div>
-            <button class="btn-primary" @onclick="() => ShowModal(ModalType.CreateSession)">
-                Create Session
-            </button>
+            <CoolPrimaryButton Text="Create Session" OnClick="() => ShowModal(ModalType.CreateSession)" />
             <button class="close-warning" @onclick="DismissWarning">×</button>
         </div>
     }
