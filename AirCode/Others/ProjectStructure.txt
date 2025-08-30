@@ -1,7 +1,7 @@
 Project Structure Documentation
-Generated: Sat Aug 30 12:39:12 UTC 2025
+Generated: Sat Aug 30 17:06:22 UTC 2025
 Repository: Mid-D-Man/AirCode
-Commit: 7f35a424e57d4911df1a0d546ba8c7556a7cde63
+Commit: ba3378b6ca8c9140f7f7f2af55af588d4d34911c
 ==================================
 
 Source Files:
@@ -22,7 +22,6 @@ Components/Admin/Shared/NavMenuButton.razor
 Components/Admin/Shared/NavMenuButton.razor.css
 Components/Auth/AccessControl.razor
 Components/Auth/AccessControl.razor.css
-Components/Auth/TokenDebugger.razor
 Components/Guards/AppAuthorizeRouteViewComponent.razor
 Components/Guards/AppAuthorizeRouteViewComponent.razor.css
 Components/Guards/BusinessHoursComponentBase.razor
@@ -31,6 +30,8 @@ Components/Guards/ProtectedComponent.razor
 Components/Guards/ProtectedComponent.razor.css
 Components/SharedPrefabs/Buttons/CircularNavigationButton.razor
 Components/SharedPrefabs/Buttons/CircularNavigationButton.razor.css
+Components/SharedPrefabs/Buttons/CoolPrimaryButton.razor
+Components/SharedPrefabs/Buttons/CoolPrimaryButton.razor.css
 Components/SharedPrefabs/Buttons/PrimaryButton.razor
 Components/SharedPrefabs/Buttons/PrimaryButton.razor.css
 Components/SharedPrefabs/Buttons/SecondaryButton.razor
@@ -43,8 +44,6 @@ Components/SharedPrefabs/Cards/NotificationComponent.razor
 Components/SharedPrefabs/Cards/NotificationComponent.razor.css
 Components/SharedPrefabs/Fields/FormField.razor
 Components/SharedPrefabs/Fields/FormField.razor.css
-Components/SharedPrefabs/Others/AttendanceChart.razor
-Components/SharedPrefabs/Others/AttendanceChart.razor.css
 Components/SharedPrefabs/Others/BlobBackground.razor
 Components/SharedPrefabs/Others/BlobBackground.razor.css
 Components/SharedPrefabs/Others/ConnectionModal.razor
@@ -66,9 +65,6 @@ Components/SharedPrefabs/Others/SvgIcon.razor
 Components/SharedPrefabs/Others/SvgIcon.razor.css
 Components/SharedPrefabs/Popups/AreYouSurePopup.razor
 Components/SharedPrefabs/Popups/AreYouSurePopup.razor.css
-Components/SharedPrefabs/QrCode/FloatingQrCodeWindow.razor
-Components/SharedPrefabs/QrCode/FloatingQrCodeWindow.razor.css
-Components/SharedPrefabs/QrCode/FloatingQrCodeWindow.razor.js
 Components/SharedPrefabs/QrCode/QRCodeCompo.razor
 Components/SharedPrefabs/QrCode/QRCodeCompo.razor.css
 Components/SharedPrefabs/Scanner/BasicQRCodeScanner.razor
@@ -346,9 +342,9 @@ Directory Structure:
 File Count Summary:
 ==================
 .cs       : 113 files
-.razor    : 68 files
+.razor    : 66 files
 .csproj   : 1 files
 .json     : 12 files
-.css      : 79 files
-.js       : 51 files
+.css      : 78 files
+.js       : 50 files
 .html     : 3 files
