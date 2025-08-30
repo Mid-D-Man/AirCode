@@ -3,11 +3,6 @@ using AirCode.Domain.Enums;
 using AirCode.Services.Firebase;
 using AirCode.Services.Storage;
 using AirCode.Services.Time;
-using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using AirCode.Models.Supabase;
 using AirCode.Services.Courses;
 using AirCode.Services.SupaBase;
@@ -1096,9 +1091,9 @@ namespace AirCode.Services.Academic
 
         #endregion
 
-        // Add to AcademicSessionService.cs
+       
 
-#region Student Level Management
+    #region Student Level Management
 
 /// <summary>
 /// Process student level promotions at session end
@@ -1199,7 +1194,7 @@ private async Task LogPromotionActivityAsync(string sessionId, Dictionary<string
 
 #endregion
 
- #region Student Course Management
+    #region Student Course Management
 
 private async Task ClearAllStudentCoursesAsync()
 {
@@ -1275,7 +1270,7 @@ private async Task SendSemesterEndNotificationsAsync(Semester endedSemester)
 
 #endregion
 
-#region Notifications
+    #region Notifications
 
 // Update ProcessSessionEndAsync to include session notifications
 private async Task SendSessionEndNotificationsAsync(AcademicSession endedSession)
@@ -1321,7 +1316,8 @@ private async Task SendSessionEndNotificationsAsync(AcademicSession endedSession
 }
 
 #endregion
-// Supporting model
+
 
 }
+    
 }

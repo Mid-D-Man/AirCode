@@ -14,7 +14,7 @@
 .main-content {
     display: flex;
     flex-direction: column;
-    height: calc(100% - 110px); /* Adjusted for enhanced nav */
+    height: calc(100% - 110px); 
     width: 100%;
     position: relative;
 }
@@ -91,7 +91,7 @@
     flex: 1;
     padding: 0.75rem;
     overflow-y: auto;
-    /* Dark gradient background instead of light */
+   
     background: linear-gradient(135deg, #0f1419 0%, #1a2332 100%);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
@@ -99,26 +99,26 @@
     margin-top: 6px;
     position: relative;
     animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    /* Ensure text is visible on dark background */
+  
     color: #ffffff;
 }
 
 body:not(.dark-mode) .nav-buttons .circular-button {
-    background: rgba(30, 58, 138, 0.9); /* Cobalt blue base */
+    background: rgba(30, 58, 138, 0.9); 
     color: white;
     border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 body:not(.dark-mode) .nav-buttons .circular-button:hover {
-    background: rgba(30, 64, 175, 0.95); /* Darker cobalt on hover */
+    background: rgba(53, 89, 207, 0.95); 
 }
 
 body:not(.dark-mode) .nav-buttons .button-content svg {
-    fill: white; /* Force white SVGs */
+    fill: #814242; /* Override white SVGs */
 }
 
 body:not(.dark-mode) .nav-buttons .button-text {
-    color: white; /* Force white text */
+    color: white; 
     font-weight: 600;
 }
 
@@ -130,7 +130,7 @@ body:not(.dark-mode) .nav-buttons .button-text {
     transform: translateX(-50%);
     width: 32px;
     height: 3px;
-    background: rgba(255, 255, 255, 0.3); /* Light handle on dark background */
+    background: rgba(255, 255, 255, 0.3);
     border-radius: 2px;
     margin-top: 6px;
 }

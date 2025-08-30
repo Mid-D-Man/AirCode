@@ -24,7 +24,7 @@ namespace AirCode.Services.Exports
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"PDF Generation Error: {ex.Message}");
+                MID_HelperFunctions.DebugMessage($"PDF Generation Error: {ex.Message}");
                 return false;
             }
         }

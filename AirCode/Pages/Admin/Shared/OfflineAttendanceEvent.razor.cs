@@ -177,11 +177,11 @@ public partial class OfflineAttendanceEvent : ComponentBase, IDisposable
             // Load offline storage preferences
             await LoadOfflinePreferencesAsync();
             
-            Console.WriteLine("Offline environment initialized successfully");
+            MID_HelperFunctions.DebugMessage("Offline environment initialized successfully");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error initializing offline environment: {ex.Message}");
+            MID_HelperFunctions.DebugMessage($"Error initializing offline environment: {ex.Message}");
         }
     }
 
@@ -201,7 +201,7 @@ public partial class OfflineAttendanceEvent : ComponentBase, IDisposable
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading offline preferences: {ex.Message}");
+            MID_HelperFunctions.DebugMessage($"Error loading offline preferences: {ex.Message}");
         }
     }
 
@@ -223,7 +223,7 @@ public partial class OfflineAttendanceEvent : ComponentBase, IDisposable
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading offline sessions: {ex.Message}");
+            MID_HelperFunctions.DebugMessage($"Error loading offline sessions: {ex.Message}");
         }
     }
 
@@ -283,11 +283,11 @@ public partial class OfflineAttendanceEvent : ComponentBase, IDisposable
             isOfflineSessionActive = true;
             showOfflineQR = true;
             
-            Console.WriteLine($"Offline session created: {sessionData.SessionId}");
+            MID_HelperFunctions.DebugMessage($"Offline session created: {sessionData.SessionId}");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error creating offline session: {ex.Message}");
+            MID_HelperFunctions.DebugMessage($"Error creating offline session: {ex.Message}");
         }
         finally
         {
@@ -346,12 +346,12 @@ public partial class OfflineAttendanceEvent : ComponentBase, IDisposable
             currentOfflineSession = null;
             selectedCourse = null;
 
-            Console.WriteLine("Offline session ended");
+            MID_HelperFunctions.DebugMessage("Offline session ended");
             StateHasChanged();
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error ending offline session: {ex.Message}");
+            MID_HelperFunctions.DebugMessage($"Error ending offline session: {ex.Message}");
         }
     }
 
@@ -397,12 +397,12 @@ public partial class OfflineAttendanceEvent : ComponentBase, IDisposable
 
             await SaveOfflineSessionAsync(currentOfflineSession);
 
-            Console.WriteLine($"Offline attendance recorded for {matricNumber}");
+            MID_HelperFunctions.DebugMessage($"Offline attendance recorded for {matricNumber}");
             StateHasChanged();
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error processing offline attendance: {ex.Message}");
+            MID_HelperFunctions.DebugMessage($"Error processing offline attendance: {ex.Message}");
         }
     }
 
@@ -415,7 +415,7 @@ public partial class OfflineAttendanceEvent : ComponentBase, IDisposable
         // Check connectivity first
         if (!await CheckConnectivityAsync())
         {
-            Console.WriteLine("Cannot sync: Device is offline");
+            MID_HelperFunctions.DebugMessage("Cannot sync: Device is offline");
             return;
         }
 
@@ -456,11 +456,11 @@ public partial class OfflineAttendanceEvent : ComponentBase, IDisposable
             await SaveOfflineSessionsAsync();
             showSyncResults = true;
 
-            Console.WriteLine($"Sync completed: {lastSyncResult.ProcessedSuccessfully}/{lastSyncResult.TotalRecords} successful");
+            MID_HelperFunctions.DebugMessage($"Sync completed: {lastSyncResult.ProcessedSuccessfully}/{lastSyncResult.TotalRecords} successful");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error during sync: {ex.Message}");
+            MID_HelperFunctions.DebugMessage($"Error during sync: {ex.Message}");
         }
         finally
         {
@@ -515,7 +515,7 @@ public partial class OfflineAttendanceEvent : ComponentBase, IDisposable
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error saving offline session: {ex.Message}");
+            MID_HelperFunctions.DebugMessage($"Error saving offline session: {ex.Message}");
         }
     }
 
@@ -528,7 +528,7 @@ public partial class OfflineAttendanceEvent : ComponentBase, IDisposable
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error saving offline sessions list: {ex.Message}");
+            MID_HelperFunctions.DebugMessage($"Error saving offline sessions list: {ex.Message}");
         }
     }
 
@@ -598,7 +598,7 @@ public partial class OfflineAttendanceEvent : ComponentBase, IDisposable
     private void HandleQRCodeGenerated(QRCodeData qrData)
     {
         // Handle QR code generation completion
-        Console.WriteLine($"QR Code generated for session: {qrData.Id}");
+        MID_HelperFunctions.DebugMessage($"QR Code generated for session: {qrData.Id}");
     }
 
     #endregion

@@ -172,7 +172,7 @@ namespace AirCode.Pages.Shared
                 }
                 catch (JSException)
                 {
-                    Console.WriteLine($"JavaScript initialization failed: {ex.Message}");
+                    MID_HelperFunctions.DebugMessage($"JavaScript initialization failed: {ex.Message}");
                 }
             }
         }
@@ -577,7 +577,7 @@ Message: {contactForm.Message}
                     ";
                     
                     // Log the email content for development purposes
-                    Console.WriteLine($"Email would be sent to {SUPPORT_EMAIL}: {emailContent}");
+                    MID_HelperFunctions.DebugMessage($"Email would be sent to {SUPPORT_EMAIL}: {emailContent}");
                     
                     notificationComponent?.ShowSuccess("Your message has been received. We'll get back to you via email soon!");
                     ClearContactForm();

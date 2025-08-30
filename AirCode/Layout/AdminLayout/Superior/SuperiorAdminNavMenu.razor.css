@@ -120,7 +120,7 @@
     transform: translateX(5px) translateZ(0);
 }
 
-/* Enhanced tooltip for collapsed menu */
+/*  tooltip for collapsed menu */
 .nav-menu.collapsed .nav-item {
     position: relative;
 }

@@ -1,5 +1,4 @@
 namespace AirCode.Utilities.DataStructures;
-using Newtonsoft.Json;
 /// <summary>
     /// Enum for QR code gradient direction
     /// </summary>

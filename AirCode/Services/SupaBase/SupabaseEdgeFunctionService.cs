@@ -64,13 +64,13 @@ namespace AirCode.Services.SupaBase
         {
             try
             {
-                Console.WriteLine($"Sending {mode} edge function request: {JsonSerializer.Serialize(request, _jsonOptions)}");
+                MID_HelperFunctions.DebugMessage($"Sending {mode} edge function request: {JsonSerializer.Serialize(request, _jsonOptions)}");
 
                 var response = await SendEdgeFunctionRequestAsync(functionName, request);
                 
                 var responseContent = await response.Content.ReadAsStringAsync();
-                Console.WriteLine($"{mode} Response Status: {response.StatusCode}");
-                Console.WriteLine($"{mode} Response Content: {responseContent}");
+                MID_HelperFunctions.DebugMessage($"{mode} Response Status: {response.StatusCode}");
+                MID_HelperFunctions.DebugMessage($"{mode} Response Content: {responseContent}");
                 
                 // Parse the response regardless of status code
                 EdgeFunctionResponse edgeResponse;
@@ -124,7 +124,7 @@ namespace AirCode.Services.SupaBase
             }
             catch (HttpRequestException ex)
             {
-                Console.WriteLine($"HTTP Request Exception in {mode} mode: {ex}");
+                MID_HelperFunctions.DebugMessage($"HTTP Request Exception in {mode} mode: {ex}");
                 return new AttendanceProcessingResult
                 {
                     Success = false,
@@ -135,7 +135,7 @@ namespace AirCode.Services.SupaBase
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"General Exception in {mode} mode: {ex}");
+                MID_HelperFunctions.DebugMessage($"General Exception in {mode} mode: {ex}");
                 return new AttendanceProcessingResult
                 {
                     Success = false,
@@ -213,7 +213,7 @@ namespace AirCode.Services.SupaBase
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error checking offline session: {ex.Message}");
+                MID_HelperFunctions.DebugMessage($"Error checking offline session: {ex.Message}");
                 return false;
             }
         }
@@ -326,8 +326,8 @@ public async Task<DeleteUserResponse> DeleteUserAsync(DeleteUserRequest requestM
         var response = await SendEdgeFunctionRequestAsync(functionName, requestModel);
 
         var content = await response.Content.ReadAsStringAsync();
-        Console.WriteLine($"DeleteUser Response Status: {response.StatusCode}");
-        Console.WriteLine($"DeleteUser Response Content: {content}");
+        MID_HelperFunctions.DebugMessage($"DeleteUser Response Status: {response.StatusCode}");
+        MID_HelperFunctions.DebugMessage($"DeleteUser Response Content: {content}");
 
         if (response.IsSuccessStatusCode)
         {
@@ -348,7 +348,7 @@ public async Task<DeleteUserResponse> DeleteUserAsync(DeleteUserRequest requestM
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Error in DeleteUserAsync: {ex}");
+        MID_HelperFunctions.DebugMessage($"Error in DeleteUserAsync: {ex}");
         return new DeleteUserResponse
         {
             Success = false,
@@ -398,7 +398,7 @@ public async Task<DeleteUserResponse> DeleteUserAsync(DeleteUserRequest requestM
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error getting server time: {ex.Message}");
+                MID_HelperFunctions.DebugMessage($"Error getting server time: {ex.Message}");
                 // Fallback to local time
                 return DateTime.UtcNow.ToString("O");
             }

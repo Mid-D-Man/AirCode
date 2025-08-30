@@ -30,14 +30,13 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0 0.2rem 0 1rem; /* OPTIMIZED: Reduced right padding to 0.2rem */
+    padding: 0 0.2rem 0 1rem; 
     background-color: var(--bg-secondary);
     border: 1px solid var(--border);
-    margin: 1rem 0.2rem 0 0; /* OPTIMIZED: Reduced right margin to 0.2rem */
+    margin: 1rem 0.2rem 0 0; 
     border-radius: 15px;
     backdrop-filter: blur(10px);
 
-    /* Enhanced shadow */
     box-shadow:
             0 4px 20px rgba(0, 0, 0, 0.08),
             0 2px 8px rgba(0, 0, 0, 0.04);
@@ -88,16 +87,15 @@
 
 .content-bottom {
     flex: 1;
-    padding: 1rem 0.2rem 2rem 1rem; /* OPTIMIZED: Reduced right padding to 0.2rem */
+    padding: 1rem 0.2rem 2rem 1rem; 
     overflow-y: auto;
     overflow-x: hidden;
     background-color: var(--bg-secondary);
     border: 1px solid var(--border);
-    margin: 1rem 0.2rem 1rem 0; /* OPTIMIZED: Reduced right margin to 0.2rem */
+    margin: 1rem 0.2rem 1rem 0; 
     border-radius: 15px;
     backdrop-filter: blur(10px);
 
-    /* Enhanced shadow */
     box-shadow:
             0 4px 20px rgba(0, 0, 0, 0.08),
             0 2px 8px rgba(0, 0, 0, 0.04);
@@ -107,7 +105,6 @@
     will-change: scroll-position;
 }
 
-/* Enhanced scrollbar */
 .content-bottom::-webkit-scrollbar {
     width: 8px;
 }
@@ -140,7 +137,7 @@
 .modal-portal-root > * {
     pointer-events: all;
 }
-::global(.modal-portal-root) {
+:global(.modal-portal-root) {
     position: fixed !important;
     top: 0 !important;
     left: 0 !important;
@@ -152,12 +149,12 @@
     transform: none !important;
 }
 
-::global(.modal-portal-root > *) {
+:global(.modal-portal-root > *) {
     pointer-events: all !important;
 }
 
 /* Ensure any portal children override all containment */
-::global(.modal-portal-root .modal-overlay) {
+:global(.modal-portal-root .modal-overlay) {
     position: fixed !important;
     top: 0 !important;
     left: 0 !important;
@@ -169,7 +166,7 @@
     contain: none !important;
     z-index: 10001 !important;
 }
-/* Responsive adjustments for collapsed menu - UNCHANGED (perfect as is) */
+/* Responsive adjustments for collapsed menu */
 @media (min-width: 1025px) {
     .nav-menu.collapsed ~ .main-content {
         margin-left: calc(80px + 0.5rem);
@@ -224,15 +221,15 @@
         padding: 0.5rem 0.625rem 1rem 0.5rem;
     }
 
-    /* FIX: Add extra right margin when nav menu is collapsed on mobile */
+  
     .nav-menu.collapsed ~ .main-content .content-top {
-        margin-right: 3rem; /* Container spacing from edge */
-        padding-right: 1.25rem; /* Keep inner content padding reasonable */
+        margin-right: 3rem; 
+        padding-right: 1.25rem; 
     }
 
     .nav-menu.collapsed ~ .main-content .content-bottom {
-        margin-right: 3rem; /* Container spacing from edge */
-        padding-right: 0.625rem; /* Keep inner content padding reasonable */
+        margin-right: 3rem; 
+        padding-right: 0.625rem; 
     }
 
     .quick-stats {
@@ -287,18 +284,18 @@
         margin-bottom: 0.5rem;
     }
 
-    /* FIX: Add extra right margin when nav menu is collapsed on small mobile */
+  
     .nav-menu.collapsed ~ .main-content .content-top,
     .nav-menu.collapsed ~ .main-content .content-bottom {
-        margin-right: 4rem; /* Container spacing from edge */
+        margin-right: 4rem;
     }
 
     .nav-menu.collapsed ~ .main-content .content-top {
-        padding-right: 0.625rem; /* Keep inner content padding reasonable */
+        padding-right: 0.625rem; 
     }
 
     .nav-menu.collapsed ~ .main-content .content-bottom {
-        padding-right: 0.375rem; /* Keep inner content padding reasonable */
+        padding-right: 0.375rem; 
     }
 
 
@@ -306,14 +303,14 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        padding: 0.4rem 0.8rem; /* Reduced from 0.5rem 1rem */
+        padding: 0.4rem 0.8rem; 
         border-radius: 8px;
         background: linear-gradient(135deg, var(--bg-tertiary), var(--bg-secondary));
         border: 1px solid var(--border);
         transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
         transform: translateZ(0);
-        min-width: 80px; /* Prevent overflow */
-        max-height: 60px; /* Constrain height */
+        min-width: 80px;
+        max-height: 60px;
     }
 
     .stat-item.loading {
@@ -321,15 +318,15 @@
     }
 
     .stat-value {
-        font-size: 1.3rem; /* Reduced from 1.5rem */
+        font-size: 1.3rem; 
         font-weight: 700;
         color: var(--text-primary);
-        line-height: 1.1; /* Tighter line height */
-        margin-bottom: 0.1rem; /* Reduce spacing */
+        line-height: 1.1; 
+        margin-bottom: 0.1rem; 
     }
 
     .stat-label {
-        font-size: 0.8rem; /* Reduced from 0.875rem */
+        font-size: 0.8rem;
         color: var(--text-secondary);
         font-weight: 500;
         text-align: center;

@@ -107,7 +107,7 @@ public partial class PWAComponent : ComponentBase, IAsyncDisposable
             if (_airCodePWA == null)
             {
                 _notificationComponent?.ShowInfo("PWA not available - running in fallback mode");
-                Console.WriteLine("[PWA Component] PWA manager not available after retries");
+                MID_HelperFunctions.DebugMessage("[PWA Component] PWA manager not available after retries");
                 return;
             }
             

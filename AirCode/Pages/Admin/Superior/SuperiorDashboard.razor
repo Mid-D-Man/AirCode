@@ -279,7 +279,7 @@
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Dashboard initialization error: {ex.Message}");
+            MID_HelperFunctions.DebugMessage($"Dashboard initialization error: {ex.Message}");
         }
         finally
         {
@@ -370,7 +370,7 @@
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading academic data: {ex.Message}");
+            MID_HelperFunctions.DebugMessage($"Error loading academic data: {ex.Message}");
         }
     }
 
@@ -401,7 +401,7 @@
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading student data: {ex.Message}");
+            MID_HelperFunctions.DebugMessage($"Error loading student data: {ex.Message}");
         }
     }
 
@@ -432,7 +432,7 @@
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading Firebase student data: {ex.Message}");
+            MID_HelperFunctions.DebugMessage($"Error loading Firebase student data: {ex.Message}");
         }
     }
 
@@ -450,7 +450,7 @@
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading lecturer data: {ex.Message}");
+            MID_HelperFunctions.DebugMessage($"Error loading lecturer data: {ex.Message}");
         }
     }
 
@@ -463,7 +463,7 @@
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading course data: {ex.Message}");
+            MID_HelperFunctions.DebugMessage($"Error loading course data: {ex.Message}");
         }
     }
 

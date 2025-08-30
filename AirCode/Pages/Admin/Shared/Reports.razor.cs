@@ -185,7 +185,7 @@ namespace AirCode.Pages.Admin.Shared
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Error parsing event {kvp.Key}: {ex.Message}");
+                    MID_HelperFunctions.DebugMessage($"Error parsing event {kvp.Key}: {ex.Message}");
                 }
             }
 
@@ -237,7 +237,7 @@ namespace AirCode.Pages.Admin.Shared
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error parsing Firebase attendance event: {ex.Message}");
+                MID_HelperFunctions.DebugMessage($"Error parsing Firebase attendance event: {ex.Message}");
                 return null;
             }
         }
@@ -294,7 +294,7 @@ namespace AirCode.Pages.Admin.Shared
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error parsing Firebase attendance record: {ex.Message}");
+                MID_HelperFunctions.DebugMessage($"Error parsing Firebase attendance record: {ex.Message}");
                 return null;
             }
         }

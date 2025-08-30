@@ -117,7 +117,7 @@ namespace AirCode.Services.Courses
                     }
                     catch (JsonException ex)
                     {
-                        Console.WriteLine($"Skipping invalid course data for key {kvp.Key}: {ex.Message}");
+                        MID_HelperFunctions.DebugMessage($"Skipping invalid course data for key {kvp.Key}: {ex.Message}");
                     }
                 }
             }
@@ -159,7 +159,7 @@ namespace AirCode.Services.Courses
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error getting course by code {courseCode}: {ex.Message}");
+                MID_HelperFunctions.DebugMessage($"Error getting course by code {courseCode}: {ex.Message}");
                 throw;
             }
     
@@ -212,7 +212,7 @@ namespace AirCode.Services.Courses
                         }
                         catch (JsonException ex)
                         {
-                            Console.WriteLine($"Skipping invalid course data for key {kvp.Key}: {ex.Message}");
+                            MID_HelperFunctions.DebugMessage($"Skipping invalid course data for key {kvp.Key}: {ex.Message}");
                         }
                     }
                 }
@@ -221,7 +221,7 @@ namespace AirCode.Services.Courses
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error getting courses by level {level}: {ex.Message}");
+                MID_HelperFunctions.DebugMessage($"Error getting courses by level {level}: {ex.Message}");
                 throw;
             }
         }
@@ -261,7 +261,7 @@ namespace AirCode.Services.Courses
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error adding course: {ex.Message}");
+                MID_HelperFunctions.DebugMessage($"Error adding course: {ex.Message}");
                 return false;
             }
         }
@@ -287,7 +287,7 @@ namespace AirCode.Services.Courses
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error updating course {course.CourseCode}: {ex.Message}");
+                MID_HelperFunctions.DebugMessage($"Error updating course {course.CourseCode}: {ex.Message}");
                 return false;
             }
         }
@@ -297,49 +297,49 @@ namespace AirCode.Services.Courses
             if (_disposed) throw new ObjectDisposedException(nameof(CourseService));
             if (!MID_HelperFunctions.IsValidString(courseId)) 
             {
-                Console.WriteLine($"DeleteCourse: Invalid courseId provided: '{courseId}'");
+                MID_HelperFunctions.DebugMessage($"DeleteCourse: Invalid courseId provided: '{courseId}'");
                 return false;
             }
 
             try
             {
-                Console.WriteLine($"DeleteCourse: Starting deletion process for course: '{courseId}'");
+                MID_HelperFunctions.DebugMessage($"DeleteCourse: Starting deletion process for course: '{courseId}'");
                 
                 var levels = new[] { "Courses_100Level", "Courses_200Level", "Courses_300Level", "Courses_400Level", "Courses_500Level" };
 
                 foreach (var levelDoc in levels)
                 {
-                    Console.WriteLine($"DeleteCourse: Checking document: '{levelDoc}' for field: '{courseId}'");
+                    MID_HelperFunctions.DebugMessage($"DeleteCourse: Checking document: '{levelDoc}' for field: '{courseId}'");
                     
                     // Check if the field exists in this document
                     var existingCourse = await _firestoreService.GetFieldAsync<CourseFirestoreModel>(_courseCollection, levelDoc, courseId);
                     
                     if (existingCourse != null)
                     {
-                        Console.WriteLine($"DeleteCourse: Found course '{courseId}' in document '{levelDoc}', attempting field removal");
+                        MID_HelperFunctions.DebugMessage($"DeleteCourse: Found course '{courseId}' in document '{levelDoc}', attempting field removal");
                         
                         var deleteResult = await _firestoreService.RemoveFieldAsync(_courseCollection, levelDoc, courseId);
                         
                         if (deleteResult)
                         {
-                            Console.WriteLine($"DeleteCourse: Successfully deleted course field '{courseId}' from '{levelDoc}'");
+                            MID_HelperFunctions.DebugMessage($"DeleteCourse: Successfully deleted course field '{courseId}' from '{levelDoc}'");
                             return true;
                         }
                         else
                         {
-                            Console.WriteLine($"DeleteCourse: Failed to delete course field '{courseId}' from '{levelDoc}'");
+                            MID_HelperFunctions.DebugMessage($"DeleteCourse: Failed to delete course field '{courseId}' from '{levelDoc}'");
                             return false;
                         }
                     }
                 }
 
-                Console.WriteLine($"DeleteCourse: Course '{courseId}' not found in any level document");
+                MID_HelperFunctions.DebugMessage($"DeleteCourse: Course '{courseId}' not found in any level document");
                 return false;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"DeleteCourse: Exception occurred while deleting course '{courseId}': {ex.Message}");
-                Console.WriteLine($"DeleteCourse: Stack trace: {ex.StackTrace}");
+                MID_HelperFunctions.DebugMessage($"DeleteCourse: Exception occurred while deleting course '{courseId}': {ex.Message}");
+                MID_HelperFunctions.DebugMessage($"DeleteCourse: Stack trace: {ex.StackTrace}");
                 return false;
             }
         }
@@ -371,7 +371,7 @@ namespace AirCode.Services.Courses
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error assigning lecturer to course: {ex.Message}");
+                MID_HelperFunctions.DebugMessage($"Error assigning lecturer to course: {ex.Message}");
                 return false;
             }
         }
@@ -401,7 +401,7 @@ namespace AirCode.Services.Courses
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error removing lecturer from course: {ex.Message}");
+                MID_HelperFunctions.DebugMessage($"Error removing lecturer from course: {ex.Message}");
                 return false;
             }
         }
@@ -455,7 +455,7 @@ public async Task<List<StudentCourse>> GetAllStudentCoursesAsync()
                     }
                     catch (JsonException ex)
                     {
-                        Console.WriteLine($"Skipping invalid student course data for key {kvp.Key}: {ex.Message}");
+                        MID_HelperFunctions.DebugMessage($"Skipping invalid student course data for key {kvp.Key}: {ex.Message}");
                     }
                 }
             }
@@ -470,7 +470,7 @@ public async Task<List<StudentCourse>> GetAllStudentCoursesAsync()
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Error getting all student courses: {ex.Message}");
+        MID_HelperFunctions.DebugMessage($"Error getting all student courses: {ex.Message}");
         throw;
     }
 }
@@ -572,7 +572,7 @@ public async Task<List<StudentCourse>> GetStudentCoursesByLevelAsync(LevelType l
                 }
                 catch (JsonException ex)
                 {
-                    Console.WriteLine($"Skipping invalid student course data for key {kvp.Key}: {ex.Message}");
+                    MID_HelperFunctions.DebugMessage($"Skipping invalid student course data for key {kvp.Key}: {ex.Message}");
                 }
             }
         }
@@ -586,7 +586,7 @@ public async Task<List<StudentCourse>> GetStudentCoursesByLevelAsync(LevelType l
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Error getting student courses by level {level}: {ex.Message}");
+        MID_HelperFunctions.DebugMessage($"Error getting student courses by level {level}: {ex.Message}");
         throw;
     }
 }
@@ -675,7 +675,7 @@ public async Task<bool> AddStudentCourseAsync(StudentCourse studentCourse)
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Error adding student course: {ex.Message}");
+        MID_HelperFunctions.DebugMessage($"Error adding student course: {ex.Message}");
         return false;
     }
 }
@@ -701,7 +701,7 @@ public async Task<bool> UpdateStudentCourseAsync(StudentCourse studentCourse)
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Error updating student course {studentCourse.StudentMatricNumber}: {ex.Message}");
+        MID_HelperFunctions.DebugMessage($"Error updating student course {studentCourse.StudentMatricNumber}: {ex.Message}");
         return false;
     }
 }
@@ -711,49 +711,49 @@ public async Task<bool> DeleteStudentCourseAsync(string matricNumber)
     if (_disposed) throw new ObjectDisposedException(nameof(CourseService));
     if (!MID_HelperFunctions.IsValidString(matricNumber)) 
     {
-        Console.WriteLine($"DeleteStudentCourse: Invalid matricNumber provided: '{matricNumber}'");
+        MID_HelperFunctions.DebugMessage($"DeleteStudentCourse: Invalid matricNumber provided: '{matricNumber}'");
         return false;
     }
 
     try
     {
-        Console.WriteLine($"DeleteStudentCourse: Starting deletion process for student: '{matricNumber}'");
+        MID_HelperFunctions.DebugMessage($"DeleteStudentCourse: Starting deletion process for student: '{matricNumber}'");
         
         var levels = new[] { "StudentCourses_100Level", "StudentCourses_200Level", "StudentCourses_300Level", "StudentCourses_400Level", "StudentCourses_500Level", "StudentCourses_ExtraLevel" };
 
         foreach (var levelDoc in levels)
         {
-            Console.WriteLine($"DeleteStudentCourse: Checking document: '{levelDoc}' for field: '{matricNumber}'");
+            MID_HelperFunctions.DebugMessage($"DeleteStudentCourse: Checking document: '{levelDoc}' for field: '{matricNumber}'");
             
             // Check if the field exists in this document
             var existingStudentCourse = await _firestoreService.GetFieldAsync<StudentCourseFirestoreModel>(_studentCourseCollection, levelDoc, matricNumber);
             
             if (existingStudentCourse != null)
             {
-                Console.WriteLine($"DeleteStudentCourse: Found student '{matricNumber}' in document '{levelDoc}', attempting field removal");
+                MID_HelperFunctions.DebugMessage($"DeleteStudentCourse: Found student '{matricNumber}' in document '{levelDoc}', attempting field removal");
                 
                 var deleteResult = await _firestoreService.RemoveFieldAsync(_studentCourseCollection, levelDoc, matricNumber);
                 
                 if (deleteResult)
                 {
-                    Console.WriteLine($"DeleteStudentCourse: Successfully deleted student field '{matricNumber}' from '{levelDoc}'");
+                    MID_HelperFunctions.DebugMessage($"DeleteStudentCourse: Successfully deleted student field '{matricNumber}' from '{levelDoc}'");
                     return true;
                 }
                 else
                 {
-                    Console.WriteLine($"DeleteStudentCourse: Failed to delete student field '{matricNumber}' from '{levelDoc}'");
+                    MID_HelperFunctions.DebugMessage($"DeleteStudentCourse: Failed to delete student field '{matricNumber}' from '{levelDoc}'");
                     return false;
                 }
             }
         }
 
-        Console.WriteLine($"DeleteStudentCourse: Student '{matricNumber}' not found in any level document");
+        MID_HelperFunctions.DebugMessage($"DeleteStudentCourse: Student '{matricNumber}' not found in any level document");
         return false;
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"DeleteStudentCourse: Exception occurred while deleting student '{matricNumber}': {ex.Message}");
-        Console.WriteLine($"DeleteStudentCourse: Stack trace: {ex.StackTrace}");
+        MID_HelperFunctions.DebugMessage($"DeleteStudentCourse: Exception occurred while deleting student '{matricNumber}': {ex.Message}");
+        MID_HelperFunctions.DebugMessage($"DeleteStudentCourse: Stack trace: {ex.StackTrace}");
         return false;
     }
 }
@@ -775,7 +775,7 @@ public async Task<bool> DeleteStudentCourseAsync(string matricNumber)
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error adding course reference to student {matricNumber}: {ex.Message}");
+                MID_HelperFunctions.DebugMessage($"Error adding course reference to student {matricNumber}: {ex.Message}");
                 return false;
             }
         }
@@ -796,7 +796,7 @@ public async Task<bool> DeleteStudentCourseAsync(string matricNumber)
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error updating course status for student {matricNumber}: {ex.Message}");
+                MID_HelperFunctions.DebugMessage($"Error updating course status for student {matricNumber}: {ex.Message}");
                 return false;
             }
         }
@@ -815,7 +815,7 @@ public async Task<bool> RemoveCourseReferenceFromStudentAsync(string matricNumbe
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Error removing course reference from student {matricNumber}: {ex.Message}");
+        MID_HelperFunctions.DebugMessage($"Error removing course reference from student {matricNumber}: {ex.Message}");
         return false;
     }
 }
@@ -841,7 +841,7 @@ public async Task<bool> ClearAllStudentCourseReferencesAsync()
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Error clearing all student course references: {ex.Message}");
+        MID_HelperFunctions.DebugMessage($"Error clearing all student course references: {ex.Message}");
         return false;
     }
 }
@@ -886,7 +886,7 @@ public async Task<bool> PromoteAllStudentsToNextLevelAsync()
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Error promoting all students: {ex.Message}");
+        MID_HelperFunctions.DebugMessage($"Error promoting all students: {ex.Message}");
         return false;
     }
 }
@@ -992,7 +992,7 @@ private async Task SaveCoursesToLocalStorageAsync(List<Course> courses)
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Error saving courses to local storage: {ex.Message}");
+        MID_HelperFunctions.DebugMessage($"Error saving courses to local storage: {ex.Message}");
     }
 }
 
@@ -1004,7 +1004,7 @@ private async Task SaveStudentCoursesToLocalStorageAsync(List<StudentCourse> stu
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Error saving student courses to local storage: {ex.Message}");
+        MID_HelperFunctions.DebugMessage($"Error saving student courses to local storage: {ex.Message}");
     }
 }
 
@@ -1017,7 +1017,7 @@ private async Task SaveUserCoursesToLocalStorageAsync<T>(string userId, T userCo
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Error saving user courses to local storage for {userId}: {ex.Message}");
+        MID_HelperFunctions.DebugMessage($"Error saving user courses to local storage for {userId}: {ex.Message}");
     }
 }
 
@@ -1030,7 +1030,7 @@ private async Task SaveLevelStudentCoursesToLocalStorageAsync(LevelType level, L
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Error saving level student courses to local storage for {level}: {ex.Message}");
+        MID_HelperFunctions.DebugMessage($"Error saving level student courses to local storage for {level}: {ex.Message}");
     }
 }
 
@@ -1043,7 +1043,7 @@ private async Task SaveLevelStudentCoursesToLocalStorageAsync(LevelType level, L
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Error retrieving courses from local storage: {ex.Message}");
+        MID_HelperFunctions.DebugMessage($"Error retrieving courses from local storage: {ex.Message}");
         return new List<Course>();
     }
 }
@@ -1056,7 +1056,7 @@ private async Task<List<StudentCourse>> GetStudentCoursesFromLocalStorageAsync()
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Error retrieving student courses from local storage: {ex.Message}");
+        MID_HelperFunctions.DebugMessage($"Error retrieving student courses from local storage: {ex.Message}");
         return new List<StudentCourse>();
     }
 }
@@ -1070,7 +1070,7 @@ private async Task<T> GetUserCoursesFromLocalStorageAsync<T>(string userId)
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Error retrieving user courses from local storage for {userId}: {ex.Message}");
+        MID_HelperFunctions.DebugMessage($"Error retrieving user courses from local storage for {userId}: {ex.Message}");
         return default(T);
     }
 }
@@ -1098,7 +1098,7 @@ public async Task<string> AddStudentCourseDistributedAsync(string matricNumber, 
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Error adding student course distributed: {ex.Message}");
+        MID_HelperFunctions.DebugMessage($"Error adding student course distributed: {ex.Message}");
         return null;
     }
 }
@@ -1139,7 +1139,7 @@ public async Task<Dictionary<string, T>> GetAllStudentCoursesDistributedAsync<T>
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Error getting all student courses distributed: {ex.Message}");
+        MID_HelperFunctions.DebugMessage($"Error getting all student courses distributed: {ex.Message}");
         return new Dictionary<string, T>();
     }
 }
@@ -1158,7 +1158,7 @@ public async Task<T> GetStudentCourseDistributedAsync<T>(string matricNumber, st
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Error getting student course distributed: {ex.Message}");
+        MID_HelperFunctions.DebugMessage($"Error getting student course distributed: {ex.Message}");
         return null;
     }
 }
@@ -1186,7 +1186,7 @@ public async Task<bool> UpdateStudentCourseDistributedAsync<T>(string matricNumb
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Error updating student course distributed: {ex.Message}");
+        MID_HelperFunctions.DebugMessage($"Error updating student course distributed: {ex.Message}");
         return false;
     }
 }
@@ -1228,7 +1228,7 @@ private async Task<string> FindAvailableDocumentAsync(string collection, string 
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Error finding available document: {ex.Message}");
+        MID_HelperFunctions.DebugMessage($"Error finding available document: {ex.Message}");
         return baseDocumentId; // Fallback to base document
     }
 }
@@ -1272,7 +1272,7 @@ private async Task<List<string>> GetDistributedDocumentsAsync(string collection,
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Error getting distributed documents: {ex.Message}");
+        MID_HelperFunctions.DebugMessage($"Error getting distributed documents: {ex.Message}");
         return new List<string>();
     }
 }
@@ -1311,7 +1311,7 @@ private async Task<string> FindDocumentContainingKeyAsync(string collection, str
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Error finding document containing key: {ex.Message}");
+        MID_HelperFunctions.DebugMessage($"Error finding document containing key: {ex.Message}");
         return null;
     }
 }
@@ -1334,7 +1334,7 @@ private async Task<T> GetFromDistributedDocumentsAsync<T>(string collection, str
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Error getting from distributed documents: {ex.Message}");
+        MID_HelperFunctions.DebugMessage($"Error getting from distributed documents: {ex.Message}");
         return null;
     }
 }

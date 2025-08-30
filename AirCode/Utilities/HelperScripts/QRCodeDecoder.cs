@@ -11,7 +11,7 @@ using AirCode.Services.SupaBase;
 namespace AirCode.Utilities.HelperScripts
 {
     /// <summary>
-    /// Enhanced QR Code decoder with dual-purpose URL generation for external scanners and GitHub Pages integration
+    /// My QR Code decoder with dual-purpose URL generation for external scanners and GitHub Pages integration
     /// </summary>
     public class QRCodeDecoder
     {
@@ -142,7 +142,7 @@ namespace AirCode.Utilities.HelperScripts
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"QR Code decoding failed: {ex.Message}");
+                MID_HelperFunctions.DebugMessage($"QR Code decoding failed: {ex.Message}");
                 return null;
             }
         }

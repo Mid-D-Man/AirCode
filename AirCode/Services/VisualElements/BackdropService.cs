@@ -1,3 +1,4 @@
+using AirCode.Utilities.HelperScripts;
 using Microsoft.JSInterop;
 
 namespace AirCode.Services.VisualElements
@@ -53,7 +54,7 @@ namespace AirCode.Services.VisualElements
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error moving element to portal: {ex.Message}");
+                MID_HelperFunctions.DebugMessage($"Error moving element to portal: {ex.Message}");
             }
         }
 
@@ -65,7 +66,7 @@ namespace AirCode.Services.VisualElements
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error returning element from portal: {ex.Message}");
+                MID_HelperFunctions.DebugMessage($"Error returning element from portal: {ex.Message}");
             }
         }
     }

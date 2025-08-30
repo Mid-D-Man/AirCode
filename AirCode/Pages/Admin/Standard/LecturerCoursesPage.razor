@@ -116,7 +116,7 @@
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading lecturer courses: {ex.Message}");
+            MID_HelperFunctions.DebugMessage($"Error loading lecturer courses: {ex.Message}");
             AuthErrorMessage = "Error loading courses. Please check your connection and try again.";
             AssignedCourses = new();
         }
@@ -151,7 +151,7 @@
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error adding course {courseCode}: {ex.Message}");
+            MID_HelperFunctions.DebugMessage($"Error adding course {courseCode}: {ex.Message}");
             ShowStatusMessage($"Error adding course {courseCode}. Please try again.", true);
         }
     }
@@ -180,7 +180,7 @@
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error removing course {courseCode}: {ex.Message}");
+            MID_HelperFunctions.DebugMessage($"Error removing course {courseCode}: {ex.Message}");
             ShowStatusMessage($"Error removing course {courseCode}. Please try again.", true);
         }
     }

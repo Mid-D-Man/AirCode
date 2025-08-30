@@ -350,7 +350,7 @@
         catch (Exception ex)
         {
             UpdateDocResult = false;
-            Console.WriteLine($"Update error: {ex.Message}");
+            MID_HelperFunctions.DebugMessage($"Update error: {ex.Message}");
         }
     }
     
@@ -363,7 +363,7 @@
         catch (Exception ex)
         {
             DeleteDocResult = false;
-            Console.WriteLine($"Delete error: {ex.Message}");
+            MID_HelperFunctions.DebugMessage($"Delete error: {ex.Message}");
         }
     }
     
@@ -430,7 +430,7 @@
         catch (Exception ex)
         {
             BatchResult = false;
-            Console.WriteLine($"Batch error: {ex.Message}");
+            MID_HelperFunctions.DebugMessage($"Batch error: {ex.Message}");
         }
     }
     
@@ -454,7 +454,7 @@
         catch (Exception ex)
         {
             SyncResult = false;
-            Console.WriteLine($"Sync error: {ex.Message}");
+            MID_HelperFunctions.DebugMessage($"Sync error: {ex.Message}");
         }
     }
     

@@ -192,7 +192,7 @@ namespace AirCode.Pages.Admin.Shared
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error checking for existing session: {ex.Message}");
+                MID_HelperFunctions.DebugMessage($"Error checking for existing session: {ex.Message}");
                 isRestoringSession = false;
                 restorationMessage = "Error occurred while restoring session";
             }
@@ -231,7 +231,7 @@ namespace AirCode.Pages.Admin.Shared
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error checking for stored sessions: {ex.Message}");
+                MID_HelperFunctions.DebugMessage($"Error checking for stored sessions: {ex.Message}");
                 restorationMessage = "Error occurred while checking for stored sessions";
             }
         }
@@ -267,7 +267,7 @@ namespace AirCode.Pages.Admin.Shared
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error restoring session: {ex.Message}");
+                MID_HelperFunctions.DebugMessage($"Error restoring session: {ex.Message}");
                 await ClearRestorationStateAsync("Failed to restore session");
             }
         }
@@ -315,7 +315,7 @@ namespace AirCode.Pages.Admin.Shared
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error restoring existing session: {ex.Message}");
+                MID_HelperFunctions.DebugMessage($"Error restoring existing session: {ex.Message}");
                 throw;
             }
         }
@@ -353,7 +353,7 @@ namespace AirCode.Pages.Admin.Shared
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error abandoning stored sessions: {ex.Message}");
+                MID_HelperFunctions.DebugMessage($"Error abandoning stored sessions: {ex.Message}");
                 await ClearRestorationStateAsync("Error occurred while cleaning up sessions");
             }
         }
@@ -436,7 +436,7 @@ namespace AirCode.Pages.Admin.Shared
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error deleting stored session: {ex.Message}");
+                MID_HelperFunctions.DebugMessage($"Error deleting stored session: {ex.Message}");
                 restorationMessage = "Error occurred while deleting session";
                 StateHasChanged();
             }
@@ -553,7 +553,7 @@ namespace AirCode.Pages.Admin.Shared
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error starting session: {ex.Message}");
+                MID_HelperFunctions.DebugMessage($"Error starting session: {ex.Message}");
             }
             finally
             {
@@ -601,7 +601,7 @@ namespace AirCode.Pages.Admin.Shared
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error ending session: {ex.Message}");
+                MID_HelperFunctions.DebugMessage($"Error ending session: {ex.Message}");
             }
             finally
             {
@@ -703,11 +703,11 @@ namespace AirCode.Pages.Admin.Shared
                 // Trigger QR component refresh via parameter change
                 await InvokeAsync(StateHasChanged);
 
-                Console.WriteLine($"Updated temporal key for session: {sessionModel.SessionId}");
+                MID_HelperFunctions.DebugMessage($"Updated temporal key for session: {sessionModel.SessionId}");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error updating temporal key: {ex.Message}");
+                MID_HelperFunctions.DebugMessage($"Error updating temporal key: {ex.Message}");
             }
         }
 
@@ -741,7 +741,7 @@ namespace AirCode.Pages.Admin.Shared
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error creating Firebase attendance event: {ex.Message}");
+                MID_HelperFunctions.DebugMessage($"Error creating Firebase attendance event: {ex.Message}");
                 throw;
             }
         }
@@ -826,16 +826,16 @@ namespace AirCode.Pages.Admin.Shared
                     
                 if (success)
                 {
-                    Console.WriteLine($"Course rep auto-signed successfully: {currentUserMatricNumber}");
+                    MID_HelperFunctions.DebugMessage($"Course rep auto-signed successfully: {currentUserMatricNumber}");
                 }
                 else
                 {
-                    Console.WriteLine($"Failed to auto-sign course rep: {currentUserMatricNumber}");
+                    MID_HelperFunctions.DebugMessage($"Failed to auto-sign course rep: {currentUserMatricNumber}");
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error auto-signing course rep: {ex.Message}");
+                MID_HelperFunctions.DebugMessage($"Error auto-signing course rep: {ex.Message}");
                 // Don't throw - session should still start even if auto-sign fails
             }
         }
@@ -1027,7 +1027,7 @@ namespace AirCode.Pages.Admin.Shared
             // - Generate reports
             // etc.
     
-            Console.WriteLine("Session ended - processing final data...");
+            MID_HelperFunctions.DebugMessage("Session ended - processing final data...");
         }
 
         private void ShowInfoPopup(InfoPopup.InfoType infoType)
@@ -1182,7 +1182,7 @@ namespace AirCode.Pages.Admin.Shared
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error during emergency cleanup: {ex.Message}");
+                MID_HelperFunctions.DebugMessage($"Error during emergency cleanup: {ex.Message}");
                 restorationMessage = "Error occurred during emergency cleanup";
                 StateHasChanged();
             }

@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using AirCode.Services.Storage;
 using AirCode.Services.SupaBase;
+using AirCode.Utilities.HelperScripts;
 
 namespace AirCode.Services.Time
 {
@@ -77,7 +78,7 @@ namespace AirCode.Services.Time
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Failed to sync server time: {ex.Message}");
+                MID_HelperFunctions.DebugMessage($"Failed to sync server time: {ex.Message}");
             }
 
             return false;
@@ -137,7 +138,7 @@ namespace AirCode.Services.Time
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Failed to load server time from storage: {ex.Message}");
+                MID_HelperFunctions.DebugMessage($"Failed to load server time from storage: {ex.Message}");
                 _isServerTimeSynced = false;
             }
         }

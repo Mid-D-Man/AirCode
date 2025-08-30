@@ -286,7 +286,7 @@
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading dashboard data: {ex.Message}");
+            MID_HelperFunctions.DebugMessage($"Error loading dashboard data: {ex.Message}");
         }
         finally
         {
@@ -322,7 +322,7 @@
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading courses: {ex.Message}");
+            MID_HelperFunctions.DebugMessage($"Error loading courses: {ex.Message}");
             _myCourses = new List<Course>();
         }
     }
@@ -345,7 +345,7 @@
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading attendance data: {ex.Message}");
+            MID_HelperFunctions.DebugMessage($"Error loading attendance data: {ex.Message}");
         }
     }
 
@@ -357,7 +357,7 @@
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading student data: {ex.Message}");
+            MID_HelperFunctions.DebugMessage($"Error loading student data: {ex.Message}");
             _allStudentCourses = new List<StudentCourse>();
         }
     }

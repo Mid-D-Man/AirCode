@@ -78,7 +78,7 @@ body.dark-mode .full-screen-layout {
 /* Responsive adjustments */
 @media (max-width: 768px) {
     .full-screen-layout {
-        /* Ensure mobile viewport units work correctly */
+        
         height: 100dvh; /* Dynamic viewport height for mobile */
     }
 }

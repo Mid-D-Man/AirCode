@@ -528,7 +528,7 @@ namespace AirCode.Pages.Shared
         internal void HandleCourseStatsClick(CourseAttendanceStats courseStats)
         {
             // Handle the click event for the course stats card
-            Console.WriteLine($"Clicked on course: {courseStats.CourseName}");
+            MID_HelperFunctions.DebugMessage($"Clicked on course: {courseStats.CourseName}");
         }
         protected void FilterCourses()
         {

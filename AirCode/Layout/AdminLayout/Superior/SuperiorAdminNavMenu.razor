@@ -1,6 +1,5 @@
 @inherits LayoutComponentBase
 @using AirCode.Components.Admin.Shared
-@using AirCode.Utilities.DataStructures
 @using Aircode.Components.Admin.Shared
 @using AirCode.Models.UI
 @using Microsoft.AspNetCore.Components.Authorization
@@ -103,7 +102,7 @@
         new("history", "Session Management", "Admin/ManageAcademicSession", true, new[] { "superioradmin"}),
         new("book3", "Manage Departments", "Admin/ManageDepartments", true, new[] { "superioradmin" }),
         new("courses", "Manage Courses", "Admin/ManageCourses", true, new[] { "superioradmin" }),
-        new("adduser", "Manage Users", "Admin/ManageUsers", true, new[] { "superioradmin" }),
+        new("users", "Manage Users", "Admin/ManageUsers", true, new[] { "superioradmin" }),
         
         new("courses", "Manage My Courses", "Admin/Lecturer/Courses", true, new[] { "lectureradmin" }),
         new("courses2", "My Courses", "Client/Courses", true, new[] { "courserepadmin" }),

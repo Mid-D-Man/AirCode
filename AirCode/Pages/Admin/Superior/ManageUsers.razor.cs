@@ -994,18 +994,18 @@ public partial class ManageUsers : ComponentBase
                     {
                         allSuccessful = false;
                         errorMessages.Add($"Failed to delete user {userId}: {deleteResult.Message}");
-                        Console.WriteLine($"Auth0 deletion failed for user {userId}: {deleteResult.Message}");
+                        MID_HelperFunctions.DebugMessage($"Auth0 deletion failed for user {userId}: {deleteResult.Message}");
                     }
                     else
                     {
-                        Console.WriteLine($"Successfully deleted Auth0 user: {userId}");
+                        MID_HelperFunctions.DebugMessage($"Successfully deleted Auth0 user: {userId}");
                     }
                 }
                 catch (Exception ex)
                 {
                     allSuccessful = false;
                     errorMessages.Add($"Exception deleting user {userId}: {ex.Message}");
-                    Console.WriteLine($"Exception during Auth0 deletion for user {userId}: {ex}");
+                    MID_HelperFunctions.DebugMessage($"Exception during Auth0 deletion for user {userId}: {ex}");
                 }
             }
 

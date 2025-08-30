@@ -6,6 +6,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
+using AirCode.Utilities.HelperScripts;
 
 namespace AirCode.Services.VisualElements
 {
@@ -114,7 +115,7 @@ namespace AirCode.Services.VisualElements
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Failed to load SVG icon '{iconName}' from '{url}': {ex.Message}");
+                MID_HelperFunctions.DebugMessage($"Failed to load SVG icon '{iconName}' from '{url}': {ex.Message}");
                 return null;
             }
         }

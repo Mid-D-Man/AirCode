@@ -1,4 +1,4 @@
-/* MainLayout.razor.css - Full Screen Stretch Implementation */
+/* MainLayout.razor.css - Full Screen Stretch  */
 
 .main-layout {
     /* Unity UI Stretch: Anchor to all edges, fill entire viewport */
@@ -78,7 +78,7 @@ body.dark-mode .main-layout {
 /* Responsive adjustments */
 @media (max-width: 768px) {
     .main-layout {
-        /* Ensure mobile viewport units work correctly */
+       
         height: 100dvh; /* Dynamic viewport height for mobile */
     }
 }

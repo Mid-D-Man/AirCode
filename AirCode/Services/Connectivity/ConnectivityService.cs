@@ -2,6 +2,7 @@
 using Microsoft.JSInterop;
 using System.Text.Json;
 using AirCode.Domain.ValueObjects;
+using AirCode.Utilities.HelperScripts;
 
 public class ConnectivityService : IAsyncDisposable
 {
@@ -35,7 +36,7 @@ public class ConnectivityService : IAsyncDisposable
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Failed to initialize connectivity service: {ex.Message}");
+            MID_HelperFunctions.DebugMessage($"Failed to initialize connectivity service: {ex.Message}");
         }
     }
 
@@ -58,7 +59,7 @@ public class ConnectivityService : IAsyncDisposable
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Failed to get connectivity status: {ex.Message}");
+            MID_HelperFunctions.DebugMessage($"Failed to get connectivity status: {ex.Message}");
             return new ConnectivityStatus { IsOnline = false, NetworkQuality = "unknown" };
         }
     }
@@ -83,7 +84,7 @@ public class ConnectivityService : IAsyncDisposable
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Failed to force connectivity check: {ex.Message}");
+            MID_HelperFunctions.DebugMessage($"Failed to force connectivity check: {ex.Message}");
         }
     }
 
@@ -113,7 +114,7 @@ public class ConnectivityService : IAsyncDisposable
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Failed to get detailed connectivity report: {ex.Message}");
+            MID_HelperFunctions.DebugMessage($"Failed to get detailed connectivity report: {ex.Message}");
             return new ConnectivityReport { IsOnline = false, NetworkQuality = "unknown" };
         }
     }
@@ -143,7 +144,7 @@ public class ConnectivityService : IAsyncDisposable
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error processing connectivity change: {ex.Message}");
+            MID_HelperFunctions.DebugMessage($"Error processing connectivity change: {ex.Message}");
         }
     }
 

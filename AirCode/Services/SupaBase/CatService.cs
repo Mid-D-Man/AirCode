@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
 using AirCode.Models.EdgeFunction;
+using AirCode.Utilities.HelperScripts;
 using Supabase.Functions;
 using Supabase.Interfaces;
 
@@ -52,13 +53,13 @@ public class CatService:ICatService
         }
         catch (HttpRequestException ex)
         {
-            Console.WriteLine($"HTTP Request Error: {ex.Message}");
+            MID_HelperFunctions.DebugMessage($"HTTP Request Error: {ex.Message}");
             // Return a more user-friendly error message
             return $"Failed to get cat image: {ex.Message}";
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"General Error: {ex.Message}");
+          await  MID_HelperFunctions.DebugMessageAsync($"General Error: {ex.Message}",DebugClass.Exception);
             return $"An error occurred: {ex.Message}";
         }
     }
