@@ -7,6 +7,7 @@ using AirCode.Domain.Enums;
 using AirCode.Models.Firebase;
 using AirCode.Services.Courses;
 using AirCode.Services.Attendance;
+using AirCode.Utilities.HelperScripts;
 
 namespace AirCode.Pages.Shared
 {
