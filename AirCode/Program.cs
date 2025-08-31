@@ -23,6 +23,7 @@ using AirCode.Services.Academic;
 using AirCode.Services.Exports;
 using AirCode.Services.Firebase;
 using AirCode.Services.VisualElements;
+using AirCode.Services.Config; // Add this line
 using AirCode.Utilities.DataStructures;
 using AirCode.Utilities.HelperScripts;
 using Microsoft.Extensions.Options;
@@ -133,6 +134,11 @@ builder.Services.AddBlazoredLocalStorage();
 builder.Services.AddBlazoredToast();
 
 // ============================================================================
+// Configuration Services - Add EARLY in the registration process
+// ============================================================================
+builder.Services.AddScoped<IConfigurationService, ConfigurationService>();
+
+// ============================================================================
 // Core Authentication & Security Services
 // ============================================================================
 builder.Services.AddScoped<ICryptographyService, CryptographyService>();
@@ -193,6 +199,7 @@ builder.Services.AddScoped<Supabase.Client>(provider =>
     
     return new Supabase.Client(supabaseUrl, supabaseKey, options);
 });
+
 // ============================================================================
 // Application Startup - Build AFTER all service registrations
 // ============================================================================
@@ -202,5 +209,17 @@ var app = builder.Build();
 var logger = app.Services.GetRequiredService<ILogger<Program>>();
 var jsRuntime = app.Services.GetRequiredService<IJSRuntime>();
 MID_HelperFunctions.Initialize(logger, jsRuntime);
+
+// Initialize configuration and push to JavaScript
+try
+{
+    var configService = app.Services.GetRequiredService<IConfigurationService>();
+    await configService.PushConfigToJavaScriptAsync();
+    logger.LogInformation("Configuration service initialized successfully");
+}
+catch (Exception ex)
+{
+    logger.LogError(ex, "Failed to initialize configuration service");
+}
 
 await app.RunAsync();
