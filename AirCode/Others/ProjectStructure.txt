@@ -1,7 +1,7 @@
 Project Structure Documentation
-Generated: Sun Aug 31 19:52:32 UTC 2025
+Generated: Sun Aug 31 21:40:31 UTC 2025
 Repository: Mid-D-Man/AirCode
-Commit: f70ec0acb552b729261ad5873fe8ec33a25a0893
+Commit: a4d08ab98763a8348eb3b594d7c9932e9731044e
 ==================================
 
 Source Files:
@@ -20,6 +20,8 @@ Components/Admin/Shared/ManualAttendancePopup.razor.cs
 Components/Admin/Shared/ManualAttendancePopup.razor.css
 Components/Admin/Shared/NavMenuButton.razor
 Components/Admin/Shared/NavMenuButton.razor.css
+Components/Admin/Superior/CourseHandler.razor
+Components/Admin/Superior/CourseHandler.razor.css
 Components/Admin/Superior/CreateAcademicSessionModal.razor
 Components/Admin/Superior/CreateAcademicSessionModal.razor.css
 Components/Auth/AccessControl.razor
@@ -346,9 +348,9 @@ Directory Structure:
 File Count Summary:
 ==================
 .cs       : 114 files
-.razor    : 67 files
+.razor    : 68 files
 .csproj   : 1 files
 .json     : 12 files
-.css      : 79 files
+.css      : 80 files
 .js       : 51 files
 .html     : 3 files
