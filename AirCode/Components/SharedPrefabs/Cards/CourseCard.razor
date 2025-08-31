@@ -25,7 +25,7 @@
         }
         else
         {
-            <p>No schedule set</p>
+            <p class="no-data">No schedule set</p>
         }
     </div>
     <div class="course-lecturers">
@@ -41,17 +41,22 @@
         }
         else
         {
-            <p>No lecturers assigned</p>
+            <p class="no-data">No lecturers assigned</p>
         }
     </div>
     <div class="course-actions">
-        <button class="btn btn-primary" @onclick="() => OnEdit.InvokeAsync(Course)">Edit</button>
-        <button class="btn btn-danger" @onclick="() => OnDelete.InvokeAsync(Course)">Delete</button>
+        <button class="btn btn-primary" @onclick="() => OnEdit.InvokeAsync(Course)" title="Edit Course">
+            <i class="fas fa-edit"></i>
+            Edit
+        </button>
+        <button class="btn btn-danger" @onclick="() => OnDelete.InvokeAsync(Course)" title="Delete Course">
+            <i class="fas fa-trash"></i>
+            Delete
+        </button>
     </div>
 </div>
 
 @code {
-    //superior admin indi card that reps a course its ok but text has some light,dark issue
     [Parameter] public Course Course { get; set; } = default!;
     [Parameter] public EventCallback<Course> OnEdit { get; set; }
     [Parameter] public EventCallback<Course> OnDelete { get; set; }

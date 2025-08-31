@@ -1,10 +1,11 @@
 @page "/Admin/ManageCourses"
 @using AirCode.Layout.AdminLayout.Superior
-@using AirCode.Domain.Entities
 @using AirCode.Domain.Enums
 @using AirCode.Components.SharedPrefabs.Cards
 @using AirCode.Components.SharedPrefabs.Spinner
 @using AirCode.Components.SharedPrefabs.Buttons
+@using AirCode.Components.Admin.Superior
+@using AirCode.Components.SharedPrefabs.Popups
 @layout SuperiorAdminLayout
 
 <div class="page-container bg-primary">
@@ -123,197 +124,22 @@
     }
 </div>
 
-<!-- Add/Edit Modal -->
-@if (_showAddForm || _showEditForm)
-{
-    <div class="modal-backdrop" @onclick="CancelForm"></div>
-    <div class="modal" @onclick:stopPropagation="true">
-        <div class="modal-header">
-            <h2>@(_showEditForm ? "Edit Course" : "Add New Course")</h2>
-            <button class="close-btn" @onclick="CancelForm">&times;</button>
-        </div>
-        <div class="modal-body">
-            @if (_isLoading && (_loadingOperation == LoadingOperation.SavingCourse || _loadingOperation == LoadingOperation.UpdatingCourse))
-            {
-                <div class="text-center p-4">
-                    <div class="spinner-border text-primary mb-3" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
-                    <p>@(_loadingOperation == LoadingOperation.SavingCourse ? "Saving course..." : "Updating course...")</p>
-                </div>
-            }
-            else
-            {
-                <EditForm Model="this" OnValidSubmit="HandleValidSubmit">
-                    <DataAnnotationsValidator />
-                    
-                    <div class="form-group">
-                        <label for="courseName">Course Name:</label>
-                        <input id="courseName" class="form-control" @bind="_courseName" />
-                    </div>
+<!-- Course Handler Modal (Replaces both Add and Edit modals) -->
+<CourseHandler IsVisible="_showCourseHandler"
+               CourseToEdit="_selectedCourse"
+               OnCourseSaved="HandleCourseSaved"
+               OnClosed="HandleCourseHandlerClosed"
+               OnShowNotification="HandleNotification" />
 
-                    <div class="form-group">
-                        <label for="courseCode">Course Code:</label>
-                        <input id="courseCode" class="form-control" @bind="_courseCode" />
-                    </div>
-
-                    <div class="form-group">
-                        <label for="department">Department ID:</label>
-                        <input id="department" class="form-control" @bind="_departmentId" />
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group col">
-                            <label for="level">Level:</label>
-                            <select id="level" class="form-control" @bind="_level">
-                                @foreach (var level in Enum.GetValues(typeof(LevelType)))
-                                {
-                                    <option value="@level">@level</option>
-                                }
-                            </select>
-                        </div>
-
-                        <div class="form-group col">
-                            <label for="semester">Semester:</label>
-                            <select id="semester" class="form-control" @bind="_semester">
-                                @foreach (var semester in Enum.GetValues(typeof(SemesterType)))
-                                {
-                                    <option value="@semester">@semester</option>
-                                }
-                            </select>
-                        </div>
-
-                        <div class="form-group col">
-                            <label for="creditUnits">Credit Units:</label>
-                            <input id="creditUnits" type="number" class="form-control" @bind="_creditUnits" min="1" max="10" />
-                        </div>
-                    </div>
-
-                    <h3>Lecturers</h3>
-                    <div class="lecturer-section">
-                        <div class="form-row">
-                            <div class="form-group col">
-                                <input class="form-control" @bind="_newLecturerId" placeholder="Lecturer ID" />
-                            </div>
-                            <div class="form-group col-auto">
-                                <button type="button" class="btn btn-secondary" @onclick="AddLecturer">Add</button>
-                            </div>
-                        </div>
-                        @if (_lecturerIds.Count > 0)
-                        {
-                            <ul class="lecturer-list">
-                                @foreach (var lecturerId in _lecturerIds)
-                                {
-                                    <li>
-                                        @lecturerId
-                                        <button type="button" class="btn btn-sm btn-danger" @onclick="() => RemoveLecturer(lecturerId)">Remove</button>
-                                    </li>
-                                }
-                            </ul>
-                        }
-                    </div>
-
-                    <h3>Schedule</h3>
-                    <div class="schedule-section">
-                        <div class="form-row">
-                            <div class="form-group col">
-                                <label>Day:</label>
-                                <select class="form-control" @bind="_newDay">
-                                    @foreach (var day in Enum.GetValues(typeof(DayOfWeek)))
-                                    {
-                                        <option value="@day">@day</option>
-                                    }
-                                </select>
-                            </div>
-                            <div class="form-group col">
-                                <label>Start Time:</label>
-                                <input class="form-control" type="time"
-                                       value="@_newStartTime.ToString(@"hh\:mm")"
-                                       @onchange="@(e => UpdateStartTime(e))" />
-                            </div>
-                            <div class="form-group col">
-                                <label>End Time:</label>
-                                <input class="form-control" type="time"
-                                       value="@_newEndTime.ToString(@"hh\:mm")"
-                                       @onchange="@(e => UpdateEndTime(e))" />
-                            </div>
-                            <div class="form-group col">
-                                <label>Location:</label>
-                                <input class="form-control" @bind="_newLocation" placeholder="Room/Location" />
-                            </div>
-                            <div class="form-group col-auto align-self-end">
-                                <button type="button" class="btn btn-secondary" @onclick="AddTimeSlot">Add</button>
-                            </div>
-                        </div>
-
-                        @if (_timeSlots.Count > 0)
-                        {
-                            <div class="schedule-list">
-                                @foreach (var slot in _timeSlots)
-                                {
-                                    <div class="schedule-item">
-                                        <span>@slot.Day: @slot.StartTime.ToString(@"hh\:mm") - @slot.EndTime.ToString(@"hh\:mm") @slot.Location</span>
-                                        <button type="button" class="btn btn-sm btn-danger" @onclick="() => RemoveTimeSlot(slot)">Remove</button>
-                                    </div>
-                                }
-                            </div>
-                        }
-                    </div>
-
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" @onclick="CancelForm" disabled="@_isLoading">
-                            Cancel
-                        </button>
-                        <button type="submit" class="btn btn-primary" disabled="@_isLoading">
-                            @if (_isLoading)
-                            {
-                                <span class="spinner-border spinner-border-sm me-2"></span>
-                            }
-                            @(_showEditForm ? "Update" : "Save")
-                        </button>
-                    </div>
-                </EditForm>
-            }
-        </div>
-    </div>
-}
-
-<!-- Delete Confirmation Modal -->
-@if (_showDeleteConfirmation)
-{
-    <div class="modal-backdrop" @onclick="CancelDelete"></div>
-    <div class="modal" @onclick:stopPropagation="true">
-        <div class="modal-header">
-            <h2>Confirm Delete</h2>
-            <button class="close-btn" @onclick="CancelDelete">&times;</button>
-        </div>
-        <div class="modal-body">
-            @if (_isLoading && _loadingOperation == LoadingOperation.DeletingCourse)
-            {
-                <div class="text-center p-4">
-                    <div class="spinner-border text-danger mb-3" role="status">
-                        <span class="visually-hidden">Deleting...</span>
-                    </div>
-                    <p>Deleting course...</p>
-                </div>
-            }
-            else
-            {
-                <p>Are you sure you want to delete the course <strong>@_courseToDelete?.Name</strong>?</p>
-                <p>This action cannot be undone.</p>
-            }
-        </div>
-        <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" @onclick="CancelDelete" disabled="@_isLoading">
-                Cancel
-            </button>
-            <button type="button" class="btn btn-danger" @onclick="DeleteCourse" disabled="@_isLoading">
-                @if (_isLoading && _loadingOperation == LoadingOperation.DeletingCourse)
-                {
-                    <span class="spinner-border spinner-border-sm me-2"></span>
-                }
-                Delete
-            </button>
-        </div>
-    </div>
-}
+<!-- Delete Confirmation Popup -->
+<AreYouSurePopup IsVisible="_showDeleteConfirmation"
+                 IsLoading="_isDeleting"
+                 Title="Delete Course"
+                 Message="@($"Are you sure you want to delete the course '{_courseToDelete?.Name}'? This action cannot be undone.")"
+                 WarningText="This will permanently remove the course and all associated data."
+                 ConfirmButtonText="Delete Course"
+                 ConfirmButtonClass="btn-danger"
+                 LoadingTitle="Deleting Course"
+                 LoadingSubtitle="Please wait while we remove the course..."
+                 OnConfirm="DeleteCourse"
+                 OnCancel="CancelDelete" />
