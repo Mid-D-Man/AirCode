@@ -20,7 +20,7 @@ public partial class ManageUsers : ComponentBase
     [Inject] private IFirestoreService FirestoreService { get; set; }
     [Inject] private ISvgIconService SvgIconService { get; set; }
     [Inject] private IJSRuntime JSRuntime { get; set; }
-    
+    [Inject] private IBackdropService BackdropService { get; set; }
     [Inject] private ISupabaseEdgeFunctionService SupabaseEdgefunctionService { get; set; }
     #endregion
 
@@ -90,6 +90,21 @@ public partial class ManageUsers : ComponentBase
     private NotificationComponent notificationComponent;
     #endregion
 
+    #region Modal
+    
+    // Portal management for modals
+    private string _createModalId = Guid.NewGuid().ToString("N")[..8];
+    private string _userManagementModalId = Guid.NewGuid().ToString("N")[..8];
+    private string _maxUsageModalId = Guid.NewGuid().ToString("N")[..8];
+    private bool _areModalsInPortal = false;
+
+// Confirmation modal state
+    private bool showConfirmDeleteModal = false;
+    private string confirmDeleteMessage = "";
+    private string confirmDeleteTitle = "";
+    
+    #endregion
+    
     #region Lifecycle Methods
     protected override async Task OnInitializedAsync()
     {
@@ -374,12 +389,14 @@ public partial class ManageUsers : ComponentBase
     #endregion
 
     #region User Management Modal Methods
-    private void ShowUserManagementModal(object user, string userType)
+    private async Task ShowUserManagementModal(object user, string userType)
     {
         selectedUser = user;
         selectedUserType = userType;
         showUserManagementModal = true;
         HideAllSections();
+        await MoveModalToPortal($"#user-management-modal-{_userManagementModalId}");
+        StateHasChanged();
     }
 
     private bool HasAssignedUsers()
@@ -541,40 +558,79 @@ public partial class ManageUsers : ComponentBase
     #endregion
 
     #region Modal Management
-    private void ShowCreateUserModal()
+    private async Task ShowCreateUserModal()
     {
         ResetCreateForm();
         showCreateModal = true;
+        await MoveModalToPortal($"#create-modal-{_createModalId}");
+        StateHasChanged();
     }
     
-    private void ShowMaxUsageModal(object user, string userType)
+    private async Task ShowMaxUsageModal(object user, string userType)
     {
         selectedUser = user;
         selectedUserType = userType;
-        
+    
         if (user is LecturerSkeletonUser lecturer)
             updateMaxUsage = lecturer.MaxUsage;
         else if (user is CourseRepAdminInfo courseRepAdmin)
             updateMaxUsage = courseRepAdmin.MaxUsage;
-            
+        
         showMaxUsageModal = true;
+        await MoveModalToPortal($"#max-usage-modal-{_maxUsageModalId}");
+        StateHasChanged();
     }
     
     private void ShowDeleteUserModal(object user, string userType)
     {
         selectedUser = user;
         selectedUserType = userType;
-        showDeleteModal = true;
+    
+        var userName = user switch
+        {
+            StudentSkeletonUser student => student.MatricNumber,
+            LecturerSkeletonUser lecturer => lecturer.AdminId,
+            CourseRepSkeletonUser courseRep => courseRep.AdminInfo.AdminId,
+            _ => "Unknown User"
+        };
+    
+        confirmDeleteTitle = "Delete Skeleton User";
+        confirmDeleteMessage = $"Are you sure you want to delete the skeleton user '{userName}'? This action cannot be undone and will permanently remove the user from the system.";
+    
+        if (HasAuth0UserId())
+        {
+            confirmDeleteMessage += "\n\nWarning: This will also delete all associated Auth0 accounts.";
+        }
+    
+        showConfirmDeleteModal = true;
+        StateHasChanged();
+    }
+    private void HandleCreateModalBackdrop()
+    {
+        if (!loading) _ = CloseModals();
     }
 
-    private void CloseModals()
+    private void HandleUserManagementBackdrop()
     {
+        if (!loading) _ = CloseModals();
+    }
+
+    private void HandleMaxUsageBackdrop()
+    {
+        if (!loading) _ = CloseModals();
+    }
+    private async Task CloseModals()
+    {
+        // Return modals from portal
+        await ReturnModalsFromPortal();
+    
         showCreateModal = false;
         showMaxUsageModal = false;
         showDeleteModal = false;
         showRemoveUserModal = false;
         showUserManagementModal = false;
-    
+        showConfirmDeleteModal = false;
+
         HideAllSections();
         newMatricNumber = "";
         suspensionReason = "";
@@ -582,6 +638,10 @@ public partial class ManageUsers : ComponentBase
         selectedUser = null;
         selectedUserType = null;
         selectedAssignedUserId = null;
+        confirmDeleteMessage = "";
+        confirmDeleteTitle = "";
+    
+        StateHasChanged();
     }
 
     private void ResetCreateForm()
@@ -591,6 +651,59 @@ public partial class ManageUsers : ComponentBase
         newLevel = "100";
         newMaxUsage = 1;
     }
+    #endregion
+    
+    #region Portal Management Methods
+
+    private async Task MoveModalToPortal(string modalSelector)
+    {
+        try
+        {
+            await Task.Delay(50); // Give DOM time to render
+            await BackdropService.ShowAsync();
+            await BackdropService.MoveElementToPortalAsync(modalSelector);
+            _areModalsInPortal = true;
+        }
+        catch (Exception ex)
+        {
+            await MID_HelperFunctions.DebugMessageAsync($"Error moving modal to portal: {ex.Message}", DebugClass.Exception);
+        }
+    }
+
+    private async Task ReturnModalsFromPortal()
+    {
+        try
+        {
+            if (_areModalsInPortal)
+            {
+                var modals = new[]
+                {
+                    $"#create-modal-{_createModalId}",
+                    $"#user-management-modal-{_userManagementModalId}",
+                    $"#max-usage-modal-{_maxUsageModalId}"
+                };
+
+                foreach (var modal in modals)
+                {
+                    await BackdropService.ReturnElementFromPortalAsync(modal);
+                }
+            
+                await BackdropService.HideAsync();
+                _areModalsInPortal = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            await MID_HelperFunctions.DebugMessageAsync($"Error returning modals from portal: {ex.Message}", DebugClass.Exception);
+        }
+    }
+
+    private async Task OnConfirmDelete()
+    {
+        showConfirmDeleteModal = false;
+        await DeleteSkeletonUser();
+    }
+
     #endregion
 
     #region ID Generation

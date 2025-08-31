@@ -1,9 +1,12 @@
 @page "/Admin/ManageUsers"
+@attribute [Authorize(Roles = "SuperiorAdmin")]
 @layout SuperiorAdminLayout
 @using AirCode.Components.SharedPrefabs.Cards
 @using AirCode.Domain.Enums
 @using AirCode.Layout.AdminLayout.Superior
 @using AirCode.Components.SharedPrefabs.Buttons
+@using AirCode.Components.SharedPrefabs.Spinner
+@using Microsoft.AspNetCore.Authorization
 <div class="container">
     <!-- Notification component -->
     <NotificationComponent @ref="notificationComponent"
@@ -14,7 +17,7 @@
                             PauseOnHover="true" />
     <div class="admin-header">
         <h2 class="text-primary">User Management</h2>
-        <CoolPrimaryButton Text="Create New Skeleton User" OnClick="() => new Task(ShowCreateUserModal)" />
+        <CoolPrimaryButton Text="Create New Skeleton User" OnClick="ShowCreateUserModal" />
        
     </div>
 
@@ -41,10 +44,7 @@
 
     @if (loading)
     {
-        <div class="loading-container">
-            <div class="spinner"></div>
-            <p>Loading user data...</p>
-        </div>
+    <LoadingSpinner Title="Loading Users" Subtitle="Please wait while we fetch user data..." />
     }
     else
     {
@@ -330,148 +330,178 @@
 </div>
 
 <!-- Create User Modal -->
-<div class="modal @(showCreateModal ? "show" : "")" tabindex="-1" style="display: @(showCreateModal ? "block" : "none")">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Create New Skeleton User</h5>
-                <button type="button" class="btn-close" @onclick="CloseModals"></button>
+<div id="create-modal-@_createModalId" class="modal-overlay @(showCreateModal ? "visible" : "")" @onclick="HandleCreateModalBackdrop">
+    <div class="modal-content" @onclick:stopPropagation="true">
+        <div class="modal-header">
+            <h5 class="modal-title">Create New Skeleton User</h5>
+            <button type="button" class="btn-close" @onclick="CloseModals"></button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group mb-3">
+                <label for="userType">User Type</label>
+                <select id="userType" class="form-control" @bind="newUserType" @bind:event="onchange">
+                    <option value="Student">Student</option>
+                    <option value="Lecturer">Lecturer</option>
+                    <option value="CourseRep">Course Rep</option>
+                </select>
             </div>
-            <div class="modal-body">
+
+            @if (newUserType == "Student" || newUserType == "CourseRep")
+            {
                 <div class="form-group mb-3">
-                    <label for="userType">User Type</label>
-                    <select id="userType" class="form-control" @bind="newUserType" @bind:event="onchange">
-                        <option value="Student">Student</option>
-                        <option value="Lecturer">Lecturer</option>
-                        <option value="CourseRep">Course Rep</option>
+                    <label for="matricNumber">Matriculation Number</label>
+                    <input type="text" id="matricNumber" class="form-control" @bind="newMatricNumber"
+                           placeholder="e.g., U21CYS1083" />
+                </div>
+                <div class="form-group mb-3">
+                    <label for="level">Level</label>
+                    <select id="level" class="form-control" @bind="newLevel">
+                        <option value="100">100</option>
+                        <option value="200">200</option>
+                        <option value="300">300</option>
+                        <option value="400">400</option>
+                        <option value="500">500</option>
                     </select>
                 </div>
+            }
 
-                @if (newUserType == "Student" || newUserType == "CourseRep")
+            @if (newUserType == "Lecturer" || newUserType == "CourseRep")
+            {
+                <div class="form-group mb-3">
+                    <label for="maxUsage">Maximum Usage</label>
+                    <input type="number" id="maxUsage" class="form-control" @bind="newMaxUsage"
+                           min="1" max="@(newUserType == "Lecturer" ? "1" : "2")"
+                           disabled="@(newUserType == "Lecturer")" />
+                    <small class="form-text text-muted">
+                        @(newUserType == "Lecturer" ? "Lecturers have a fixed maximum of 1 user" : "Course Reps can have up to 2 users")
+                    </small>
+                </div>
+            }
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn-secondary" @onclick="CloseModals">Cancel</button>
+            <button type="button" class="btn-primary" @onclick="CreateSkeletonUser" disabled="@loading">
+                @if (loading)
                 {
-                    <div class="form-group mb-3">
-                        <label for="matricNumber">Matriculation Number</label>
-                        <input type="text" id="matricNumber" class="form-control" @bind="newMatricNumber" 
-                               placeholder="e.g., U21CYS1083" />
-                    </div>
-                    <div class="form-group mb-3">
-                        <label for="level">Level</label>
-                        <select id="level" class="form-control" @bind="newLevel">
-                            <option value="100">100</option>
-                            <option value="200">200</option>
-                            <option value="300">300</option>
-                            <option value="400">400</option>
-                            <option value="500">500</option>
-                        </select>
-                    </div>
+                    <LoadingSpinner Title="" Subtitle="" />
                 }
-
-                @if (newUserType == "Lecturer" || newUserType == "CourseRep")
-                {
-                    <div class="form-group mb-3">
-                        <label for="maxUsage">Maximum Usage</label>
-                        <input type="number" id="maxUsage" class="form-control" @bind="newMaxUsage" 
-                               min="1" max="@(newUserType == "Lecturer" ? "1" : "2")" 
-                               disabled="@(newUserType == "Lecturer")" />
-                        <small class="form-text text-muted">
-                            @(newUserType == "Lecturer" ? "Lecturers have a fixed maximum of 1 user" : "Course Reps can have up to 2 users")
-                        </small>
-                    </div>
-                }
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" @onclick="CloseModals">Cancel</button>
-                <button type="button" class="btn btn-primary" @onclick="CreateSkeletonUser">Create</button>
-            </div>
+                Create
+            </button>
         </div>
     </div>
 </div>
 
 <!-- User Management Modal -->
-<div class="modal @(showUserManagementModal ? "show" : "")" tabindex="-1" style="display: @(showUserManagementModal ? "block" : "none")">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Manage User</h5>
-                <button type="button" class="btn-close" @onclick="CloseModals"></button>
-            </div>
-            <div class="modal-body">
-                <div class="user-management-options">
-                    @if (HasAssignedUsers())
-                    {
-                        <button class="btn btn-outline-danger mb-3" @onclick="ShowRemoveCurrentUserSection">
-                            <i class="fas fa-user-minus"></i> Remove Current User
-                        </button>
-                    }
-                    <button class="btn btn-outline-warning" @onclick="ShowSuspendUserSection">
-                        <i class="fas fa-ban"></i> @(IsUserSuspended() ? "Update Suspension" : "Suspend User")
+<div id="user-management-modal-@_userManagementModalId" class="modal-overlay @(showUserManagementModal ? "visible" : "")" @onclick="HandleUserManagementBackdrop">
+    <div class="modal-content" @onclick:stopPropagation="true">
+        <div class="modal-header">
+            <h5 class="modal-title">Manage User</h5>
+            <button type="button" class="btn-close" @onclick="CloseModals"></button>
+        </div>
+        <div class="modal-body">
+            <div class="user-management-options">
+                @if (HasAssignedUsers())
+                {
+                    <button class="btn btn-outline-danger mb-3" @onclick="ShowRemoveCurrentUserSection">
+                        <i class="fas fa-user-minus"></i> Remove Current User
                     </button>
-                </div>
-
-                @if (showRemoveUserSection)
-                {
-                    <div class="remove-user-section mt-4">
-                        <h6>Remove Assigned User</h6>
-                        <div class="alert alert-warning">
-                            This will unassign the current user from this skeleton account.
-                        </div>
-                        <div class="text-right">
-                            <button class="btn btn-secondary me-2" @onclick="HideAllSections">Cancel</button>
-                            <button class="btn btn-danger" @onclick="RemoveCurrentUser">Remove User</button>
-                        </div>
-                    </div>
                 }
-
-                @if (showSuspendUserSection)
-                {
-                    <div class="suspend-user-section mt-4">
-                        <h6>@(IsUserSuspended() ? "Update Suspension" : "Suspend User")</h6>
-                        <div class="form-group mb-3">
-                            <label for="suspensionReason">Reason</label>
-                            <textarea id="suspensionReason" class="form-control" @bind="suspensionReason" 
-                                      placeholder="Enter reason for suspension" rows="3"></textarea>
-                        </div>
-                        <div class="form-group mb-3">
-                            <label for="suspensionDuration">Duration (hours)</label>
-                            <input type="number" id="suspensionDuration" class="form-control" @bind="suspensionDurationHours" 
-                                   min="1" max="8760" placeholder="24" />
-                        </div>
-                        <div class="text-right">
-                            <button class="btn btn-secondary me-2" @onclick="HideAllSections">Cancel</button>
-                            <button class="btn btn-warning" @onclick="SuspendUser">
-                                @(IsUserSuspended() ? "Update Suspension" : "Suspend User")
-                            </button>
-                        </div>
-                    </div>
-                }
+                <button class="btn btn-outline-warning" @onclick="ShowSuspendUserSection">
+                    <i class="fas fa-ban"></i> @(IsUserSuspended() ? "Update Suspension" : "Suspend User")
+                </button>
             </div>
+
+            @if (showRemoveUserSection)
+            {
+                <div class="remove-user-section mt-4">
+                    <h6>Remove Assigned User</h6>
+                    <div class="alert alert-warning">
+                        This will unassign the current user from this skeleton account.
+                    </div>
+                    <div class="text-right">
+                        <button class="btn btn-secondary me-2" @onclick="HideAllSections">Cancel</button>
+                        <button class="btn btn-danger" @onclick="RemoveCurrentUser">Remove User</button>
+                    </div>
+                </div>
+            }
+
+            @if (showSuspendUserSection)
+            {
+                <div class="suspend-user-section mt-4">
+                    <h6>@(IsUserSuspended() ? "Update Suspension" : "Suspend User")</h6>
+                    <div class="form-group mb-3">
+                        <label for="suspensionReason">Reason</label>
+                        <textarea id="suspensionReason" class="form-control" @bind="suspensionReason"
+                                  placeholder="Enter reason for suspension" rows="3"></textarea>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="suspensionDuration">Duration (hours)</label>
+                        <input type="number" id="suspensionDuration" class="form-control" @bind="suspensionDurationHours"
+                               min="1" max="8760" placeholder="24" />
+                    </div>
+                    <div class="text-right">
+                        <button class="btn btn-secondary me-2" @onclick="HideAllSections">Cancel</button>
+                        <button class="btn btn-warning" @onclick="SuspendUser">
+                            @(IsUserSuspended() ? "Update Suspension" : "Suspend User")
+                        </button>
+                    </div>
+                </div>
+            }
         </div>
     </div>
 </div>
 
 <!-- Max Usage Modal -->
-<div class="modal @(showMaxUsageModal ? "show" : "")" tabindex="-1" style="display: @(showMaxUsageModal ? "block" : "none")">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Update Maximum Usage</h5>
-                <button type="button" class="btn-close" @onclick="CloseModals"></button>
+<div id="max-usage-modal-@_maxUsageModalId" class="modal-overlay @(showMaxUsageModal ? "visible" : "")" @onclick="HandleMaxUsageBackdrop">
+    <div class="modal-content" @onclick:stopPropagation="true">
+        <div class="modal-header">
+            <h5 class="modal-title">Update Maximum Usage</h5>
+            <button type="button" class="btn-close" @onclick="CloseModals"></button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label for="updateMaxUsage">Maximum Usage</label>
+                <input type="number" id="updateMaxUsage" class="form-control" @bind="updateMaxUsage"
+                       min="1" max="@(selectedUserType == "lecturer" ? "1" : "2")" />
             </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label for="updateMaxUsage">Maximum Usage</label>
-                    <input type="number" id="updateMaxUsage" class="form-control" @bind="updateMaxUsage" 
-                           min="1" max="@(selectedUserType == "lecturer" ? "1" : "2")" />
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" @onclick="CloseModals">Cancel</button>
-                <button type="button" class="btn btn-primary" @onclick="UpdateMaxUsage">Update</button>
-            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn-secondary" @onclick="CloseModals">Cancel</button>
+            <button type="button" class="btn-primary" @onclick="UpdateMaxUsage">Update</button>
         </div>
     </div>
 </div>
-
+<!-- Confirmation Delete Modal -->
+@if (showConfirmDeleteModal)
+{
+    <div class="modal-overlay visible">
+        <div class="modal-content confirmation-modal" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h5 class="modal-title text-danger">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    @confirmDeleteTitle
+                </h5>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger">
+                    <strong>Warning:</strong> This action cannot be undone!
+                </div>
+                <p style="white-space: pre-line;">@confirmDeleteMessage</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" @onclick="() => showConfirmDeleteModal = false">Cancel</button>
+                <button type="button" class="btn-danger" @onclick="OnConfirmDelete" disabled="@loading">
+                    @if (loading)
+                    {
+                        <LoadingSpinner Title="" Subtitle="" />
+                    }
+                    <i class="fas fa-trash"></i>
+                    Delete Permanently
+                </button>
+            </div>
+        </div>
+    </div>
+}
 <!-- Delete User Modal -->
 <div class="modal @(showDeleteModal ? "show" : "")" tabindex="-1" style="display: @(showDeleteModal ? "block" : "none")">
     <div class="modal-dialog">

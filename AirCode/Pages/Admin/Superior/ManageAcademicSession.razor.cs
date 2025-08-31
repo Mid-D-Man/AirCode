@@ -7,8 +7,10 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using Newtonsoft.Json;
 using System.ComponentModel;
+using AirCode.Components.Admin.Superior;
 using AirCode.Components.SharedPrefabs.Cards;
 using AirCode.Models.Forms;
+using AirCode.Components.SharedPrefabs.Others;
 
 namespace AirCode.Pages.Admin.Superior
 {
@@ -25,7 +27,7 @@ namespace AirCode.Pages.Admin.Superior
         private List<AcademicSession> archivedSessions = new List<AcademicSession>();
         private bool showModal = false;
         private bool showWarning = false;
-        private ModalType activeModal;
+        private CreateAcademicSessionModal.ModalType activeModal;
         private string targetSessionId;
         
         // Form models
@@ -33,6 +35,10 @@ namespace AirCode.Pages.Admin.Superior
         private SemesterFormModel semesterForm = new();
         private SemesterFormModel firstSemesterForm = new();
         private bool includeFirstSemester = true;
+        
+        // Loading states
+        private bool isLoadingSessions = true;
+        private bool isModalLoading = false;
         
         // Notification component
         private AirCode.Components.SharedPrefabs.Cards.NotificationComponent notificationComponent;
@@ -59,12 +65,28 @@ namespace AirCode.Pages.Admin.Superior
         #region Component Lifecycle
         protected override async Task OnInitializedAsync()
         {
-            await CheckConnectionStatus();
-            await InitializeSessionService();
-            await LoadSessions();
-            await ProcessPendingTransitions();
-            SetupCountdownTimer();
-            await CheckForWarnings();
+            try
+            {
+                isLoadingSessions = true;
+                StateHasChanged();
+
+                await CheckConnectionStatus();
+                await InitializeSessionService();
+                await LoadSessions();
+                await ProcessPendingTransitions();
+                SetupCountdownTimer();
+                await CheckForWarnings();
+            }
+            catch (Exception ex)
+            {
+                MID_HelperFunctions.DebugMessage($"Error initializing ManageAcademicSession: {ex.Message}");
+                notificationComponent?.ShowError("Failed to initialize session management");
+            }
+            finally
+            {
+                isLoadingSessions = false;
+                StateHasChanged();
+            }
         }
 
         protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -97,7 +119,7 @@ namespace AirCode.Pages.Admin.Superior
                 if (!validationResult.IsValid)
                 {
                     MID_HelperFunctions.DebugMessage($"System validation issues found: {string.Join(", ", validationResult.Issues)}");
-                    NotificationComponent?.ShowWarning($"System issues detected: {validationResult.Issues.FirstOrDefault()}");
+                    notificationComponent?.ShowWarning($"System issues detected: {validationResult.Issues.FirstOrDefault()}");
                 }
                 
                 if (validationResult.Warnings.Any())
@@ -108,7 +130,7 @@ namespace AirCode.Pages.Admin.Superior
             catch (Exception ex)
             {
                 MID_HelperFunctions.DebugMessage($"Error initializing session service: {ex.Message}");
-                NotificationComponent?.ShowError("Failed to initialize session service");
+                notificationComponent?.ShowError("Failed to initialize session service");
             }
         }
 
@@ -130,12 +152,12 @@ namespace AirCode.Pages.Admin.Superior
                     // Show notifications for important transitions
                     foreach (var endedSession in transitionResult.EndedSessions)
                     {
-                        NotificationComponent?.ShowInfo($"Session {endedSession.Session.SessionId} has ended and been archived");
+                        notificationComponent?.ShowInfo($"Session {endedSession.Session.SessionId} has ended and been archived");
                     }
                     
                     foreach (var startedSession in transitionResult.StartedSessions)
                     {
-                        NotificationComponent?.ShowSuccess($"Session {startedSession.Session.SessionId} is now active");
+                        notificationComponent?.ShowSuccess($"Session {startedSession.Session.SessionId} is now active");
                     }
                     
                     // Refresh session data after transitions
@@ -145,12 +167,12 @@ namespace AirCode.Pages.Admin.Superior
                 // Show any warnings or errors
                 foreach (var warning in transitionResult.Warnings)
                 {
-                    NotificationComponent?.ShowWarning(warning);
+                    notificationComponent?.ShowWarning(warning);
                 }
                 
                 foreach (var error in transitionResult.Errors)
                 {
-                    NotificationComponent?.ShowError(error);
+                    notificationComponent?.ShowError(error);
                 }
                 
                 lastTransitionCheck = DateTime.Now;
@@ -158,7 +180,7 @@ namespace AirCode.Pages.Admin.Superior
             catch (Exception ex)
             {
                 MID_HelperFunctions.DebugMessage($"Error processing pending transitions: {ex.Message}");
-                NotificationComponent?.ShowError("Failed to check for pending transitions");
+                notificationComponent?.ShowError("Failed to check for pending transitions");
             }
         }
 
@@ -168,6 +190,9 @@ namespace AirCode.Pages.Admin.Superior
             {
                 MID_HelperFunctions.DebugMessage("Refreshing session cache...");
                 
+                isLoadingSessions = true;
+                StateHasChanged();
+
                 await AcademicSessionService.RefreshSessionCacheAsync();
                 
                 // Reload sessions using the service
@@ -176,13 +201,16 @@ namespace AirCode.Pages.Admin.Superior
                 archivedSessions = await AcademicSessionService.GetArchivedSessionsAsync();
                 
                 MID_HelperFunctions.DebugMessage($"Sessions refreshed - Current: {currentSession?.SessionId ?? "None"}, Next: {nextSession?.SessionId ?? "None"}, Archived: {archivedSessions.Count}");
-                
-                StateHasChanged();
             }
             catch (Exception ex)
             {
                 MID_HelperFunctions.DebugMessage($"Error refreshing sessions: {ex.Message}");
-                NotificationComponent?.ShowError("Failed to refresh session data");
+                notificationComponent?.ShowError("Failed to refresh session data");
+            }
+            finally
+            {
+                isLoadingSessions = false;
+                StateHasChanged();
             }
         }
 
@@ -198,14 +226,14 @@ namespace AirCode.Pages.Admin.Superior
                 var criticalIssues = lastHealthReport.Issues.Where(i => i.Severity == IssueSeverity.Critical).ToList();
                 foreach (var issue in criticalIssues)
                 {
-                    NotificationComponent?.ShowError($"Critical session issue: {issue.Description}");
+                    notificationComponent?.ShowError($"Critical session issue: {issue.Description}");
                 }
                 
                 // Show error issues as warnings
                 var errorIssues = lastHealthReport.Issues.Where(i => i.Severity == IssueSeverity.Error).ToList();
                 foreach (var issue in errorIssues)
                 {
-                    NotificationComponent?.ShowWarning($"Session error: {issue.Description}");
+                    notificationComponent?.ShowWarning($"Session error: {issue.Description}");
                 }
             }
             catch (Exception ex)
@@ -235,28 +263,28 @@ namespace AirCode.Pages.Admin.Superior
         private async Task OnSessionEnded(SessionEndEvent endEvent)
         {
             MID_HelperFunctions.DebugMessage($"Session ended event received: {endEvent.Session.SessionId}");
-            NotificationComponent?.ShowInfo($"Session {endEvent.Session.SessionId} has ended");
+            notificationComponent?.ShowInfo($"Session {endEvent.Session.SessionId} has ended");
             await RefreshSessions();
         }
 
         private async Task OnSessionStarted(SessionStartEvent startEvent)
         {
             MID_HelperFunctions.DebugMessage($"Session started event received: {startEvent.Session.SessionId}");
-            NotificationComponent?.ShowSuccess($"Session {startEvent.Session.SessionId} is now active");
+            notificationComponent?.ShowSuccess($"Session {startEvent.Session.SessionId} is now active");
             await RefreshSessions();
         }
 
         private async Task OnSemesterEnded(SemesterEndEvent endEvent)
         {
             MID_HelperFunctions.DebugMessage($"Semester ended event received: {endEvent.Semester.SemesterId}");
-            NotificationComponent?.ShowInfo($"Semester {GetSemesterName(endEvent.Semester.Type)} has ended");
+            notificationComponent?.ShowInfo($"Semester {GetSemesterName(endEvent.Semester.Type)} has ended");
             await RefreshSessions();
         }
 
         private async Task OnSemesterStarted(SemesterStartEvent startEvent)
         {
             MID_HelperFunctions.DebugMessage($"Semester started event received: {startEvent.Semester.SemesterId}");
-            NotificationComponent?.ShowSuccess($"Semester {GetSemesterName(startEvent.Semester.Type)} is now active");
+            notificationComponent?.ShowSuccess($"Semester {GetSemesterName(startEvent.Semester.Type)} is now active");
             await RefreshSessions();
         }
         #endregion
@@ -289,12 +317,12 @@ namespace AirCode.Pages.Admin.Superior
                 if (totalSessions > 0)
                 {
                     MID_HelperFunctions.DebugMessage($"Successfully loaded {totalSessions} sessions using service");
-                    NotificationComponent?.ShowInfo($"Loaded {totalSessions} academic sessions");
+                    notificationComponent?.ShowInfo($"Loaded {totalSessions} academic sessions");
                 }
                 else
                 {
                     MID_HelperFunctions.DebugMessage("No sessions found");
-                    NotificationComponent?.ShowInfo("No academic sessions found. Create your first session to get started.");
+                    notificationComponent?.ShowInfo("No academic sessions found. Create your first session to get started.");
                 }
             }
             catch (Exception ex)
@@ -306,7 +334,7 @@ namespace AirCode.Pages.Admin.Superior
                 currentSession = null;
                 nextSession = null;
                 archivedSessions = new List<AcademicSession>();
-                NotificationComponent?.ShowError($"Failed to load sessions: {ex.Message}");
+                notificationComponent?.ShowError($"Failed to load sessions: {ex.Message}");
             }
         }
         #endregion
@@ -331,16 +359,16 @@ namespace AirCode.Pages.Admin.Superior
         #endregion
 
         #region Modal Management
-        public void ShowModal(ModalType modalType, string sessionId = null)
+        public void ShowModal(CreateAcademicSessionModal.ModalType modalType, string sessionId = null)
         {
             activeModal = modalType;
             targetSessionId = sessionId;
             
-            if (modalType == ModalType.CreateSession)
+            if (modalType == CreateAcademicSessionModal.ModalType.CreateSession)
             {
                 InitializeSessionForm();
             }
-            else if (modalType == ModalType.CreateSemester)
+            else if (modalType == CreateAcademicSessionModal.ModalType.CreateSemester)
             {
                 InitializeSemesterForm();
             }
@@ -348,9 +376,19 @@ namespace AirCode.Pages.Admin.Superior
             showModal = true;
         }
         
-        public void CloseModal()
+        public async Task CloseModal()
         {
             showModal = false;
+            isModalLoading = false;
+            
+            // Reset form states
+            sessionForm = new SessionFormModel();
+            semesterForm = new SemesterFormModel();
+            firstSemesterForm = new SemesterFormModel();
+            includeFirstSemester = true;
+            targetSessionId = null;
+            
+            StateHasChanged();
         }
 
         private void InitializeSessionForm()
@@ -415,16 +453,6 @@ namespace AirCode.Pages.Admin.Superior
                         new DateTime(targetSession.YearEnd, 6, 30));
             }
         }
-
-        public string GetModalTitle()
-        {
-            return activeModal switch
-            {
-                ModalType.CreateSession => "Create New Academic Session",
-                ModalType.CreateSemester => "Add Semester",
-                _ => "Modal"
-            };
-        }
         #endregion
 
         #region Session Management
@@ -432,20 +460,23 @@ namespace AirCode.Pages.Admin.Superior
         {
             try
             {
+                isModalLoading = true;
+                StateHasChanged();
+                
                 MID_HelperFunctions.DebugMessage($"Saving modal data for {activeModal}");
                 
-                if (activeModal == ModalType.CreateSession)
+                if (activeModal == CreateAcademicSessionModal.ModalType.CreateSession)
                 {
                     await CreateNewSession();
-                    NotificationComponent?.ShowSuccess($"Academic session {sessionForm.YearStart}-{sessionForm.YearEnd} created successfully!");
+                    notificationComponent?.ShowSuccess($"Academic session {sessionForm.YearStart}-{sessionForm.YearEnd} created successfully!");
                 }
-                else if (activeModal == ModalType.CreateSemester)
+                else if (activeModal == CreateAcademicSessionModal.ModalType.CreateSemester)
                 {
                     await CreateNewSemester();
-                    NotificationComponent?.ShowSuccess($"{GetSemesterName(semesterForm.Type)} added successfully!");
+                    notificationComponent?.ShowSuccess($"{GetSemesterName(semesterForm.Type)} added successfully!");
                 }
                 
-                CloseModal();
+                await CloseModal();
                 
                 // Refresh sessions and check for warnings
                 await RefreshSessions();
@@ -457,7 +488,12 @@ namespace AirCode.Pages.Admin.Superior
             {
                 MID_HelperFunctions.DebugMessage($"Error saving modal: {ex.Message}");
                 MID_HelperFunctions.DebugMessage($"Stack trace: {ex.StackTrace}");
-                NotificationComponent?.ShowError($"Failed to save: {ex.Message}");
+                notificationComponent?.ShowError($"Failed to save: {ex.Message}");
+            }
+            finally
+            {
+                isModalLoading = false;
+                StateHasChanged();
             }
         }
 
@@ -554,7 +590,7 @@ namespace AirCode.Pages.Admin.Superior
                     {
                         showWarning = true;
                         MID_HelperFunctions.DebugMessage($"Warning: Current session ends in {timeRemaining.TotalDays} days");
-                        NotificationComponent?.ShowWarning(
+                        notificationComponent?.ShowWarning(
                             $"Current academic session ends in {(int)timeRemaining.TotalDays} days. Consider creating the next session.");
                     }
                 }
@@ -565,7 +601,7 @@ namespace AirCode.Pages.Admin.Superior
                     var warningIssues = lastHealthReport.Issues.Where(i => i.Severity == IssueSeverity.Warning).ToList();
                     foreach (var issue in warningIssues)
                     {
-                        NotificationComponent?.ShowWarning($"Session warning: {issue.Description}");
+                        notificationComponent?.ShowWarning($"Session warning: {issue.Description}");
                     }
                 }
                 
@@ -573,7 +609,7 @@ namespace AirCode.Pages.Admin.Superior
                 var overlapResult = await AcademicSessionService.ResolveSessionOverlapAsync();
                 if (overlapResult.HasOverlap)
                 {
-                    NotificationComponent?.ShowWarning($"Session overlap detected: {overlapResult.Resolution}");
+                    notificationComponent?.ShowWarning($"Session overlap detected: {overlapResult.Resolution}");
                 }
             }
             catch (Exception ex)
@@ -786,11 +822,10 @@ namespace AirCode.Pages.Admin.Superior
                 MID_HelperFunctions.DebugMessage($"Error saving session to Firebase: {ex.Message}");
                 MID_HelperFunctions.DebugMessage($"Session ID: {session.SessionId}");
                 MID_HelperFunctions.DebugMessage($"Stack trace: {ex.StackTrace}");
-                NotificationComponent?.ShowError($"Database error: Failed to save session {session.SessionId}");
+                notificationComponent?.ShowError($"Database error: Failed to save session {session.SessionId}");
                 throw; // Re-throw to allow calling method to handle
             }
         }
         #endregion
-
     }
 }

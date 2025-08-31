@@ -1,13 +1,10 @@
 @using AirCode.Utilities.DataStructures
-@using AirCode.Utilities.HelperScripts
 @using AirCode.Services.Cryptography
-@using Microsoft.AspNetCore.Components
-@using AirCode.Models.QRCode
-@using AirCode.Components.SharedPrefabs.Spinner
 @using AirCode.Domain.Enums
+@using AirCode.Services.Config
 @inject IJSRuntime JS
 @inject ICryptographyService CryptographyService
-
+@inject IConfigurationService ConfigService
 <div class="qr-code">
     <h3>Attendance QR Code</h3>
     <div class="qr-code-container @(IsLoading ? "loading" : "")">
@@ -74,7 +71,7 @@
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
-        _qrDecoder = new QRCodeDecoder(CryptographyService);
+        _qrDecoder = new QRCodeDecoder(CryptographyService,ConfigService);
         
         if (!_jsInitialized)
         {

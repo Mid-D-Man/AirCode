@@ -728,7 +728,127 @@
     transform: translateY(-2px);
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
 }
+/* Loading sessions container */
+.sessions-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 60vh;
+    padding: var(--spacing-xxl);
+    background: linear-gradient(135deg, var(--bg-secondary), var(--bg-tertiary));
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    margin: var(--spacing-xl) 0;
+}
 
+/* Loading state for buttons */
+.btn-primary:disabled,
+.btn-secondary:disabled {
+    background: var(--text-tertiary);
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+    opacity: 0.6;
+}
+
+/* Loading spinner animation for buttons */
+.loading-spinner-small {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top: 2px solid white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Loading state for action buttons */
+.actions .btn-primary:disabled {
+    background: linear-gradient(135deg, var(--text-tertiary), var(--text-secondary));
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+    opacity: 0.6;
+}
+
+/* Skeleton loading for cards (optional enhancement) */
+.session-card-skeleton {
+    background: linear-gradient(135deg, var(--bg-secondary), var(--bg-tertiary));
+    border-radius: 12px;
+    padding: var(--spacing-lg);
+    margin-bottom: var(--spacing-xl);
+    border: 1px solid var(--border);
+    animation: skeleton-pulse 1.5s ease-in-out infinite alternate;
+}
+
+.skeleton-header {
+    height: 24px;
+    background: var(--border);
+    border-radius: 4px;
+    margin-bottom: var(--spacing-md);
+    animation: skeleton-shimmer 1.5s ease-in-out infinite alternate;
+}
+
+.skeleton-content {
+    height: 16px;
+    background: var(--border);
+    border-radius: 4px;
+    margin-bottom: var(--spacing-sm);
+    animation: skeleton-shimmer 1.5s ease-in-out infinite alternate;
+}
+
+.skeleton-content.short {
+    width: 60%;
+}
+
+@keyframes skeleton-pulse {
+    0% {
+        opacity: 0.6;
+    }
+    100% {
+        opacity: 1;
+    }
+}
+
+@keyframes skeleton-shimmer {
+    0% {
+        background-color: var(--border);
+    }
+    100% {
+        background-color: var(--text-tertiary);
+    }
+}
+
+/* Loading overlay for individual sections */
+.section-loading-overlay {
+    position: relative;
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.section-loading-overlay::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(var(--bg-primary-rgb, 255, 255, 255), 0.8);
+    border-radius: inherit;
+    z-index: 10;
+}
+
+.section-loading-spinner {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 11;
+}
 /* Responsive Design */
 @media (max-width: 1200px) {
     .semester-cards {
@@ -805,6 +925,16 @@
         text-align: center;
         gap: var(--spacing-sm);
     }
+    .sessions-loading {
+        min-height: 40vh;
+        padding: var(--spacing-lg);
+        margin: var(--spacing-lg) 0;
+    }
+
+    .loading-spinner-small {
+        width: 14px;
+        height: 14px;
+    }
 }
 
 @media (max-width: 480px) {
@@ -877,10 +1007,22 @@
     .form-control {
         padding: 10px 12px;
     }
+    .sessions-loading {
+        min-height: 30vh;
+        padding: var(--spacing-md);
+    }
+
+    .skeleton-header {
+        height: 20px;
+    }
+
+    .skeleton-content {
+        height: 14px;
+    }
 }
 
 /* High contrast mode support */
-@media (prefers-contrast: high) {
+@media (prefers-contrast: more) {
     .semester-card,
     .add-semester-card,
     .archived-session-card {
@@ -919,6 +1061,16 @@
     .btn-secondary:hover {
         transform: none;
     }
+    .loading-spinner-small,
+    .skeleton-header,
+    .skeleton-content,
+    .session-card-skeleton {
+        animation: none;
+    }
+
+    .section-loading-overlay {
+        opacity: 0.8;
+    }
 }
 
 /* Focus styles for accessibility */
@@ -927,6 +1079,17 @@
 .archived-session-card:focus-visible {
     outline: 3px solid var(--primary-500);
     outline-offset: 2px;
+}
+@media (prefers-contrast: more) {
+    .sessions-loading {
+        border-width: 2px;
+    }
+
+    .skeleton-header,
+    .skeleton-content {
+        background: var(--text-primary);
+        opacity: 0.3;
+    }
 }
 
 /* Print styles */

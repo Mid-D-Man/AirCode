@@ -22,8 +22,6 @@ namespace AirCode.Utilities.HelperScripts
         
         private readonly ICryptographyService _cryptographyService;
         private readonly IConfigurationService _configurationService;
-        private readonly ILogger<QRCodeDecoder> _logger;
-
         // Cache for keys to avoid repeated async calls
         private string? _cachedEncryptionKey;
         private string? _cachedInitializationVector;
@@ -31,12 +29,10 @@ namespace AirCode.Utilities.HelperScripts
 
         public QRCodeDecoder(
             ICryptographyService cryptographyService,
-            IConfigurationService configurationService,
-            ILogger<QRCodeDecoder> logger)
+            IConfigurationService configurationService)
         {
             _cryptographyService = cryptographyService;
             _configurationService = configurationService;
-            _logger = logger;
         }
 
         /// <summary>
@@ -48,27 +44,16 @@ namespace AirCode.Utilities.HelperScripts
             {
                 try
                 {
-                    // Try to get AirCode specific key first
                     var airCodeKey = await GetAirCodeKeyAsync();
-                    if (!string.IsNullOrEmpty(airCodeKey))
-                    {
-                        _cachedEncryptionKey = airCodeKey;
-                    }
-                    else
-                    {
-                        // Fallback to general cryptography key
-                        _cachedEncryptionKey = await _configurationService.GetCryptoKeyAsync();
-                    }
-                    
-                    _logger.LogDebug("Encryption key retrieved successfully");
+                    _cachedEncryptionKey = !string.IsNullOrEmpty(airCodeKey) ? airCodeKey : await _configurationService.GetCryptoKeyAsync();
+                    await MID_HelperFunctions.DebugMessageAsync("Encryption key retrieved successfully", DebugClass.Info);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Failed to retrieve encryption key from configuration");
+                    await MID_HelperFunctions.DebugMessageAsync($"Failed to retrieve encryption key: {ex.Message}", DebugClass.Exception);
                     throw;
                 }
             }
-            
             return _cachedEncryptionKey;
         }
 
@@ -81,27 +66,16 @@ namespace AirCode.Utilities.HelperScripts
             {
                 try
                 {
-                    // Try to get AirCode specific IV first
                     var airCodeIV = await GetAirCodeIVAsync();
-                    if (!string.IsNullOrEmpty(airCodeIV))
-                    {
-                        _cachedInitializationVector = airCodeIV;
-                    }
-                    else
-                    {
-                        // Fallback to general cryptography IV
-                        _cachedInitializationVector = await _configurationService.GetCryptoIVAsync();
-                    }
-                    
-                    _logger.LogDebug("Initialization vector retrieved successfully");
+                    _cachedInitializationVector = !string.IsNullOrEmpty(airCodeIV) ? airCodeIV : await _configurationService.GetCryptoIVAsync();
+                    await MID_HelperFunctions.DebugMessageAsync("Initialization vector retrieved successfully", DebugClass.Info);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Failed to retrieve initialization vector from configuration");
+                    await MID_HelperFunctions.DebugMessageAsync($"Failed to retrieve initialization vector: {ex.Message}", DebugClass.Exception);
                     throw;
                 }
             }
-            
             return _cachedInitializationVector;
         }
 
@@ -149,164 +123,140 @@ namespace AirCode.Utilities.HelperScripts
         /// Encodes session data with temporal key provided from CreateAttendanceEvent
         /// </summary>
         public async Task<string> EncodeSessionDataAsync(
-            string sessionId,
-            string courseCode,
-            DateTime startTime,
-            int duration,
-            bool allowOfflineConnectionAndSync,
-            bool useTemporalKeyRefresh,
-            AdvancedSecurityFeatures securityFeatures,
-            string temporalKey)
+    string sessionId,
+    string courseCode,
+    DateTime startTime,
+    int duration,
+    bool allowOfflineConnectionAndSync,
+    bool useTemporalKeyRefresh,
+    AdvancedSecurityFeatures securityFeatures,
+    string temporalKey)
+{
+    try
+    {
+        var sessionData = new DecodedSessionData
         {
-            try
-            {
-                var sessionData = new DecodedSessionData
-                {
-                    SessionId = sessionId,
-                    CourseCode = courseCode,
-                    StartTime = startTime,
-                    Duration = duration,
-                    GeneratedTime = DateTime.UtcNow,
-                    ExpirationTime = DateTime.UtcNow.AddMinutes(duration),
-                    TemporalKey = temporalKey,
-                    UseTemporalKeyRefresh = useTemporalKeyRefresh,
-                    AllowOfflineConnectionAndSync = allowOfflineConnectionAndSync,
-                    SecurityFeatures = securityFeatures
-                };
+            SessionId = sessionId,
+            CourseCode = courseCode,
+            StartTime = startTime,
+            Duration = duration,
+            GeneratedTime = DateTime.UtcNow,
+            ExpirationTime = DateTime.UtcNow.AddMinutes(duration),
+            TemporalKey = temporalKey,
+            UseTemporalKeyRefresh = useTemporalKeyRefresh,
+            AllowOfflineConnectionAndSync = allowOfflineConnectionAndSync,
+            SecurityFeatures = securityFeatures
+        };
 
-                string jsonData = JsonSerializer.Serialize(sessionData, new JsonSerializerOptions
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                });
+        string jsonData = JsonSerializer.Serialize(sessionData, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        string compressedData = CompressString(jsonData);
 
-                string compressedData = CompressString(jsonData);
-                
-                // Get keys from configuration
-                string encryptionKey = await GetEncryptionKeyAsync();
-                string initializationVector = await GetInitializationVectorAsync();
+        string encryptionKey = await GetEncryptionKeyAsync();
+        string initializationVector = await GetInitializationVectorAsync();
+        string encryptedData = await _cryptographyService.EncryptData(compressedData, encryptionKey, initializationVector);
 
-                string encryptedData = await _cryptographyService.EncryptData(
-                    compressedData, encryptionKey, initializationVector);
+        string signingKey = await GetSigningKeyAsync();
+        string signature = await _cryptographyService.SignData(encryptedData, signingKey);
 
-                string signingKey = await GetSigningKeyAsync();
-                string signature = await _cryptographyService.SignData(encryptedData, signingKey);
+        string payload = $"{APP_SIGNATURE}:{encryptedData}:{signature}";
+        string encodedPayload = Convert.ToBase64String(Encoding.UTF8.GetBytes(payload));
 
-                // Create payload for URL fragment
-                string payload = $"{APP_SIGNATURE}:{encryptedData}:{signature}";
-                string encodedPayload = Convert.ToBase64String(Encoding.UTF8.GetBytes(payload));
-
-                // Return GitHub Pages URL with payload in fragment for external scanners
-                string qrUrl = $"{GITHUB_BASE_URL}?session={sessionId}#{encodedPayload}";
-                
-                _logger.LogDebug("QR Code encoded successfully for session: {SessionId}", sessionId);
-                return qrUrl;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to encode session data for session: {SessionId}", sessionId);
-                throw;
-            }
-        }
+        string qrUrl = $"{GITHUB_BASE_URL}?session={sessionId}#{encodedPayload}";
+        await MID_HelperFunctions.DebugMessageAsync($"QR Code encoded successfully for session: {sessionId}", DebugClass.Info);
+        return qrUrl;
+    }
+    catch (Exception ex)
+    {
+        await MID_HelperFunctions.DebugMessageAsync($"Failed to encode session data: {ex.Message}", DebugClass.Exception);
+        throw;
+    }
+}
 
         /// <summary>
         /// Decodes QR code to extract full session data (for internal app use)
         /// Handles both legacy format and new GitHub Pages format
         /// </summary>
         public async Task<DecodedSessionData?> DecodeSessionDataAsync(string qrCodeContent)
+{
+    try
+    {
+        string payload = ExtractPayloadFromQRCode(qrCodeContent);
+        if (string.IsNullOrEmpty(payload))
         {
-            try
-            {
-                string payload = ExtractPayloadFromQRCode(qrCodeContent);
-                if (string.IsNullOrEmpty(payload))
-                {
-                    _logger.LogWarning("No payload found in QR code content");
-                    return null;
-                }
-
-                // Decode the Base64 encoded payload
-                string decodedPayload;
-                try
-                {
-                    byte[] payloadBytes = Convert.FromBase64String(payload);
-                    decodedPayload = Encoding.UTF8.GetString(payloadBytes);
-                }
-                catch
-                {
-                    // Fallback for legacy format
-                    decodedPayload = payload;
-                }
-
-                if (!decodedPayload.StartsWith(APP_SIGNATURE + ":"))
-                {
-                    _logger.LogWarning("QR code does not contain valid AirCode signature");
-                    return null;
-                }
-
-                string[] components = decodedPayload.Substring(APP_SIGNATURE.Length + 1).Split(':');
-                if (components.Length != 2)
-                {
-                    _logger.LogWarning("QR code payload format is invalid");
-                    return null;
-                }
-
-                string encryptedData = components[0];
-                string providedSignature = components[1];
-
-                // Verify signature
-                string signingKey = await GetSigningKeyAsync();
-                bool isValidSignature = await _cryptographyService.VerifyHmac(
-                    encryptedData, providedSignature, signingKey);
-                
-                if (!isValidSignature)
-                {
-                    _logger.LogWarning("QR code signature verification failed");
-                    return null;
-                }
-
-                // Decrypt data
-                string encryptionKey = await GetEncryptionKeyAsync();
-                string initializationVector = await GetInitializationVectorAsync();
-
-                string compressedData = await _cryptographyService.DecryptData(
-                    encryptedData, encryptionKey, initializationVector);
-
-                string jsonData = DecompressString(compressedData);
-
-                DecodedSessionData? sessionData = JsonSerializer.Deserialize<DecodedSessionData>(
-                    jsonData, new JsonSerializerOptions
-                    {
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                    });
-
-                if (sessionData == null)
-                {
-                    _logger.LogWarning("Failed to deserialize session data from QR code");
-                    return null;
-                }
-
-                // Basic time validation
-                if (DateTime.UtcNow > sessionData.ExpirationTime)
-                {
-                    _logger.LogInformation("QR code has expired for session: {SessionId}", sessionData.SessionId);
-                    return null;
-                }
-
-                if (sessionData.GeneratedTime > DateTime.UtcNow.AddMinutes(5))
-                {
-                    _logger.LogWarning("QR code appears to be from the future for session: {SessionId}", sessionData.SessionId);
-                    return null;
-                }
-
-                _logger.LogDebug("QR Code decoded successfully for session: {SessionId}", sessionData.SessionId);
-                return sessionData;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "QR Code decoding failed");
-                MID_HelperFunctions.DebugMessage($"QR Code decoding failed: {ex.Message}");
-                return null;
-            }
+            await MID_HelperFunctions.DebugMessageAsync("No payload found in QR code content", DebugClass.Warning);
+            return null;
         }
+
+        string decodedPayload;
+        try
+        {
+            byte[] payloadBytes = Convert.FromBase64String(payload);
+            decodedPayload = Encoding.UTF8.GetString(payloadBytes);
+        }
+        catch
+        {
+            decodedPayload = payload;
+        }
+
+        if (!decodedPayload.StartsWith(APP_SIGNATURE + ":"))
+        {
+            await MID_HelperFunctions.DebugMessageAsync("QR code does not contain valid AirCode signature", DebugClass.Warning);
+            return null;
+        }
+
+        string[] components = decodedPayload.Substring(APP_SIGNATURE.Length + 1).Split(':');
+        if (components.Length != 2)
+        {
+            await MID_HelperFunctions.DebugMessageAsync("QR code payload format is invalid", DebugClass.Warning);
+            return null;
+        }
+
+        string encryptedData = components[0];
+        string providedSignature = components[1];
+
+        string signingKey = await GetSigningKeyAsync();
+        bool isValidSignature = await _cryptographyService.VerifyHmac(encryptedData, providedSignature, signingKey);
+
+        if (!isValidSignature)
+        {
+            await MID_HelperFunctions.DebugMessageAsync("QR code signature verification failed", DebugClass.Warning);
+            return null;
+        }
+
+        string encryptionKey = await GetEncryptionKeyAsync();
+        string initializationVector = await GetInitializationVectorAsync();
+        string compressedData = await _cryptographyService.DecryptData(encryptedData, encryptionKey, initializationVector);
+
+        string jsonData = DecompressString(compressedData);
+        DecodedSessionData? sessionData = JsonSerializer.Deserialize<DecodedSessionData>(jsonData, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+
+        if (sessionData == null)
+        {
+            await MID_HelperFunctions.DebugMessageAsync("Failed to deserialize session data from QR code", DebugClass.Warning);
+            return null;
+        }
+
+        if (DateTime.UtcNow > sessionData.ExpirationTime)
+        {
+            await MID_HelperFunctions.DebugMessageAsync($"QR code has expired for session: {sessionData.SessionId}", DebugClass.Info);
+            return null;
+        }
+
+        if (sessionData.GeneratedTime > DateTime.UtcNow.AddMinutes(5))
+        {
+            await MID_HelperFunctions.DebugMessageAsync($"QR code appears to be from the future for session: {sessionData.SessionId}", DebugClass.Warning);
+            return null;
+        }
+
+        await MID_HelperFunctions.DebugMessageAsync($"QR Code decoded successfully for session: {sessionData.SessionId}", DebugClass.Info);
+        return sessionData;
+    }
+    catch (Exception ex)
+    {
+        await MID_HelperFunctions.DebugMessageAsync($"QR Code decoding failed: {ex.Message}", DebugClass.Exception);
+        return null;
+    }
+}
 
         /// <summary>
         /// Extracts payload from QR code content, handling both GitHub Pages and legacy formats
@@ -447,9 +397,13 @@ namespace AirCode.Utilities.HelperScripts
             _cachedEncryptionKey = null;
             _cachedInitializationVector = null;
             _cachedSigningKey = null;
-            _logger.LogDebug("QRCodeDecoder key cache cleared");
+            MID_HelperFunctions.DebugMessage("QRCodeDecoder key cache cleared", DebugClass.Info);
         }
 
+        ~QRCodeDecoder()
+        {
+            ClearKeyCache();
+        }
         #endregion
 
         #region Compression Helpers

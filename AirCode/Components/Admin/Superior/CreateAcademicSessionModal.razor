@@ -1,0 +1,263 @@
+@using AirCode.Domain.Entities
+@using AirCode.Domain.Enums
+@using AirCode.Models.Forms
+@using AirCode.Services.VisualElements
+@using AirCode.Components.SharedPrefabs.Spinner
+@inject IBackdropService BackdropService
+@inject IJSRuntime JSRuntime
+
+@if (IsVisible)
+{
+    <!-- Academic Session Creation Modal -->
+<div id="session-creation-modal-@InstanceId"
+     class="modal-overlay @(IsVisible ? "visible" : "")"
+     @onclick="HandleBackdropClick"
+     @ref="modalOverlayRef">
+    <div class="modal-content" @onclick:stopPropagation="true">
+        <div class="modal-header">
+            <h3>
+                <i class="fas fa-calendar-plus" style="margin-right: 0.5rem; color: var(--primary-600);"></i>
+                @GetModalTitle()
+            </h3>
+            <button class="close-btn" @onclick="CloseModal">&times;</button>
+        </div>
+
+        <div class="modal-body">
+            @if (ActiveModal == ModalType.CreateSession)
+            {
+                <div class="form-group">
+                    <label for="yearStart">Start Year</label>
+                    <input type="number"
+                           id="yearStart"
+                           @bind="SessionForm.YearStart"
+                           class="form-control"
+                           min="@GetMinAllowedStartYear()"
+                           max="@GetMaxAllowedEndYear()" />
+                    <small class="form-text">Academic session can span up to 4 years for degree programs</small>
+                </div>
+                <div class="form-group">
+                    <label for="yearEnd">End Year</label>
+                    <input type="number"
+                           id="yearEnd"
+                           @bind="SessionForm.YearEnd"
+                           class="form-control"
+                           min="@(SessionForm.YearStart + 1)"
+                           max="@(SessionForm.YearStart + 4)" />
+                    <small class="form-text">Maximum 4 years from start year</small>
+                </div>
+                <div class="form-group">
+                    <div class="toggle-container">
+                        <label class="toggle-label" for="includeFirstSemester">Include First Semester</label>
+                        <div class="toggle-switch">
+                            <input type="checkbox"
+                                   id="includeFirstSemester"
+                                   @bind="IncludeFirstSemester"
+                                   class="toggle-input" />
+                            <label for="includeFirstSemester" class="toggle-slider"></label>
+                        </div>
+                    </div>
+                </div>
+                @if (IncludeFirstSemester)
+                {
+                    <div class="semester-section">
+                        <h4>First Semester Details</h4>
+                        <div class="form-group">
+                            <label for="firstSemesterStart">First Semester Start Date</label>
+                            <input type="date"
+                                   id="firstSemesterStart"
+                                   @bind="FirstSemesterForm.StartDate"
+                                   class="form-control" />
+                        </div>
+                        <div class="form-group">
+                            <label for="firstSemesterEnd">First Semester End Date</label>
+                            <input type="date"
+                                   id="firstSemesterEnd"
+                                   @bind="FirstSemesterForm.EndDate"
+                                   class="form-control" />
+                        </div>
+                    </div>
+                }
+            }
+            else if (ActiveModal == ModalType.CreateSemester)
+            {
+                <div class="form-group">
+                    <label for="semesterType">Semester Type</label>
+                    <select id="semesterType" @bind="SemesterForm.Type" class="form-control">
+                        @foreach (SemesterType type in Enum.GetValues(typeof(SemesterType)))
+                        {
+                            <option value="@type">@GetSemesterName(type)</option>
+                        }
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="semesterStart">Start Date</label>
+                    <input type="date"
+                           id="semesterStart"
+                           @bind="SemesterForm.StartDate"
+                           class="form-control" />
+                </div>
+                <div class="form-group">
+                    <label for="semesterEnd">End Date</label>
+                    <input type="date"
+                           id="semesterEnd"
+                           @bind="SemesterForm.EndDate"
+                           class="form-control" />
+                </div>
+            }
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn-secondary" @onclick="CloseModal" disabled="@IsLoading">Cancel</button>
+            <button class="btn-primary" @onclick="ConfirmSave" disabled="@IsLoading">
+                @if (IsLoading)
+                {
+                    <div class="loading-spinner-small"></div>
+                }
+                else
+                {
+                    <i class="fas fa-save"></i>
+                }
+                Save @(ActiveModal == ModalType.CreateSession ? "Session" : "Semester")
+            </button>
+        </div>
+    </div>
+</div>
+}
+
+@code {
+[Parameter] public bool IsVisible { get; set; }
+[Parameter] public ModalType ActiveModal { get; set; }
+[Parameter] public SessionFormModel SessionForm { get; set; } = new();
+[Parameter] public SemesterFormModel SemesterForm { get; set; } = new();
+[Parameter] public SemesterFormModel FirstSemesterForm { get; set; } = new();
+[Parameter] public bool IncludeFirstSemester { get; set; } = true;
+[Parameter] public bool IsLoading { get; set; }
+[Parameter] public EventCallback OnSave { get; set; }
+[Parameter] public EventCallback OnClosed { get; set; }
+
+private ElementReference modalOverlayRef;
+private string InstanceId = Guid.NewGuid().ToString("N")[..8];
+private string ModalSelector => $"#session-creation-modal-{InstanceId}";
+private bool _isInPortal = false;
+private bool _wasVisible = false;
+
+public enum ModalType
+{
+    CreateSession,
+    CreateSemester
+}
+
+protected override async Task OnParametersSetAsync()
+{
+    if (IsVisible && !_wasVisible)
+    {
+        await ShowModalAsync();
+    }
+    else if (!IsVisible && _wasVisible)
+    {
+        await HideModalAsync();
+    }
+
+    _wasVisible = IsVisible;
+}
+
+private async Task ShowModalAsync()
+{
+    try
+    {
+        // Give the DOM time to render
+        await Task.Delay(50);
+        await BackdropService.MoveElementToPortalAsync(ModalSelector);
+        _isInPortal = true;
+    }
+    catch (Exception ex)
+    {
+        await MID_HelperFunctions.DebugMessageAsync($"Error showing session modal: {ex.Message}", DebugClass.Exception);
+    }
+}
+
+private async Task HideModalAsync()
+{
+    try
+    {
+        if (_isInPortal)
+        {
+            await BackdropService.ReturnElementFromPortalAsync(ModalSelector);
+            _isInPortal = false;
+        }
+    }
+    catch (Exception ex)
+    {
+        await MID_HelperFunctions.DebugMessageAsync($"Error hiding session modal: {ex.Message}", DebugClass.Exception);
+    }
+}
+
+private async Task ConfirmSave()
+{
+    if (!IsLoading)
+    {
+        await OnSave.InvokeAsync();
+    }
+}
+
+private void HandleBackdropClick()
+{
+    if (!IsLoading)
+    {
+        _ = CloseModal();
+    }
+}
+
+private async Task CloseModal()
+{
+    // Return from portal before closing
+    await HideModalAsync();
+    await OnClosed.InvokeAsync();
+}
+
+private string GetModalTitle()
+{
+    return ActiveModal switch
+    {
+        ModalType.CreateSession => "Create New Academic Session",
+        ModalType.CreateSemester => "Add Semester",
+        _ => "Modal"
+    };
+}
+
+private string GetSemesterName(SemesterType type)
+{
+    return type switch
+    {
+        SemesterType.FirstSemester => "First Semester",
+        SemesterType.SecondSemester => "Second Semester",
+        _ => type.ToString()
+    };
+}
+
+private short GetMaxAllowedEndYear()
+{
+    return (short)(DateTime.Now.Year + 4);
+}
+
+private short GetMinAllowedStartYear()
+{
+    return (short)DateTime.Now.Year;
+}
+
+public async void Dispose()
+{
+    // Ensure we return from portal on disposal
+    if (_isInPortal)
+    {
+        try
+        {
+            await BackdropService.ReturnElementFromPortalAsync(ModalSelector);
+        }
+        catch (Exception ex)
+        {
+            await MID_HelperFunctions.DebugMessageAsync($"Error during session modal disposal: {ex.Message}", DebugClass.Exception);
+        }
+    }
+}
+}
