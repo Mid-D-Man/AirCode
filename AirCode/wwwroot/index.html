@@ -183,7 +183,23 @@
 <script src="js/offlineCredentialsHandler.js"></script>
 <script src="js/firestoreModule.js"></script>
 <script src="js/firestoreNotificationModule.js"></script>
-<script src="js/qrCodeModule.js"></script>
+<script type="module">
+    // Import and initialize the QR module
+    import * as QRModule from './js/qrCodeModule.js';
+
+    // Expose to global scope for Blazor interop
+    window.QRCodeModule = QRModule;
+
+    // Initialize WASM when DOM is ready
+    document.addEventListener('DOMContentLoaded', async () => {
+        try {
+            await QRModule.initWasm();
+            console.log('QR Code module initialized successfully');
+        } catch (error) {
+            console.warn('QR Code module initialization failed:', error);
+        }
+    });
+</script>
 <script src="js/search-helpers.js"></script>
 <script src="js/PwaDiagnostics.js"></script>
 
