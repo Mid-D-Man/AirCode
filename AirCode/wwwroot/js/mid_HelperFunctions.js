@@ -134,7 +134,22 @@ class MID_HelperFunctions {
      * @private
      */
     #generateSessionId() {
-        this.#sessionId = 'sess_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2);
+        // Use cryptographically secure randomness for session ID
+        let randomPart;
+        if (typeof window !== 'undefined' && window.crypto && window.crypto.getRandomValues) {
+            const array = new Uint32Array(2);
+            window.crypto.getRandomValues(array);
+            // .toString(36) for compact base36 encoding, as in original
+            randomPart = array[0].toString(36) + array[1].toString(36);
+        } else {
+            // fallback for environments without crypto
+            randomPart = Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2);
+            // Optionally log a warning here for developers
+            if (typeof console !== 'undefined' && console.warn) {
+                console.warn('Warning: window.crypto.getRandomValues is not available; falling back to insecure Math.random() for session ID generation.');
+            }
+        }
+        this.#sessionId = 'sess_' + Date.now().toString(36) + '_' + randomPart;
     }
 
     // #endregion
