@@ -4,7 +4,7 @@
         type="@Type"
         title="@Title"
         @onclick="OnClick"
-        disabled="@(IsLoading || Disabled)">
+        disabled="@(IsLoading || IsDisabled)">
     @if (IsLoading)
     {
         <div class="loading-indicator">
@@ -29,5 +29,5 @@
     [Parameter] public string Class { get; set; }
     [Parameter] public string Type { get; set; } = "button";
     [Parameter] public bool IsLoading { get; set; } = false;
-    [Parameter] public bool Disabled { get; set; } = false;
+    [Parameter] public bool IsDisabled { get; set; } = false; // Changed from 'Disabled' to 'IsDisabled'
 }
