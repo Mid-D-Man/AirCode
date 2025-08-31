@@ -1,0 +1,594 @@
+@using AirCode.Domain.Entities
+@using AirCode.Domain.Enums
+@using AirCode.Domain.ValueObjects
+@using AirCode.Services.Courses
+@using AirCode.Components.SharedPrefabs.Spinner
+@using AirCode.Services.VisualElements
+@inject ICourseService CourseService
+@inject IBackdropService BackdropService
+@inject IJSRuntime JSRuntime
+
+@if (IsVisible)
+{
+    <!-- Course Handler Modal -->
+<div id="course-handler-modal-@InstanceId"
+     class="modal-overlay @(IsVisible ? "visible" : "")"
+     @onclick="HandleBackdropClick"
+     @ref="modalOverlayRef">
+    <div class="modal-content" @onclick:stopPropagation="true">
+        <div class="modal-header">
+            <h3>
+                <i class="@(IsEditMode ? "fas fa-edit" : "fas fa-plus-circle")"
+                   style="margin-right: 0.5rem; color: var(--primary-600);"></i>
+                @(IsEditMode ? "Edit Course" : "Add New Course")
+            </h3>
+            <button class="close-btn" @onclick="CloseModal">&times;</button>
+        </div>
+
+        <div class="modal-body">
+            @if (IsLoading)
+            {
+                <div class="loading-indicator">
+                    <LoadingSpinner Title="@(IsEditMode ? "Updating Course" : "Saving Course")"
+                                    Subtitle="Please wait while we process your request..." />
+                </div>
+            }
+            else
+            {
+                <EditForm Model="this" OnValidSubmit="HandleValidSubmit">
+                    <DataAnnotationsValidator />
+
+                    <!-- Basic Course Information -->
+                    <div class="form-section">
+                        <h4 class="section-title">Basic Information</h4>
+
+                        <div class="form-row">
+                            <div class="form-group col">
+                                <label for="courseName-@InstanceId">Course Name <span class="required">*</span></label>
+                                <input id="courseName-@InstanceId"
+                                       class="form-control"
+                                       @bind="CourseName"
+                                       placeholder="Enter course name" />
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group col">
+                                <label for="courseCode-@InstanceId">Course Code <span class="required">*</span></label>
+                                <input id="courseCode-@InstanceId"
+                                       class="form-control"
+                                       @bind="CourseCode"
+                                       placeholder="e.g., CSC101" />
+                            </div>
+
+                            <div class="form-group col">
+                                <label for="department-@InstanceId">Department ID <span class="required">*</span></label>
+                                <input id="department-@InstanceId"
+                                       class="form-control"
+                                       @bind="DepartmentId"
+                                       placeholder="e.g., CSC" />
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group col">
+                                <label for="level-@InstanceId">Level <span class="required">*</span></label>
+                                <select id="level-@InstanceId" class="form-control" @bind="Level">
+                                    @foreach (var level in Enum.GetValues(typeof(LevelType)))
+                                    {
+                                        <option value="@level">@GetLevelDisplay((LevelType)level)</option>
+                                    }
+                                </select>
+                            </div>
+
+                            <div class="form-group col">
+                                <label for="semester-@InstanceId">Semester <span class="required">*</span></label>
+                                <select id="semester-@InstanceId" class="form-control" @bind="Semester">
+                                    @foreach (var semester in Enum.GetValues(typeof(SemesterType)))
+                                    {
+                                        <option value="@semester">@semester.ToString().Replace("Semester", " Semester")</option>
+                                    }
+                                </select>
+                            </div>
+
+                            <div class="form-group col">
+                                <label for="creditUnits-@InstanceId">Credit Units <span class="required">*</span></label>
+                                <input id="creditUnits-@InstanceId"
+                                       type="number"
+                                       class="form-control"
+                                       @bind="CreditUnits"
+                                       min="1"
+                                       max="10" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Lecturers Section -->
+                    <div class="form-section">
+                        <h4 class="section-title">Lecturers</h4>
+
+                        <div class="form-row">
+                            <div class="form-group col">
+                                <input class="form-control"
+                                       @bind="NewLecturerId"
+                                       placeholder="Enter Lecturer ID"
+                                       @onkeypress="@(async (e) => { if (e.Key == "Enter") await AddLecturer(); })" />
+                            </div>
+                            <div class="form-group col-auto">
+                                <button type="button" class="btn btn-secondary" @onclick="AddLecturer">
+                                    <i class="fas fa-plus"></i> Add
+                                </button>
+                            </div>
+                        </div>
+
+                        @if (LecturerIds.Count > 0)
+                        {
+                            <div class="lecturer-list">
+                                @foreach (var lecturerId in LecturerIds)
+                                {
+                                    <div class="lecturer-item">
+                                        <span class="lecturer-id">@lecturerId</span>
+                                        <button type="button"
+                                                class="btn btn-sm btn-danger"
+                                                @onclick="() => RemoveLecturer(lecturerId)">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="empty-state">
+                                <i class="fas fa-user-tie"></i>
+                                <p>No lecturers assigned yet</p>
+                            </div>
+                        }
+                    </div>
+
+                    <!-- Schedule Section -->
+                    <div class="form-section">
+                        <h4 class="section-title">Schedule</h4>
+
+                        <div class="form-row">
+                            <div class="form-group col">
+                                <label>Day</label>
+                                <select class="form-control" @bind="NewDay">
+                                    @foreach (var day in Enum.GetValues(typeof(DayOfWeek)))
+                                    {
+                                        <option value="@day">@day</option>
+                                    }
+                                </select>
+                            </div>
+
+                            <div class="form-group col">
+                                <label>Start Time</label>
+                                <input class="form-control"
+                                       type="time"
+                                       value="@NewStartTime.ToString(@"hh\:mm")"
+                                       @onchange="@(e => UpdateStartTime(e))" />
+                            </div>
+
+                            <div class="form-group col">
+                                <label>End Time</label>
+                                <input class="form-control"
+                                       type="time"
+                                       value="@NewEndTime.ToString(@"hh\:mm")"
+                                       @onchange="@(e => UpdateEndTime(e))" />
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group col">
+                                <label>Location</label>
+                                <input class="form-control"
+                                       @bind="NewLocation"
+                                       placeholder="Room/Location"
+                                       @onkeypress="@(async (e) => { if (e.Key == "Enter") await AddTimeSlot(); })" />
+                            </div>
+
+                            <div class="form-group col-auto align-self-end">
+                                <button type="button" class="btn btn-secondary" @onclick="AddTimeSlot">
+                                    <i class="fas fa-plus"></i> Add
+                                </button>
+                            </div>
+                        </div>
+
+                        @if (TimeSlots.Count > 0)
+                        {
+                            <div class="schedule-list">
+                                @foreach (var slot in TimeSlots)
+                                {
+                                    <div class="schedule-item">
+                                        <div class="schedule-info">
+                                            <span class="schedule-day">@slot.Day</span>
+                                            <span class="schedule-time">
+                                                    @slot.StartTime.ToString(@"hh\:mm") - @slot.EndTime.ToString(@"hh\:mm")
+                                                </span>
+                                            <span class="schedule-location">@slot.Location</span>
+                                        </div>
+                                        <button type="button"
+                                                class="btn btn-sm btn-danger"
+                                                @onclick="() => RemoveTimeSlot(slot)">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="empty-state">
+                                <i class="fas fa-calendar-alt"></i>
+                                <p>No schedule added yet</p>
+                            </div>
+                        }
+                    </div>
+                </EditForm>
+            }
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn-secondary" @onclick="CloseModal" disabled="@IsLoading">
+                Cancel
+            </button>
+            <button class="btn-primary"
+                    @onclick="HandleValidSubmit"
+                    disabled="@(IsLoading || !IsFormValid)">
+                @if (IsLoading)
+                {
+                    <LoadingSpinner Title="" Subtitle="" />
+                }
+                else
+                {
+                    <i class="fas fa-@(IsEditMode ? "save" : "plus")"></i>
+                }
+                @(IsEditMode ? "Update Course" : "Save Course")
+            </button>
+        </div>
+    </div>
+</div>
+}
+
+@code {
+[Parameter] public bool IsVisible { get; set; }
+[Parameter] public Course? CourseToEdit { get; set; }
+[Parameter] public EventCallback<Course> OnCourseSaved { get; set; }
+[Parameter] public EventCallback OnClosed { get; set; }
+[Parameter] public EventCallback<string> OnShowNotification { get; set; }
+
+// Form properties
+public string CourseName { get; set; } = "";
+public string CourseCode { get; set; } = "";
+public string DepartmentId { get; set; } = "";
+public LevelType Level { get; set; } = LevelType.Level100;
+public SemesterType Semester { get; set; } = SemesterType.FirstSemester;
+public byte CreditUnits { get; set; } = 1;
+public List<string> LecturerIds { get; set; } = new();
+public List<TimeSlot> TimeSlots { get; set; } = new();
+
+// Form input helpers
+public string NewLecturerId { get; set; } = "";
+public DayOfWeek NewDay { get; set; } = DayOfWeek.Monday;
+public TimeSpan NewStartTime { get; set; } = new(9, 0, 0);
+public TimeSpan NewEndTime { get; set; } = new(10, 0, 0);
+public string NewLocation { get; set; } = "";
+
+private bool IsLoading = false;
+private bool _wasVisible = false;
+
+// Portal management
+private ElementReference modalOverlayRef;
+private string InstanceId = Guid.NewGuid().ToString("N")[..8];
+private string ModalSelector => $"#course-handler-modal-{InstanceId}";
+private bool _isInPortal = false;
+
+private bool IsEditMode => CourseToEdit != null;
+
+private bool IsFormValid =>
+    !string.IsNullOrWhiteSpace(CourseName) &&
+    !string.IsNullOrWhiteSpace(CourseCode) &&
+    !string.IsNullOrWhiteSpace(DepartmentId);
+
+protected override async Task OnParametersSetAsync()
+{
+    if (IsVisible && !_wasVisible)
+    {
+        await ShowModalAsync();
+    }
+    else if (!IsVisible && _wasVisible)
+    {
+        await HideModalAsync();
+    }
+
+    _wasVisible = IsVisible;
+
+    if (IsVisible)
+    {
+        if (IsEditMode)
+        {
+            LoadCourseToForm(CourseToEdit!);
+        }
+        else
+        {
+            ResetForm();
+        }
+    }
+}
+
+private async Task ShowModalAsync()
+{
+    try
+    {
+        await Task.Delay(50);
+        await BackdropService.MoveElementToPortalAsync(ModalSelector);
+        _isInPortal = true;
+    }
+    catch (Exception ex)
+    {
+        await MID_HelperFunctions.DebugMessageAsync($"Error showing modal: {ex.Message}", DebugClass.Exception);
+    }
+}
+
+private async Task HideModalAsync()
+{
+    try
+    {
+        if (_isInPortal)
+        {
+            await BackdropService.ReturnElementFromPortalAsync(ModalSelector);
+            _isInPortal = false;
+        }
+    }
+    catch (Exception ex)
+    {
+        await MID_HelperFunctions.DebugMessageAsync($"Error hiding modal: {ex.Message}", DebugClass.Exception);
+    }
+}
+
+private void LoadCourseToForm(Course course)
+{
+    CourseName = course.Name;
+    CourseCode = course.CourseCode;
+    DepartmentId = course.DepartmentId;
+    Level = course.Level;
+    Semester = course.Semester;
+    CreditUnits = course.CreditUnits;
+    LecturerIds = course.LecturerIds?.ToList() ?? new List<string>();
+    TimeSlots = course.Schedule.TimeSlots?.ToList() ?? new List<TimeSlot>();
+}
+
+private void ResetForm()
+{
+    CourseName = "";
+    CourseCode = "";
+    DepartmentId = "";
+    Level = LevelType.Level100;
+    Semester = SemesterType.FirstSemester;
+    CreditUnits = 1;
+    LecturerIds = new List<string>();
+    TimeSlots = new List<TimeSlot>();
+    NewLecturerId = "";
+    NewLocation = "";
+    NewStartTime = new(9, 0, 0);
+    NewEndTime = new(10, 0, 0);
+}
+
+private string GetLevelDisplay(LevelType level)
+{
+    return level switch
+    {
+        LevelType.Level100 => "Level 100",
+        LevelType.Level200 => "Level 200",
+        LevelType.Level300 => "Level 300",
+        LevelType.Level400 => "Level 400",
+        LevelType.Level500 => "Level 500",
+        LevelType.LevelExtra => "Extra Level",
+        _ => "Unknown"
+    };
+}
+
+private async Task HandleValidSubmit()
+{
+    if (!IsFormValid || IsLoading) return;
+
+    IsLoading = true;
+    StateHasChanged();
+
+    try
+    {
+        if (IsEditMode)
+        {
+            await UpdateCourse();
+        }
+        else
+        {
+            await AddCourse();
+        }
+    }
+    catch (Exception ex)
+    {
+        await OnShowNotification.InvokeAsync($"Error: {ex.Message}");
+    }
+    finally
+    {
+        IsLoading = false;
+        StateHasChanged();
+    }
+}
+
+private async Task AddCourse()
+{
+    var schedule = new CourseSchedule(TimeSlots);
+    var course = Course.Create(
+        CourseCode,
+        CourseName,
+        DepartmentId,
+        Level,
+        Semester,
+        CreditUnits,
+        schedule,
+        LecturerIds
+    );
+
+    var success = await CourseService.AddCourseAsync(course);
+    if (success)
+    {
+        await OnCourseSaved.InvokeAsync(course);
+        await OnShowNotification.InvokeAsync($"Course '{CourseName}' added successfully!");
+        await CloseModal();
+    }
+    else
+    {
+        await OnShowNotification.InvokeAsync("Failed to add course. Please try again.");
+    }
+}
+
+private async Task UpdateCourse()
+{
+    var schedule = new CourseSchedule(TimeSlots);
+    var updatedCourse = new Course(
+        CourseCode,
+        CourseName,
+        DepartmentId,
+        Level,
+        Semester,
+        CreditUnits,
+        schedule,
+        LecturerIds,
+        DateTime.UtcNow,
+        "Admin"
+    );
+
+    var success = await CourseService.UpdateCourseAsync(updatedCourse);
+    if (success)
+    {
+        await OnCourseSaved.InvokeAsync(updatedCourse);
+        await OnShowNotification.InvokeAsync($"Course '{CourseName}' updated successfully!");
+        await CloseModal();
+    }
+    else
+    {
+        await OnShowNotification.InvokeAsync("Failed to update course. Please try again.");
+    }
+}
+
+private async Task AddLecturer()
+{
+    if (string.IsNullOrWhiteSpace(NewLecturerId))
+    {
+        await OnShowNotification.InvokeAsync("Please enter a lecturer ID");
+        return;
+    }
+
+    if (LecturerIds.Contains(NewLecturerId))
+    {
+        await OnShowNotification.InvokeAsync("Lecturer already added to this course");
+        return;
+    }
+
+    LecturerIds.Add(NewLecturerId);
+    NewLecturerId = "";
+    StateHasChanged();
+}
+
+private void RemoveLecturer(string lecturerId)
+{
+    LecturerIds.Remove(lecturerId);
+    StateHasChanged();
+}
+
+private async Task AddTimeSlot()
+{
+    if (string.IsNullOrWhiteSpace(NewLocation))
+    {
+        await OnShowNotification.InvokeAsync("Please enter a location");
+        return;
+    }
+
+    if (NewStartTime >= NewEndTime)
+    {
+        await OnShowNotification.InvokeAsync("Start time must be before end time");
+        return;
+    }
+
+    // Check for time conflicts
+    var conflictingSlot = TimeSlots.FirstOrDefault(ts =>
+        ts.Day == NewDay &&
+        ((ts.StartTime <= NewStartTime && ts.EndTime > NewStartTime) ||
+         (ts.StartTime < NewEndTime && ts.EndTime >= NewEndTime) ||
+         (ts.StartTime >= NewStartTime && ts.EndTime <= NewEndTime)));
+
+    if (!conflictingSlot.Equals(default(TimeSlot)))
+    {
+        await OnShowNotification.InvokeAsync($"Time conflict with existing slot on {conflictingSlot.Day}");
+        return;
+    }
+
+    var timeSlot = new TimeSlot
+    {
+        Day = NewDay,
+        StartTime = NewStartTime,
+        EndTime = NewEndTime,
+        Location = NewLocation
+    };
+
+    TimeSlots.Add(timeSlot);
+    NewLocation = "";
+    NewStartTime = new(9, 0, 0);
+    NewEndTime = new(10, 0, 0);
+    StateHasChanged();
+}
+
+private void RemoveTimeSlot(TimeSlot timeSlot)
+{
+    TimeSlots.Remove(timeSlot);
+    StateHasChanged();
+}
+
+private void UpdateStartTime(ChangeEventArgs e)
+{
+    if (TimeSpan.TryParse(e.Value?.ToString(), out var time))
+    {
+        NewStartTime = time;
+    }
+}
+
+private void UpdateEndTime(ChangeEventArgs e)
+{
+    if (TimeSpan.TryParse(e.Value?.ToString(), out var time))
+    {
+        NewEndTime = time;
+    }
+}
+
+private void HandleBackdropClick()
+{
+    if (!IsLoading)
+    {
+        _ = CloseModal();
+    }
+}
+
+private async Task CloseModal()
+{
+    await HideModalAsync();
+    ResetForm();
+    await OnClosed.InvokeAsync();
+}
+
+public async void Dispose()
+{
+    if (_isInPortal)
+    {
+        try
+        {
+            await BackdropService.ReturnElementFromPortalAsync(ModalSelector);
+        }
+        catch (Exception ex)
+        {
+            await MID_HelperFunctions.DebugMessageAsync($"Error during disposal: {ex.Message}", DebugClass.Exception);
+        }
+    }
+}
+}

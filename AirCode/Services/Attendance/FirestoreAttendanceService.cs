@@ -40,7 +40,7 @@ namespace AirCode.Services.Attendance
                 // Calculate end time
                 var endTime = startTime.AddMinutes(duration);
 
-                // Get all students taking this course
+                // Get all students taking this course -- remove this we no longer need it
                 var allStudentCourses = await _courseService.GetAllStudentCoursesAsync();
                 var studentsInCourse = allStudentCourses
                     .Where(sc => sc.GetEnrolledCourses().Any(cr => cr.CourseCode == courseCode))

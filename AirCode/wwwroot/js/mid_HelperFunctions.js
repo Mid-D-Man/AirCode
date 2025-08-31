@@ -4,7 +4,7 @@
 /**
  * Debug message type enumeration
  */
-const DebugClass = Object.freeze({
+let DebugClass = Object.freeze({
     LOG: 'log',
     WARNING: 'warning',
     ERROR: 'error',
@@ -15,7 +15,7 @@ const DebugClass = Object.freeze({
 /**
  * Environment detection
  */
-const Environment = Object.freeze({
+let Environment = Object.freeze({
     DEVELOPMENT: 'development',
     PRODUCTION: 'production',
     STAGING: 'staging'
