@@ -5,7 +5,7 @@
 <div class="error-container">
     <div class="animated-background">
         <div class="floating-shapes">
-            @for (int i = 0; i < 15; i++)
+            @for (int i = 0; i < 8; i++)
             {
                 <div class="shape shape-@i"></div>
             }
@@ -14,100 +14,59 @@
         <div class="gradient-orbs">
             <div class="orb orb-1"></div>
             <div class="orb orb-2"></div>
-            <div class="orb orb-3"></div>
         </div>
     </div>
 
     <div class="content-wrapper">
         <div class="error-content">
-            <!-- 3D Rotating Error Icon -->
+            <!-- Static Error Icon -->
             <div class="error-icon-container">
-                <div class="error-cube">
-                    <div class="cube-face front">
-                        <svg class="error-symbol" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="12" cy="12" r="10"/>
-                            <line x1="15" y1="9" x2="9" y2="15"/>
-                            <line x1="9" y1="9" x2="15" y2="15"/>
-                        </svg>
-                    </div>
-                    <div class="cube-face back">
-                        <svg class="error-symbol" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
-                            <path d="M12 9v4"/>
-                            <path d="m12 17 .01 0"/>
-                        </svg>
-                    </div>
-                    <div class="cube-face right">
-                        <svg class="error-symbol" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="12" cy="12" r="10"/>
-                            <path d="M12 8v4"/>
-                            <path d="m12 16 .01 0"/>
-                        </svg>
-                    </div>
-                    <div class="cube-face left">
-                        <svg class="error-symbol" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/>
-                            <path d="M15 9l-6 6"/>
-                            <path d="m9 9 6 6"/>
-                        </svg>
-                    </div>
-                    <div class="cube-face top">
-                        <svg class="error-symbol" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-                            <line x1="12" y1="9" x2="12" y2="13"/>
-                            <line x1="12" y1="17" x2="12.01" y2="17"/>
-                        </svg>
-                    </div>
-                    <div class="cube-face bottom">
-                        <svg class="error-symbol" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-                            <path d="m2 17 10 5 10-5"/>
-                            <path d="m2 12 10 5 10-5"/>
-                        </svg>
-                    </div>
+                <div class="error-icon">
+                    <svg class="error-symbol" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="15" y1="9" x2="9" y2="15"/>
+                        <line x1="9" y1="9" x2="15" y2="15"/>
+                    </svg>
                 </div>
             </div>
 
-            <!-- Glitch Effect Title -->
+            <!-- Static Title -->
             <div class="title-container">
-                <h1 class="glitch-title" data-text="SYSTEM ANOMALY DETECTED">
-                    <span class="glitch-text">SYSTEM</span>
-                    <span class="glitch-text">ANOMALY</span>
-                    <span class="glitch-text">DETECTED</span>
+                <h1 class="error-title">
+                    SYSTEM ANOMALY DETECTED
                 </h1>
             </div>
 
-            <!-- Animated Error Code -->
+            <!-- Error Code -->
             <div class="error-code-container">
                 <div class="error-code">
                     <span class="code-label">ERROR CODE:</span>
-                    <span class="code-value" id="errorCode">UNKNOWN_0x</span>
+                    <span class="code-value" id="errorCode">UNKNOWN_0x4F75</span>
                 </div>
                 <div class="code-description">
-                    <span class="typing-text" id="typingText"></span>
-                    <span class="cursor-blink">|</span>
+                    <span>An unexpected error occurred. Please try the options below.</span>
                 </div>
             </div>
 
             <!-- Status Indicators -->
             <div class="status-indicators">
                 <div class="indicator indicator-1">
-                    <div class="indicator-light"></div>
+                    <div class="indicator-light error-light"></div>
                     <span>SYSTEM STATUS</span>
                 </div>
                 <div class="indicator indicator-2">
-                    <div class="indicator-light"></div>
+                    <div class="indicator-light warning-light"></div>
                     <span>RECOVERY MODE</span>
                 </div>
                 <div class="indicator indicator-3">
-                    <div class="indicator-light"></div>
+                    <div class="indicator-light success-light"></div>
                     <span>USER SESSION</span>
                 </div>
             </div>
 
-            <!-- Action Buttons -->
+            <!-- Action Buttons - Fixed for Mobile -->
             <div class="action-buttons">
-                <button class="btn btn-primary" @onclick="ReturnHome">
+                <button class="btn btn-primary" @onclick="ReturnHome" type="button">
                     <div class="btn-content">
                         <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
@@ -115,20 +74,18 @@
                         </svg>
                         <span>RETURN TO BASE</span>
                     </div>
-                    <div class="btn-ripple"></div>
                 </button>
 
-                <button class="btn btn-secondary" @onclick="ContactSupport">
+                <button class="btn btn-secondary" @onclick="ContactSupport" type="button">
                     <div class="btn-content">
                         <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
                         </svg>
                         <span>CONTACT SUPPORT</span>
                     </div>
-                    <div class="btn-ripple"></div>
                 </button>
 
-                <button class="btn btn-warning" @onclick="InitiateLogout">
+                <button class="btn btn-warning" @onclick="InitiateLogout" type="button">
                     <div class="btn-content">
                         <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
@@ -137,19 +94,18 @@
                         </svg>
                         <span>EMERGENCY LOGOUT</span>
                     </div>
-                    <div class="btn-ripple"></div>
                 </button>
             </div>
 
-            <!-- Diagnostic Information -->
+            <!-- Simplified Diagnostic Information -->
             <div class="diagnostic-panel">
                 <div class="panel-header">
                     <span>DIAGNOSTIC INFORMATION</span>
-                    <div class="toggle-switch" @onclick="ToggleDiagnostics">
-                        <div class="toggle-slider"></div>
-                    </div>
+                    <button class="toggle-switch" @onclick="ToggleDiagnostics" type="button" aria-label="Toggle diagnostics">
+                        <div class="toggle-slider @(showDiagnostics ? "active" : "")"></div>
+                    </button>
                 </div>
-                <div class="panel-content" id="diagnosticContent">
+                <div class="panel-content @(showDiagnostics ? "active" : "")" id="diagnosticContent">
                     <div class="diagnostic-item">
                         <span class="diagnostic-label">Timestamp:</span>
                         <span class="diagnostic-value" id="timestamp"></span>
@@ -171,248 +127,78 @@
         </div>
     </div>
 
-    <!-- Particle System -->
+    <!-- Simplified Particle System -->
     <div class="particle-system" id="particleSystem"></div>
 </div>
 
 @code {
     private bool showDiagnostics = false;
-//an over engineered unknown error page
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
             await JSRuntime.InvokeVoidAsync("eval", @"
-                // Initialize Error Page JavaScript
+                // Simplified initialization
                 window.initializeErrorPage = function() {
-                    // Generate random error code
-                    const errorCodes = ['FATAL_0x', 'CRITICAL_0x', 'UNKNOWN_0x', 'SYSTEM_0x', 'RUNTIME_0x'];
-                    const randomCode = errorCodes[Math.floor(Math.random() * errorCodes.length)];
-                    const randomHex = Math.floor(Math.random() * 0xFFFF).toString(16).toUpperCase().padStart(4, '0');
-                    document.getElementById('errorCode').textContent = randomCode + randomHex;
-
-                    // Initialize typing effect
-                    const messages = [
-                        'Analyzing system state...',
-                        'Checking error logs...',
-                        'Attempting recovery procedures...',
-                        'Contacting support systems...',
-                        'Generating diagnostic report...',
-                        'System anomaly detected.',
-                        'Please try the available options below.'
-                    ];
-                    
-                    let messageIndex = 0;
-                    let charIndex = 0;
-                    const typingElement = document.getElementById('typingText');
-                    
-                    function typeMessage() {
-                        if (messageIndex < messages.length) {
-                            if (charIndex < messages[messageIndex].length) {
-                                typingElement.textContent += messages[messageIndex].charAt(charIndex);
-                                charIndex++;
-                                setTimeout(typeMessage, 50 + Math.random() * 50);
-                            } else {
-                                setTimeout(() => {
-                                    typingElement.textContent = '';
-                                    charIndex = 0;
-                                    messageIndex++;
-                                    if (messageIndex < messages.length) {
-                                        setTimeout(typeMessage, 1000);
-                                    }
-                                }, messageIndex === messages.length - 1 ? 0 : 2000);
-                            }
-                        }
-                    }
-                    
-                    setTimeout(typeMessage, 1000);
-
                     // Initialize diagnostic information
                     const now = new Date();
                     document.getElementById('timestamp').textContent = now.toISOString();
                     document.getElementById('sessionId').textContent = 'SID-' + Math.random().toString(36).substr(2, 9).toUpperCase();
                     document.getElementById('userAgent').textContent = navigator.userAgent.substring(0, 50) + '...';
 
-                    // Initialize particle system
-                    initializeParticles();
-
-                    // Add mouse interaction effects
-                    addMouseEffects();
-                };
-
-                // Particle system
-                function initializeParticles() {
+                    // Simple particle system (reduced for performance)
                     const particleSystem = document.getElementById('particleSystem');
-                    const particleCount = window.innerWidth < 768 ? 20 : 50;
+                    const particleCount = window.innerWidth < 768 ? 5 : 10;
+                    
+                    function createParticle() {
+                        const particle = document.createElement('div');
+                        particle.className = 'particle';
+                        particle.style.left = Math.random() * 100 + '%';
+                        particle.style.animationDuration = (15 + Math.random() * 10) + 's';
+                        particle.style.animationDelay = Math.random() * 5 + 's';
+                        particleSystem.appendChild(particle);
+                        
+                        setTimeout(() => {
+                            if (particle.parentNode) {
+                                particle.parentNode.removeChild(particle);
+                            }
+                        }, 25000);
+                    }
                     
                     for (let i = 0; i < particleCount; i++) {
-                        setTimeout(() => {
-                            createParticle(particleSystem);
-                        }, i * 300);
+                        setTimeout(() => createParticle(), i * 1000);
                     }
                     
                     setInterval(() => {
                         if (particleSystem.children.length < particleCount) {
-                            createParticle(particleSystem);
+                            createParticle();
                         }
-                    }, 1000);
-                }
-
-                function createParticle(container) {
-                    const particle = document.createElement('div');
-                    particle.className = 'particle';
-                    particle.style.left = Math.random() * 100 + '%';
-                    particle.style.animationDuration = (10 + Math.random() * 10) + 's';
-                    particle.style.animationDelay = Math.random() * 2 + 's';
-                    
-                    const colors = ['var(--primary-400)', 'var(--secondary-400)', 'var(--success)', 'var(--warning)'];
-                    particle.style.background = colors[Math.floor(Math.random() * colors.length)];
-                    
-                    container.appendChild(particle);
-                    
-                    setTimeout(() => {
-                        if (particle.parentNode) {
-                            particle.parentNode.removeChild(particle);
-                        }
-                    }, 15000);
-                }
-
-                // Mouse interaction effects
-                function addMouseEffects() {
-                    const container = document.querySelector('.error-container');
-                    
-                    container.addEventListener('mousemove', (e) => {
-                        const { clientX, clientY } = e;
-                        const { innerWidth, innerHeight } = window;
-                        
-                        const xPercent = (clientX / innerWidth - 0.5) * 2;
-                        const yPercent = (clientY / innerHeight - 0.5) * 2;
-                        
-                        // Parallax effect for orbs
-                        const orbs = document.querySelectorAll('.orb');
-                        orbs.forEach((orb, index) => {
-                            const factor = (index + 1) * 0.5;
-                            orb.style.transform = `translate(${xPercent * factor * 10}px, ${yPercent * factor * 10}px) scale(${1 + Math.abs(xPercent) * 0.1})`;
-                        });
-                        
-                        // Cube interaction
-                        const cube = document.querySelector('.error-cube');
-                        if (cube) {
-                            cube.style.transform = `rotateY(${xPercent * 15}deg) rotateX(${-yPercent * 15}deg) scale(${1 + Math.abs(xPercent) * 0.1})`;
-                        }
-                    });
-                }
-
-                // Button animation triggers
-                window.triggerButtonAnimation = function(type) {
-                    const button = document.querySelector(`.btn-${type === 'return' ? 'primary' : type === 'contact' ? 'secondary' : 'warning'}`);
-                    if (button) {
-                        button.style.transform = 'scale(0.95)';
-                        button.style.filter = 'brightness(1.2)';
-                        
-                        // Create explosion effect
-                        const rect = button.getBoundingClientRect();
-                        for (let i = 0; i < 12; i++) {
-                            const spark = document.createElement('div');
-                            spark.style.position = 'fixed';
-                            spark.style.left = rect.left + rect.width / 2 + 'px';
-                            spark.style.top = rect.top + rect.height / 2 + 'px';
-                            spark.style.width = '4px';
-                            spark.style.height = '4px';
-                            spark.style.background = type === 'return' ? 'var(--primary-400)' : type === 'contact' ? 'var(--secondary-400)' : 'var(--warning)';
-                            spark.style.borderRadius = '50%';
-                            spark.style.pointerEvents = 'none';
-                            spark.style.zIndex = '9999';
-                            
-                            const angle = (i / 12) * Math.PI * 2;
-                            const velocity = 50 + Math.random() * 50;
-                            const vx = Math.cos(angle) * velocity;
-                            const vy = Math.sin(angle) * velocity;
-                            
-                            spark.style.animation = `sparkFly 0.6s ease-out forwards`;
-                            spark.style.setProperty('--vx', vx + 'px');
-                            spark.style.setProperty('--vy', vy + 'px');
-                            
-                            document.body.appendChild(spark);
-                            
-                            setTimeout(() => {
-                                if (spark.parentNode) {
-                                    spark.parentNode.removeChild(spark);
-                                }
-                            }, 600);
-                        }
-                        
-                        setTimeout(() => {
-                            button.style.transform = '';
-                            button.style.filter = '';
-                        }, 200);
-                    }
+                    }, 5000);
                 };
 
-                // Diagnostic panel toggle
-                window.toggleDiagnosticPanel = function(show) {
-                    const panel = document.getElementById('diagnosticContent');
-                    const toggle = document.querySelector('.toggle-switch');
-                    
-                    if (show) {
-                        panel.classList.add('active');
-                        toggle.classList.add('active');
-                        panel.style.maxHeight = panel.scrollHeight + 'px';
-                    } else {
-                        panel.classList.remove('active');
-                        toggle.classList.remove('active');
-                        panel.style.maxHeight = '0';
-                    }
-                };
-
-                // Add spark animation to document
-                const sparkStyle = document.createElement('style');
-                sparkStyle.textContent = `
-                    @keyframes sparkFly {
-                        0% {
-                            transform: translate(0, 0) scale(1);
-                            opacity: 1;
-                        }
-                        100% {
-                            transform: translate(var(--vx), var(--vy)) scale(0);
-                            opacity: 0;
-                        }
-                    }
-                `;
-                document.head.appendChild(sparkStyle);
+                window.initializeErrorPage();
             ");
-            
-            await JSRuntime.InvokeVoidAsync("initializeErrorPage");
         }
     }
 
     private async Task ReturnHome()
     {
-        await JSRuntime.InvokeVoidAsync("triggerButtonAnimation", "return");
-        await Task.Delay(800);
         Navigation.NavigateTo("/", true);
     }
 
     private async Task ContactSupport()
     {
-        await JSRuntime.InvokeVoidAsync("triggerButtonAnimation", "contact");
-        await Task.Delay(800);
         Navigation.NavigateTo("ContactUs", true);
     }
 
     private async Task InitiateLogout()
     {
-        await JSRuntime.InvokeVoidAsync("triggerButtonAnimation", "logout");
-        await Task.Delay(800);
-        // Add your logout logic here - example:
-        // await AuthService.LogoutAsync();
         Navigation.NavigateTo("logout", true);
     }
 
-    private async Task ToggleDiagnostics()
+    private void ToggleDiagnostics()
     {
         showDiagnostics = !showDiagnostics;
-        await JSRuntime.InvokeVoidAsync("toggleDiagnosticPanel", showDiagnostics);
-        StateHasChanged();
     }
 }

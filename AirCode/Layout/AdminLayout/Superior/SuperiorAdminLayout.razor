@@ -10,6 +10,7 @@
 @using AirCode.Services.Academic
 @using AirCode.Services.Auth
 @using AirCode.Components.SharedPrefabs.Others
+@using AirCode.Models.Search
 @inject IFirestoreService FirestoreService
 @inject ICourseService CourseService
 @inject IAttendanceSessionService AttendanceService
@@ -41,11 +42,6 @@
                     <div class="stat-label">Active Sessions</div>
                 </div>
 
-                <div class="stat-item connection-status @(_connectivityStatus.IsOnline ? "online" : "offline")">
-                    <div class="stat-value">@(_connectivityStatus.IsOnline ? "Online" : "Offline")</div>
-                    <div class="stat-label">Connection</div>
-                </div>
-
                 @if (_pendingOfflineSessions > 0)
                 {
                     <div class="stat-item sync-item @(_isSyncing ? "syncing" : "")" @onclick="HandleOfflineSync" style="cursor: pointer;">
@@ -53,21 +49,19 @@
                         <div class="stat-label">@(_isSyncing ? "Syncing..." : "Offline Sync")</div>
                     </div>
                 }
-
-                @if (_currentSession != null)
-                {
-                    <div class="stat-item">
-                        <div class="stat-value">@_currentSession.SessionId</div>
-                        <div class="stat-label">Current Session</div>
-                    </div>
-                }
             </div>
 
             <div class="header-actions">
-                <button class="refresh-btn @(_isDataLoading ? "loading" : "")" @onclick="RefreshData" disabled="@_isDataLoading">
-                    <i class="fas @(_isDataLoading ? "fa-spinner fa-spin" : "fa-refresh")"></i>
-                    @(_isDataLoading ? "Loading..." : "Refresh")
-                </button>
+                <div class="search-container">
+                    <DynamicSearch 
+                        Context="General" 
+                        Placeholder="Search dashboard..."
+                        MaxSuggestions="6"
+                        MaxResults="10"
+                        OnSearchChanged="HandleSearchChanged"
+                        OnSuggestionSelected="HandleSuggestionSelected"
+                        OnResultSelected="HandleResultSelected" />
+                </div>
             </div>
         </div>
 
@@ -95,7 +89,6 @@
     private int _activeSessions = 0;
     private int _totalSessions = 0;
     private int _pendingOfflineSessions = 0;
-    private AcademicSession? _currentSession;
     private bool _isSyncing = false;
     private bool _isDataLoading = true;
     
@@ -143,28 +136,8 @@
         }
     }
 
-    private async Task LoadRealtimeData()
-    {
-        try
-        {
-            var loadingTasks = new List<Task>
-            {
-                LoadUserMetrics(),
-                LoadSessionMetrics(),
-                LoadOfflineMetrics(),
-                LoadAcademicSessionInfo()
-            };
-
-            await Task.WhenAll(loadingTasks);
-        }
-        catch (Exception ex)
-        {
-            MID_HelperFunctions.DebugMessage($"Error loading realtime data: {ex.Message}");
-            ShowNotification("Error loading dashboard data", NotificationType.Warning);
-        }
-    }
-
-    private async Task LoadUserMetrics()
+    // Expose LoadUserMetrics method for dashboard to use
+    public async Task<(int totalUsers, int activeUsers, int totalStudents, int activeStudents, int totalLecturers, int activeLecturers)> LoadUserMetricsAsync()
     {
         try
         {
@@ -204,13 +177,43 @@
             totalStudents = Math.Max(totalStudents, firebaseStudentCount);
             activeStudents = Math.Max(activeStudents, firebaseActiveCount);
 
-            _totalUsers = totalStudents + totalLecturers;
-            _activeUsers = activeStudents + activeLecturers;
+            var totalUsers = totalStudents + totalLecturers;
+            var activeUsers = activeStudents + activeLecturers;
+
+            return (totalUsers, activeUsers, totalStudents, activeStudents, totalLecturers, activeLecturers);
         }
         catch (Exception ex)
         {
             MID_HelperFunctions.DebugMessage($"Error loading user metrics: {ex.Message}");
+            return (0, 0, 0, 0, 0, 0);
         }
+    }
+
+    private async Task LoadRealtimeData()
+    {
+        try
+        {
+            var loadingTasks = new List<Task>
+            {
+                LoadUserMetrics(),
+                LoadSessionMetrics(),
+                LoadOfflineMetrics()
+            };
+
+            await Task.WhenAll(loadingTasks);
+        }
+        catch (Exception ex)
+        {
+            MID_HelperFunctions.DebugMessage($"Error loading realtime data: {ex.Message}");
+            ShowNotification("Error loading dashboard data", NotificationType.Warning);
+        }
+    }
+
+    private async Task LoadUserMetrics()
+    {
+        var (totalUsers, activeUsers, _, _, _, _) = await LoadUserMetricsAsync();
+        _totalUsers = totalUsers;
+        _activeUsers = activeUsers;
     }
 
     private async Task LoadSessionMetrics()
@@ -239,18 +242,6 @@
         catch (Exception ex)
         {
             MID_HelperFunctions.DebugMessage($"Error loading offline metrics: {ex.Message}");
-        }
-    }
-
-    private async Task LoadAcademicSessionInfo()
-    {
-        try
-        {
-            _currentSession = await AcademicSessionService.GetCurrentSessionAsync();
-        }
-        catch (Exception ex)
-        {
-            MID_HelperFunctions.DebugMessage($"Error loading academic session: {ex.Message}");
         }
     }
 
@@ -297,22 +288,25 @@
         }
     }
 
-    private async Task RefreshData()
+    // Search event handlers
+    private void HandleSearchChanged(string searchTerm)
     {
-        if (_isDataLoading) return;
-        
-        _isDataLoading = true;
-        StateHasChanged();
-        
-        try
+        // Optional: Handle search term changes for analytics or other purposes
+    }
+
+    private void HandleSuggestionSelected(SearchSuggestion suggestion)
+    {
+        if (!string.IsNullOrEmpty(suggestion.Url))
         {
-            await LoadRealtimeData();
-            ShowNotification("Dashboard data refreshed", NotificationType.Success);
+            NavigationManager.NavigateTo(suggestion.Url);
         }
-        finally
+    }
+
+    private void HandleResultSelected(SearchResult result)
+    {
+        if (!string.IsNullOrEmpty(result.Url))
         {
-            _isDataLoading = false;
-            StateHasChanged();
+            NavigationManager.NavigateTo(result.Url);
         }
     }
 
