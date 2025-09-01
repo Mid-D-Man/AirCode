@@ -9,10 +9,10 @@ namespace AirCode.Services.Guards
 
             var routeRoleMap = new Dictionary<string, string[]>
             {
-                { "/Admin/SuperiorDashboard", new[] { "superioradmin" } },
-                { "/Admin/Dashboard", new[] { "lectureradmin", "courseadmin" } },
-                { "/Client/ScanAttendance", new[] { "student" } },
-                { "/Client/Dashboard", new[] { "student" } }
+                { "Admin/SuperiorDashboard", new[] { "superioradmin" } },
+                { "Admin/Dashboard", new[] { "lectureradmin", "courseadmin" } },
+                { "Client/ScanAttendance", new[] { "student" } },
+                { "Client/Dashboard", new[] { "student" } }
             };
 
             if (routeRoleMap.TryGetValue(route, out var requiredRoles))
@@ -34,10 +34,10 @@ namespace AirCode.Services.Guards
             
             return await Task.FromResult(role switch
             {
-                "superioradmin" => "/Admin/SuperiorDashboard",
-                "lectureradmin" => "/Admin/Dashboard",
-                "courseadmin" => "/Admin/Dashboard",
-                "student" => "/Client/ScanAttendance",
+                "superioradmin" => "Admin/SuperiorDashboard",
+                "lectureradmin" => "Admin/Dashboard",
+                "courseadmin" => "Admin/Dashboard",
+                "student" => "Client/ScanAttendance",
                 _ => "/"
             });
         }

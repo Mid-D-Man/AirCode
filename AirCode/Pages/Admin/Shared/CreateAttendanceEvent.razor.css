@@ -1,4 +1,4 @@
-/* CreateAttendanceEvent.razor.css - Updated with Spinner Integration */
+/* CreateAttendanceEvent.razor.css  */
 .create-session-page {
     max-width: 1200px;
     margin: 0 auto;
@@ -264,7 +264,7 @@ body.dark-mode .floating-qr-icon:hover {
     position: relative;
 }
 
-/* Removed duplicate/conflicting spinner styles - now handled by LoadingSpinner component */
+
 
 /* Session Status Indicators - Enhanced */
 .session-status-indicators {

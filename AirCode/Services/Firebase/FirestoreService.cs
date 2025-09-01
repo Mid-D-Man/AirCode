@@ -515,8 +515,6 @@ namespace AirCode.Services.Firebase
             }
         }
         
-        // Add to FirestoreService.cs implementation
-        
         #region Student Level Operations
         
         private const string STUDENTS_LEVEL_COLLECTION = "STUDENTS_LEVEL_TRACKER";
@@ -877,8 +875,7 @@ namespace AirCode.Services.Firebase
     }
         
         #endregion
-        // Add these implementations to FirestoreService class
-
+        
 #region Distributed Document Operations
 
 public async Task<string> AddToDistributedDocumentAsync(string collection, string documentId, string key, string jsonData)

@@ -5,7 +5,6 @@ using Microsoft.JSInterop;
 using System.Text.Json;
 using AirCode.Utilities.HelperScripts;
 using Microsoft.AspNetCore.Components;
-using Microsoft.Extensions.Logging;
 
 namespace AirCode.Services.Auth
 {
@@ -279,7 +278,7 @@ private async Task<string> GenerateGravatarUrlAsync(string email, int size = 80)
        
         if (!user.Identity.IsAuthenticated)
         {
-            _logger.LogDebug("User not authenticated, returning empty user email");
+          await  MID_HelperFunctions.DebugMessageAsync("User not authenticated, returning empty user email");
             return string.Empty;
         }
             
@@ -290,18 +289,18 @@ private async Task<string> GenerateGravatarUrlAsync(string email, int size = 80)
         if (!string.IsNullOrEmpty(userEmail))
         {
             var sanitizedEmail = SanitizeEmailForLogging(userEmail);
-            _logger.LogDebug("Retrieved user email: {SanitizedEmail}", sanitizedEmail);
+            await  MID_HelperFunctions.DebugMessageAsync("Retrieved user email: {SanitizedEmail -> sanitizedEmail}");
         }
         else
         {
-            _logger.LogDebug("No email found in user claims");
+            await  MID_HelperFunctions.DebugMessageAsync("No email found in user claims",DebugClass.Warning);
         }
         
         return userEmail ?? string.Empty;
     }
     catch (Exception ex)
     {
-        _logger.LogError(ex, "Error retrieving user email");
+        await  MID_HelperFunctions.DebugMessageAsync( "Error retrieving user email -> " + ex);
         return string.Empty;
     }
 }

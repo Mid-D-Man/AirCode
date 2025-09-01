@@ -8,7 +8,7 @@ public class BusinessHoursGuard : IBusinessHoursGuard
 {
     //imple buss guard as last last thing not now though test out time service to
     private readonly IServerTimeService _serverTimeService;
-    private readonly string[] _exemptRoutes = { "/outside-business-hours", "/error", "/loading" };
+    private readonly string[] _exemptRoutes = { "outside-business-hours", "error", "loading" };
 
     public BusinessHoursGuard(IServerTimeService serverTimeService)
     {
@@ -39,7 +39,7 @@ public class BusinessHoursGuard : IBusinessHoursGuard
             
         if (!isBusinessHours)
         {
-            navigationManager.NavigateTo("/outside-business-hours");
+            navigationManager.NavigateTo("outside-business-hours");
         }
     }
 

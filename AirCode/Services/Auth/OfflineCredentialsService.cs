@@ -14,7 +14,7 @@ public class OfflineCredentialsService : IOfflineCredentialsService
     private readonly AuthenticationStateProvider _authStateProvider;
     private readonly ILogger<OfflineCredentialsService> _logger;
 
-    // Test constants - DO NOT use in production!
+    // Test constants - DO NOT use in production! use config service or fetch from edge functions (dont forget)
     internal static string TEST_KEY = "+58K1jECYmF6GpPovgv3kmUMljv/EvY3G1NPwWqRCj8=";
     internal static string TEST_IV = "3emqU/f2fW6KG4rqanUG+Q==";
 

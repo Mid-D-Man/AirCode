@@ -62,14 +62,15 @@
                         <div class="search-item @(SelectedIndex == index ? "selected" : "")" 
                              @onclick="() => SelectSuggestion(suggestion)"
                              @onmouseenter="() => SelectedIndex = index">
-                            @if (!string.IsNullOrEmpty(suggestion.IconPath))
+                        <!--    @if (!string.IsNullOrEmpty(suggestion.IconPath))
                             {
-                                <img src="@suggestion.IconPath" alt="" class="item-icon" />
+                            <img src="@suggestion.IconPath" alt="" class="item-icon" /> 
                             }
                             else
                             {
                                 <div class="item-icon-placeholder"></div>
                             }
+                            -->
                             <div class="item-content">
                                 <div class="item-title">@suggestion.Text</div>
                                 <div class="item-context">@suggestion.Context</div>
@@ -87,17 +88,18 @@
                     {
                         var index = i;
                         var result = Results[i];
-                        <div class="search-item @(SelectedIndex == index ? "selected" : "")" 
+                        <div class="search-item @(SelectedIndex == index ? "selected" : "")"
                              @onclick="() => SelectResult(result)"
                              @onmouseenter="() => SelectedIndex = index">
+                            <!--
                             @if (!string.IsNullOrEmpty(result.IconPath))
                             {
-                                <img src="@result.IconPath" alt="" class="item-icon" />
+                                <img src="@result.IconPath" alt="" class="item-icon"/>
                             }
                             else
                             {
                                 <div class="item-icon-placeholder"></div>
-                            }
+                            } -->
                             <div class="item-content">
                                 <div class="item-title">@result.Title</div>
                                 <div class="item-description">@result.Description</div>

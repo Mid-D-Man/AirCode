@@ -1,8 +1,11 @@
-using AirCode.Domain.Enums;
+
 using AirCode.Services.Auth;
 
 namespace AirCode.Services.Permissions
 {
+    /// <summary>
+    /// this needs to be expanded upon at end , helps determine permissions easily
+    /// </summary>
     public class PermissionService : IPermissionService
     {
         private readonly IAuthService _authService;

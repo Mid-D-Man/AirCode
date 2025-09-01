@@ -1,11 +1,12 @@
 using AirCode.Models.Supabase;
 using AirCode.Services.SupaBase;
-using Microsoft.Extensions.Logging;
-using Supabase.Postgrest;
 using static Supabase.Postgrest.Constants;
 
 namespace AirCode.Services.Attendance
-{
+{/// <summary>
+ /// for supabase attendance session,delete online session imediately after session end and offline sessions only get
+ /// deleted after semester end, but fetched from when ever new session is created or rather ends-- - - - - - hmmmmmmm think about it
+ /// </summary>
     public class AttendanceSessionService : IAttendanceSessionService
     {
         private readonly ISupabaseDatabase _database;

@@ -1,9 +1,22 @@
 
 using AirCode.Models.Search;
-using AirCode.Services.Auth;
+using AirCode.Services.VisualElements;
 using Microsoft.AspNetCore.Components;
 namespace AirCode.Services.Search;
 
+/// <summary>
+/// Works
+/// .
+/// .
+/// .
+/// .
+/// .
+/// .
+/// .
+/// .
+/// .
+///  to an extent
+/// </summary>
 public class SearchContextService : ISearchContextService
 {
     private readonly NavigationManager _navigationManager;
@@ -16,8 +29,6 @@ public class SearchContextService : ISearchContextService
      )
     {
         _navigationManager = navigationManager;
-       
-
         // Register built-in context providers
         RegisterDefaultProviders();
     }
@@ -131,52 +142,41 @@ public class SearchContextService : ISearchContextService
             {
                 new()
                 {
-                    Text = "Dashboard", Context = "Navigation", Url = "/Admin/Dashboard",
-                    IconPath = "/svgs/Admin_Icon.svg", Priority = 10
+                    Text = "Dashboard", Context = "Navigation", Url = "Admin/Dashboard",
+                   Priority = 10
                 },
                 new()
                 {
-                    Text = "Create Session", Context = "Activity", Url = "/Admin/CreateSession",
-                    IconPath = "/svgs/QRCode_Icon.svg", Priority = 9
+                    Text = "Create Session", Context = "Activity", Url = "Admin/CreateSession", Priority = 9
                 },
                 new()
                 {
-                    Text = "User Management", Context = "Admin", Url = "/TestPage", IconPath = "/svgs/Users_Icon.svg",
+                    Text = "User Management", Context = "Admin", Url = "TestPage",
                     Priority = 8
                 },
                 new()
                 {
-                    Text = "Admin Management", Context = "Admin", Url = "/admin/admins",
-                    IconPath = "/svgs/Admin_Icon.svg", Priority = 7
+                    Text = "Manage Courses", Context = "Courses", Url = "Admin/ManageCourses",
+                    Priority = 7
                 },
                 new()
                 {
-                    Text = "Manage Courses", Context = "Courses", Url = "/Admin/ManageCourses",
-                    IconPath = "/svgs/Admin_Icon.svg", Priority = 7
+                    Text = "Reports", Context = "Analysis", Url = "Admin/ShaderPage1",
+                   Priority = 6
                 },
                 new()
                 {
-                    Text = "Reports", Context = "Analysis", Url = "/Admin/ShaderPage1",
-                    IconPath = "/svgs/Report_Icon.svg", Priority = 6
+                    Text = "Settings", Context = "Preferences", Url = "/Admin/Settings",
+                   Priority = 5
                 },
                 new()
                 {
-                    Text = "Statistics", Context = "Analysis", Url = "/admin/stats", IconPath = "/svgs/Stats_Icon.svg",
-                    Priority = 6
+                    Text = "Contact", Context = "Support", Url = "ContactUs",
+                   Priority = 4
                 },
                 new()
                 {
-                    Text = "Settings", Context = "Preferences", Url = "/admin/settings",
-                    IconPath = "/svgs/Admin_Icon.svg", Priority = 5
-                },
-                new()
-                {
-                    Text = "Contact", Context = "Support", Url = "/admin/contact",
-                    IconPath = "/svgs/ContactUs_Icon.svg", Priority = 4
-                },
-                new()
-                {
-                    Text = "Logout", Context = "Auth", Url = "/auth", IconPath = "/svgs/Logout_Icon.svg", Priority = 3
+                    Text = "Logout", Context = "Auth", Url = "logout", Priority = 3
                 }
             };
         }
@@ -207,7 +207,6 @@ public class SearchContextService : ISearchContextService
                     Description = $"Navigate to {s.Text}",
                     Url = s.Url,
                     Context = s.Context,
-                    IconPath = s.IconPath,
                     Relevance = CalculateRelevance(s.Text, s.Context, searchTerm)
                 })
                 .OrderByDescending(r => r.Relevance)
@@ -242,7 +241,7 @@ public class SearchContextService : ISearchContextService
             return relevance;
         }
     }
-/*
+/* nah
     private class CoursesSearchProvider : ISearchContextProvider
     {
         private readonly ICourseService _courseService;
