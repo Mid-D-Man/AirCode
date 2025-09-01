@@ -1,6 +1,6 @@
 // wwwroot/js/firestoreModule.js
 
-// Enhanced Firestore module for Blazor WASM interop with document/field/subcollection support
+//  Firestore module for Blazor WASM interop with document/field/subcollection support
 window.firestoreModule = (function () {
     let db = null;
     let isInitialized = false;

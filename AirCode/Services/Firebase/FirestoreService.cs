@@ -1,8 +1,4 @@
 // Services/Firebase/FirestoreService.cs
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using AirCode.Domain.Entities;
 using AirCode.Domain.Enums;
 using AirCode.Models.Firebase;
@@ -527,142 +523,167 @@ namespace AirCode.Services.Firebase
             try
             {
                 var levelData = await GetStudentLevelAsync(matricNumber);
-                var levelString = levelData.Level;
-                switch (levelString)
+                if (levelData == null || string.IsNullOrEmpty(levelData.Level))
                 {
-                    case "100": 
-                    {
-                        return LevelType.Level100;
-                    }
-                    case "200":
-                    {
-                        return LevelType.Level200;
-                    }
-                      case "300": 
-                                        {
-                                            return LevelType.Level300;
-                                        }
-                                        case "400":
-                                        {
-                                            return LevelType.Level400;
-                                        }
-                    case "500": 
-                    {
-                        return LevelType.Level500;
-                    }
-                    default :
-                    {
-                        return LevelType.LevelExtra;
-                    }
+                    MID_HelperFunctions.DebugMessage($"No level data found for {matricNumber}", DebugClass.Warning);
+                    return LevelType.LevelExtra;
                 }
-            }  catch (Exception ex)
+
+                var levelString = levelData.Level.Trim();
+        
+                MID_HelperFunctions.DebugMessage($"Student {matricNumber} level string: '{levelString}'", DebugClass.Info);
+        
+                return levelString switch
+                {
+                    "100" => LevelType.Level100,
+                    "200" => LevelType.Level200,
+                    "300" => LevelType.Level300,
+                    "400" => LevelType.Level400,
+                    "500" => LevelType.Level500,
+                    _ => LevelType.LevelExtra
+                };
+            }
+            catch (Exception ex)
             {
                 MID_HelperFunctions.DebugMessage($"Error getting student level for {matricNumber}: {ex.Message}", DebugClass.Exception);
                 return LevelType.LevelExtra;
             }
         }
         public async Task<StudentLevelInfo> GetStudentLevelAsync(string matricNumber)
+{
+    try
+    {
+        if (!_isInitialized) await InitializeAsync();
+        
+        MID_HelperFunctions.DebugMessage($"Getting student level for: {matricNumber}", DebugClass.Info);
+        
+        // ONLINE FIRST - Find document containing this matric number
+        string targetDocument = await FindDocumentContainingKeyAsync(
+            STUDENTS_LEVEL_COLLECTION, BASE_LEVEL_DOCUMENT, matricNumber);
+        
+        if (string.IsNullOrEmpty(targetDocument))
         {
-            try
+            MID_HelperFunctions.DebugMessage($"No document found containing matric number: {matricNumber}", DebugClass.Warning);
+            
+            // Try offline cache as fallback
+            var cachedLevels = await _localStorage?.GetItemAsync<Dictionary<string, StudentLevelInfo>>(LEVEL_CACHE_KEY);
+            if (cachedLevels?.ContainsKey(matricNumber) == true)
             {
-                if (!_isInitialized) await InitializeAsync();
-                
-                // Try local cache first
-                var cachedLevels = await _localStorage?.GetItemAsync<Dictionary<string, StudentLevelInfo>>(LEVEL_CACHE_KEY);
-                if (cachedLevels?.ContainsKey(matricNumber) == true)
-                {
-                    return cachedLevels[matricNumber];
-                }
-                
-                // Find document containing this matric number
-                string targetDocument = await FindDocumentContainingKeyAsync(
-                    STUDENTS_LEVEL_COLLECTION, BASE_LEVEL_DOCUMENT, matricNumber);
-                
-                if (string.IsNullOrEmpty(targetDocument))
-                {
-                    return null;
-                }
-                
-                // Get student data
-                var studentData = await GetFieldAsync<Dictionary<string, object>>(
-                    STUDENTS_LEVEL_COLLECTION, targetDocument, matricNumber);
-                
-                if (studentData == null) return null;
-                
-                var studentInfo = new StudentLevelInfo
-                {
-                    MatricNumber = matricNumber,
-                    Email = studentData.GetValueOrDefault("email")?.ToString(),
-                    Level = studentData.GetValueOrDefault("level")?.ToString(),
-                    RegistrationDate = DateTime.TryParse(studentData.GetValueOrDefault("registrationDate")?.ToString(), out var date) 
-                        ? date : DateTime.MinValue
-                };
-                
-                // Cache locally
-                await CacheStudentLevelAsync(matricNumber, studentInfo);
-                
-                return studentInfo;
+                MID_HelperFunctions.DebugMessage($"Found student level in offline cache: {matricNumber}", DebugClass.Info);
+                return cachedLevels[matricNumber];
             }
-            catch (Exception ex)
-            {
-                MID_HelperFunctions.DebugMessage($"Error getting student level for {matricNumber}: {ex.Message}", DebugClass.Exception);
-                return null;
-            }
+            
+            return null;
         }
         
-        public async Task<bool> UpdateStudentLevelAsync(string matricNumber, string newLevel)
+        MID_HelperFunctions.DebugMessage($"Found student in document: {targetDocument}", DebugClass.Info);
+        
+        // Get student data from the found document
+        var studentData = await GetFieldAsync<Dictionary<string, object>>(
+            STUDENTS_LEVEL_COLLECTION, targetDocument, matricNumber);
+        
+        if (studentData == null)
         {
-            try
+            MID_HelperFunctions.DebugMessage($"Student data is null in document: {targetDocument}", DebugClass.Warning);
+            return null;
+        }
+        
+        var studentInfo = new StudentLevelInfo
+        {
+            MatricNumber = matricNumber,
+            Email = studentData.GetValueOrDefault("email")?.ToString(),
+            Level = studentData.GetValueOrDefault("level")?.ToString(),
+            RegistrationDate = DateTime.TryParse(studentData.GetValueOrDefault("registrationDate")?.ToString(), out var date) 
+                ? date : DateTime.MinValue
+        };
+        
+        MID_HelperFunctions.DebugMessage($"Retrieved student info - Level: {studentInfo.Level}, Email: {studentInfo.Email}", DebugClass.Info);
+        
+        // Cache locally after successful online retrieval
+        await CacheStudentLevelAsync(matricNumber, studentInfo);
+        
+        return studentInfo;
+    }
+    catch (Exception ex)
+    {
+        MID_HelperFunctions.DebugMessage($"Error getting student level for {matricNumber}: {ex.Message}", DebugClass.Exception);
+        
+        // Try offline cache as fallback on error
+        try
+        {
+            var cachedLevels = await _localStorage?.GetItemAsync<Dictionary<string, StudentLevelInfo>>(LEVEL_CACHE_KEY);
+            if (cachedLevels?.ContainsKey(matricNumber) == true)
             {
-                if (!_isInitialized) await InitializeAsync();
-
-                // Find document containing this student
-                string targetDocument = await FindDocumentContainingKeyAsync(
-                    STUDENTS_LEVEL_COLLECTION, BASE_LEVEL_DOCUMENT, matricNumber);
-
-                if (string.IsNullOrEmpty(targetDocument))
-                {
-                    return false;
-                }
-
-                // Update level field only
-                var updateData = new Dictionary<string, object> { { "level", newLevel } };
-                var json = JsonConvert.SerializeObject(updateData, _jsonSettings);
-
-                bool result = await UpdateFieldInDistributedDocumentAsync(
-                    STUDENTS_LEVEL_COLLECTION, targetDocument, matricNumber, json);
-
-
-                if (result)
-                {
-                    if (_permissionService.CanCacheAllStudentsLevel(await _authService.GetUserIdAsync()).Result)
-                    {
-                        // Update local cache
-                        var cachedLevels =
-                            await _localStorage?.GetItemAsync<Dictionary<string, StudentLevelInfo>>(LEVEL_CACHE_KEY)
-                            ?? new Dictionary<string, StudentLevelInfo>();
-
-                        if (cachedLevels.ContainsKey(matricNumber))
-                        {
-                            cachedLevels[matricNumber].Level = newLevel;
-                            await _localStorage?.SetItemAsync(LEVEL_CACHE_KEY, cachedLevels);
-
-                            await _localStorage?.SetItemAsync("M_Personal_Level", cachedLevels[matricNumber].Level);
-
-                        }
-                    }
-                }
-
-                return result;
-                }
-            
-            catch (Exception ex)
-            {
-                MID_HelperFunctions.DebugMessage($"Error updating student level for {matricNumber}: {ex.Message}",
-                    DebugClass.Exception);
-                return false;
+                MID_HelperFunctions.DebugMessage($"Fallback to offline cache successful for: {matricNumber}", DebugClass.Info);
+                return cachedLevels[matricNumber];
             }
         }
+        catch (Exception cacheEx)
+        {
+            MID_HelperFunctions.DebugMessage($"Cache fallback also failed: {cacheEx.Message}", DebugClass.Exception);
+        }
+        
+        return null;
+    }
+}
+
+        
+       public async Task<bool> UpdateStudentLevelAsync(string matricNumber, string newLevel)
+{
+    try
+    {
+        if (!_isInitialized) await InitializeAsync();
+
+        // Find document containing this student
+        string targetDocument = await FindDocumentContainingKeyAsync(
+            STUDENTS_LEVEL_COLLECTION, BASE_LEVEL_DOCUMENT, matricNumber);
+
+        if (string.IsNullOrEmpty(targetDocument))
+        {
+            MID_HelperFunctions.DebugMessage($"Cannot update level - student {matricNumber} not found in any document", DebugClass.Warning);
+            return false;
+        }
+
+        // Update level field only
+        var updateData = new Dictionary<string, object> { { "level", newLevel } };
+        var json = JsonConvert.SerializeObject(updateData, _jsonSettings);
+
+        bool result = await UpdateFieldInDistributedDocumentAsync(
+            STUDENTS_LEVEL_COLLECTION, targetDocument, matricNumber, json);
+
+        if (result)
+        {
+            MID_HelperFunctions.DebugMessage($"Successfully updated level for {matricNumber} to {newLevel}", DebugClass.Info);
+            
+            if (_permissionService.CanCacheAllStudentsLevel(await _authService.GetUserIdAsync()).Result)
+            {
+                // Update local cache
+                var cachedLevels =
+                    await _localStorage?.GetItemAsync<Dictionary<string, StudentLevelInfo>>(LEVEL_CACHE_KEY)
+                    ?? new Dictionary<string, StudentLevelInfo>();
+
+                if (cachedLevels.ContainsKey(matricNumber))
+                {
+                    cachedLevels[matricNumber].Level = newLevel;
+                    await _localStorage?.SetItemAsync(LEVEL_CACHE_KEY, cachedLevels);
+                    await _localStorage?.SetItemAsync("M_Personal_Level", cachedLevels[matricNumber].Level);
+                    MID_HelperFunctions.DebugMessage($"Updated cache for {matricNumber}", DebugClass.Info);
+                }
+            }
+        }
+        else
+        {
+            MID_HelperFunctions.DebugMessage($"Failed to update level for {matricNumber}", DebugClass.Error);
+        }
+
+        return result;
+    }
+    catch (Exception ex)
+    {
+        MID_HelperFunctions.DebugMessage($"Error updating student level for {matricNumber}: {ex.Message}", DebugClass.Exception);
+        return false;
+    }
+}
         
         public async Task<bool> BatchUpdateStudentLevelsAsync(Dictionary<string, string> matricToLevelMap)
         {
@@ -693,18 +714,24 @@ namespace AirCode.Services.Firebase
             try
             {
                 if (_localStorage == null) return;
-               
-                var cachedLevels = await _localStorage.GetItemAsync<Dictionary<string, StudentLevelInfo>>(LEVEL_CACHE_KEY) 
-                    ?? new Dictionary<string, StudentLevelInfo>();
-                
-                cachedLevels[matricNumber] = studentInfo;
-                await _localStorage.SetItemAsync(LEVEL_CACHE_KEY, cachedLevels);
+        
+                if (_permissionService.CanCacheAllStudentsLevel(await _authService.GetUserIdAsync()).Result)
+                {
+                    var cachedLevels = await _localStorage.GetItemAsync<Dictionary<string, StudentLevelInfo>>(LEVEL_CACHE_KEY) 
+                                       ?? new Dictionary<string, StudentLevelInfo>();
+            
+                    cachedLevels[matricNumber] = studentInfo;
+                    await _localStorage.SetItemAsync(LEVEL_CACHE_KEY, cachedLevels);
+            
+                    MID_HelperFunctions.DebugMessage($"Cached student level for {matricNumber}", DebugClass.Info);
+                }
             }
             catch (Exception ex)
             {
                 MID_HelperFunctions.DebugMessage($"Error caching student level: {ex.Message}", DebugClass.Exception);
             }
         }
+
         
         #endregion
         
@@ -853,43 +880,77 @@ namespace AirCode.Services.Firebase
     }
 
     /// <summary>
-    /// Find which distributed document contains a specific key
-    /// </summary>
-    private async Task<string> FindDocumentContainingKeyAsync(string collection, string baseDocumentId, string key)
+/// Find which distributed document contains a specific key - FIXED VERSION
+/// </summary>
+private async Task<string> FindDocumentContainingKeyAsync(string collection, string baseDocumentId, string key)
+{
+    try
     {
-        try
+        MID_HelperFunctions.DebugMessage($"Searching for key '{key}' in collection '{collection}' with base '{baseDocumentId}'", DebugClass.Info);
+        
+        // Check base document first (STUDENT_LEVELS_NO1)
+        string currentDocumentId = $"{baseDocumentId}1";
+        
+        var hasKey = await _jsRuntime.InvokeAsync<bool>("firestoreModule.documentContainsKey", collection, currentDocumentId, key);
+        
+        if (hasKey)
         {
-            int documentIndex = 1;
-            string currentDocumentId = baseDocumentId;
+            MID_HelperFunctions.DebugMessage($"Found key '{key}' in document: {currentDocumentId}", DebugClass.Info);
+            return currentDocumentId;
+        }
+        
+        // Check if document exists
+        var exists = await _jsRuntime.InvokeAsync<bool>("firestoreModule.documentExists", collection, currentDocumentId);
+        if (!exists)
+        {
+            MID_HelperFunctions.DebugMessage($"Base document {currentDocumentId} does not exist", DebugClass.Warning);
+            return null; // No documents exist
+        }
+        
+        // Continue checking additional documents (NO2, NO3, etc.)
+        int documentIndex = 2;
+        
+        while (true)
+        {
+            currentDocumentId = $"{baseDocumentId}{documentIndex}";
             
-            while (true)
+            MID_HelperFunctions.DebugMessage($"Checking document: {currentDocumentId}", DebugClass.Info);
+            
+            hasKey = await _jsRuntime.InvokeAsync<bool>("firestoreModule.documentContainsKey", collection, currentDocumentId, key);
+            
+            if (hasKey)
             {
-                var hasKey = await _jsRuntime.InvokeAsync<bool>("firestoreModule.documentContainsKey", collection, currentDocumentId, key);
-                
-                if (hasKey)
-                {
-                    return currentDocumentId;
-                }
-                
-                // Check if document exists
-                var exists = await _jsRuntime.InvokeAsync<bool>("firestoreModule.documentExists", collection, currentDocumentId);
-                if (!exists)
-                {
-                    break; // No more documents to check
-                }
-                
-                documentIndex++;
-                currentDocumentId = $"{baseDocumentId}_{documentIndex}";
+                MID_HelperFunctions.DebugMessage($"Found key '{key}' in document: {currentDocumentId}", DebugClass.Info);
+                return currentDocumentId;
             }
             
-            return null; // Key not found in any document
+            // Check if document exists
+            exists = await _jsRuntime.InvokeAsync<bool>("firestoreModule.documentExists", collection, currentDocumentId);
+            if (!exists)
+            {
+                MID_HelperFunctions.DebugMessage($"Document {currentDocumentId} does not exist, ending search", DebugClass.Info);
+                break; // No more documents to check
+            }
+            
+            documentIndex++;
+            
+            // Safety check to prevent infinite loop
+            if (documentIndex > 100) // Reasonable limit
+            {
+                MID_HelperFunctions.DebugMessage($"Reached maximum document search limit (100) for key: {key}", DebugClass.Warning);
+                break;
+            }
         }
-        catch (Exception ex)
-        {
-            MID_HelperFunctions.DebugMessage($"Error finding document containing key: {ex.Message}", DebugClass.Exception);
-            return null;
-        }
+        
+        MID_HelperFunctions.DebugMessage($"Key '{key}' not found in any document", DebugClass.Warning);
+        return null; // Key not found in any document
     }
+    catch (Exception ex)
+    {
+        MID_HelperFunctions.DebugMessage($"Error finding document containing key '{key}': {ex.Message}", DebugClass.Exception);
+        return null;
+    }
+}
 
     /// <summary>
     /// Get data from distributed documents by key

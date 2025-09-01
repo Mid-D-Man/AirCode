@@ -78,7 +78,7 @@ namespace AirCode.Pages.Shared
         }
         #endregion
 
-        #region Enhanced Data Loading Methods
+        #region  Data Loading Methods
         protected async Task LoadDataWithProgress()
         {
             IsLoading = true;
@@ -157,25 +157,40 @@ namespace AirCode.Pages.Shared
         private async Task LoadEnrolledCoursesAsync()
         {
             EnrolledCourses.Clear();
-            
-            if (StudentCourseData?.StudentCoursesRefs?.Any() == true)
+    
+            if (StudentCourseData?.StudentCoursesRefs?.Any() != true)
             {
-                foreach (var courseRef in StudentCourseData.StudentCoursesRefs)
+                MID_HelperFunctions.DebugMessage($"No course references found for student {CurrentStudentMatric}", DebugClass.Warning);
+                return;
+            }
+
+            MID_HelperFunctions.DebugMessage($"Loading {StudentCourseData.StudentCoursesRefs.Count} course references for {CurrentStudentMatric}", DebugClass.Info);
+    
+            foreach (var courseRef in StudentCourseData.StudentCoursesRefs)
+            {
+                try
                 {
-                    try
+                    MID_HelperFunctions.DebugMessage($"Loading course: {courseRef.CourseCode}, Status: {courseRef.CourseEnrollmentStatus}, Level: {courseRef.Level}", DebugClass.Info);
+            
+                    var course = await CourseService.GetCourseByIdAsync(courseRef.CourseCode);
+                    if (course != null)
                     {
-                        var course = await CourseService.GetCourseByIdAsync(courseRef.CourseCode);
-                        if (course != null)
-                        {
-                            EnrolledCourses.Add(course);
-                        }
+                        EnrolledCourses.Add(course);
+                        MID_HelperFunctions.DebugMessage($"Successfully loaded course: {course.CourseCode} - {course.Name}", DebugClass.Info);
                     }
-                    catch (Exception ex)
+                    else
                     {
-                        Logger?.LogWarning(ex, "Error loading course {CourseCode}", courseRef.CourseCode);
+                        MID_HelperFunctions.DebugMessage($"Course not found in service: {courseRef.CourseCode}", DebugClass.Warning);
                     }
                 }
+                catch (Exception ex)
+                {
+                    Logger?.LogWarning(ex, "Error loading course {CourseCode}", courseRef.CourseCode);
+                    MID_HelperFunctions.DebugMessage($"Error loading course {courseRef.CourseCode}: {ex.Message}", DebugClass.Exception);
+                }
             }
+    
+            MID_HelperFunctions.DebugMessage($"Finished loading courses. Total loaded: {EnrolledCourses.Count}", DebugClass.Info);
         }
 
         private async Task LoadAttendanceDataAsync()

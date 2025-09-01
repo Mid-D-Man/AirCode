@@ -1,4 +1,4 @@
-// Enhanced offline credentials handler - optimized for reliability
+//  offline credentials handler - optimized for reliability
 window.offlineCredentialsHandler = (() => {
     'use strict';
 

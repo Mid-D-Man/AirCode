@@ -1,9 +1,8 @@
-// Fixed qrCodeModule.js with proper WASM loading
+//  qrCodeModule.js with proper WASM loading
 let wasmModule;
 let wasmInitialized = false;
 let wasmAvailable = false;
-//am
-// Try to import WASM module with proper error handling
+
 async function tryInitWasm() {
     try {
         // Try to load the WASM module with explicit file extension
@@ -344,7 +343,7 @@ function applyEnhancements(baseSvg, size, darkColor, lightColor, options) {
             defs.appendChild(gradient);
             svgElement.insertBefore(defs, svgElement.firstChild);
 
-            // FIX: Target all dark-colored elements, not just paths
+            //  Target all dark-colored elements, not just paths
             const allElements = svgElement.querySelectorAll('path, rect, circle, polygon');
             allElements.forEach(element => {
                 const fillColor = element.getAttribute('fill');
@@ -356,7 +355,7 @@ function applyEnhancements(baseSvg, size, darkColor, lightColor, options) {
                 }
             });
 
-            // FIX: Also check for elements with dark color in style attribute
+            // check for elements with dark color in style attribute
             const styledElements = svgElement.querySelectorAll('[style*="fill"]');
             styledElements.forEach(element => {
                 const style = element.getAttribute('style');
