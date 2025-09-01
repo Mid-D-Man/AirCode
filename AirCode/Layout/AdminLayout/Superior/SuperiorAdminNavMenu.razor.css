@@ -55,15 +55,185 @@
 }
 
 .nav-top {
-    height: 80px;
+    height: auto;
+    min-height: 80px;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     padding: 1rem;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(10px);
+    gap: 0.5rem;
 }
 
+/* Status Indicators */
+.status-indicators {
+    width: 100%;
+    transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+.status-indicators.collapsed {
+    display: none;
+}
+
+.status-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+    padding: 0.5rem;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    backdrop-filter: blur(5px);
+}
+
+.status-row:last-child {
+    margin-bottom: 0;
+}
+
+.status-row.sync-indicator {
+    background: rgba(var(--warning), 0.1);
+    border: 1px solid rgba(var(--warning), 0.3);
+}
+
+.status-row.sync-indicator.clickable {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.status-row.sync-indicator.clickable:hover {
+    background: rgba(var(--warning), 0.2);
+    transform: translateY(-1px);
+}
+
+.status-item {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+    flex: 1;
+}
+
+.status-item.clickable {
+    cursor: pointer;
+}
+
+.status-icon {
+    font-size: 0.875rem;
+    color: var(--text-primary);
+    opacity: 0.8;
+}
+
+.status-text {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1;
+}
+
+.status-subtext {
+    font-size: 0.7rem;
+    color: var(--text-primary);
+    opacity: 0.7;
+    line-height: 1;
+}
+
+.connection-status.online {
+    color: var(--success);
+    opacity: 1;
+}
+
+.connection-status.offline {
+    color: var(--error);
+    opacity: 1;
+}
+
+/* Collapsed Indicators */
+.collapsed-indicators {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: center;
+    width: 100%;
+}
+
+.indicator-dot {
+    position: relative;
+    width: 40px;
+    height: 32px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(5px);
+    transition: all 0.2s ease;
+}
+
+.indicator-dot:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
+}
+
+.indicator-dot.clickable {
+    cursor: pointer;
+}
+
+.indicator-dot.connection-dot.online {
+    background: rgba(var(--success), 0.2);
+    border: 1px solid rgba(var(--success), 0.3);
+}
+
+.indicator-dot.connection-dot.offline {
+    background: rgba(var(--error), 0.2);
+    border: 1px solid rgba(var(--error), 0.3);
+}
+
+.indicator-dot.sync-dot {
+    background: rgba(var(--warning), 0.2);
+    border: 1px solid rgba(var(--warning), 0.3);
+}
+
+.indicator-dot i {
+    font-size: 0.875rem;
+    color: var(--text-primary);
+}
+
+.badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    background: var(--primary-500);
+    color: var(--text-on-primary);
+    font-size: 0.6rem;
+    font-weight: 700;
+    padding: 0.125rem 0.25rem;
+    border-radius: 8px;
+    min-width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--nav-background);
+}
+
+.badge.warning {
+    background: var(--warning);
+    color: var(--text-on-warning);
+}
+
+/* Spinning animation for sync */
+.spinning {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Rest of the original CSS remains the same */
 .nav-middle {
     flex: 1;
     display: flex;
@@ -167,6 +337,52 @@
 
 .nav-menu.collapsed .nav-item:hover::before,
 .nav-menu.collapsed .nav-item:hover::after {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(-50%) translateX(0);
+}
+
+/* Collapsed status indicators tooltips */
+.nav-menu.collapsed .indicator-dot::before {
+    content: attr(title);
+    position: absolute;
+    left: calc(100% + 15px);
+    top: 50%;
+    transform: translateY(-50%) translateX(-10px);
+    background: var(--dark-bg-secondary);
+    color: var(--white);
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    white-space: nowrap;
+    z-index: 2000;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+.nav-menu.collapsed .indicator-dot::after {
+    content: '';
+    position: absolute;
+    left: calc(100% + 5px);
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 6px 8px 6px 0;
+    border-color: transparent var(--dark-bg-secondary) transparent transparent;
+    z-index: 2000;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+.nav-menu.collapsed .indicator-dot:hover::before,
+.nav-menu.collapsed .indicator-dot:hover::after {
     opacity: 1;
     visibility: visible;
     transform: translateY(-50%) translateX(0);
