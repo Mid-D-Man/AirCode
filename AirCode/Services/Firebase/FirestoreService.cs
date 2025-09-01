@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using AirCode.Domain.Entities;
+using AirCode.Domain.Enums;
 using AirCode.Models.Firebase;
 using AirCode.Services.Auth;
 using AirCode.Services.Permissions;
@@ -520,7 +521,46 @@ namespace AirCode.Services.Firebase
         private const string STUDENTS_LEVEL_COLLECTION = "STUDENTS_LEVEL_TRACKER";
         private const string LEVEL_CACHE_KEY = "student_levels_cache";
         private const string BASE_LEVEL_DOCUMENT = "STUDENT_LEVELS_NO";
-        
+
+        public async Task<LevelType> GetStudentLevelType(string matricNumber)
+        {
+            try
+            {
+                var levelData = await GetStudentLevelAsync(matricNumber);
+                var levelString = levelData.Level;
+                switch (levelString)
+                {
+                    case "100": 
+                    {
+                        return LevelType.Level100;
+                    }
+                    case "200":
+                    {
+                        return LevelType.Level200;
+                    }
+                      case "300": 
+                                        {
+                                            return LevelType.Level300;
+                                        }
+                                        case "400":
+                                        {
+                                            return LevelType.Level400;
+                                        }
+                    case "500": 
+                    {
+                        return LevelType.Level500;
+                    }
+                    default :
+                    {
+                        return LevelType.LevelExtra;
+                    }
+                }
+            }  catch (Exception ex)
+            {
+                MID_HelperFunctions.DebugMessage($"Error getting student level for {matricNumber}: {ex.Message}", DebugClass.Exception);
+                return LevelType.LevelExtra;
+            }
+        }
         public async Task<StudentLevelInfo> GetStudentLevelAsync(string matricNumber)
         {
             try

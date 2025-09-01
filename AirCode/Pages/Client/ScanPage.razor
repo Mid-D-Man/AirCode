@@ -8,6 +8,8 @@
 @using AirCode.Services.SupaBase
 @using AirCode.Utilities.HelperScripts
 @using AirCode.Domain.Enums
+@using AirCode.Services.Attendance
+@implements IDisposable
 <NavigationLock ConfirmExternalNavigation="false" OnBeforeInternalNavigation="@OnBeforeInternalNavigation"></NavigationLock>
 
 <div class="scan-page">
@@ -54,6 +56,18 @@
 
     <!-- Controls -->
     <footer class="scan-controls">
+        <!-- Sync Indicator -->
+        @if (showSyncIndicator)
+        {
+            <div class="sync-indicator @syncStatus">
+                @if (syncStatus == "syncing")
+                {
+                    <div class="sync-spinner"></div>
+                }
+                <span>@syncMessage</span>
+            </div>
+        }
+        
         @if (isScanning)
         {
             <button class="control-btn stop" @onclick="StopScanning" disabled="@isProcessing">
@@ -73,7 +87,7 @@
         {
             <button class="control-btn camera" @onclick="SwitchCamera">
                 <span class="icon">🔄</span>
-                Switch Camera
+                Switch Camera - (depricated)
             </button>
         }
     </footer>

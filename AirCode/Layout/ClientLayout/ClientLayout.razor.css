@@ -1,4 +1,4 @@
-/* Layout/ClientLayout/ClientLayout.razor.css */
+/* Layout/ClientLayout/ClientLayout.razor.css - FIXED */
 
 .client-layout {
     display: flex;
@@ -14,7 +14,7 @@
 .main-content {
     display: flex;
     flex-direction: column;
-    height: calc(100% - 110px); 
+    height: calc(100% - 110px);
     width: 100%;
     position: relative;
 }
@@ -87,55 +87,25 @@
     filter: brightness(1.1);
 }
 
+/* FIXED: Content bottom is now plain black */
 .content-bottom {
     flex: 1;
     padding: 0.75rem;
     overflow-y: auto;
-   
-    background: linear-gradient(135deg, #0f1419 0%, #1a2332 100%);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border-radius: 24px 24px 0 0;
+    background: #000000 !important; /* Plain black background */
     margin-top: 6px;
     position: relative;
     animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  
     color: #ffffff;
+    border-radius: 0; /* Remove border radius for plain black look */
 }
 
-body:not(.dark-mode) .nav-buttons .circular-button {
-    background: rgba(30, 58, 138, 0.9); 
-    color: white;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-}
-
-body:not(.dark-mode) .nav-buttons .circular-button:hover {
-    background: rgba(53, 89, 207, 0.95); 
-}
-
-body:not(.dark-mode) .nav-buttons .button-content svg {
-    fill: #814242; /* Override white SVGs */
-}
-
-body:not(.dark-mode) .nav-buttons .button-text {
-    color: white; 
-    font-weight: 600;
-}
-
+/* Remove the decorative elements for plain black look */
 .content-bottom::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 32px;
-    height: 3px;
-    background: rgba(255, 255, 255, 0.3);
-    border-radius: 2px;
-    margin-top: 6px;
+    display: none;
 }
 
-/* Ensure all content in the dark area is properly styled */
+/* Force all content in content-bottom to be on black background */
 .content-bottom * {
     color: inherit;
 }
@@ -181,7 +151,27 @@ body:not(.dark-mode) .nav-buttons .button-text {
     }
 }
 
-/* Tablet adjustments */
+/* Ensure nav menu styling remains consistent */
+body:not(.dark-mode) .nav-buttons .circular-button {
+    background: rgba(30, 58, 138, 0.9);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+body:not(.dark-mode) .nav-buttons .circular-button:hover {
+    background: rgba(53, 89, 207, 0.95);
+}
+
+body:not(.dark-mode) .nav-buttons .button-content svg {
+    fill: #ffffff; /* Fixed to white for better visibility */
+}
+
+body:not(.dark-mode) .nav-buttons .button-text {
+    color: white;
+    font-weight: 600;
+}
+
+/* Responsive adjustments */
 @media (min-width: 481px) and (max-width: 768px) {
     .main-content {
         height: calc(100% - 120px);
@@ -203,11 +193,9 @@ body:not(.dark-mode) .nav-buttons .button-text {
 
     .content-bottom {
         padding: 1rem;
-        border-radius: 28px 28px 0 0;
     }
 }
 
-/* Desktop adjustments */
 @media (min-width: 769px) {
     .main-content {
         height: calc(100% - 130px);
@@ -233,11 +221,23 @@ body:not(.dark-mode) .nav-buttons .button-text {
 
     .content-bottom {
         padding: 1.5rem;
-        border-radius: 32px 32px 0 0;
     }
+}
 
-    .content-bottom::before {
-        width: 40px;
-        height: 4px;
-    }
+/* Force black background on all themes */
+body .client-layout .content-bottom {
+    background: #000000 !important;
+}
+
+/* Ensure all child elements have proper contrast on black background */
+.content-bottom h1,
+.content-bottom h2,
+.content-bottom h3,
+.content-bottom h4,
+.content-bottom h5,
+.content-bottom h6,
+.content-bottom p,
+.content-bottom span,
+.content-bottom div {
+    color: #ffffff !important;
 }

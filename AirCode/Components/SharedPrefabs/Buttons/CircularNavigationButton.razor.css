@@ -132,11 +132,11 @@
 }
 
 @keyframes glow {
-    from { 
-        box-shadow: 0 2px 8px rgba(244, 67, 54, 0.4); 
+    from {
+        box-shadow: 0 2px 8px rgba(244, 67, 54, 0.4);
     }
-    to { 
-        box-shadow: 0 2px 16px rgba(244, 67, 54, 0.6); 
+    to {
+        box-shadow: 0 2px 16px rgba(244, 67, 54, 0.6);
     }
 }
 
@@ -173,30 +173,59 @@
     animation: pop 0.3s ease-out;
 }
 
-/* Light Mode Theme-specific styling */
+/* Light Mode Theme-specific styling - Better contrast */
 body:not(.dark-mode) .circular-button {
-    background-color: var(--bg-secondary);
-    color: var(--text-primary);
-    border-color: var(--border);
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.08);
+    background-color: #1e3a8a !important; /* Dark blue background */
+    color: #ffffff !important; /* White text/icons */
+    border-color: rgba(255, 255, 255, 0.3);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
 }
 
 body:not(.dark-mode) .circular-button:hover {
-    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.12);
+    background-color: #1d4ed8 !important; /* Slightly lighter blue on hover */
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.25);
 }
 
 body:not(.dark-mode) .circular-button.primary {
-    background-color: var(--primary-500);
-    color: #ffffff;
+    background-color: #0f766e !important; /* Teal for primary button */
+    color: #ffffff !important;
+    border-color: rgba(255, 255, 255, 0.4);
 }
 
 body:not(.dark-mode) .circular-button.primary:hover {
-    background-color: var(--primary-600);
+    background-color: #0d9488 !important; /* Lighter teal on hover */
+}
+
+/* FIXED: Light mode SVG icons - Force white color */
+body:not(.dark-mode) .circular-button .button-content svg {
+    fill: #ffffff !important; /* Force white SVG icons */
+}
+
+body:not(.dark-mode) .circular-button.primary .button-content svg {
+    fill: #ffffff !important; /* Force white SVG icons for primary */
+}
+
+/* FIXED: Light mode button text - Force black color for better readability */
+body:not(.dark-mode) .button-text {
+    color: #000000 !important; /* Black text for light mode */
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8); /* White text shadow for better contrast */
+}
+
+body:not(.dark-mode) .circular-button.primary ~ .button-text {
+    color: #000000 !important; /* Black text for primary button text too */
+    font-weight: 700;
+}
+
+body:not(.dark-mode) .circular-button-container.active .button-text {
+    color: #0f766e !important; /* Teal color for active button text */
+    font-weight: 700;
+    text-shadow: none;
 }
 
 body:not(.dark-mode) .active-indicator {
-    background-color: var(--primary-500);
-    box-shadow: 0 2px 8px rgba(15, 76, 117, 0.4);
+    background-color: #0f766e !important; /* Teal active indicator */
+    box-shadow: 0 2px 8px rgba(15, 118, 110, 0.6);
 }
 
 body:not(.dark-mode) .active-indicator {
@@ -204,12 +233,18 @@ body:not(.dark-mode) .active-indicator {
 }
 
 @keyframes glow-light {
-    from { 
-        box-shadow: 0 2px 8px rgba(15, 76, 117, 0.4); 
+    from {
+        box-shadow: 0 2px 8px rgba(15, 118, 110, 0.6);
     }
-    to { 
-        box-shadow: 0 2px 16px rgba(15, 76, 117, 0.6); 
+    to {
+        box-shadow: 0 2px 16px rgba(15, 118, 110, 0.8);
     }
+}
+
+body:not(.dark-mode) .circular-button-container.active .circular-button {
+    background-color: #0f766e !important;
+    color: #ffffff !important;
+    border-color: rgba(255, 255, 255, 0.5);
 }
 
 /* Dark Mode Theme-specific styling */
@@ -248,11 +283,11 @@ body.dark-mode .active-indicator {
 }
 
 @keyframes glow-dark {
-    from { 
-        box-shadow: 0 2px 8px rgba(245, 158, 11, 0.5); 
+    from {
+        box-shadow: 0 2px 8px rgba(245, 158, 11, 0.5);
     }
-    to { 
-        box-shadow: 0 2px 16px rgba(245, 158, 11, 0.7); 
+    to {
+        box-shadow: 0 2px 16px rgba(245, 158, 11, 0.7);
     }
 }
 

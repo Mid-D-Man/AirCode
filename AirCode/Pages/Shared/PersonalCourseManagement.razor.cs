@@ -1,7 +1,8 @@
 using AirCode.Domain.Entities;
 using AirCode.Domain.Enums;
 using AirCode.Domain.ValueObjects;
-using AirCode.Services.Courses;
+using AirCode.Services.Auth;
+using AirCode.Services.Firebase;
 using AirCode.Utilities.ObjectPooling;
 using Microsoft.AspNetCore.Components;
 
@@ -29,6 +30,8 @@ public partial class PersonalCourseManagement : ComponentBase, IDisposable
         cleanupInterval: TimeSpan.FromMinutes(5)
     );
 
+    [Inject]  private IAuthService _authService {get;set;}
+    [Inject]  private FirestoreService _fireStoreService {get;set;}
     // Component State
     private bool IsLoading = true;
     private bool IsProcessing = false;
@@ -72,6 +75,8 @@ public partial class PersonalCourseManagement : ComponentBase, IDisposable
             _pooledEnrolledCourses = _courseListPool.GetPooled();
             _pooledAvailableCourses = _courseListPool.GetPooled();
 
+            CurrentMatricNumber = await  _authService.GetMatricNumberAsync();
+            CurrentStudentLevel =  await _fireStoreService.GetStudentLevelType(CurrentMatricNumber);
             // Load student's current course data
             CurrentStudentCourse = await CourseService.GetStudentCoursesByMatricAsync(CurrentMatricNumber);
             

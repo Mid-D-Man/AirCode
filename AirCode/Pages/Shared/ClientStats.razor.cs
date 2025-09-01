@@ -1,12 +1,13 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
-using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using AirCode.Domain.Entities;
 using AirCode.Domain.Enums;
 using AirCode.Models.Firebase;
 using AirCode.Services.Courses;
 using AirCode.Services.Attendance;
+using AirCode.Services.Auth;
+using AirCode.Services.Firebase;
 using AirCode.Utilities.HelperScripts;
 
 namespace AirCode.Pages.Shared
@@ -17,6 +18,8 @@ namespace AirCode.Pages.Shared
         [Inject] protected ICourseService CourseService { get; set; } = default!;
         [Inject] protected IFirestoreAttendanceService FirestoreAttendanceService { get; set; } = default!;
         [Inject] protected NavigationManager Navigation { get; set; } = default!;
+        [Inject]  private IAuthService _authService {get;set;}
+        [Inject]  private FirestoreService _fireStoreService {get;set;}
         [Inject] protected ILogger<ClientStatsBase>? Logger { get; set; }
         #endregion
 
@@ -90,7 +93,8 @@ namespace AirCode.Pages.Shared
                 LoadingProgress = 20;
                 StateHasChanged();
                 await Task.Delay(200); // Reduced delay for better UX
-
+                CurrentStudentMatric = await  _authService.GetMatricNumberAsync();
+                CurrentStudentLevel =  await _fireStoreService.GetStudentLevelType(CurrentStudentMatric);
                 StudentCourseData = await CourseService.GetStudentCoursesByMatricAsync(CurrentStudentMatric);
                 
                 if (StudentCourseData == null)
@@ -572,7 +576,7 @@ namespace AirCode.Pages.Shared
         }
         #endregion
 
-        #region Enhanced Helper and Utility Methods
+        #region  Helper and Utility Methods
         protected string GetAttendanceClass(double percentage)
         {
             return percentage switch
