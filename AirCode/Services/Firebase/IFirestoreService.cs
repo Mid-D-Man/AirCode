@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using AirCode.Domain.Entities;
+using AirCode.Domain.Enums;
 
 namespace AirCode.Services.Firebase
 {
@@ -83,6 +84,12 @@ namespace AirCode.Services.Firebase
         
         #region Student Level Operations
 
+        /// <summary>
+        /// Returns student level enum not structure
+        /// </summary>
+        /// <param name="matricNumber"></param>
+        /// <returns></returns>
+        Task<LevelType> GetStudentLevelType(string matricNumber);
         /// <summary>
         /// Get student level by matric number from distributed documents
         /// </summary>

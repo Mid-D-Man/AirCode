@@ -19,7 +19,7 @@ namespace AirCode.Pages.Shared
         [Inject] protected IFirestoreAttendanceService FirestoreAttendanceService { get; set; } = default!;
         [Inject] protected NavigationManager Navigation { get; set; } = default!;
         [Inject]  private IAuthService _authService {get;set;}
-        [Inject]  private FirestoreService _fireStoreService {get;set;}
+        [Inject]  private IFirestoreService _fireStoreService {get;set;}
         [Inject] protected ILogger<ClientStatsBase>? Logger { get; set; }
         #endregion
 

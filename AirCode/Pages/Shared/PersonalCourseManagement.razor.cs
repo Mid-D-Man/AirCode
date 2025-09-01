@@ -31,7 +31,7 @@ public partial class PersonalCourseManagement : ComponentBase, IDisposable
     );
 
     [Inject]  private IAuthService _authService {get;set;}
-    [Inject]  private FirestoreService _fireStoreService {get;set;}
+    [Inject]  private IFirestoreService _fireStoreService {get;set;}
     // Component State
     private bool IsLoading = true;
     private bool IsProcessing = false;

@@ -129,7 +129,7 @@ public partial class ScanPage : ComponentBase
 
                     bool isTakingCourse =
                         courseRefs.FirstOrDefault(course => course.CourseCode == decodedSessionData.CourseCode) != null;
-
+                    
                     if (isTakingCourse)
                     {
                       
