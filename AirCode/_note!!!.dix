@@ -1,0 +1,86 @@
+@CONFIG(
+    version -> "1.0-dev",
+    encoding -> "UTF-8",
+    author -> "Mid-D-Man",
+    created -> "2025-09-01"
+)
+
+@DATA(
+    root = {
+        development_status = {
+            current_version = "In Development",
+            completion_status = "Partial - Core functionality complete",
+            production_ready = false,
+            final_release_plan = "Will be moved to separate production branch upon completion"
+        },
+        
+        known_issues = {
+            logout_refresh = "Sometimes requires app refresh after logout",
+            scanner_refresh = "May need to refresh app when starting scanner",
+            page_logic = "Some pages have incomplete logic implementation"
+        },
+        
+        scanner_changes = {
+            previous_scanner = "ReactorBlazor QR Scanner",
+            current_scanner = "Nimiq QR Scanner",
+            reason = "Much better performance and reliability"
+        },
+        
+        project_scope = {
+            built_for = "School project - Higher education attendance system",
+            expandable = true,
+            institutional_focus = "Designed for educational institutions",
+            scalability = "Can be expanded for enterprise use"
+        },
+        
+        repository_usage = {
+            how_to_clone = "git clone https://github.com/Mid-D-Man/AirCode.git",
+            setup_steps = [
+                "Clone the repository",
+                "Install .NET 7.0 SDK or later", 
+                "Run 'dotnet restore' to install dependencies",
+                "Configure your own Auth0, Firebase, and Supabase accounts",
+                "Update appsettings.json with YOUR credentials",
+                "Update Firebase config in wwwroot/index.html",
+                "Run 'dotnet run' to start development server"
+            ],
+            branch_info = "Development happens on main branch, production will be separate"
+        },
+        
+        test_credentials = {
+            warning = "TEST USERS ONLY - WILL BE REMOVED IN FINAL BUILD",
+            email_verification = "Currently disabled for testing purposes",
+            test_users = {
+                lecturer = {
+                    email = "ali1@gmail.com",
+                    password = "@Password1",
+                    role = "Lecturer Admin"
+                },
+                course_rep = {
+                    email = "ali2@gmail.com", 
+                    password = "@Password1",
+                    role = "Course Rep Admin"
+                },
+                student = {
+                    email = "ali3@gmail.com",
+                    password = "@Password1", 
+                    role = "Student"
+                }
+            }
+        },
+        
+        important_notes = {
+            readme_first = "READ THE README.md FILE THOROUGHLY",
+            documentation = "Check Others/Info.txt and Others/ProjectStructure.txt",
+            future_improvements = "See FutureImprovements.cs for roadmap",
+            security_focus = "Application has strong security design but requires proper backend implementation"
+        },
+        
+        contribution_guidelines = {
+            check_status = "Review current development status before contributing",
+            test_thoroughly = "Test all changes with proper credentials",
+            follow_architecture = "Maintain clean architecture patterns",
+            security_first = "Security considerations are paramount"
+        }
+    }
+)
