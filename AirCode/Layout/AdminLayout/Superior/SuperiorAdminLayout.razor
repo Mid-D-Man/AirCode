@@ -1,48 +1,394 @@
-@* Layout/Admin/SuperiorAdminLayout.razor *@
 @inherits LayoutComponentBase
-
-@using AirCode.Components.SharedPrefabs.Buttons
+@using AirCode.Layout.AdminLayout.Superior
+@using AirCode.Components.SharedPrefabs.Cards
+@using AirCode.Domain.Entities
+@using AirCode.Domain.Enums
+@using AirCode.Domain.ValueObjects
+@using AirCode.Services.Firebase
+@using AirCode.Services.Courses
+@using AirCode.Services.Attendance
+@using AirCode.Services.Academic
+@using AirCode.Services.Auth
 @using AirCode.Components.SharedPrefabs.Others
-@using Blazored.Toast
-@using Blazored.Toast.Configuration
+@inject IFirestoreService FirestoreService
+@inject ICourseService CourseService
+@inject IAttendanceSessionService AttendanceService
+@inject IAcademicSessionService AcademicSessionService
+@inject IOfflineSyncService OfflineSyncService
+@inject ConnectivityService ConnectivityService
+@inject IAuthService AuthService
+@inject IJSRuntime JSRuntime
+@implements IDisposable
 
 <div class="superior-admin-layout">
     <SuperiorAdminNavMenu />
 
     <div class="main-content">
-        <BlazoredToasts Position="ToastPosition.TopRight"
-                        Timeout="5"
-                        IconType="IconType.FontAwesome"
-                        SuccessClass="success-toast"
-                        InfoClass="info-toast"
-                        WarningClass="warning-toast"
-                        ErrorClass="error-toast"
-                        ShowProgressBar="true" />
-        
         <div class="content-top">
-            <DynamicSearch Context="Admin" Placeholder="Search admin..."/>
-            <ThemeToggle/>
             <div class="quick-stats">
-                <div class="stat-item">
-                    <span class="stat-value">150</span>
-                    <span class="stat-label">Total Users</span>
+                <div class="stat-item @(_isDataLoading ? "loading" : "")">
+                    <div class="stat-value @(_isDataLoading ? "skeleton" : "")">@_totalUsers</div>
+                    <div class="stat-label">Total Users</div>
                 </div>
-                <div class="stat-item">
-                    <span class="stat-value">25</span>
-                    <span class="stat-label">Active Sessions</span>
+
+                <div class="stat-item @(_isDataLoading ? "loading" : "")">
+                    <div class="stat-value @(_isDataLoading ? "skeleton" : "")">@_activeUsers</div>
+                    <div class="stat-label">Active Users</div>
                 </div>
+
+                <div class="stat-item @(_isDataLoading ? "loading" : "")">
+                    <div class="stat-value @(_isDataLoading ? "skeleton" : "")">@_activeSessions</div>
+                    <div class="stat-label">Active Sessions</div>
+                </div>
+
+                <div class="stat-item connection-status @(_connectivityStatus.IsOnline ? "online" : "offline")">
+                    <div class="stat-value">@(_connectivityStatus.IsOnline ? "Online" : "Offline")</div>
+                    <div class="stat-label">Connection</div>
+                </div>
+
+                @if (_pendingOfflineSessions > 0)
+                {
+                    <div class="stat-item sync-item @(_isSyncing ? "syncing" : "")" @onclick="HandleOfflineSync" style="cursor: pointer;">
+                        <div class="stat-value">@_pendingOfflineSessions</div>
+                        <div class="stat-label">@(_isSyncing ? "Syncing..." : "Offline Sync")</div>
+                    </div>
+                }
+
+                @if (_currentSession != null)
+                {
+                    <div class="stat-item">
+                        <div class="stat-value">@_currentSession.SessionId</div>
+                        <div class="stat-label">Current Session</div>
+                    </div>
+                }
+            </div>
+
+            <div class="header-actions">
+                <button class="refresh-btn @(_isDataLoading ? "loading" : "")" @onclick="RefreshData" disabled="@_isDataLoading">
+                    <i class="fas @(_isDataLoading ? "fa-spinner fa-spin" : "fa-refresh")"></i>
+                    @(_isDataLoading ? "Loading..." : "Refresh")
+                </button>
             </div>
         </div>
 
         <div class="content-bottom">
             @Body
         </div>
-
-        <!-- GlobalBackdrop -->
-        <GlobalBackdrop />
     </div>
 </div>
+<GlobalBackdrop />
+<!-- Notification Component -->
+<NotificationComponent @ref="notificationComponent" 
+    Position="NotificationPosition.TopRight" 
+    AutoDismissTime="5000" 
+    ShowProgressBar="true" 
+    ShowCloseButton="true" 
+    PauseOnHover="true" />
 
 @code {
-    // navigation handled by superioradminnavmenu
+    private NotificationComponent notificationComponent;
+    
+    // Real-time data
+    private ConnectivityStatus _connectivityStatus = new();
+    private int _totalUsers = 0;
+    private int _activeUsers = 0;
+    private int _activeSessions = 0;
+    private int _totalSessions = 0;
+    private int _pendingOfflineSessions = 0;
+    private AcademicSession? _currentSession;
+    private bool _isSyncing = false;
+    private bool _isDataLoading = true;
+    
+    // Update timer
+    private Timer? _updateTimer;
+    private readonly TimeSpan _updateInterval = TimeSpan.FromSeconds(30);
+
+    // Constants
+    private const string STUDENTS_COLLECTION = "STUDENTS_MATRICULATION_NUMBERS";
+    private const string ADMIN_IDS_COLLECTION = "VALID_ADMIN_IDS";
+    private const string LECTURER_ADMIN_DOC = "LecturerAdminIdsDoc";
+
+    [Inject]
+    private NavigationManager NavigationManager { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Initialize connectivity service
+            await ConnectivityService.InitializeAsync();
+            ConnectivityService.ConnectivityChanged += OnConnectivityChanged;
+            
+            // Get initial connectivity status
+            _connectivityStatus = await ConnectivityService.GetConnectivityStatusAsync();
+            
+            // Load initial data
+            await LoadRealtimeData();
+            
+            // Start periodic updates
+            StartPeriodicUpdates();
+            
+            // Show initialization notification
+            ShowNotification("Admin dashboard initialized", NotificationType.Success);
+        }
+        catch (Exception ex)
+        {
+            MID_HelperFunctions.DebugMessage($"Admin layout initialization error: {ex.Message}");
+            ShowNotification("Failed to initialize admin dashboard", NotificationType.Error);
+        }
+        finally
+        {
+            _isDataLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadRealtimeData()
+    {
+        try
+        {
+            var loadingTasks = new List<Task>
+            {
+                LoadUserMetrics(),
+                LoadSessionMetrics(),
+                LoadOfflineMetrics(),
+                LoadAcademicSessionInfo()
+            };
+
+            await Task.WhenAll(loadingTasks);
+        }
+        catch (Exception ex)
+        {
+            MID_HelperFunctions.DebugMessage($"Error loading realtime data: {ex.Message}");
+            ShowNotification("Error loading dashboard data", NotificationType.Warning);
+        }
+    }
+
+    private async Task LoadUserMetrics()
+    {
+        try
+        {
+            // Load student data
+            var studentCourses = await CourseService.GetAllStudentCoursesAsync() ?? new List<StudentCourse>();
+            var totalStudents = studentCourses.Count;
+            var activeStudents = studentCourses.Count(sc => sc.StudentCoursesRefs?.Any(cr => 
+                cr.CourseEnrollmentStatus == CourseEnrollmentStatus.Enrolled) == true);
+
+            // Load lecturer data from Firebase
+            var lecturerDoc = await FirestoreService.GetDocumentAsync<LecturerAdminDocument>(ADMIN_IDS_COLLECTION, LECTURER_ADMIN_DOC);
+            var totalLecturers = lecturerDoc?.Ids?.Count ?? 0;
+            var activeLecturers = lecturerDoc?.Ids?.Count(l => l.CurrentUsage > 0) ?? 0;
+
+            // Also try to get from Firebase student documents
+            var levels = new[] { "100", "200", "300", "400", "500" };
+            var firebaseStudentCount = 0;
+            var firebaseActiveCount = 0;
+
+            foreach (var level in levels)
+            {
+                try
+                {
+                    var docName = $"StudentLevel{level}";
+                    var levelDoc = await FirestoreService.GetDocumentAsync<StudentLevelDocument>(STUDENTS_COLLECTION, docName);
+                    
+                    if (levelDoc?.ValidStudentMatricNumbers != null)
+                    {
+                        firebaseStudentCount += levelDoc.ValidStudentMatricNumbers.Count;
+                        firebaseActiveCount += levelDoc.ValidStudentMatricNumbers.Count(s => s.IsCurrentlyInUse);
+                    }
+                }
+                catch { } // Continue if a level document doesn't exist
+            }
+
+            // Use the higher count (Firebase or local data)
+            totalStudents = Math.Max(totalStudents, firebaseStudentCount);
+            activeStudents = Math.Max(activeStudents, firebaseActiveCount);
+
+            _totalUsers = totalStudents + totalLecturers;
+            _activeUsers = activeStudents + activeLecturers;
+        }
+        catch (Exception ex)
+        {
+            MID_HelperFunctions.DebugMessage($"Error loading user metrics: {ex.Message}");
+        }
+    }
+
+    private async Task LoadSessionMetrics()
+    {
+        try
+        {
+            var activeSessions = await AttendanceService.GetActiveSessionsAsync();
+            _activeSessions = activeSessions?.Count ?? 0;
+            
+            var allSessions = await AttendanceService.GetAllSessionsAsync();
+            _totalSessions = allSessions?.Count(s => s.CreatedAt.Date == DateTime.Today) ?? 0;
+        }
+        catch (Exception ex)
+        {
+            MID_HelperFunctions.DebugMessage($"Error loading session metrics: {ex.Message}");
+        }
+    }
+
+    private async Task LoadOfflineMetrics()
+    {
+        try
+        {
+            var offlineSessions = await AttendanceService.GetActiveOfflineSessionsAsync();
+            _pendingOfflineSessions = offlineSessions?.Count ?? 0;
+        }
+        catch (Exception ex)
+        {
+            MID_HelperFunctions.DebugMessage($"Error loading offline metrics: {ex.Message}");
+        }
+    }
+
+    private async Task LoadAcademicSessionInfo()
+    {
+        try
+        {
+            _currentSession = await AcademicSessionService.GetCurrentSessionAsync();
+        }
+        catch (Exception ex)
+        {
+            MID_HelperFunctions.DebugMessage($"Error loading academic session: {ex.Message}");
+        }
+    }
+
+    private async Task HandleOfflineSync()
+    {
+        if (_isSyncing || !_connectivityStatus.IsOnline || _pendingOfflineSessions == 0)
+        {
+            if (!_connectivityStatus.IsOnline)
+            {
+                ShowNotification("Cannot sync while offline", NotificationType.Warning);
+            }
+            return;
+        }
+
+        _isSyncing = true;
+        StateHasChanged();
+
+        try
+        {
+            ShowNotification($"Syncing {_pendingOfflineSessions} offline sessions...", NotificationType.Info);
+            
+            var syncResult = await OfflineSyncService.SyncPendingRecordsAsync();
+            
+            if (syncResult)
+            {
+                ShowNotification("Offline sessions synced successfully", NotificationType.Success);
+                await LoadOfflineMetrics(); // Refresh the count
+                StateHasChanged();
+            }
+            else
+            {
+                ShowNotification("Failed to sync some offline sessions", NotificationType.Warning);
+            }
+        }
+        catch (Exception ex)
+        {
+            MID_HelperFunctions.DebugMessage($"Offline sync error: {ex.Message}");
+            ShowNotification("Offline sync failed", NotificationType.Error);
+        }
+        finally
+        {
+            _isSyncing = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RefreshData()
+    {
+        if (_isDataLoading) return;
+        
+        _isDataLoading = true;
+        StateHasChanged();
+        
+        try
+        {
+            await LoadRealtimeData();
+            ShowNotification("Dashboard data refreshed", NotificationType.Success);
+        }
+        finally
+        {
+            _isDataLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void OnConnectivityChanged(ConnectivityStatus status)
+    {
+        _connectivityStatus = status;
+        InvokeAsync(StateHasChanged);
+        
+        // Show connectivity notifications
+        if (status.IsOnline && _pendingOfflineSessions > 0)
+        {
+            ShowNotification($"Back online! {_pendingOfflineSessions} offline sessions ready to sync", NotificationType.Info);
+        }
+        else if (!status.IsOnline)
+        {
+            ShowNotification("Connection lost - working offline", NotificationType.Warning);
+        }
+    }
+
+    private void StartPeriodicUpdates()
+    {
+        _updateTimer = new Timer(async _ =>
+        {
+            if (!_isDataLoading)
+            {
+                await InvokeAsync(async () =>
+                {
+                    await LoadRealtimeData();
+                    StateHasChanged();
+                });
+            }
+        }, null, _updateInterval, _updateInterval);
+    }
+
+    private void ShowNotification(string message, NotificationType type, int? duration = null)
+    {
+        try
+        {
+            notificationComponent?.ShowNotification(message, type, duration);
+        }
+        catch (Exception ex)
+        {
+            MID_HelperFunctions.DebugMessage($"Notification error: {ex.Message}");
+        }
+    }
+
+    public void Dispose()
+    {
+        _updateTimer?.Dispose();
+        
+        if (ConnectivityService != null)
+        {
+            ConnectivityService.ConnectivityChanged -= OnConnectivityChanged;
+        }
+    }
+
+    // Support classes
+    public class LecturerAdminDocument
+    {
+        public List<LecturerAdminId> Ids { get; set; } = new();
+    }
+
+    public class LecturerAdminId
+    {
+        public string Id { get; set; } = string.Empty;
+        public int CurrentUsage { get; set; } = 0;
+    }
+
+    public class StudentLevelDocument
+    {
+        public List<ValidStudentMatricNumber> ValidStudentMatricNumbers { get; set; } = new();
+    }
+
+    public class ValidStudentMatricNumber
+    {
+        public string MatricNumber { get; set; } = string.Empty;
+        public bool IsCurrentlyInUse { get; set; } = false;
+    }
 }

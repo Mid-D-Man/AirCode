@@ -1,93 +1,20 @@
 @inherits LayoutComponentBase
 @using AirCode.Components.Admin.Shared
 @using Aircode.Components.Admin.Shared
-@using AirCode.Components.SharedPrefabs.Cards
 @using AirCode.Models.UI
-@using AirCode.Domain.Entities
-@using AirCode.Domain.Enums
-@using AirCode.Domain.ValueObjects
 @using Microsoft.AspNetCore.Components.Authorization
 @using AirCode.Services.Auth
 @using AirCode.Services.VisualElements
-@using AirCode.Services.Firebase
-@using AirCode.Services.Courses
-@using AirCode.Services.Attendance
-@using AirCode.Services.Academic
 @inject IJSRuntime JSRuntime
 @inject IAuthService AuthService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject ConnectivityService ConnectivityService
 @inject ISvgIconService SvgIconService
-@inject IFirestoreService FirestoreService
-@inject ICourseService CourseService
-@inject IAttendanceSessionService AttendanceService
-@inject IAcademicSessionService AcademicSessionService
-@inject IOfflineSyncService OfflineSyncService
 @implements IDisposable
 
 <div class="nav-menu @(IsExpanded ? "expanded" : "collapsed")" @ref="navMenuRef">
     <div class="nav-top">
         <Burger OnToggle="ToggleNavMenu" />
-        
-        <!-- Real-time Status Display -->
-        <div class="status-indicators @(!IsExpanded ? "collapsed" : "")">
-            @if (IsExpanded)
-            {
-                <div class="status-row">
-                    <div class="status-item">
-                        <i class="fas fa-users status-icon"></i>
-                        <span class="status-text">@_totalUsers Users</span>
-                        <span class="status-subtext">@_activeUsers Active</span>
-                    </div>
-                </div>
-                
-                <div class="status-row">
-                    <div class="status-item">
-                        <i class="fas fa-calendar-check status-icon"></i>
-                        <span class="status-text">@_activeSessions Sessions</span>
-                        <span class="status-subtext connection-status @(_connectivityStatus.IsOnline ? "online" : "offline")">
-                            @(_connectivityStatus.IsOnline ? "Online" : "Offline")
-                        </span>
-                    </div>
-                </div>
-
-                @if (_pendingOfflineSessions > 0)
-                {
-                    <div class="status-row sync-indicator">
-                        <div class="status-item clickable" @onclick="HandleOfflineSync">
-                            <i class="fas fa-sync-alt status-icon @(_isSyncing ? "spinning" : "")"></i>
-                            <span class="status-text">@_pendingOfflineSessions Offline</span>
-                            <span class="status-subtext">Click to sync</span>
-                        </div>
-                    </div>
-                }
-            }
-            else
-            {
-                <!-- Collapsed indicators -->
-                <div class="collapsed-indicators">
-                    <div class="indicator-dot" title="@_totalUsers Users (@_activeUsers Active)">
-                        <i class="fas fa-users"></i>
-                        <span class="badge">@_totalUsers</span>
-                    </div>
-                    <div class="indicator-dot connection-dot @(_connectivityStatus.IsOnline ? "online" : "offline")" 
-                         title="@(_connectivityStatus.IsOnline ? "Online" : "Offline") - @_activeSessions Active Sessions">
-                        <i class="fas fa-calendar-check"></i>
-                        @if (_activeSessions > 0)
-                        {
-                            <span class="badge">@_activeSessions</span>
-                        }
-                    </div>
-                    @if (_pendingOfflineSessions > 0)
-                    {
-                        <div class="indicator-dot sync-dot clickable" title="@_pendingOfflineSessions Offline Sessions - Click to sync" @onclick="HandleOfflineSync">
-                            <i class="fas fa-sync-alt @(_isSyncing ? "spinning" : "")"></i>
-                            <span class="badge warning">@_pendingOfflineSessions</span>
-                        </div>
-                    }
-                </div>
-            }
-        </div>
     </div>
 
     <div class="nav-middle">
@@ -121,33 +48,12 @@
     </div>
 </div>
 
-<!-- Notification Component -->
-<NotificationComponent @ref="notificationComponent" 
-    Position="NotificationPosition.TopRight" 
-    AutoDismissTime="5000" 
-    ShowProgressBar="true" 
-    ShowCloseButton="true" 
-    PauseOnHover="true" />
-
 @code {
     private bool IsExpanded { get; set; } = true;
+    private bool IsOnline { get; set; } = true;
     private string UserRole { get; set; } = string.Empty;
     private ElementReference navMenuRef;
     private DotNetObjectReference<SuperiorAdminNavMenu> objRef;
-    private NotificationComponent notificationComponent;
-    
-    // Real-time data
-    private ConnectivityStatus _connectivityStatus = new() { IsOnline = false };
-    private int _totalUsers = 0;
-    private int _activeUsers = 0;
-    private int _activeSessions = 0;
-    private int _pendingOfflineSessions = 0;
-    private bool _isSyncing = false;
-    private bool _isDataLoading = true;
-    
-    // Update timer
-    private Timer? _updateTimer;
-    private readonly TimeSpan _updateInterval = TimeSpan.FromSeconds(30);
 
     [Inject]
     private NavigationManager NavigationManager { get; set; }
@@ -155,204 +61,24 @@
     protected override async Task OnInitializedAsync()
     {
         objRef = DotNetObjectReference.Create(this);
-        
+        IsOnline = await ConnectivityService.GetSimpleOnlineStatusAsync();
+
         try
         {
-            // Initialize connectivity service
-            await ConnectivityService.InitializeAsync();
-            ConnectivityService.ConnectivityChanged += OnConnectivityChanged;
-            
-            // Get initial connectivity status
-            _connectivityStatus = await ConnectivityService.GetConnectivityStatusAsync();
-            
-            // Get user role
             UserRole = await AuthService.GetUserRoleAsync() ?? string.Empty;
-            
-            // Load initial data
-            await LoadRealtimeData();
-            
-            // Enable GPU acceleration
-            await JSRuntime.InvokeVoidAsync("enableGPUAcceleration", navMenuRef);
-            
-            // Start periodic updates
-            StartPeriodicUpdates();
-            
-            // Show initialization notification
-            ShowNotification("Dashboard initialized", NotificationType.Success);
         }
-        catch (Exception ex)
+        catch
         {
-            MID_HelperFunctions.DebugMessage($"NavMenu initialization error: {ex.Message}");
-            ShowNotification("Failed to initialize dashboard", NotificationType.Error);
-        }
-        finally
-        {
-            _isDataLoading = false;
-            StateHasChanged();
-        }
-    }
-
-    private async Task LoadRealtimeData()
-    {
-        try
-        {
-            var loadingTasks = new List<Task>
-            {
-                LoadUserMetrics(),
-                LoadSessionMetrics(),
-                LoadOfflineMetrics()
-            };
-
-            await Task.WhenAll(loadingTasks);
-        }
-        catch (Exception ex)
-        {
-            MID_HelperFunctions.DebugMessage($"Error loading realtime data: {ex.Message}");
-            ShowNotification("Error loading dashboard data", NotificationType.Warning);
-        }
-    }
-
-    private async Task LoadUserMetrics()
-    {
-        try
-        {
-            // Load student data
-            var studentCourses = await CourseService.GetAllStudentCoursesAsync() ?? new List<StudentCourse>();
-            var totalStudents = studentCourses.Count;
-            var activeStudents = studentCourses.Count(sc => sc.StudentCoursesRefs?.Any(cr => 
-                cr.CourseEnrollmentStatus == CourseEnrollmentStatus.Enrolled) == true);
-
-            // Load lecturer data
-            const string ADMIN_IDS_COLLECTION = "VALID_ADMIN_IDS";
-            const string LECTURER_ADMIN_DOC = "LecturerAdminIdsDoc";
-            var lecturerDoc = await FirestoreService.GetDocumentAsync<LecturerAdminDocument>(ADMIN_IDS_COLLECTION, LECTURER_ADMIN_DOC);
-            
-            var totalLecturers = lecturerDoc?.Ids?.Count ?? 0;
-            var activeLecturers = lecturerDoc?.Ids?.Count(l => l.CurrentUsage > 0) ?? 0;
-
-            _totalUsers = totalStudents + totalLecturers;
-            _activeUsers = activeStudents + activeLecturers;
-        }
-        catch (Exception ex)
-        {
-            MID_HelperFunctions.DebugMessage($"Error loading user metrics: {ex.Message}");
-        }
-    }
-
-    private async Task LoadSessionMetrics()
-    {
-        try
-        {
-            var activeSessions = await AttendanceService.GetActiveSessionsAsync();
-            _activeSessions = activeSessions?.Count ?? 0;
-        }
-        catch (Exception ex)
-        {
-            MID_HelperFunctions.DebugMessage($"Error loading session metrics: {ex.Message}");
-        }
-    }
-
-    private async Task LoadOfflineMetrics()
-    {
-        try
-        {
-            var offlineSessions = await AttendanceService.GetActiveOfflineSessionsAsync();
-            _pendingOfflineSessions = offlineSessions?.Count ?? 0;
-        }
-        catch (Exception ex)
-        {
-            MID_HelperFunctions.DebugMessage($"Error loading offline metrics: {ex.Message}");
-        }
-    }
-
-    private async Task HandleOfflineSync()
-    {
-        if (_isSyncing || !_connectivityStatus.IsOnline || _pendingOfflineSessions == 0)
-        {
-            if (!_connectivityStatus.IsOnline)
-            {
-                ShowNotification("Cannot sync while offline", NotificationType.Warning);
-            }
-            return;
+            UserRole = string.Empty;
         }
 
-        _isSyncing = true;
-        StateHasChanged();
-
-        try
-        {
-            ShowNotification($"Syncing {_pendingOfflineSessions} offline sessions...", NotificationType.Info);
-            
-            var syncResult = await OfflineSyncService.SyncPendingRecordsAsync();
-            
-            if (syncResult)
-            {
-                ShowNotification("Offline sessions synced successfully", NotificationType.Success);
-                await LoadOfflineMetrics(); // Refresh the count
-            }
-            else
-            {
-                ShowNotification("Failed to sync some offline sessions", NotificationType.Warning);
-            }
-        }
-        catch (Exception ex)
-        {
-            MID_HelperFunctions.DebugMessage($"Offline sync error: {ex.Message}");
-            ShowNotification("Offline sync failed", NotificationType.Error);
-        }
-        finally
-        {
-            _isSyncing = false;
-            StateHasChanged();
-        }
-    }
-
-    private void OnConnectivityChanged(ConnectivityStatus status)
-    {
-        _connectivityStatus = status;
-        InvokeAsync(StateHasChanged);
-        
-        // Show connectivity notifications
-        if (status.IsOnline && _pendingOfflineSessions > 0)
-        {
-            ShowNotification($"Back online! {_pendingOfflineSessions} offline sessions ready to sync", NotificationType.Info);
-        }
-        else if (!status.IsOnline)
-        {
-            ShowNotification("Connection lost - working offline", NotificationType.Warning);
-        }
-    }
-
-    private void StartPeriodicUpdates()
-    {
-        _updateTimer = new Timer(async _ =>
-        {
-            if (!_isDataLoading)
-            {
-                await InvokeAsync(async () =>
-                {
-                    await LoadRealtimeData();
-                    StateHasChanged();
-                });
-            }
-        }, null, _updateInterval, _updateInterval);
-    }
-
-    private void ShowNotification(string message, NotificationType type, int? duration = null)
-    {
-        try
-        {
-            notificationComponent?.ShowNotification(message, type, duration);
-        }
-        catch (Exception ex)
-        {
-            MID_HelperFunctions.DebugMessage($"Notification error: {ex.Message}");
-        }
+        await JSRuntime.InvokeVoidAsync("enableGPUAcceleration", navMenuRef);
     }
 
     [JSInvokable]
     public void OnConnectivityChanged(bool online)
     {
+        IsOnline = online;
         StateHasChanged();
     }
 
@@ -395,37 +121,18 @@
     private List<NavItemExtended> FilteredNavigationItems => 
         NavigationItems.Where(item => 
             item.AllowedRoles.Contains(UserRole.ToLower()) && 
-            (_connectivityStatus.IsOnline || !item.RequiresOnline)
+            (IsOnline || !item.RequiresOnline)
         ).ToList();
 
     private List<NavItemExtended> FilteredBottomItems => 
         BottomItems.Where(item => 
             item.AllowedRoles.Contains(UserRole.ToLower()) && 
-            (_connectivityStatus.IsOnline || !item.RequiresOnline)
+            (IsOnline || !item.RequiresOnline)
         ).ToList();
 
     public async void Dispose()
     {
-        _updateTimer?.Dispose();
-        
-        if (ConnectivityService != null)
-        {
-            ConnectivityService.ConnectivityChanged -= OnConnectivityChanged;
-            await ConnectivityService.DisposeAsync();
-        }
-        
+       await ConnectivityService.DisposeAsync();
         objRef?.Dispose();
-    }
-
-    // Support classes (add these to your domain/models)
-    public class LecturerAdminDocument
-    {
-        public List<LecturerAdminId> Ids { get; set; } = new();
-    }
-
-    public class LecturerAdminId
-    {
-        public string Id { get; set; } = string.Empty;
-        public int CurrentUsage { get; set; } = 0;
     }
 }
