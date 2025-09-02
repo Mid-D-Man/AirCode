@@ -17,7 +17,8 @@
     text-align: center;
 }
 
-.course-item {
+/* Assigned course items - different from selectable ones */
+.assigned-courses-section .course-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -32,7 +33,7 @@
     overflow: hidden;
 }
 
-.course-item::before {
+.assigned-courses-section .course-item::before {
     content: '';
     position: absolute;
     left: 0;
@@ -44,13 +45,13 @@
     transition: transform 0.2s ease;
 }
 
-.course-item:hover {
+.assigned-courses-section .course-item:hover {
     transform: translateY(-3px);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
     border-color: var(--primary-300);
 }
 
-.course-item:hover::before {
+.assigned-courses-section .course-item:hover::before {
     transform: scaleY(1);
 }
 
@@ -62,50 +63,70 @@
     padding-left: var(--spacing-lg);
 }
 
-.course-primary {
+.course-header {
     display: flex;
     align-items: center;
-    gap: var(--spacing-md);
-    margin-bottom: var(--spacing-xs);
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
 }
 
 .course-code {
     font-weight: 700;
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     color: var(--primary-700);
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    background: var(--primary-50);
-    padding: var(--spacing-xs) var(--spacing-sm);
-    border-radius: 8px;
+}
+
+.course-level {
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+    padding: 0.25rem 0.5rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.assigned-courses-section .course-item:hover .course-level {
+    background: var(--primary-100);
+    color: var(--primary-700);
 }
 
 .course-name {
+    font-size: 0.95rem;
     color: var(--text-primary);
-    font-size: 1rem;
+    margin-bottom: 0.75rem;
     font-weight: 500;
     line-height: 1.4;
+    transition: color 0.2s ease;
 }
 
 .course-details {
-    font-size: 0.875rem;
-    color: var(--text-secondary);
     display: flex;
-    gap: var(--spacing-md);
-    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
     flex-wrap: wrap;
 }
 
 .course-details span {
     background: var(--bg-tertiary);
-    padding: var(--spacing-xs) var(--spacing-sm);
+    padding: 0.25rem 0.5rem;
     border-radius: 6px;
     transition: all 0.2s ease;
 }
 
-.course-item:hover .course-details span {
+.assigned-courses-section .course-item:hover .course-details span {
     background: var(--primary-100);
     color: var(--primary-700);
+}
+
+.course-schedule {
+    margin-top: 0.75rem;
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+    font-style: italic;
 }
 
 .btn-remove, .btn-add-course {
@@ -166,22 +187,26 @@
     margin-bottom: var(--spacing-lg);
 }
 
-/* Modal Styles - Professional Design */
+/* Modal Styles - Matching CourseSelectionComponent */
 .modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.6);
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    z-index: 10000;
     display: flex;
-    justify-content: center;
     align-items: center;
-    z-index: 1000;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.6);
     backdrop-filter: blur(6px);
     opacity: 0;
     visibility: hidden;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transform: none !important;
+    contain: none !important;
 }
 
 .modal-overlay.visible {
@@ -190,18 +215,20 @@
 }
 
 .modal-content {
-    background-color: var(--bg-secondary);
+    position: relative;
+    background: var(--bg-secondary);
     border: 1px solid var(--border);
     border-radius: 16px;
-    width: 90%;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    width: 85vw;
     max-width: 700px;
     max-height: 85vh;
-    overflow: hidden;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
     transform: scale(0.9) translateY(20px);
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    margin: auto;
+    overflow: hidden;
 }
 
 .modal-overlay.visible .modal-content {
@@ -209,58 +236,64 @@
 }
 
 .modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: var(--spacing-xl) var(--spacing-xl) var(--spacing-lg);
-    background: linear-gradient(135deg, var(--primary-50) 0%, var(--primary-100) 100%);
+    padding: 1.5rem 2rem;
     border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--bg-secondary);
     border-radius: 16px 16px 0 0;
+    flex-shrink: 0;
 }
 
-.modal-header h4 {
-    color: var(--primary-700);
-    font-weight: 600;
-    font-size: 1.25rem;
+.modal-header h3 {
     margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-primary);
     display: flex;
     align-items: center;
 }
 
-.btn-close {
+.close-btn {
     background: none;
     border: none;
     font-size: 24px;
-    cursor: pointer;
     color: var(--text-secondary);
+    cursor: pointer;
+    padding: var(--spacing-xs);
+    border-radius: 8px;
     width: 36px;
     height: 36px;
-    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: all 0.2s ease;
+    line-height: 1;
 }
 
-.btn-close:hover {
-    background-color: var(--error);
-    color: white;
-    transform: rotate(90deg) scale(1.1);
+.close-btn:hover {
+    background: rgba(var(--text-secondary-rgb, 107, 114, 128), 0.1);
+    color: var(--text-primary);
 }
 
 .modal-body {
-    padding: var(--spacing-xl);
-    flex-grow: 1;
-    overflow-y: auto;
+    padding: 1.5rem 2rem;
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
 }
 
-.search-box {
-    margin-bottom: var(--spacing-lg);
+.search-container {
+    margin-bottom: 1rem;
+    flex-shrink: 0;
 }
 
 .search-input {
     width: 100%;
-    padding: var(--spacing-md);
+    padding: 0.875rem 1rem;
     border: 2px solid var(--border);
     border-radius: 12px;
     font-size: 1rem;
@@ -280,39 +313,66 @@
     color: var(--text-tertiary);
 }
 
-.course-list {
-    max-height: 450px;
+.filters-container {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+}
+
+.filter-select {
+    flex: 1;
+    min-width: 140px;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.875rem;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    transition: all 0.2s ease;
+}
+
+.filter-select:focus {
+    border-color: var(--primary-500);
+    box-shadow: 0 0 0 3px var(--primary-100);
+}
+
+.courses-list {
+    flex: 1;
     overflow-y: auto;
-    padding-right: var(--spacing-xs);
+    min-height: 400px;
+    max-height: none;
     border: 1px solid var(--border);
     border-radius: 12px;
-    padding: var(--spacing-sm);
+    padding: 1rem;
     background: var(--bg-primary);
 }
 
-.course-list::-webkit-scrollbar {
+.courses-list::-webkit-scrollbar {
     width: 8px;
 }
 
-.course-list::-webkit-scrollbar-track {
+.courses-list::-webkit-scrollbar-track {
     background: var(--bg-tertiary);
     border-radius: 4px;
 }
 
-.course-list::-webkit-scrollbar-thumb {
+.courses-list::-webkit-scrollbar-thumb {
     background: var(--primary-300);
     border-radius: 4px;
 }
 
-.course-list::-webkit-scrollbar-thumb:hover {
+.courses-list::-webkit-scrollbar-thumb:hover {
     background: var(--primary-400);
 }
 
-.selectable-course-item {
-    padding: var(--spacing-lg);
+/* Selectable course items in modal */
+.course-item-selectable {
+    padding: 1rem 1.25rem;
     border: 1px solid var(--border);
-    border-radius: 12px;
-    margin-bottom: var(--spacing-sm);
+    border-radius: 8px;
+    margin-bottom: 0.75rem;
     cursor: pointer;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     background: var(--bg-secondary);
@@ -320,7 +380,7 @@
     overflow: hidden;
 }
 
-.selectable-course-item::before {
+.course-item-selectable::before {
     content: '';
     position: absolute;
     left: 0;
@@ -332,27 +392,151 @@
     transition: transform 0.2s ease;
 }
 
-.selectable-course-item:hover {
+.course-item-selectable:hover {
     background-color: var(--primary-50);
     border-color: var(--primary-300);
     transform: translateY(-2px);
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
 }
 
-.selectable-course-item:hover::before {
+.course-item-selectable:hover::before {
     transform: scaleY(1);
 }
 
-.selectable-course-item .course-info {
-    padding-left: var(--spacing-md);
+.course-item-selectable:hover .course-name {
+    color: var(--text-primary);
 }
 
-.selectable-course-item .course-code {
-    background: none;
-    padding: 0;
+body:not(.dark-mode) .course-item-selectable:hover .course-name {
+    color: #1f2937 !important;
 }
 
-/* Confirmation Dialog - Professional Style */
+.course-item-selectable.selected {
+    border-color: var(--primary-500);
+    background: var(--primary-50);
+    box-shadow: 0 0 0 3px var(--primary-100);
+    transform: scale(1.02);
+}
+
+.course-item-selectable.selected::before {
+    transform: scaleY(1);
+}
+
+.course-item-selectable:hover .course-level {
+    background: var(--primary-100);
+    color: var(--primary-700);
+}
+
+.course-item-selectable:hover .course-details span {
+    background: var(--primary-100);
+    color: var(--primary-700);
+}
+
+.loading-indicator {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    color: var(--text-secondary);
+}
+
+.no-results {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-secondary);
+    animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.no-results i {
+    margin-bottom: 1rem;
+    opacity: 0.5;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 0.3; }
+}
+
+.more-results {
+    text-align: center;
+    padding: 1rem;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    font-style: italic;
+    animation: slideInUp 0.3s ease-out;
+}
+
+@keyframes slideInUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.modal-footer {
+    padding: 1rem 2rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    background: var(--bg-primary);
+    border-radius: 0 0 16px 16px;
+    flex-shrink: 0;
+}
+
+.btn-secondary, .btn-primary {
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-secondary {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+}
+
+.btn-secondary:hover {
+    background: var(--bg-primary);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--primary-600) 0%, var(--primary-700) 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.btn-primary:hover:not(:disabled) {
+    background: linear-gradient(135deg, var(--primary-700) 0%, var(--primary-800) 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+}
+
+.btn-primary:disabled {
+    background: var(--text-tertiary);
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+    opacity: 0.6;
+}
+
+/* Confirmation Dialog */
 .confirmation-dialog {
     position: fixed;
     top: 50%;
@@ -409,9 +593,27 @@
     box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3);
 }
 
+.btn-confirm.success {
+    background: linear-gradient(135deg, var(--success) 0%, #2e7d32 100%);
+    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+}
+
+.btn-confirm.danger {
+    background: linear-gradient(135deg, var(--error) 0%, #c62828 100%);
+    box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3);
+}
+
 .btn-confirm:hover:not(:disabled) {
-    background: linear-gradient(135deg, #c62828 0%, #b71c1c 100%);
     transform: translateY(-2px);
+}
+
+.btn-confirm.success:hover:not(:disabled) {
+    background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%);
+    box-shadow: 0 6px 16px rgba(76, 175, 80, 0.4);
+}
+
+.btn-confirm.danger:hover:not(:disabled) {
+    background: linear-gradient(135deg, #c62828 0%, #b71c1c 100%);
     box-shadow: 0 6px 16px rgba(244, 67, 54, 0.4);
 }
 
@@ -435,7 +637,7 @@ button:disabled {
     box-shadow: none !important;
 }
 
-/* Loading spinner for this component */
+/* Loading spinner */
 .loading-spinner {
     display: inline-block;
     width: 20px;
@@ -450,13 +652,34 @@ button:disabled {
     to { transform: rotate(360deg); }
 }
 
-/* Loading states */
 .modal-body .loading-spinner {
     width: 40px;
     height: 40px;
     border: 4px solid var(--border);
     border-top: 4px solid var(--primary-600);
     margin-bottom: var(--spacing-lg);
+}
+
+/* Staggered animations */
+.course-item-selectable {
+    animation: slideInLeft 0.3s ease-out;
+}
+
+.course-item-selectable:nth-child(1) { animation-delay: 0.05s; }
+.course-item-selectable:nth-child(2) { animation-delay: 0.1s; }
+.course-item-selectable:nth-child(3) { animation-delay: 0.15s; }
+.course-item-selectable:nth-child(4) { animation-delay: 0.2s; }
+.course-item-selectable:nth-child(5) { animation-delay: 0.25s; }
+
+@keyframes slideInLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
 }
 
 /* Responsive Design */
@@ -470,8 +693,7 @@ button:disabled {
         margin-bottom: var(--spacing-lg);
     }
 
-    /* Mobile course cards */
-    .course-item {
+    .assigned-courses-section .course-item {
         flex-direction: column;
         align-items: flex-start;
         padding: var(--spacing-lg);
@@ -485,7 +707,7 @@ button:disabled {
         width: 100%;
     }
 
-    .course-primary {
+    .course-header {
         flex-direction: column;
         align-items: flex-start;
         gap: var(--spacing-sm);
@@ -529,9 +751,8 @@ button:disabled {
         margin-top: var(--spacing-lg);
     }
 
-    /* Modal adjustments */
     .modal-content {
-        width: 95%;
+        width: 95vw;
         max-height: 90vh;
         border-radius: 12px;
     }
@@ -540,7 +761,7 @@ button:disabled {
         padding: var(--spacing-lg);
     }
 
-    .modal-header h4 {
+    .modal-header h3 {
         font-size: 1.1rem;
     }
 
@@ -561,28 +782,35 @@ button:disabled {
         justify-content: center;
     }
 
-    .selectable-course-item {
+    .filters-container {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .filter-select {
+        min-width: unset;
+    }
+
+    .courses-list {
+        min-height: 300px;
+    }
+
+    .course-item-selectable {
         padding: var(--spacing-lg);
         margin-bottom: var(--spacing-sm);
         border-radius: 10px;
     }
 
-    .selectable-course-item .course-info {
-        gap: var(--spacing-xs);
-    }
-
-    .selectable-course-item .course-primary {
+    .modal-footer {
+        padding: 1rem 1.5rem;
         flex-direction: column;
-        align-items: flex-start;
-        gap: var(--spacing-xs);
+        gap: 0.75rem;
     }
 
-    .selectable-course-item .course-code {
-        font-size: 0.95rem;
-    }
-
-    .selectable-course-item .course-name {
-        font-size: 0.85rem;
+    .btn-secondary, .btn-primary {
+        width: 100%;
+        justify-content: center;
+        padding: 0.875rem;
     }
 }
 
@@ -596,8 +824,7 @@ button:disabled {
         margin-bottom: var(--spacing-md);
     }
 
-    /* Ultra-compact mobile design */
-    .course-item {
+    .assigned-courses-section .course-item {
         padding: var(--spacing-md);
         margin-bottom: var(--spacing-sm);
         border-radius: 10px;
@@ -658,9 +885,8 @@ button:disabled {
         font-size: 1.5rem !important;
     }
 
-    /* Compact modal for mobile */
     .modal-content {
-        width: 98%;
+        width: 98vw;
         max-height: 95vh;
         margin: var(--spacing-sm);
         border-radius: 8px;
@@ -671,7 +897,7 @@ button:disabled {
         border-radius: 8px 8px 0 0;
     }
 
-    .modal-header h4 {
+    .modal-header h3 {
         font-size: 1rem;
     }
 
@@ -685,27 +911,21 @@ button:disabled {
         border-radius: 8px;
     }
 
-    .course-list {
-        max-height: 300px;
-        border-radius: 8px;
-        padding: var(--spacing-xs);
-    }
-
-    .selectable-course-item {
+    .course-item-selectable {
         padding: var(--spacing-sm) var(--spacing-md);
         border-radius: 8px;
     }
 
-    .selectable-course-item .course-code {
+    .course-item-selectable .course-code {
         font-size: 0.85rem;
     }
 
-    .selectable-course-item .course-name {
+    .course-item-selectable .course-name {
         font-size: 0.75rem;
         line-height: 1.2;
     }
 
-    .selectable-course-item .course-details {
+    .course-item-selectable .course-details {
         font-size: 0.7rem;
         gap: var(--spacing-xs);
     }
@@ -730,6 +950,11 @@ button:disabled {
         padding: var(--spacing-sm) var(--spacing-md);
         font-size: 0.85rem;
     }
+
+    .modal-footer {
+        border-radius: 0 0 8px 8px;
+        padding: 0.875rem 1rem;
+    }
 }
 
 /* Dark mode support */
@@ -737,57 +962,62 @@ button:disabled {
     .modal-overlay {
         background-color: rgba(0, 0, 0, 0.8);
     }
-    
+
     .search-input::placeholder {
         color: var(--text-tertiary);
     }
 }
 
-/* Animation improvements */
-.course-item, .selectable-course-item {
-    animation: slideInUp 0.3s ease-out;
-}
-
-.course-item:nth-child(1), .selectable-course-item:nth-child(1) { animation-delay: 0.05s; }
-.course-item:nth-child(2), .selectable-course-item:nth-child(2) { animation-delay: 0.1s; }
-.course-item:nth-child(3), .selectable-course-item:nth-child(3) { animation-delay: 0.15s; }
-.course-item:nth-child(4), .selectable-course-item:nth-child(4) { animation-delay: 0.2s; }
-.course-item:nth-child(5), .selectable-course-item:nth-child(5) { animation-delay: 0.25s; }
-
-@keyframes slideInUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
+/* High contrast mode support */
+@media (prefers-contrast: more) {
+    .assigned-courses-section .course-item,
+    .course-item-selectable,
+    .modal-content,
+    .confirmation-dialog {
+        border-width: 2px;
     }
-    to {
-        opacity: 1;
-        transform: translateY(0);
+
+    .btn-remove,
+    .btn-add-course,
+    .btn-confirm,
+    .btn-cancel {
+        border: 2px solid transparent;
     }
 }
 
-/* Loading states and empty states styling */
-.modal-body .loading-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: var(--spacing-xxl);
-    text-align: center;
-}
-
-.modal-body .loading-container p {
-    color: var(--text-secondary);
-    margin-top: var(--spacing-md);
-    font-size: 0.9rem;
-}
-
-/* Success and error states for confirmation dialogs */
-.confirmation-dialog.success .btn-confirm {
-    background: linear-gradient(135deg, var(--success) 0%, #2e7d32 100%);
-    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
-}
-
-.confirmation-dialog.success .btn-confirm:hover:not(:disabled) {
-    background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%);
-    box-shadow: 0 6px 16px rgba(76, 175, 80, 0.4);
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .course-item-selectable,
+    .assigned-courses-section .course-item {
+        animation: none;
     }
+
+    * {
+        transition: none !important;
+    }
+}
+
+/* Focus styles for accessibility */
+.btn-remove:focus-visible,
+.btn-add-course:focus-visible,
+.btn-confirm:focus-visible,
+.btn-cancel:focus-visible,
+.close-btn:focus-visible {
+    outline: 2px solid var(--primary-500);
+    outline-offset: 2px;
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+    .btn-remove,
+    .btn-add-course,
+    .btn-confirm,
+    .btn-cancel {
+        min-height: 44px;
+        padding: var(--spacing-md) var(--spacing-lg);
+    }
+
+    .course-item-selectable {
+        min-height: 60px;
+    }
+}

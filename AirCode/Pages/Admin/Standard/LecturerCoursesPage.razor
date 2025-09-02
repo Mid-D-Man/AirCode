@@ -1,12 +1,12 @@
-@* Pages/Admin/Standard/LecturerCoursesPage.razor *@
 @page "/Admin/Lecturer/Courses"
 @attribute [Authorize(Policy = "LecturerAdmin")]
+@using AirCode.Components.SharedPrefabs.Cards
 @using AirCode.Domain.Entities
 @using AirCode.Services.Courses
 @using AirCode.Services.Auth
 @using AirCode.Components.SharedPrefabs.Others
 @using AirCode.Components.SharedPrefabs.Spinner
-
+@using AirCode.Domain.Enums
 @using AirCode.Layout.AdminLayout.Superior
 @using Microsoft.AspNetCore.Authorization
 @layout SuperiorAdminLayout
@@ -53,29 +53,27 @@
                 SectionTitle="Courses You Handle"
                 AddButtonText="Add Course to Handle"
                 OnCourseAdded="@HandleCourseAdded"
-                OnCourseRemoved="@HandleCourseRemoved" />
-        </div>
-    }
-
-    @if (!string.IsNullOrEmpty(StatusMessage))
-    {
-        <div class="status-message @(IsError ? "error" : "success")">
-            <div class="status-icon">
-                @if (IsError) { <span>❌</span> } else { <span>✅</span> }
-            </div>
-            <span class="status-text">@StatusMessage</span>
+                OnCourseRemoved="@HandleCourseRemoved"
+                OnNotification="@HandleNotification" />
         </div>
     }
 </div>
 
+<!-- Notification Component -->
+<NotificationComponent @ref="notificationComponent" 
+    Position="NotificationPosition.TopRight" 
+    AutoDismissTime="5000" 
+    ShowProgressBar="true" 
+    ShowCloseButton="true" 
+    PauseOnHover="true" />
+
 @code {
+    private NotificationComponent notificationComponent;
     private string CurrentLecturerId = "";
     private string AuthErrorMessage = "";
     
     private List<Course> AssignedCourses = new();
     private bool IsInitialLoading = true;
-    private string StatusMessage = "";
-    private bool IsError = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -107,7 +105,9 @@
 
             // Load courses for authenticated lecturer
             AssignedCourses = await CourseService.GetCoursesByLecturerAsync(CurrentLecturerId) ?? new();
-            ClearStatusMessage();
+            
+            // Show success notification
+            ShowNotification("Courses loaded successfully", NotificationType.Success);
         }
         catch (UnauthorizedAccessException)
         {
@@ -131,7 +131,7 @@
     {
         if (string.IsNullOrEmpty(CurrentLecturerId))
         {
-            ShowStatusMessage("Authentication required to add courses.", true);
+            ShowNotification("Authentication required to add courses.", NotificationType.Error);
             return;
         }
 
@@ -141,18 +141,18 @@
             
             if (success)
             {
-                ShowStatusMessage($"Successfully added to course {courseCode}", false);
+                ShowNotification($"Successfully added to course {courseCode}", NotificationType.Success);
                 await LoadLecturerCourses(); // Refresh the list
             }
             else
             {
-                ShowStatusMessage($"Failed to add course {courseCode}. Please try again.", true);
+                ShowNotification($"Failed to add course {courseCode}. Please try again.", NotificationType.Error);
             }
         }
         catch (Exception ex)
         {
             MID_HelperFunctions.DebugMessage($"Error adding course {courseCode}: {ex.Message}");
-            ShowStatusMessage($"Error adding course {courseCode}. Please try again.", true);
+            ShowNotification($"Error adding course {courseCode}. Please try again.", NotificationType.Error);
         }
     }
 
@@ -160,7 +160,7 @@
     {
         if (string.IsNullOrEmpty(CurrentLecturerId))
         {
-            ShowStatusMessage("Authentication required to remove courses.", true);
+            ShowNotification("Authentication required to remove courses.", NotificationType.Error);
             return;
         }
 
@@ -170,41 +170,35 @@
             
             if (success)
             {
-                ShowStatusMessage($"Successfully removed from course {courseCode}", false);
+                ShowNotification($"Successfully removed from course {courseCode}", NotificationType.Success);
                 await LoadLecturerCourses(); // Refresh the list
             }
             else
             {
-                ShowStatusMessage($"Failed to remove course {courseCode}. Please try again.", true);
+                ShowNotification($"Failed to remove course {courseCode}. Please try again.", NotificationType.Error);
             }
         }
         catch (Exception ex)
         {
             MID_HelperFunctions.DebugMessage($"Error removing course {courseCode}: {ex.Message}");
-            ShowStatusMessage($"Error removing course {courseCode}. Please try again.", true);
+            ShowNotification($"Error removing course {courseCode}. Please try again.", NotificationType.Error);
         }
     }
 
-    private void ShowStatusMessage(string message, bool isError)
+    private async Task HandleNotification((string message, NotificationType type) notification)
     {
-        StatusMessage = message;
-        IsError = isError;
-        StateHasChanged();
-
-        // Auto-hide message after 5 seconds
-        _ = Task.Delay(5000).ContinueWith(_ => 
-        {
-            InvokeAsync(() => 
-            {
-                ClearStatusMessage();
-                StateHasChanged();
-            });
-        });
+        ShowNotification(notification.message, notification.type);
     }
 
-    private void ClearStatusMessage()
+    private void ShowNotification(string message, NotificationType type, int? duration = null)
     {
-        StatusMessage = "";
-        IsError = false;
+        try
+        {
+            notificationComponent?.ShowNotification(message, type, duration);
+        }
+        catch (Exception ex)
+        {
+            MID_HelperFunctions.DebugMessage($"Notification error: {ex.Message}");
+        }
     }
 }
