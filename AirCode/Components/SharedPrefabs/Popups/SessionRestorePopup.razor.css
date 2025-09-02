@@ -1,0 +1,292 @@
+/* SessionRestorePopup.razor.css - Scoped styles for SessionRestorePopup component */
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    z-index: 2000; /* Above backdrop */
+}
+
+.modal-overlay.visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+.popup-container {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    width: 90%;
+    max-width: 600px;
+    max-height: 80vh;
+    overflow: hidden;
+    transform: scale(0.9) translateY(20px);
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.modal-overlay.visible .popup-container {
+    transform: scale(1) translateY(0);
+}
+
+.popup-content {
+    display: flex;
+    flex-direction: column;
+}
+
+.popup-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 24px 24px 16px 24px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.popup-title {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #111827;
+}
+
+.close-button {
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: #6b7280;
+    cursor: pointer;
+    padding: 4px;
+    line-height: 1;
+    transition: color 0.2s ease;
+}
+
+.close-button:hover {
+    color: #374151;
+}
+
+.popup-body {
+    padding: 16px 24px 24px 24px;
+    overflow-y: auto;
+    max-height: 60vh;
+}
+
+.popup-message {
+    margin: 0 0 16px 0;
+    color: #374151;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.popup-warning {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: #fef3cd;
+    border: 1px solid #f59e0b;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    font-size: 0.9rem;
+    color: #92400e;
+}
+
+.popup-warning svg {
+    flex-shrink: 0;
+    color: #f59e0b;
+}
+
+.stored-sessions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.stored-session-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: white;
+}
+
+.stored-session-item:hover {
+    border-color: #d1d5db;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.stored-session-item.selected {
+    border-color: #3b82f6;
+    background: #eff6ff;
+    box-shadow: 0 0 0 1px #3b82f6;
+}
+
+.session-details {
+    flex: 1;
+    min-width: 0;
+}
+
+.session-details strong {
+    display: block;
+    color: #111827;
+    font-size: 1rem;
+    margin-bottom: 4px;
+}
+
+.session-course-id {
+    color: #6b7280;
+    font-size: 0.875rem;
+    font-weight: 500;
+    margin-left: 8px;
+}
+
+.session-metadata {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-top: 8px;
+    font-size: 0.8rem;
+    color: #6b7280;
+}
+
+.session-time,
+.session-started,
+.session-remaining {
+    white-space: nowrap;
+}
+
+.session-remaining {
+    color: #059669;
+    font-weight: 500;
+}
+
+.delete-session-btn {
+    background: none;
+    border: none;
+    padding: 8px;
+    cursor: pointer;
+    color: #ef4444;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+    margin-left: 12px;
+}
+
+.delete-session-btn:hover {
+    background: #fef2f2;
+    color: #dc2626;
+}
+
+.popup-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 16px 24px 24px 24px;
+    border-top: 1px solid #e5e7eb;
+    background: #f9fafb;
+}
+
+.secondary-button,
+.danger-button,
+.primary-button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.secondary-button {
+    background: white;
+    color: #374151;
+    border: 1px solid #d1d5db;
+}
+
+.secondary-button:hover {
+    background: #f9fafb;
+    border-color: #9ca3af;
+}
+
+.danger-button {
+    background: #ef4444;
+    color: white;
+}
+
+.danger-button:hover {
+    background: #dc2626;
+}
+
+.primary-button {
+    background: #3b82f6;
+    color: white;
+}
+
+.primary-button:hover:not(:disabled) {
+    background: #2563eb;
+}
+
+.primary-button:disabled {
+    background: #9ca3af;
+    cursor: not-allowed;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 640px) {
+    .popup-container {
+        width: 95%;
+        margin: 0 8px;
+    }
+
+    .popup-header {
+        padding: 20px 20px 12px 20px;
+    }
+
+    .popup-body {
+        padding: 12px 20px 20px 20px;
+    }
+
+    .popup-actions {
+        flex-direction: column;
+        padding: 16px 20px 20px 20px;
+    }
+
+    .secondary-button,
+    .danger-button,
+    .primary-button {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .session-metadata {
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .stored-session-item {
+        padding: 12px;
+    }
+
+    .delete-session-btn {
+        margin-left: 8px;
+        padding: 6px;
+    }
+}

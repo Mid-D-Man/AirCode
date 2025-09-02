@@ -81,9 +81,22 @@ namespace AirCode.Pages.Admin.Shared
 
         protected override async Task OnInitializedAsync()
         {
-            SessionStateService.StateChanged += OnStateChanged;
-            await CheckForExistingSessionAsync();
-            await CheckForStoredSessionsAsync();
+            try
+            {
+                SessionStateService.StateChanged += OnStateChanged;
+        
+                // Start the session initialization process
+                isSearchingForSessions = true;
+                StateHasChanged();
+        
+                await CheckForExistingSessionAsync();
+                await CheckForStoredSessionsAsync();
+            }
+            finally
+            {
+                isSearchingForSessions = false;
+                StateHasChanged();
+            }
         }
 
 
@@ -202,18 +215,10 @@ namespace AirCode.Pages.Admin.Shared
         {
             try
             {
-                // Get all stored sessions that haven't been restored yet
+                // Get all stored sessions that haven't expired yet
                 var persistentSessions = await SessionStateService.GetStoredSessionsAsync();
                 storedSessions = persistentSessions
                     .Where(s => s.StartTime.AddMinutes(s.Duration) > DateTime.UtcNow)
-                    .Select(ps => new SessionData
-                    {
-                        SessionId = ps.SessionId,
-                        CourseCode = ps.CourseCode,
-                        CourseName = ps.CourseName,
-                        StartTime = ps.StartTime,
-                        Duration = ps.Duration,
-                    })
                     .ToList();
 
                 hasExistingSessions = storedSessions.Any();
@@ -222,6 +227,7 @@ namespace AirCode.Pages.Admin.Shared
                 {
                     restorationMessage = $"Found {storedSessions.Count} stored session(s) available for restoration";
                     showSessionRestoreDialog = true;
+                    StateHasChanged();
                 }
                 else
                 {
@@ -443,124 +449,134 @@ namespace AirCode.Pages.Admin.Shared
         }
 
         private async Task StartSessionAsync()
+{
+    if (selectedCourse == null) return;
+
+    // Prevent starting if we're in the middle of restoration
+    if (isRestoringSession || isSearchingForSessions)
+    {
+        return;
+    }
+
+    // Check if there's already an active session for this course
+    if (allActiveSessions.Any(s => s.CourseCode == selectedCourse.CourseCode))
+    {
+        restorationMessage = "Session already exists for this course";
+        return;
+    }
+
+    try
+    {
+        isCreatingSession = true;
+        StateHasChanged();
+
+        sessionModel.StartTime = DateTime.UtcNow;
+        sessionModel.CreatedAt = DateTime.UtcNow.Date;
+        sessionModel.SessionId = Guid.NewGuid().ToString("N");
+        
+        sessionEndTime = DateTime.UtcNow.AddMinutes(sessionModel.Duration);
+
+        // Generate temporal key if enabled
+        string temporalKey = useTemporalKeyRefresh ? 
+            GenerateTemporalKey(sessionModel.SessionId, sessionModel.StartTime) : 
+            string.Empty;
+
+        // Create Supabase attendance session
+        var attendanceSession = new SupabaseAttendanceSession
         {
-            if (selectedCourse == null) return;
+            SessionId = sessionModel.SessionId,
+            CourseCode = sessionModel.CourseCode,
+            StartTime = sessionModel.StartTime,
+            Duration = sessionModel.Duration,
+            ExpirationTime = sessionEndTime,
+            AttendanceRecords = "[]",
+            AllowOfflineConnectionAndSync = allowOfflineSync,
+            SecurityFeatures = (int)securityFeatures,
+            TemporalKey = temporalKey,
+            UseTemporalKeyRefresh = useTemporalKeyRefresh,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
 
-            // Prevent starting if we're in the middle of restoration
-            if (isRestoringSession || isSearchingForSessions)
+        // Save to Supabase
+        var savedSession = await AttendanceSessionService.CreateSessionAsync(attendanceSession);
+
+        // Create offline session entry when offline sync is enabled
+        if (allowOfflineSync)
+        {
+            var offlineSession = new SupabaseOfflineAttendanceSession
             {
-                return;
-            }
+                SessionId = sessionModel.SessionId,
+                CourseCode = sessionModel.CourseCode,
+                StartTime = sessionModel.StartTime,
+                Duration = sessionModel.Duration,
+                ExpirationTime = sessionEndTime,
+                OfflineRecords = "[]",
+                AllowOfflineSync = allowOfflineSync,
+                SecurityFeatures = (int)securityFeatures,
+                SyncStatus = 0,
+                CreatedAt = DateTime.UtcNow
+            };
 
-            // Check if there's already an active session for this course
-            if (allActiveSessions.Any(s => s.CourseCode == selectedCourse.CourseCode))
-            {
-                restorationMessage = "Session already exists for this course";
-                return;
-            }
-
-            try
-            {
-                isCreatingSession = true;
-                StateHasChanged();
-
-                sessionModel.StartTime = DateTime.UtcNow;
-                sessionModel.CreatedAt = DateTime.UtcNow.Date;
-                sessionModel.SessionId = Guid.NewGuid().ToString("N");
-                
-                sessionEndTime = DateTime.UtcNow.AddMinutes(sessionModel.Duration);
-
-                // Generate temporal key if enabled
-                string temporalKey = useTemporalKeyRefresh ? 
-                    GenerateTemporalKey(sessionModel.SessionId, sessionModel.StartTime) : 
-                    string.Empty;
-
-                // Create Supabase attendance session
-                var attendanceSession = new SupabaseAttendanceSession
-                {
-                    SessionId = sessionModel.SessionId,
-                    CourseCode = sessionModel.CourseCode,
-                    StartTime = sessionModel.StartTime,
-                    Duration = sessionModel.Duration,
-                    ExpirationTime = sessionEndTime,
-                    AttendanceRecords = "[]",
-                    AllowOfflineConnectionAndSync = allowOfflineSync,
-                    SecurityFeatures = (int)securityFeatures,
-                    TemporalKey = temporalKey,
-                    UseTemporalKeyRefresh = useTemporalKeyRefresh,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
-                };
-
-                // Save to Supabase
-                var savedSession = await AttendanceSessionService.CreateSessionAsync(attendanceSession);
-
-                // Create offline session entry when offline sync is enabled
-                if (allowOfflineSync)
-                {
-                    var offlineSession = new SupabaseOfflineAttendanceSession
-                    {
-                        SessionId = sessionModel.SessionId,
-                        CourseCode = sessionModel.CourseCode,
-                        StartTime = sessionModel.StartTime,
-                        Duration = sessionModel.Duration,
-                        ExpirationTime = sessionEndTime,
-                        OfflineRecords = "[]",
-                        AllowOfflineSync = allowOfflineSync,
-                        SecurityFeatures = (int)securityFeatures,
-                        SyncStatus = 0,
-                        CreatedAt = DateTime.UtcNow
-                    };
-
-                    await AttendanceSessionService.CreateOfflineSessionAsync(offlineSession);
-                }
-                
-                // Generate QR code payload with temporal key
-                qrCodePayload = await QRCodeDecoder.EncodeSessionDataAsync(
-                    sessionModel.SessionId,
-                    sessionModel.CourseCode,
-                    sessionModel.StartTime,
-                    sessionModel.Duration,
-                    allowOfflineSync,
-                    useTemporalKeyRefresh,
-                    securityFeatures,
-                    temporalKey
-                );
-
-                // Create Firebase attendance event document (keep existing functionality)
-                await CreateFirebaseAttendanceEvent();
-
-                // Create active session data
-                currentActiveSession = new SessionData
-                {
-                    SessionId = sessionModel.SessionId,
-                    CourseCode = sessionModel.CourseCode,
-                    CourseName = sessionModel.CourseName,
-                    StartTime = sessionModel.StartTime,
-                    Duration = sessionModel.Duration,
-                    TemporalKey = temporalKey
-                };
-
-                if (isCurrentUserCourseRep && !string.IsNullOrEmpty(currentUserMatricNumber))
-                {
-                    await AutoSignCourseRepAsync();
-                }
-                
-                isSessionStarted = true;
-                RefreshSessionLists();
-                
-                isCreatingSession = false;
-            }
-            catch (Exception ex)
-            {
-                MID_HelperFunctions.DebugMessage($"Error starting session: {ex.Message}");
-            }
-            finally
-            {
-                isCreatingSession = false;
-                StateHasChanged();
-            }
+            await AttendanceSessionService.CreateOfflineSessionAsync(offlineSession);
         }
+        
+        // Generate QR code payload with temporal key
+        qrCodePayload = await QRCodeDecoder.EncodeSessionDataAsync(
+            sessionModel.SessionId,
+            sessionModel.CourseCode,
+            sessionModel.StartTime,
+            sessionModel.Duration,
+            allowOfflineSync,
+            useTemporalKeyRefresh,
+            securityFeatures,
+            temporalKey
+        );
+
+        // Create Firebase attendance event document (keep existing functionality)
+        await CreateFirebaseAttendanceEvent();
+
+        // Create active session data
+        currentActiveSession = new SessionData
+        {
+            SessionId = sessionModel.SessionId,
+            CourseCode = sessionModel.CourseCode,
+            CourseName = sessionModel.CourseName,
+            StartTime = sessionModel.StartTime,
+            Duration = sessionModel.Duration,
+            TemporalKey = temporalKey
+        };
+
+        // Add to active sessions and persist
+        await SessionStateService.AddActiveSessionAsync(currentActiveSession);
+        await SessionStateService.UpdateCurrentSessionAsync("default", currentActiveSession);
+
+        if (isCurrentUserCourseRep && !string.IsNullOrEmpty(currentUserMatricNumber))
+        {
+            await AutoSignCourseRepAsync();
+        }
+        
+        isSessionStarted = true;
+        RefreshSessionLists();
+        
+        // Start temporal key refresh timer if enabled
+        if (useTemporalKeyRefresh)
+        {
+            StartTemporalKeyUpdateTimer();
+        }
+        
+        isCreatingSession = false;
+    }
+    catch (Exception ex)
+    {
+        MID_HelperFunctions.DebugMessage($"Error starting session: {ex.Message}");
+    }
+    finally
+    {
+        isCreatingSession = false;
+        StateHasChanged();
+    }
+}
 
         private async Task EndSession()
         {
@@ -579,24 +595,24 @@ namespace AirCode.Pages.Admin.Shared
                         currentActiveSession.SessionId, currentActiveSession.CourseCode);
 
                     if (!completedSuccess) return;
-                    
+            
                     await MigrateAttendanceDataToFirebase(currentActiveSession.SessionId, currentActiveSession.CourseCode);
 
                     // Remove from active sessions
-                    SessionStateService.RemoveActiveSession(currentActiveSession.SessionId);
-                    
+                    await SessionStateService.RemoveActiveSessionAsync(currentActiveSession.SessionId);
+            
                     // Remove stored session as well
                     await SessionStateService.RemoveStoredSessionAsync(currentActiveSession.SessionId);
                 }
 
                 // Clean up current session
-                SessionStateService.RemoveCurrentSession("default");
-             
+                await SessionStateService.RemoveCurrentSessionAsync("default");
+     
                 // Reset component state
                 isSessionStarted = false;
                 currentActiveSession = null;
                 selectedCourse = null;
-                
+        
                 RefreshSessionLists();
             }
             catch (Exception ex)
@@ -609,7 +625,6 @@ namespace AirCode.Pages.Admin.Shared
                 StateHasChanged();
             }
         }
-
         private void ResetSession()
         {
             // Reset all session states to start fresh

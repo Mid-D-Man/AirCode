@@ -28,11 +28,12 @@ public partial class ScanPage : ComponentBase
     private string currentUserMatricNumber = "SukaBlak";
     private string deviceGUID = "N";
 
-    // Sync indicator state
+    // Improved sync indicator state management
     private bool showSyncIndicator = false;
     private string syncMessage = "";
     private string syncStatus = ""; // "syncing", "success", "error"
-    private Timer? syncIndicatorTimer;
+    private CancellationTokenSource? syncIndicatorCancellation;
+    private readonly object syncIndicatorLock = new object();
 
     protected override async Task OnInitializedAsync()
     {
@@ -66,16 +67,16 @@ public partial class ScanPage : ComponentBase
     private async Task OnBeforeInternalNavigation(LocationChangingContext context)
     {
         await StopScanning();
-        syncIndicatorTimer?.Dispose();
+        CancelSyncIndicator();
     }
 
     private async Task CheckAndSyncOfflineRecords()
     {
         try
         {
-            var syncStatus = await OfflineService.GetSyncStatusAsync();
+            var syncStatusInfo = await OfflineService.GetSyncStatusAsync();
 
-            if (syncStatus.HasPendingRecords && syncStatus.IsOnline)
+            if (syncStatusInfo.HasPendingRecords && syncStatusInfo.IsOnline)
             {
                 ShowSyncIndicator("Syncing offline records...", "syncing");
 
@@ -83,27 +84,29 @@ public partial class ScanPage : ComponentBase
 
                 if (syncResult)
                 {
-                    ShowSyncIndicator("✅ Offline records synced", "success");
+                    ShowSyncIndicator("✅ Offline records synced successfully", "success");
                     MID_HelperFunctions.DebugMessage("Successfully synced offline records", DebugClass.Info);
                 }
                 else
                 {
-                    ShowSyncIndicator("⚠️ Sync incomplete", "error");
+                    ShowSyncIndicator("⚠️ Some records failed to sync", "error");
                     MID_HelperFunctions.DebugMessage("Failed to sync some offline records", DebugClass.Warning);
                 }
 
                 // Hide indicator after 3 seconds
-                HideSyncIndicatorAfterDelay(3000);
+                _ = HideSyncIndicatorAfterDelay(3000);
             }
-            else if (syncStatus.HasPendingRecords && !syncStatus.IsOnline)
+            else if (syncStatusInfo.HasPendingRecords && !syncStatusInfo.IsOnline)
             {
-                ShowSyncIndicator($"📴 {syncStatus.PendingRecordsCount} offline records pending", "error");
-                HideSyncIndicatorAfterDelay(4000);
+                ShowSyncIndicator($"📴 {syncStatusInfo.PendingRecordsCount} records pending sync", "error");
+                _ = HideSyncIndicatorAfterDelay(5000);
             }
         }
         catch (Exception ex)
         {
             MID_HelperFunctions.DebugMessage($"Error checking offline records: {ex.Message}", DebugClass.Exception);
+            ShowSyncIndicator("⚠️ Sync check failed", "error");
+            _ = HideSyncIndicatorAfterDelay(3000);
         }
     }
 
@@ -124,6 +127,7 @@ public partial class ScanPage : ComponentBase
                 {
                     MID_HelperFunctions.DebugMessage(
                         $"Valid AirCode QR detected for course: {decodedSessionData.CourseCode}", DebugClass.Info);
+                    
                     var myCourses = await CourseService.GetStudentCoursesByMatricAsync(currentUserMatricNumber);
                     var courseRefs = myCourses.GetEnrolledCourses();
 
@@ -132,7 +136,6 @@ public partial class ScanPage : ComponentBase
                     
                     if (isTakingCourse)
                     {
-                      
                         await ProcessAttendanceWithOfflineSupport(qrCodeData);
                     }
                     else
@@ -174,16 +177,21 @@ public partial class ScanPage : ComponentBase
             {
                 if (result.IsOfflineMode)
                 {
-                    ShowNotification("📴 Attendance recorded offline", NotificationType.Success);
-                    ShowSyncIndicator("📴 Will sync when online", "error");
-                    HideSyncIndicatorAfterDelay(3000);
+                    ShowNotification("📴 Attendance recorded offline - will sync when online", NotificationType.Success);
+                    ShowSyncIndicator("📴 Offline record saved", "error");
+                    _ = HideSyncIndicatorAfterDelay(3000);
                     MID_HelperFunctions.DebugMessage("Attendance recorded offline successfully", DebugClass.Info);
                 }
                 else
                 {
-                    ShowNotification("✅ Attendance recorded online!", NotificationType.Success);
+                    ShowNotification("✅ Attendance recorded successfully!", NotificationType.Success);
+                    ShowSyncIndicator("✅ Synced online", "success");
+                    _ = HideSyncIndicatorAfterDelay(2000);
                     MID_HelperFunctions.DebugMessage("Attendance recorded online successfully", DebugClass.Info);
                 }
+
+                // Auto stop scanning on successful attendance
+                await AutoStopScanningOnSuccess();
             }
             else
             {
@@ -200,47 +208,29 @@ public partial class ScanPage : ComponentBase
         }
     }
 
-    private async Task ProcessAttendanceWithNewPayload(string qrCode)
+    private async Task AutoStopScanningOnSuccess()
     {
         try
         {
-            MID_HelperFunctions.DebugMessage($"Processing attendance with payload for QR: {qrCode}", DebugClass.Info);
-
-            var attendanceRecord = new AttendanceRecord
+            if (isScanning)
             {
-                MatricNumber = currentUserMatricNumber,
-                HasScannedAttendance = true,
-                IsOnlineScan = true,
-                DeviceGUID = deviceGUID
-            };
-
-            var edgeFunctionRequest = await QRDecoder.CreateEdgeFunctionRequestAsync(qrCode, attendanceRecord);
-
-            if (edgeFunctionRequest == null)
-            {
-                ShowNotification("Failed to create valid request", NotificationType.Error);
-                return;
-            }
-
-            var result = await EdgeService.ProcessAttendanceWithPayloadAsync(edgeFunctionRequest);
-
-            if (result.Success)
-            {
-                ShowNotification("Attendance recorded successfully!", NotificationType.Success);
-                MID_HelperFunctions.DebugMessage("Attendance recorded successfully!", DebugClass.Info);
-            }
-            else
-            {
-                var userFriendlyMessage = GetUserFriendlyErrorMessage(result.ErrorCode, result.Message);
-                ShowNotification(userFriendlyMessage, NotificationType.Error);
-                MID_HelperFunctions.DebugMessage($"Attendance processing failed: {result.Message}", DebugClass.Warning);
+                MID_HelperFunctions.DebugMessage("Auto-stopping scanner after successful scan", DebugClass.Info);
+                
+                // Add a small delay for better UX
+                await Task.Delay(1000);
+                
+                await StopScanning();
+                
+                // Reset UI state
+                isProcessing = false;
+                await InvokeAsync(StateHasChanged);
+                
+                MID_HelperFunctions.DebugMessage("Scanner stopped and UI reset", DebugClass.Info);
             }
         }
         catch (Exception ex)
         {
-            ShowNotification("Failed to process attendance", NotificationType.Error);
-            MID_HelperFunctions.DebugMessage($"Exception in ProcessAttendanceWithNewPayload: {ex}",
-                DebugClass.Exception);
+            MID_HelperFunctions.DebugMessage($"Error in auto-stop scanning: {ex.Message}", DebugClass.Exception);
         }
     }
 
@@ -251,24 +241,79 @@ public partial class ScanPage : ComponentBase
 
     private void ShowSyncIndicator(string message, string status)
     {
-        syncMessage = message;
-        syncStatus = status;
-        showSyncIndicator = true;
+        lock (syncIndicatorLock)
+        {
+            // Cancel any existing timer
+            CancelSyncIndicator();
 
-        // Cancel any existing timer
-        syncIndicatorTimer?.Dispose();
+            syncMessage = message;
+            syncStatus = status;
+            showSyncIndicator = true;
 
-        StateHasChanged();
+            InvokeAsync(StateHasChanged);
+            MID_HelperFunctions.DebugMessage($"Sync indicator shown: {message} ({status})", DebugClass.Info);
+        }
     }
 
-    private void HideSyncIndicatorAfterDelay(int delayMs)
+    private async Task HideSyncIndicatorAfterDelay(int delayMs)
     {
-        syncIndicatorTimer?.Dispose();
-        syncIndicatorTimer = new Timer(_ =>
+        lock (syncIndicatorLock)
         {
-            showSyncIndicator = false;
-            InvokeAsync(StateHasChanged);
-        }, null, delayMs, Timeout.Infinite);
+            CancelSyncIndicator();
+            syncIndicatorCancellation = new CancellationTokenSource();
+        }
+
+        try
+        {
+            await Task.Delay(delayMs, syncIndicatorCancellation.Token);
+            
+            lock (syncIndicatorLock)
+            {
+                if (!syncIndicatorCancellation.Token.IsCancellationRequested)
+                {
+                    showSyncIndicator = false;
+                    syncMessage = "";
+                    syncStatus = "";
+                    
+                    InvokeAsync(StateHasChanged);
+                    MID_HelperFunctions.DebugMessage("Sync indicator hidden after delay", DebugClass.Info);
+                }
+            }
+        }
+        catch (TaskCanceledException)
+        {
+            // Expected when cancellation occurs
+            MID_HelperFunctions.DebugMessage("Sync indicator hide cancelled", DebugClass.Info);
+        }
+        catch (Exception ex)
+        {
+            MID_HelperFunctions.DebugMessage($"Error hiding sync indicator: {ex.Message}", DebugClass.Exception);
+        }
+        finally
+        {
+            lock (syncIndicatorLock)
+            {
+                syncIndicatorCancellation?.Dispose();
+                syncIndicatorCancellation = null;
+            }
+        }
+    }
+
+    private void CancelSyncIndicator()
+    {
+        lock (syncIndicatorLock)
+        {
+            try
+            {
+                syncIndicatorCancellation?.Cancel();
+                syncIndicatorCancellation?.Dispose();
+                syncIndicatorCancellation = null;
+            }
+            catch (Exception ex)
+            {
+                MID_HelperFunctions.DebugMessage($"Error cancelling sync indicator: {ex.Message}", DebugClass.Exception);
+            }
+        }
     }
 
     private string GetUserFriendlyErrorMessage(string errorCode, string originalMessage)
@@ -293,11 +338,16 @@ public partial class ScanPage : ComponentBase
 
     private bool CanProcessAttendance()
     {
-        if (isProcessing) return false;
+        if (isProcessing) 
+        {
+            MID_HelperFunctions.DebugMessage("Cannot process attendance - already processing", DebugClass.Warning);
+            return false;
+        }
 
         if (string.IsNullOrWhiteSpace(currentUserMatricNumber))
         {
             ShowNotification("User not logged in", NotificationType.Error);
+            MID_HelperFunctions.DebugMessage("Cannot process attendance - user not logged in", DebugClass.Warning);
             return false;
         }
 
@@ -306,34 +356,70 @@ public partial class ScanPage : ComponentBase
 
     private async Task StartScanning()
     {
-        if (qrScanner != null)
+        try
         {
-            isScanning = true;
-            await qrScanner.StartScanningAsync();
-            StateHasChanged();
+            if (qrScanner != null && !isScanning)
+            {
+                isScanning = true;
+                await qrScanner.StartScanningAsync();
+                
+                MID_HelperFunctions.DebugMessage("Scanner started successfully", DebugClass.Info);
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (Exception ex)
+        {
+            isScanning = false;
+            MID_HelperFunctions.DebugMessage($"Error starting scanner: {ex.Message}", DebugClass.Exception);
+            ShowNotification("Failed to start camera", NotificationType.Error);
+            await InvokeAsync(StateHasChanged);
         }
     }
 
     private async Task StopScanning()
     {
-        if (qrScanner != null)
+        try
         {
+            if (qrScanner != null && isScanning)
+            {
+                isScanning = false;
+                isProcessing = false; // Reset processing state
+                
+                await qrScanner.StopScanningAsync();
+                
+                MID_HelperFunctions.DebugMessage("Scanner stopped successfully", DebugClass.Info);
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (Exception ex)
+        {
+            MID_HelperFunctions.DebugMessage($"Error stopping scanner: {ex.Message}", DebugClass.Exception);
+            // Still update UI state even if stop fails
             isScanning = false;
-            await qrScanner.StopScanningAsync();
-            StateHasChanged();
+            isProcessing = false;
+            await InvokeAsync(StateHasChanged);
         }
     }
 
     private async Task SwitchCamera()
     {
-        if (qrScanner != null)
+        try
         {
-            await qrScanner.SwitchCameraAsync();
+            if (qrScanner != null && isScanning)
+            {
+                await qrScanner.SwitchCameraAsync();
+                MID_HelperFunctions.DebugMessage("Camera switched", DebugClass.Info);
+            }
+        }
+        catch (Exception ex)
+        {
+            MID_HelperFunctions.DebugMessage($"Error switching camera: {ex.Message}", DebugClass.Exception);
+            ShowNotification("Failed to switch camera", NotificationType.Warning);
         }
     }
 
     public void Dispose()
     {
-        syncIndicatorTimer?.Dispose();
+        CancelSyncIndicator();
     }
 }

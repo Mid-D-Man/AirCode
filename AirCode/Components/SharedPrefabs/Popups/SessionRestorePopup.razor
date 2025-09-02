@@ -1,0 +1,173 @@
+@namespace AirCode.Components.SharedPrefabs.Popups
+@using AirCode.Domain.Entities
+@using AirCode.Models.QRCode
+@using AirCode.Services.VisualElements
+@inject IBackdropService BackdropService
+@inject IJSRuntime JSRuntime
+
+@if (IsVisible)
+{
+    <div id="session-restore-modal-@InstanceId" 
+         class="modal-overlay @(IsVisible ? "visible" : "")" 
+         @onclick="HandleBackdropClick"
+         @ref="modalOverlayRef">
+        <div class="popup-container" @onclick:stopPropagation="true">
+            <div class="popup-content">
+                <div class="popup-header">
+                    <h3 class="popup-title">Restore Previous Sessions</h3>
+                    <button class="close-button" @onclick="OnDismiss">×</button>
+                </div>
+                
+                <div class="popup-body">
+                    <p class="popup-message">Found @StoredSessions.Count stored session(s) from previous usage:</p>
+                    <div class="popup-warning">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+                        </svg>
+                        Choose to restore a session or clean up all stored sessions to start fresh.
+                    </div>
+                    
+                    <div class="stored-sessions-list">
+                        @foreach (var session in StoredSessions)
+                        {
+                            <div class="stored-session-item @(SelectedSession?.SessionId == session.SessionId ? "selected" : "")"
+                                 @onclick="async () => await OnSessionSelected.InvokeAsync(session)">">
+                                <div class="session-details">
+                                    <strong>@session.CourseName</strong>
+                                    <span class="session-course-id">(@session.CourseCode)</span>
+                                    <div class="session-metadata">
+                                        <span class="session-time">Duration: @session.Duration min</span>
+                                        <span class="session-started">Started: @session.StartTime.ToString("MMM dd, HH:mm")</span>
+                                        <span class="session-remaining">
+                                            @{
+                                                var remaining = session.StartTime.AddMinutes(session.Duration) - DateTime.UtcNow;
+                                                var remainingText = remaining.TotalMinutes > 60
+                                                    ? $"{remaining.Hours}h {remaining.Minutes}m remaining"
+                                                    : $"{(int)remaining.TotalMinutes}m remaining";
+                                            }
+                                            @remainingText
+                                        </span>
+                                    </div>
+                                </div>
+                                <button class="delete-session-btn" @onclick="() => OnSessionDeleted.InvokeAsync(session)"
+                                        @onclick:stopPropagation="true" title="Delete this stored session">
+                                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        }
+                    </div>
+                </div>
+                
+                <div class="popup-actions">
+                    <button class="secondary-button" @onclick="OnDismiss" title="Keep stored sessions but start new">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                        </svg>
+                        Start New Session
+                    </button>
+                    <button class="danger-button" @onclick="OnCleanupAll" title="Delete all stored sessions">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                        </svg>
+                        Clean Up All Sessions
+                    </button>
+                    <button class="primary-button" 
+                            @onclick="OnRestore" 
+                            disabled="@(SelectedSession == null)"
+                            title="Restore the selected session">
+                        Restore Selected
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public List<SessionData> StoredSessions { get; set; } = new();
+    [Parameter] public SessionData? SelectedSession { get; set; }
+    [Parameter] public EventCallback<SessionData> OnSessionSelected { get; set; }
+    [Parameter] public EventCallback<SessionData> OnSessionDeleted { get; set; }
+    [Parameter] public EventCallback OnRestore { get; set; }
+    [Parameter] public EventCallback OnCleanupAll { get; set; }
+    [Parameter] public EventCallback OnDismiss { get; set; }
+
+    // Portal management
+    private ElementReference modalOverlayRef;
+    private string InstanceId = Guid.NewGuid().ToString("N")[..8];
+    private string ModalSelector => $"#session-restore-modal-{InstanceId}";
+    private bool _isInPortal = false;
+    private bool _wasVisible = false;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (IsVisible && !_wasVisible)
+        {
+            await ShowModalAsync();
+        }
+        else if (!IsVisible && _wasVisible)
+        {
+            await HideModalAsync();
+        }
+        
+        _wasVisible = IsVisible;
+    }
+
+    private async Task ShowModalAsync()
+    {
+        try
+        {
+            await BackdropService.ShowAsync();
+            // Give the DOM time to render
+            await Task.Delay(50);
+            await BackdropService.MoveElementToPortalAsync(ModalSelector);
+            _isInPortal = true;
+        }
+        catch (Exception ex)
+        {
+            await MID_HelperFunctions.DebugMessageAsync($"Error showing session restore modal: {ex.Message}", DebugClass.Exception);
+        }
+    }
+
+    private async Task HideModalAsync()
+    {
+        try
+        {
+            if (_isInPortal)
+            {
+                await BackdropService.ReturnElementFromPortalAsync(ModalSelector);
+                _isInPortal = false;
+            }
+            await BackdropService.HideAsync();
+        }
+        catch (Exception ex)
+        {
+            await MID_HelperFunctions.DebugMessageAsync($"Error hiding session restore modal: {ex.Message}", DebugClass.Exception);
+        }
+    }
+
+    private async Task HandleBackdropClick()
+    {
+        await HideModalAsync();
+        await OnDismiss.InvokeAsync();
+    }
+
+    public async void Dispose()
+    {
+        // Ensure we return from portal on disposal
+        if (_isInPortal)
+        {
+            try
+            {
+                await BackdropService.ReturnElementFromPortalAsync(ModalSelector);
+            }
+            catch (Exception ex)
+            {
+                await MID_HelperFunctions.DebugMessageAsync($"Error during session restore modal disposal: {ex.Message}", DebugClass.Exception);
+            }
+        }
+    }
+}

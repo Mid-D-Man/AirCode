@@ -6,84 +6,24 @@
 @using AirCode.Components.SharedPrefabs.QrCode
 @using AirCode.Components.SharedPrefabs.Buttons
 @using AirCode.Components.SharedPrefabs.Spinner
+@using AirCode.Components.SharedPrefabs.Popups
 @using AirCode.Models.QRCode
 @using AirCode.Components.Admin.Shared
+@using AirCode.Domain.Entities
 @using AirCode.Domain.Enums
 <div class="create-session-page">
     <h1>Create Attendance Event</h1>
     
-    
-    
-    <!-- Session Restoration Dialog -->
-    @if (showSessionRestoreDialog && !isRestoringSession)
-    {
-        <div class="session-restore-backdrop">
-            <div class="session-restore-dialog">
-                <div class="dialog-header">
-                    <h3>Restore Previous Sessions</h3>
-                    <button class="close-button" @onclick="DismissSessionRestoreDialogAsync">×</button>
-                </div>
-                <div class="dialog-content">
-                    <p class="dialog-message">Found @storedSessions.Count stored session(s) from previous usage:</p>
-                    <div class="dialog-warning">
-                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
-                        </svg>
-                        Choose to restore a session or clean up all stored sessions to start fresh.
-                    </div>
-                    <div class="stored-sessions-list">
-                        @foreach (var session in storedSessions)
-                        {
-                            <div class="stored-session-item @(selectedStoredSession?.SessionId == session.SessionId ? "selected" : "")"
-                                 @onclick="() => SelectStoredSession(session)">
-                                <div class="session-details">
-                                    <strong>@session.CourseName</strong>
-                                    <span class="session-course-id">(@session.CourseCode)</span>
-                                    <div class="session-metadata">
-                                        <span class="session-time">Duration: @session.Duration min</span>
-                                        <span class="session-started">Started: @session.StartTime.ToString("MMM dd, HH:mm")</span>
-                                        <span class="session-remaining">
-                                        @{
-                                                var remaining = session.StartTime.AddMinutes(session.Duration) - DateTime.UtcNow;
-                                                var remainingText = remaining.TotalMinutes > 60
-                                                    ? $"{remaining.Hours}h {remaining.Minutes}m remaining"
-                                                    : $"{(int)remaining.TotalMinutes}m remaining";
-                                            }
-                                            @remainingText
-                                    </span>
-                                    </div>
-                                </div>
-                                <button class="delete-session-btn" @onclick="() => DeleteStoredSessionAsync(session)"
-                                        @onclick:stopPropagation="true" title="Delete this stored session">
-                                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
-                                        <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
-                                    </svg>
-                                </button>
-                            </div>
-                        }
-                    </div>
-                </div>
-                <div class="dialog-actions">
-                    <button class="secondary-button" @onclick="DismissSessionRestoreDialogAsync" title="Keep stored sessions but start new">
-                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
-                        </svg>
-                        Start New Session
-                    </button>
-                    <button class="danger-button" @onclick="AbandonStoredSessionsAsync" title="Delete all stored sessions">
-                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
-                        </svg>
-                        Clean Up All Sessions
-                    </button>
-                    <PrimaryButton Text="Restore Selected"
-                                   OnClick="RestoreSelectedSessionAsync"
-                                   Disabled="@(selectedStoredSession == null)"
-                                   title="Restore the selected session" />
-                </div>
-            </div>
-        </div>
-    }
+    <!-- Session Restoration Popup Component -->
+    <SessionRestorePopup
+        IsVisible="showSessionRestoreDialog"
+        StoredSessions="storedSessions"
+        SelectedSession="selectedStoredSession"
+        OnSessionSelected="@((SessionData session) => { selectedStoredSession = session; StateHasChanged(); })"
+        OnSessionDeleted="DeleteStoredSessionAsync"
+        OnRestore="RestoreSelectedSessionAsync"
+        OnCleanupAll="AbandonStoredSessionsAsync"
+        OnDismiss="DismissSessionRestoreDialogAsync" />
 
     <!-- Enhanced Loading Backdrop -->
     @if (isSearchingForSessions || isRestoringSession)
@@ -335,28 +275,24 @@
                                  OnGenerated="@HandleQRCodeGenerated" />
                 </div>
                 
-              <div class="session-actions">
+                <div class="session-actions">
+                    <button class="manual-attendance-icon" @onclick="OpenManualAttendancePopup" title="Manual Attendance Sign">
+                        <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/>
+                        </svg>
+                    </button>
 
-
-                  <div class="session-actions">
-                      <button class="manual-attendance-icon" @onclick="OpenManualAttendancePopup" title="Manual Attendance Sign">
-                          <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
-                              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/>
-                          </svg>
-                      </button>
-
-                      <div class="end-session-container">
-                          <PrimaryButton Text="End Session"
-                                         OnClick="EndSession"
-                                         Disabled="@isEndingSession" />
-                          @if (isEndingSession)
-                          {
-                              <LoadingSpinner Title="Ending Session"
-                                              Subtitle="Finalizing attendance data and cleaning up..." />
-                          }
-                      </div>
-                  </div>
-</div>
+                    <div class="end-session-container">
+                        <PrimaryButton Text="End Session"
+                                       OnClick="EndSession"
+                                       Disabled="@isEndingSession" />
+                        @if (isEndingSession)
+                        {
+                            <LoadingSpinner Title="Ending Session"
+                                            Subtitle="Finalizing attendance data and cleaning up..." />
+                        }
+                    </div>
+                </div>
             </div>
         }
     </div>
@@ -404,15 +340,11 @@
                             }
                         </div>
                     </div>
-                
                 </div>
             }
         </div>
     }
-
-  
 </div>
-
 
 <!-- Info Popup Component  -->
 <InfoPopup
