@@ -1,12 +1,9 @@
 using System.Text.Json;
 using AirCode.Domain.Entities;
-using AirCode.Models.QRCode;
-using AirCode.Models.Supabase;
 using AirCode.Services.Attendance;
 using AirCode.Services.Courses;
 using AirCode.Services.Cryptography;
 using AirCode.Services.Firebase;
-using AirCode.Components.SharedPrefabs.QrCode;
 using AirCode.Components.SharedPrefabs.Others;
 using AirCode.Domain.Enums;
 using AirCode.Domain.ValueObjects;
