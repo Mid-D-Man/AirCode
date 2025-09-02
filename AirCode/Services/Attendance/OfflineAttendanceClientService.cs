@@ -4,6 +4,7 @@ using AirCode.Models.Events;
 namespace AirCode.Services.Attendance;
 using AirCode.Domain.Entities;
 using AirCode.Models.QRCode;
+using AirCode.Models.Supabase;
 using AirCode.Services.Storage;
 using AirCode.Services.SupaBase;
 using AirCode.Utilities.HelperScripts;
@@ -11,8 +12,8 @@ using Microsoft.Extensions.Logging;
 using AttendanceRecord = AirCode.Models.Supabase.AttendanceRecord;
 
 /// <summary>
-/// Enhanced client-side service for handling offline attendance scanning (STUDENT USE ONLY)
-/// Handles offline QR generation, prevents duplicates, and manages sync intelligently
+/// Simplified client-side service for handling offline attendance scanning (STUDENT USE ONLY)
+/// Uses the existing OfflineAttendanceRecordModel from Domain.Entities
 /// </summary>
 public class OfflineAttendanceClientService : IOfflineAttendanceClientService
 {
@@ -210,11 +211,24 @@ public class OfflineAttendanceClientService : IOfflineAttendanceClientService
 
             var result = await _edgeFunctionService.ProcessAttendanceWithPayloadAsync(edgeRequest);
             
+            // Convert DecodedSessionData to QRCodePayloadData for the result
+            var payloadData = new QRCodePayloadData
+            {
+                SessionId = sessionData.SessionId,
+                CourseCode = sessionData.CourseCode,
+                StartTime = sessionData.StartTime,
+                EndTime = sessionData.ExpirationTime,
+                TemporalKey = sessionData.TemporalKey,
+                UseTemporalKeyRefresh = sessionData.UseTemporalKeyRefresh,
+                AllowOfflineConnectionAndSync = sessionData.AllowOfflineConnectionAndSync,
+                SecurityFeatures = sessionData.SecurityFeatures
+            };
+            
             return new AttendanceResult
             {
                 Success = result.Success,
                 Message = result.Message,
-                SessionData = result.SessionData,
+                SessionData = payloadData,
                 IsOfflineMode = false,
                 ErrorCode = result.ErrorCode
             };
@@ -258,10 +272,11 @@ public class OfflineAttendanceClientService : IOfflineAttendanceClientService
                 };
             }
 
+            // Use the existing OfflineAttendanceRecordModel from Domain.Entities
             var offlineRecord = new OfflineAttendanceRecordModel
             {
                 Id = Guid.NewGuid().ToString(),
-                SessionId = sessionData.SessionId, // Store session ID for duplicate checking
+                SessionId = sessionData.SessionId,
                 CourseCode = sessionData.CourseCode,
                 EncryptedQrPayload = qrCodeContent,
                 MatricNumber = _matricNumber,
@@ -281,7 +296,20 @@ public class OfflineAttendanceClientService : IOfflineAttendanceClientService
             var message = reason != null 
                 ? $"Attendance recorded offline: {reason}" 
                 : "Attendance recorded offline. Will sync when online.";
-            var payloadData = sessionData != null ? MapToPayloadData(sessionData) : null;
+
+            // Convert DecodedSessionData to QRCodePayloadData for the result
+            var payloadData = new QRCodePayloadData
+            {
+                SessionId = sessionData.SessionId,
+                CourseCode = sessionData.CourseCode,
+                StartTime = sessionData.StartTime,
+                EndTime = sessionData.ExpirationTime,
+                TemporalKey = sessionData.TemporalKey,
+                UseTemporalKeyRefresh = sessionData.UseTemporalKeyRefresh,
+                AllowOfflineConnectionAndSync = sessionData.AllowOfflineConnectionAndSync,
+                SecurityFeatures = sessionData.SecurityFeatures
+            };
+            
             return new AttendanceResult
             {
                 Success = true,
@@ -302,20 +330,7 @@ public class OfflineAttendanceClientService : IOfflineAttendanceClientService
             };
         }
     }
-    private QRCodePayloadData MapToPayloadData(DecodedSessionData sessionData)
-    {
-        return new QRCodePayloadData
-        {
-            SessionId = sessionData.SessionId,
-            CourseCode = sessionData.CourseCode,
-            StartTime = sessionData.StartTime,
-            EndTime = sessionData.ExpirationTime,
-            TemporalKey = sessionData.TemporalKey,
-            UseTemporalKeyRefresh = sessionData.UseTemporalKeyRefresh,
-            AllowOfflineConnectionAndSync = sessionData.AllowOfflineConnectionAndSync,
-            SecurityFeatures = sessionData.SecurityFeatures
-        };
-    }
+
     private async Task<bool> TrySyncOfflineRecordsAsync()
     {
         try

@@ -372,14 +372,10 @@ public partial class OfflineAttendanceEvent : ComponentBase, IDisposable
                 CourseCode = currentOfflineSession.SessionDetails.CourseCode,
                 MatricNumber = matricNumber,
                 DeviceGuid = deviceGuid,
-                ScanTime = DateTime.UtcNow,
                 EncryptedQrPayload = qrCode,
-                TemporalKey = await GenerateOfflineTemporalKeyAsync(currentOfflineSession.SessionId),
-                UseTemporalKeyRefresh = false,
-                SecurityFeatures = (int)securityFeatures,
+             
                 RecordedAt = DateTime.UtcNow,
                 ScannedAt = DateTime.UtcNow,
-                DeviceId = deviceGuid,
                 Status = SyncStatus.Pending,
                 SyncStatus = SyncStatus.Pending
             };
@@ -429,7 +425,7 @@ public partial class OfflineAttendanceEvent : ComponentBase, IDisposable
 
             foreach (var session in pendingSessions)
             {
-                session.SyncStatus = SyncStatus.Processing;
+                session.SyncStatus = SyncStatus.Pending;
                 var result = await OfflineSyncService.SyncOfflineSessionAsync(session);
                 syncResults.Add(result);
 
@@ -663,11 +659,10 @@ public partial class OfflineAttendanceEvent : ComponentBase, IDisposable
     {
         return status switch
         {
-            SyncStatus.Pending => "orange",
-            SyncStatus.Processing => "blue",
+            SyncStatus.Pending => "blue",
             SyncStatus.Synced => "green",
             SyncStatus.Failed => "red",
-            SyncStatus.Expired => "gray",
+            SyncStatus.Invalid => "gray",
             _ => "black"
         };
     }
