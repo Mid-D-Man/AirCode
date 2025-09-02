@@ -17,6 +17,7 @@ using AirCode.Domain.Enums;
 using AirCode.Models.QRCode;
 using Course = AirCode.Domain.Entities.Course;
 using AirCode.Components.SharedPrefabs.Others;
+using OfflineAttendanceRecord = AirCode.Models.Supabase.OfflineAttendanceRecord;
 
 namespace AirCode.Pages.Admin.Shared
 {
@@ -761,39 +762,111 @@ namespace AirCode.Pages.Admin.Shared
             }
         }
 
-        private async Task MigrateAttendanceDataToFirebase(string sessionId, string courseCode)
+       private async Task MigrateAttendanceDataToFirebase(string sessionId, string courseCode)
+{
+    try
+    {
+        // Add null validation before database operations
+        if (string.IsNullOrEmpty(sessionId) || string.IsNullOrEmpty(courseCode))
         {
-            try
-            {
-                // Add null validation before database operations
-                if (string.IsNullOrEmpty(sessionId) || string.IsNullOrEmpty(courseCode))
-                {
-                    MID_HelperFunctions.DebugMessage("Invalid parameters for migration: SessionId={SessionId}, CourseCode={CourseCode}", DebugClass.Warning);
-                    MID_HelperFunctions.DebugMessage($"Invalid parameters for migration: SessionId={sessionId}, CourseCode={courseCode}", DebugClass.Warning);
-                    return;
-                }
+            MID_HelperFunctions.DebugMessage($"Invalid parameters for migration: SessionId={sessionId}, CourseCode={courseCode}", DebugClass.Warning);
+            return;
+        }
 
-                // Use direct database query with error handling
-                var session = await AttendanceSessionService.GetSessionByIdAsync(sessionId);
-                if (session == null)
-                {
-                    MID_HelperFunctions.DebugMessage($"Session not found for migration for session: {sessionId}", DebugClass.Warning);
-                    return;
-                }
+        // Get session data from Supabase
+        var session = await AttendanceSessionService.GetSessionByIdAsync(sessionId);
+        if (session == null)
+        {
+            MID_HelperFunctions.DebugMessage($"Session not found for migration for session: {sessionId}", DebugClass.Warning);
+            return;
+        }
 
-                var attendanceRecords = session.GetAttendanceRecords();
-                if (attendanceRecords?.Any() == true)
-                {
-                    await FirebaseAttendanceService.UpdateAttendanceRecordsAsync(
-                        sessionId, courseCode, attendanceRecords);
-                }
-            }
-            catch (Exception ex)
+        // Get the actual scanned attendance records
+        var attendanceRecords = session.GetAttendanceRecords();
+        if (attendanceRecords?.Any() == true)
+        {
+            // Migrate only the scanned records to Firebase
+            await FirebaseAttendanceService.UpdateAttendanceRecordsAsync(
+                sessionId, courseCode, attendanceRecords);
+
+            MID_HelperFunctions.DebugMessage($"Successfully migrated {attendanceRecords.Count} attendance records to Firebase for session {sessionId}");
+        }
+        else
+        {
+            MID_HelperFunctions.DebugMessage($"No attendance records found to migrate for session {sessionId}");
+        }
+
+        // Also check for offline records if offline sync was enabled
+        var offlineSession = await AttendanceSessionService.GetOfflineSessionByIdAsync(sessionId);
+        if (offlineSession != null)
+        {
+            var offlineRecords = offlineSession.GetOfflineRecords();
+            if (offlineRecords?.Any() == true)
             {
-                MID_HelperFunctions.DebugMessage("Migration failed for session {SessionId}", DebugClass.Exception);
-                throw; // Re-throw to maintain error handling flow
+                // Convert offline records to regular attendance records for Firebase
+                var offlineAttendanceRecords = offlineRecords.Select(or => new OfflineAttendanceRecord
+                {
+                    MatricNumber = or.MatricNumber,
+                    HasScannedAttendance = or.HasScannedAttendance,
+                    ScanTime = or.ScanTime,
+                    DeviceGUID = or.DeviceGUID,
+                    SyncStatus = or.SyncStatus
+                }).ToList();
+
+                // Migrate offline records to Firebase
+                await FirebaseAttendanceService.UpdateOfflineAttendanceRecordsAsync(
+                    sessionId, courseCode, offlineAttendanceRecords);
+
+                MID_HelperFunctions.DebugMessage($"Successfully migrated {offlineRecords.Count} offline attendance records to Firebase for session {sessionId}");
             }
         }
+
+        // After successful migration, clear the attendance records from Supabase session
+        // (Keep the session itself, just clear the records)
+        await ClearSupabaseSessionRecordsAsync(sessionId);
+    }
+    catch (Exception ex)
+    {
+        MID_HelperFunctions.DebugMessage($"Migration failed for session {sessionId}: {ex.Message}", DebugClass.Exception);
+        throw; // Re-throw to maintain error handling flow
+    }
+}
+
+/// <summary>
+/// Clear attendance records from Supabase session after migration to Firebase
+/// </summary>
+private async Task ClearSupabaseSessionRecordsAsync(string sessionId)
+{
+    try
+    {
+        // Clear main session attendance records
+        var session = await AttendanceSessionService.GetSessionByIdAsync(sessionId);
+        if (session != null)
+        {
+            session.AttendanceRecords = "[]"; // Clear the records
+            session.UpdatedAt = DateTime.UtcNow;
+            await AttendanceSessionService.UpdateSessionAsync(session);
+            
+            MID_HelperFunctions.DebugMessage($"Cleared attendance records from main session {sessionId}");
+        }
+
+        // Clear offline session records
+        var offlineSession = await AttendanceSessionService.GetOfflineSessionByIdAsync(sessionId);
+        if (offlineSession != null)
+        {
+            offlineSession.OfflineRecords = "[]"; // Clear the offline records
+            offlineSession.SyncStatus = 1; // Mark as synced
+            await AttendanceSessionService.UpdateOfflineSessionAsync(offlineSession);
+            
+            MID_HelperFunctions.DebugMessage($"Cleared offline records from session {sessionId}");
+        }
+    }
+    catch (Exception ex)
+    {
+        MID_HelperFunctions.DebugMessage($"Error clearing Supabase session records for {sessionId}: {ex.Message}", DebugClass.Warning);
+        // Don't throw here - migration was successful, clearing is just cleanup
+    }
+}
 
         #endregion
 
@@ -1062,6 +1135,7 @@ namespace AirCode.Pages.Admin.Shared
 
         private string GetSessionStatusText()
         {
+           
             if (isCreatingSession) return "Creating session...";
             if (isEndingSession) return "Ending session...";
             if (isRestoringSession) return "Restoring session...";

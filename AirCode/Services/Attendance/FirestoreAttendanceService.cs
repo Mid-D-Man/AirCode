@@ -29,90 +29,72 @@ namespace AirCode.Services.Attendance
             _logger = logger;
         }
 
-        /// <summary>
-        /// Create Firebase attendance event with all enrolled students
-        /// </summary>
-        public async Task<bool> CreateAttendanceEventAsync(string sessionId, string courseCode, string courseName, 
-            DateTime startTime, int duration, string theme)
+       /// <summary>
+/// Create Firebase attendance event without pre-populating students
+/// </summary>
+public async Task<bool> CreateAttendanceEventAsync(string sessionId, string courseCode, string courseName, 
+    DateTime startTime, int duration, string theme)
+{
+    try
+    {
+        // Calculate end time
+        var endTime = startTime.AddMinutes(duration);
+
+        // Create minimal attendance event data without pre-populating students
+        var attendanceEventData = new
         {
-            try
-            {
-                // Calculate end time
-                var endTime = startTime.AddMinutes(duration);
+            SessionId = sessionId,
+            CourseCode = courseCode,
+            CourseName = courseName,
+            StartTime = startTime,
+            Duration = duration,
+            EndTime = endTime,
+            Theme = theme,
+            CreatedAt = DateTime.UtcNow,
+            Status = "Active",
+            TemporalKey = "Sukablak",
+            AttendanceRecords = new Dictionary<string, object>() // Start with empty records
+        };
 
-                // Get all students taking this course -- remove this we no longer need it
-                var allStudentCourses = await _courseService.GetAllStudentCoursesAsync();
-                var studentsInCourse = allStudentCourses
-                    .Where(sc => sc.GetEnrolledCourses().Any(cr => cr.CourseCode == courseCode))
-                    .ToList();
+        // Create document with course-based naming: AttendanceEvent_{CourseCode}
+        var documentId = $"AttendanceEvent_{courseCode}";
 
-                // Build AttendanceRecords for each student
-                var attendanceRecords = new Dictionary<string, object>();
-                foreach (var studentCourse in studentsInCourse)
-                {
-                    attendanceRecords[studentCourse.StudentMatricNumber] = new
-                    {
-                        MatricNumber = studentCourse.StudentMatricNumber,
-                        HasScannedAttendance = false,
-                        ScanTime = (DateTime?)null,
-                        IsOnlineScan = false
-                    };
-                }
+        // Check if document exists
+        var existingDoc = await _firestoreService.GetDocumentAsync<Dictionary<string, object>>(
+            ATTENDANCE_EVENTS_COLLECTION, documentId);
 
-                var attendanceEventData = new
-                {
-                    SessionId = sessionId,
-                    CourseCode = courseCode,
-                    CourseName = courseName,
-                    StartTime = startTime,
-                    Duration = duration,
-                    EndTime = endTime,
-                    Theme = theme,
-                    CreatedAt = DateTime.UtcNow,
-                    Status = "Active",
-                    TemporalKey = "Sukablak",
-                    AttendanceRecords = attendanceRecords
-                };
-
-                // Create document with course-based naming: AttendanceEvent_{CourseCode}
-                var documentId = $"AttendanceEvent_{courseCode}";
-
-                // Check if document exists
-                var existingDoc = await _firestoreService.GetDocumentAsync<Dictionary<string, object>>(
-                    ATTENDANCE_EVENTS_COLLECTION, documentId);
-
-                if (existingDoc != null)
-                {
-                    // Add new event as a field within existing document
-                    var eventFieldName = $"Event_{sessionId}_{startTime:yyyyMMdd}";
-                    await _firestoreService.AddOrUpdateFieldAsync(
-                        ATTENDANCE_EVENTS_COLLECTION, documentId, eventFieldName, attendanceEventData);
-                }
-                else
-                {
-                    // Create new document with first event
-                    var courseEventDocument = new Dictionary<string, object>
-                    {
-                        ["CourseCode"] = courseCode,
-                        ["CourseName"] = courseName,
-                        ["CreatedAt"] = DateTime.UtcNow,
-                        ["LastEventAt"] = DateTime.UtcNow,
-                        [$"Event_{sessionId}_{startTime:yyyyMMdd}"] = attendanceEventData
-                    };
-
-                    await _firestoreService.AddDocumentAsync(
-                        ATTENDANCE_EVENTS_COLLECTION, courseEventDocument, documentId);
-                }
-
-                _logger.LogInformation($"Successfully created Firebase attendance event for session {sessionId}");
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Error creating Firebase attendance event for session {sessionId}");
-                return false;
-            }
+        if (existingDoc != null)
+        {
+            // Add new event as a field within existing document
+            var eventFieldName = $"Event_{sessionId}_{startTime:yyyyMMdd}";
+            await _firestoreService.AddOrUpdateFieldAsync(
+                ATTENDANCE_EVENTS_COLLECTION, documentId, eventFieldName, attendanceEventData);
         }
+        else
+        {
+            // Create new document with first event
+            var courseEventDocument = new Dictionary<string, object>
+            {
+                ["CourseCode"] = courseCode,
+                ["CourseName"] = courseName,
+                ["CreatedAt"] = DateTime.UtcNow,
+                ["LastEventAt"] = DateTime.UtcNow,
+                [$"Event_{sessionId}_{startTime:yyyyMMdd}"] = attendanceEventData
+            };
+
+            await _firestoreService.AddDocumentAsync(
+                ATTENDANCE_EVENTS_COLLECTION, courseEventDocument, documentId);
+        }
+
+        _logger.LogInformation($"Successfully created Firebase attendance event for session {sessionId}");
+        return true;
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, $"Error creating Firebase attendance event for session {sessionId}");
+        return false;
+    }
+}
         
         /// <summary>
         /// Update Firebase attendance records with Supabase scan data
@@ -559,7 +541,7 @@ private string GetStudentLevelFromMatricNumber(string matricNumber)
 }
 
 /// <summary>
-/// Enhanced auto-sign with course rep lookup integration
+/// Enhanced auto-sign with course rep lookup integration - now adds to Supabase instead of Firebase
 /// </summary>
 public async Task<bool> AutoSignCourseRepAsync(string sessionId, string courseCode)
 {
@@ -573,21 +555,51 @@ public async Task<bool> AutoSignCourseRepAsync(string sessionId, string courseCo
             return false;
         }
 
-        // Perform auto-sign
-        var success = await UpdateAttendanceRecordsAsync(sessionId, courseCode, 
-            new List<AttendanceRecord> 
-            {
-                new AttendanceRecord
-                {
-                    MatricNumber = courseRep.StudentInfo.MatricNumber,
-                    HasScannedAttendance = true,
-                    ScanTime = DateTime.UtcNow,
-                    IsOnlineScan = true
-                }
-            });
+        // Get the Supabase session to add the attendance record
+        var session = await _attendanceSessionService.GetSessionByIdAsync(sessionId);
+        if (session == null)
+        {
+            _logger.LogWarning($"Session {sessionId} not found for course rep auto-signing");
+            return false;
+        }
 
-        _logger.LogInformation($"Course rep auto-signed: {courseRep.StudentInfo.MatricNumber} for course {courseCode}, Success: {success}");
-        return success;
+        // Get existing attendance records
+        var existingRecords = session.GetAttendanceRecords();
+        
+        // Check if course rep already signed
+        var existingRecord = existingRecords.FirstOrDefault(r => r.MatricNumber == courseRep.StudentInfo.MatricNumber);
+        if (existingRecord != null && existingRecord.HasScannedAttendance)
+        {
+            _logger.LogInformation($"Course rep {courseRep.StudentInfo.MatricNumber} already signed for session {sessionId}");
+            return true;
+        }
+
+        // Add or update course rep attendance record
+        if (existingRecord != null)
+        {
+            existingRecord.HasScannedAttendance = true;
+            existingRecord.ScanTime = DateTime.UtcNow;
+            existingRecord.IsOnlineScan = true;
+        }
+        else
+        {
+            existingRecords.Add(new AttendanceRecord
+            {
+                MatricNumber = courseRep.StudentInfo.MatricNumber,
+                HasScannedAttendance = true,
+                ScanTime = DateTime.UtcNow,
+                IsOnlineScan = true,
+                DeviceGUID = "AUTO_SIGN_COURSE_REP"
+            });
+        }
+
+        // Update session with new attendance records
+        session.SetAttendanceRecords(existingRecords);
+        session.UpdatedAt = DateTime.UtcNow;
+        await _attendanceSessionService.UpdateSessionAsync(session);
+
+        _logger.LogInformation($"Course rep auto-signed: {courseRep.StudentInfo.MatricNumber} for course {courseCode}");
+        return true;
     }
     catch (Exception ex)
     {
@@ -628,37 +640,14 @@ public async Task<bool> CreateAttendanceEventWithCourseRepAsync(string sessionId
         return false;
     }
 }
-
 /// <summary>
-/// Manually sign student attendance by admin/instructor
+/// Manually sign student attendance by admin/instructor - now adds to Supabase instead of Firebase directly
 /// </summary>
 public async Task<bool> ManualSignAttendanceAsync(string sessionId, string courseCode, 
     string studentMatricNumber, bool isManualSign = true)
 {
     try
     {
-        var documentId = $"AttendanceEvent_{courseCode}";
-        
-        // Get existing document to find the correct event field
-        var existingDoc = await _firestoreService.GetDocumentAsync<Dictionary<string, object>>(
-            ATTENDANCE_EVENTS_COLLECTION, documentId);
-
-        if (existingDoc == null)
-        {
-            _logger.LogWarning($"No Firebase document found for course {courseCode}");
-            return false;
-        }
-
-        // Find the event field that matches the session ID
-        var eventFieldName = existingDoc.Keys
-            .FirstOrDefault(key => key.StartsWith("Event_") && key.Contains(sessionId));
-
-        if (string.IsNullOrEmpty(eventFieldName))
-        {
-            _logger.LogWarning($"No event found for session {sessionId} in course {courseCode}");
-            return false;
-        }
-
         // Verify student is enrolled in this course
         var allStudentCourses = await _courseService.GetAllStudentCoursesAsync();
         var isStudentEnrolled = allStudentCourses
@@ -671,20 +660,48 @@ public async Task<bool> ManualSignAttendanceAsync(string sessionId, string cours
             return false;
         }
 
-        // Update attendance record directly in Firebase
-        var attendanceRecordPath = $"{eventFieldName}.AttendanceRecords.{studentMatricNumber}";
-        
-        var updatedRecord = new
+        // Get the Supabase session to add the attendance record
+        var session = await _attendanceSessionService.GetSessionByIdAsync(sessionId);
+        if (session == null)
         {
-            MatricNumber = studentMatricNumber,
-            HasScannedAttendance = true,
-            ScanTime = DateTime.UtcNow,
-            IsOnlineScan = false,
-            IsManualSign = isManualSign
-        };
+            _logger.LogWarning($"Session {sessionId} not found for manual attendance signing");
+            return false;
+        }
 
-        await _firestoreService.AddOrUpdateFieldAsync(
-            ATTENDANCE_EVENTS_COLLECTION, documentId, attendanceRecordPath, updatedRecord);
+        // Get existing attendance records
+        var existingRecords = session.GetAttendanceRecords();
+        
+        // Check if student already signed
+        var existingRecord = existingRecords.FirstOrDefault(r => r.MatricNumber == studentMatricNumber);
+        if (existingRecord != null && existingRecord.HasScannedAttendance)
+        {
+            _logger.LogInformation($"Student {studentMatricNumber} already signed for session {sessionId}");
+            return true;
+        }
+
+        // Add or update student attendance record
+        if (existingRecord != null)
+        {
+            existingRecord.HasScannedAttendance = true;
+            existingRecord.ScanTime = DateTime.UtcNow;
+            existingRecord.IsOnlineScan = false; // Manual sign is considered offline
+        }
+        else
+        {
+            existingRecords.Add(new AttendanceRecord
+            {
+                MatricNumber = studentMatricNumber,
+                HasScannedAttendance = true,
+                ScanTime = DateTime.UtcNow,
+                IsOnlineScan = false, // Manual sign is considered offline
+                DeviceGUID = "MANUAL_SIGN_ADMIN"
+            });
+        }
+
+        // Update session with new attendance records
+        session.SetAttendanceRecords(existingRecords);
+        session.UpdatedAt = DateTime.UtcNow;
+        await _attendanceSessionService.UpdateSessionAsync(session);
 
         _logger.LogInformation($"Successfully manually signed attendance for student {studentMatricNumber} in session {sessionId}");
         return true;
