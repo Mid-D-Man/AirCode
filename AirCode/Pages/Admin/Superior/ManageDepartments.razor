@@ -281,7 +281,9 @@
                  OnCancel="CancelRemoveCourse" />
 
 <!-- Notification Component -->
-<NotificationComponent @ref="notificationComponent" />
+<NotificationComponent @ref="notificationComponent"
+                       Position="NotificationPosition.TopRight"
+                       AutoDismissTime="2000"/>
 
 @code {
     // Component references

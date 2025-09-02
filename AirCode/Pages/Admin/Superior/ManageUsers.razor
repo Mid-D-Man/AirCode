@@ -8,13 +8,7 @@
 @using AirCode.Components.SharedPrefabs.Spinner
 @using Microsoft.AspNetCore.Authorization
 <div class="container">
-    <!-- Notification component -->
-    <NotificationComponent @ref="notificationComponent"
-                            Position="NotificationPosition.TopRight"
-                            AutoDismissTime="5000"
-                            ShowProgressBar="true"
-                            ShowCloseButton="true"
-                            PauseOnHover="true" />
+   
     <div class="admin-header">
         <h2 class="text-primary">User Management</h2>
         <CoolPrimaryButton Text="Create New Skeleton User" OnClick="ShowCreateUserModal" />
@@ -557,7 +551,13 @@
         </div>
     </div>
 </div>
-
+<!-- Notification component -->
+<NotificationComponent @ref="notificationComponent"
+                       Position="NotificationPosition.TopRight"
+                       AutoDismissTime="3000"
+                       ShowProgressBar="true"
+                       ShowCloseButton="true"
+                       PauseOnHover="true" />
 <!-- Modal backdrop -->
 @if (showCreateModal || showMaxUsageModal || showDeleteModal || showRemoveUserModal || showUserManagementModal)
 {

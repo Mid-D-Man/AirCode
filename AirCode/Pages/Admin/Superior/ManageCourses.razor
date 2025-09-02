@@ -14,10 +14,7 @@
         <CoolPrimaryButton Text="Add New Course" IsLoading="_isLoading" OnClick="ShowAddForm" />
     </div>
 
-    <!-- Notification Component -->
-    <NotificationComponent @ref="_notificationComponent" 
-                          Position="NotificationPosition.TopRight" 
-                          AutoDismissTime="4000" />
+   
 
     <!-- Filters Section -->
     <div class="filter-section bg-secondary border-theme">
@@ -123,7 +120,10 @@
         }
     }
 </div>
-
+<!-- Notification Component -->
+<NotificationComponent @ref="_notificationComponent"
+                       Position="NotificationPosition.TopRight"
+                       AutoDismissTime="2000" />
 <!-- Course Handler Modal (Replaces both Add and Edit modals) -->
 <CourseHandler IsVisible="_showCourseHandler"
                CourseToEdit="_selectedCourse"
