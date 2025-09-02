@@ -7,24 +7,106 @@ namespace AirCode.Domain.Entities;
 /// </summary>
 public class OfflineAttendanceRecordModel
 {
-    public string Id { get; set; } = Guid.NewGuid().ToString();
+    /// <summary>
+    /// Unique identifier for this offline record
+    /// </summary>
+    public string Id { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Session ID extracted from QR code for duplicate checking
+    /// </summary>
     public string SessionId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Course code for additional validation
+    /// </summary>
     public string CourseCode { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Original encrypted QR code payload
+    /// </summary>
+    public string EncryptedQrPayload { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Student's matriculation number
+    /// </summary>
     public string MatricNumber { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Device GUID for security tracking
+    /// </summary>
     public string DeviceGuid { get; set; } = string.Empty;
-    public DateTime ScanTime { get; set; }
-    public string EncryptedQrPayload { get; set; } = string.Empty; // Store raw QR without decryption
-    public string TemporalKey { get; set; } = string.Empty;
-    public bool UseTemporalKeyRefresh { get; set; }
-    public int SecurityFeatures { get; set; }
-    public DateTime RecordedAt { get; set; }
+
+    /// <summary>
+    /// When the QR code was actually scanned
+    /// </summary>
     public DateTime ScannedAt { get; set; }
-    public string DeviceId { get; set; } = string.Empty;
-    public SyncStatus Status { get; set; } = SyncStatus.Pending;
-    public SyncStatus SyncStatus { get; set; } = SyncStatus.Pending;
-    public int RetryCount { get; set; } = 0;
+
+    /// <summary>
+    /// When this offline record was created/stored
+    /// </summary>
+    public DateTime RecordedAt { get; set; }
+
+    /// <summary>
+    /// Current sync status of this record
+    /// </summary>
+    public SyncStatus Status { get; set; }
+
+    /// <summary>
+    /// Legacy sync status property for compatibility
+    /// </summary>
+    public SyncStatus SyncStatus { get; set; }
+
+    /// <summary>
+    /// Reason why this was stored offline (e.g., "No network", "Session not found")
+    /// </summary>
+    public string OfflineReason { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Number of sync attempts for this record
+    /// </summary>
     public int SyncAttempts { get; set; } = 0;
-    public string ErrorDetails { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Last error encountered during sync attempt
+    /// </summary>
+    public string LastSyncError { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Last time sync was attempted
+    /// </summary>
+    public DateTime? LastSyncAttempt { get; set; }
+}
+
+/// <summary>
+/// Sync status enumeration for offline records
+/// </summary>
+public enum SyncStatus
+{
+    /// <summary>
+    /// Record is waiting to be synced
+    /// </summary>
+    Pending,
+
+    /// <summary>
+    /// Record is currently being synced
+    /// </summary>
+    Syncing,
+
+    /// <summary>
+    /// Record was successfully synced and can be removed
+    /// </summary>
+    Synced,
+
+    /// <summary>
+    /// Record failed to sync after multiple attempts
+    /// </summary>
+    Failed,
+
+    /// <summary>
+    /// Record is invalid and should be removed
+    /// </summary>
+    Invalid
 }
 
 public class OfflineSessionData
@@ -34,15 +116,6 @@ public class OfflineSessionData
     public SessionData SessionDetails { get; set; }
     public List<OfflineAttendanceRecordModel> PendingAttendanceRecords { get; set; } = new();
     public SyncStatus SyncStatus { get; set; } = SyncStatus.Pending;
-}
-
-public enum SyncStatus
-{
-    Pending,
-    Processing,
-    Synced,
-    Failed,
-    Expired
 }
 
 public class SyncResult

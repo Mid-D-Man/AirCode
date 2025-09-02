@@ -4,15 +4,15 @@ using AirCode.Models.Events;
 namespace AirCode.Services.Attendance;
 using AirCode.Domain.Entities;
 using AirCode.Models.QRCode;
-using AirCode.Models.Supabase;
 using AirCode.Services.Storage;
 using AirCode.Services.SupaBase;
 using AirCode.Utilities.HelperScripts;
 using Microsoft.Extensions.Logging;
 using AttendanceRecord = AirCode.Models.Supabase.AttendanceRecord;
+
 /// <summary>
-/// Client-side service for handling offline attendance scanning (STUDENT USE ONLY)
-/// Stores offline records, syncs when online, removes after successful sync
+/// Enhanced client-side service for handling offline attendance scanning (STUDENT USE ONLY)
+/// Handles offline QR generation, prevents duplicates, and manages sync intelligently
 /// </summary>
 public class OfflineAttendanceClientService : IOfflineAttendanceClientService
 {
@@ -72,21 +72,44 @@ public class OfflineAttendanceClientService : IOfflineAttendanceClientService
     {
         try
         {
+            // First, decode the QR to extract session info
+            var sessionData = await _qrCodeDecoder.DecodeSessionDataAsync(qrCodeContent);
+            if (sessionData == null)
+            {
+                return new AttendanceResult
+                {
+                    Success = false,
+                    Message = "Invalid or expired QR code",
+                    IsOfflineMode = false
+                };
+            }
+
             var isOnline = await _connectivityService.GetSimpleOnlineStatusAsync();
             
             if (isOnline)
             {
                 // Try online first
-                var onlineResult = await ProcessOnlineAttendanceAsync(qrCodeContent);
+                var onlineResult = await ProcessOnlineAttendanceAsync(qrCodeContent, sessionData);
                 if (onlineResult.Success)
                 {
+                    // Online success - no need to store offline
                     return onlineResult;
                 }
-                _logger.LogWarning("Online processing failed, falling back to offline");
+                
+                // Online failed - check if it's because session doesn't exist on server
+                if (IsSessionNotFoundError(onlineResult.ErrorCode))
+                {
+                    _logger.LogInformation("Session {SessionId} not found on server - likely offline generated, storing for later sync", 
+                        sessionData.SessionId);
+                    return await ProcessOfflineAttendanceAsync(qrCodeContent, sessionData, "Session not yet synced to server");
+                }
+                
+                // Other online errors - try offline as fallback
+                _logger.LogWarning("Online processing failed with error {ErrorCode}, falling back to offline", onlineResult.ErrorCode);
             }
             
-            // Process offline
-            return await ProcessOfflineAttendanceAsync(qrCodeContent);
+            // Process offline (either we're offline or online failed for non-session reasons)
+            return await ProcessOfflineAttendanceAsync(qrCodeContent, sessionData);
         }
         catch (Exception ex)
         {
@@ -148,10 +171,22 @@ public class OfflineAttendanceClientService : IOfflineAttendanceClientService
 
     #region Private Methods
 
-    private async Task<AttendanceResult> ProcessOnlineAttendanceAsync(string qrCodeContent)
+    private async Task<AttendanceResult> ProcessOnlineAttendanceAsync(string qrCodeContent, DecodedSessionData sessionData)
     {
         try
         {
+            // Check for duplicate attendance first (locally)
+            if (await HasExistingAttendanceRecord(sessionData.SessionId, sessionData.CourseCode))
+            {
+                return new AttendanceResult
+                {
+                    Success = false,
+                    Message = "You have already marked attendance for this session",
+                    ErrorCode = "DUPLICATE_ATTENDANCE",
+                    IsOfflineMode = false
+                };
+            }
+
             // Create attendance data for edge function
             var attendanceData = new AttendanceRecord
             {
@@ -191,53 +226,69 @@ public class OfflineAttendanceClientService : IOfflineAttendanceClientService
             {
                 Success = false,
                 Message = "Network error",
+                ErrorCode = "NETWORK_ERROR",
                 IsOfflineMode = false
             };
         }
     }
 
-    private async Task<AttendanceResult> ProcessOfflineAttendanceAsync(string qrCodeContent)
+    private async Task<AttendanceResult> ProcessOfflineAttendanceAsync(string qrCodeContent, DecodedSessionData sessionData, string reason = null)
     {
         try
         {
             var deviceGuid = await GetOrCreateDeviceGuidAsync();
             
+            // Check for duplicate offline records for this session and student
+            var existingRecords = await GetOfflineRecordsAsync();
+            var existingRecord = existingRecords.FirstOrDefault(r => 
+                r.SessionId == sessionData.SessionId && 
+                r.MatricNumber == _matricNumber);
+
+            if (existingRecord != null)
+            {
+                _logger.LogInformation("Duplicate offline attendance attempt for session {SessionId} by student {MatricNumber}", 
+                    sessionData.SessionId, _matricNumber);
+                
+                return new AttendanceResult
+                {
+                    Success = false,
+                    Message = "You have already recorded attendance for this session offline",
+                    ErrorCode = "DUPLICATE_ATTENDANCE",
+                    IsOfflineMode = true
+                };
+            }
+
             var offlineRecord = new OfflineAttendanceRecordModel
             {
                 Id = Guid.NewGuid().ToString(),
+                SessionId = sessionData.SessionId, // Store session ID for duplicate checking
+                CourseCode = sessionData.CourseCode,
                 EncryptedQrPayload = qrCodeContent,
                 MatricNumber = _matricNumber,
                 DeviceGuid = deviceGuid,
                 ScannedAt = DateTime.UtcNow,
                 RecordedAt = DateTime.UtcNow,
                 Status = SyncStatus.Pending,
-                SyncStatus = SyncStatus.Pending
+                SyncStatus = SyncStatus.Pending,
+                OfflineReason = reason ?? "Offline mode"
             };
-
-            // Check for duplicates
-            var existingRecords = await GetOfflineRecordsAsync();
-            if (existingRecords.Any(r => r.EncryptedQrPayload == qrCodeContent && 
-                                        r.MatricNumber == _matricNumber))
-            {
-                return new AttendanceResult
-                {
-                    Success = false,
-                    Message = "Duplicate attendance record",
-                    IsOfflineMode = true
-                };
-            }
 
             existingRecords.Add(offlineRecord);
             await _localStorage.SetItemAsync(OFFLINE_RECORDS_KEY, existingRecords);
             
             NotifyOfflineAttendanceRecorded(qrCodeContent);
             
+            var message = reason != null 
+                ? $"Attendance recorded offline: {reason}" 
+                : "Attendance recorded offline. Will sync when online.";
+            var payloadData = sessionData != null ? MapToPayloadData(sessionData) : null;
             return new AttendanceResult
             {
                 Success = true,
-                Message = "Attendance recorded offline. Will sync when online.",
+                Message = message,
                 IsOfflineMode = true,
-                RequiresSync = true
+                RequiresSync = true,
+                SessionData = payloadData
             };
         }
         catch (Exception ex)
@@ -251,7 +302,20 @@ public class OfflineAttendanceClientService : IOfflineAttendanceClientService
             };
         }
     }
-
+    private QRCodePayloadData MapToPayloadData(DecodedSessionData sessionData)
+    {
+        return new QRCodePayloadData
+        {
+            SessionId = sessionData.SessionId,
+            CourseCode = sessionData.CourseCode,
+            StartTime = sessionData.StartTime,
+            EndTime = sessionData.ExpirationTime,
+            TemporalKey = sessionData.TemporalKey,
+            UseTemporalKeyRefresh = sessionData.UseTemporalKeyRefresh,
+            AllowOfflineConnectionAndSync = sessionData.AllowOfflineConnectionAndSync,
+            SecurityFeatures = sessionData.SecurityFeatures
+        };
+    }
     private async Task<bool> TrySyncOfflineRecordsAsync()
     {
         try
@@ -262,10 +326,13 @@ public class OfflineAttendanceClientService : IOfflineAttendanceClientService
                 return true;
             }
 
+            _logger.LogInformation("Starting sync of {Count} offline attendance records", offlineRecords.Count);
+
             var recordsToRemove = new List<string>();
+            var syncedCount = 0;
             var allSuccessful = true;
 
-            foreach (var record in offlineRecords)
+            foreach (var record in offlineRecords.OrderBy(r => r.ScannedAt))
             {
                 try
                 {
@@ -275,7 +342,7 @@ public class OfflineAttendanceClientService : IOfflineAttendanceClientService
                         MatricNumber = record.MatricNumber,
                         HasScannedAttendance = true,
                         ScanTime = record.ScannedAt,
-                        IsOnlineScan = false,
+                        IsOnlineScan = false, // Mark as offline sync
                         DeviceGUID = record.DeviceGuid
                     };
 
@@ -286,41 +353,47 @@ public class OfflineAttendanceClientService : IOfflineAttendanceClientService
                     {
                         var result = await _edgeFunctionService.ProcessAttendanceWithPayloadAsync(edgeRequest);
                         
-                        if (result.Success || result.ErrorCode == "ALREADY_SCANNED")
+                        if (result.Success)
                         {
                             recordsToRemove.Add(record.Id);
-                            _logger.LogInformation("Synced offline record: {RecordId}", record.Id);
+                            syncedCount++;
+                            _logger.LogInformation("Successfully synced offline record: {RecordId} for session {SessionId}", 
+                                record.Id, record.SessionId);
                         }
-                        else if (result.ErrorCode == "SESSION_EXPIRED")
+                        else if (ShouldRemoveFailedRecord(result.ErrorCode))
                         {
                             recordsToRemove.Add(record.Id);
-                            _logger.LogWarning("Removed expired record: {RecordId}", record.Id);
+                            _logger.LogWarning("Removing offline record {RecordId} due to {ErrorCode}: {Message}", 
+                                record.Id, result.ErrorCode, result.Message);
                         }
                         else
                         {
                             allSuccessful = false;
-                            _logger.LogWarning("Sync failed for record {RecordId}: {Error}", 
-                                record.Id, result.Message);
+                            _logger.LogWarning("Sync failed for record {RecordId}: {ErrorCode} - {Message}", 
+                                record.Id, result.ErrorCode, result.Message);
                         }
                     }
                     else
                     {
                         recordsToRemove.Add(record.Id);
-                        _logger.LogWarning("Invalid QR payload, removing record: {RecordId}", record.Id);
+                        _logger.LogWarning("Invalid QR payload in offline record {RecordId}, removing", record.Id);
                     }
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error syncing record: {RecordId}", record.Id);
+                    _logger.LogError(ex, "Error syncing offline record: {RecordId}", record.Id);
                     allSuccessful = false;
                 }
             }
 
-            // Remove successfully synced/expired records
+            // Remove successfully synced or invalid records
             if (recordsToRemove.Any())
             {
                 var remainingRecords = offlineRecords.Where(r => !recordsToRemove.Contains(r.Id)).ToList();
                 await _localStorage.SetItemAsync(OFFLINE_RECORDS_KEY, remainingRecords);
+                
+                _logger.LogInformation("Synced {SyncedCount} records, {RemainingCount} remain pending", 
+                    syncedCount, remainingRecords.Count);
             }
 
             return allSuccessful;
@@ -363,6 +436,48 @@ public class OfflineAttendanceClientService : IOfflineAttendanceClientService
         }
     }
 
+    private async Task<bool> HasExistingAttendanceRecord(string sessionId, string courseCode)
+    {
+        try
+        {
+            var offlineRecords = await GetOfflineRecordsAsync();
+            return offlineRecords.Any(r => 
+                r.SessionId == sessionId && 
+                r.MatricNumber == _matricNumber &&
+                r.CourseCode == courseCode);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static bool IsSessionNotFoundError(string errorCode)
+    {
+        return errorCode switch
+        {
+            "SESSION_NOT_FOUND" => true,
+            "SESSION_QUERY_ERROR" => true,
+            "INVALID_SESSION" => true,
+            _ => false
+        };
+    }
+
+    private static bool ShouldRemoveFailedRecord(string errorCode)
+    {
+        return errorCode switch
+        {
+            "DUPLICATE_ATTENDANCE" => true, // Already recorded online
+            "ALREADY_SCANNED" => true, // Same as duplicate
+            "SESSION_EXPIRED" => true, // Too old to sync
+            "TEMPORAL_KEY_EXPIRED" => true, // QR code expired
+            "INVALID_SESSION" => true, // Session doesn't exist
+            "INVALID_QR_CODE" => true, // Malformed QR
+            "INVALID_JSON" => true, // Corrupted data
+            _ => false
+        };
+    }
+
     private void InitializeConnectivityMonitoring()
     {
         _connectivityService.ConnectivityChanged += (status) =>
@@ -375,6 +490,7 @@ public class OfflineAttendanceClientService : IOfflineAttendanceClientService
             
             if (status.IsOnline)
             {
+                _logger.LogInformation("Network connectivity restored, starting sync");
                 _ = Task.Run(async () => await TrySyncOfflineRecordsAsync());
             }
         };
