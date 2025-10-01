@@ -1,0 +1,122 @@
+@CONFIG(
+    version -> "1.0",
+    encoding -> "UTF-8",
+    author -> "Mid-D-Man",
+    created -> "2025-09-01"
+)
+
+@ENUMS(
+    LiabilityLevel {
+        NONE = 0,
+        LIMITED = 1,
+        FULL = 2
+    }
+    
+    UsageRights {
+        FORBIDDEN = 0,
+        RESTRICTED = 1,
+        ALLOWED = 2,
+        REQUIRED = 3
+    }
+)
+
+@DATA(
+    project_nature.type: type = "School Project"
+    
+    project_nature.institution_specific: institution_specific = true
+    
+    project_nature.educational_purpose: educational_purpose = true
+    
+    project_nature.open_source_license: open_source_license = "MIT License"
+    
+    credential_restrictions.default_configs_prohibited: 
+        appsettings_json = "STRICTLY PROHIBITED - Belongs to our organization",
+        firebase_config = "STRICTLY PROHIBITED - Belongs to our school only",
+        auth0_credentials = "RESTRICTED - Create your own Auth0 tenant",
+        supabase_credentials = "RESTRICTED - Create your own Supabase project",
+        authorized_domains = "Only our educational institution is authorized"
+    
+    credential_restrictions.required_actions: 
+        create_own_auth0 = "You MUST create your own Auth0 tenant",
+        create_own_firebase = "You MUST create your own Firebase project", 
+        create_own_supabase = "You MUST create your own Supabase project",
+        update_all_configs = "Replace ALL default configurations with your own"
+    
+    usage_rights.repository_access: 
+        cloning = "Allowed under MIT License",
+        forking = "Allowed under MIT License", 
+        modification = "Allowed under MIT License",
+        distribution = "Allowed under MIT License",
+        commercial_use = "Allowed under MIT License"
+    
+    usage_rights.restrictions: 
+        default_credentials = "NEVER use our default credentials",
+        unauthorized_access = "Do not attempt to access our services",
+        impersonation = "Do not impersonate our institution"
+    
+    liability_disclaimer.no_warranty: no_warranty = "Software provided AS-IS without any warranty"
+    
+    liability_disclaimer.no_liability: no_liability = "Authors not liable for any damages, issues, or consequences"
+    
+    liability_disclaimer.use_at_own_risk: use_at_own_risk = "You assume all risks when using this software"
+    
+    liability_disclaimer.security_responsibility: security_responsibility = "You are responsible for implementing proper security"
+    
+    liability_disclaimer.data_protection: data_protection = "You are responsible for protecting your data"
+    
+    security_important_notice.client_side_limitation: client_side_limitation = "Client-side security is just extra defense layer"
+    
+    security_important_notice.real_security_backend: real_security_backend = "REAL security happens at the backend/server"
+    
+    security_important_notice.no_backend_provided: no_backend_provided = "We deliberately did NOT provide backend code"
+    
+    security_important_notice.your_responsibility: your_responsibility = "YOU must implement secure backend yourself"
+    
+    security_important_notice.read_documentation: read_documentation = "READ the README.md to understand requirements"
+    
+    security_important_notice.understand_architecture: understand_architecture = "Understand the security architecture before implementation"
+    
+    backend_implementation.firebase_rules: firebase_rules = "You must implement proper Firestore security rules"
+    
+    backend_implementation.auth0_configuration: auth0_configuration = "You must configure Auth0 properly with actions and rules"
+    
+    backend_implementation.supabase_policies: supabase_policies = "You must implement Row Level Security policies"
+    
+    backend_implementation.api_security: api_security = "You must secure all API endpoints properly"
+    
+    backend_implementation.data_validation: data_validation = "You must implement server-side data validation"
+    
+    educational_context.built_for_school: built_for_school = "This project was built for a specific educational institution"
+    
+    educational_context.institutional_features: institutional_features = "Some features may be specific to our school's requirements"
+    
+    educational_context.adaptation_required: adaptation_required = "You may need to adapt features for your use case"
+    
+    educational_context.documentation_available: documentation_available = "Refer to provided documentation for customization guidance"
+    
+    legal_compliance.mit_license_terms: mit_license_terms = "All usage subject to MIT License terms"
+    
+    legal_compliance.copyright_notice: copyright_notice = "Copyright notice must be preserved"
+    
+    legal_compliance.license_inclusion: license_inclusion = "LICENSE file must be included in distributions"
+    
+    legal_compliance.local_laws: local_laws = "Users must comply with their local laws and regulations"
+    
+    support_and_maintenance.no_support_guaranteed: no_support_guaranteed = "No official support or maintenance guaranteed"
+    
+    support_and_maintenance.community_driven: community_driven = "Support may be community-driven"
+    
+    support_and_maintenance.development_status: development_status = "Project is under active development"
+    
+    support_and_maintenance.breaking_changes: breaking_changes = "Breaking changes may occur during development"
+    
+    final_warning.read_everything: read_everything = "READ ALL DOCUMENTATION BEFORE USE"
+    
+    final_warning.test_thoroughly: test_thoroughly = "TEST THOROUGHLY in development environment"
+    
+    final_warning.security_audit: security_audit = "Perform security audit before production use"
+    
+    final_warning.backup_data: backup_data = "Always backup your data"
+    
+    final_warning.monitor_usage: monitor_usage = "Monitor application usage and performance"
+)
