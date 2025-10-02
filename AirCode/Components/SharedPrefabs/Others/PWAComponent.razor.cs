@@ -33,7 +33,7 @@ public partial class PWAComponent : ComponentBase, IAsyncDisposable
         IsOnBasePage && 
         _status.IsInstallable && 
         !_status.IsInstalled;
-
+private Timer? _cacheHeartbeatTimer;
     private bool IsOnBasePage
     {
         get
@@ -89,6 +89,17 @@ public partial class PWAComponent : ComponentBase, IAsyncDisposable
                             "window.AirCodePWA", _cancellationTokenSource.Token);
                         break;
                     }
+   // Start cache heartbeat timer (ping every 24 hours)
+    _cacheHeartbeatTimer = new Timer(async _ => 
+    {
+        try 
+        {
+            await JSRuntime.InvokeVoidAsync("eval", 
+                "if ('serviceWorker' in navigator && navigator.serviceWorker.controller) { " +
+                "navigator.serviceWorker.controller.postMessage({ type: 'VALIDATE_CACHE' }); }");
+        }
+        catch { /* Ignore errors */ }
+    }, null, TimeSpan.Zero, TimeSpan.FromHours(24));
                 }
                 catch (OperationCanceledException)
                 {
@@ -292,7 +303,7 @@ public partial class PWAComponent : ComponentBase, IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         _cancellationTokenSource?.Cancel();
-        
+        _cacheHeartbeatTimer?.Dispose();
         if (_airCodePWA != null) 
         {
             try
