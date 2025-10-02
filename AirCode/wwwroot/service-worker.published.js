@@ -1,4 +1,4 @@
-// Simplified service worker for GitHub Pages Blazor WASM PWA - AirCode
+
 self.importScripts('./service-worker-assets.js');
 
 const cacheNamePrefix = 'aircode-offline-cache-';
@@ -13,6 +13,10 @@ const offlineAssetsExclude = [ /^service-worker\.js$/ ];
 
 const pagesCacheName = `aircode-pages-cache-${self.assetsManifest.version}`;
 const blazorRoutes = ['/', '/Admin/OfflineAttendanceEvent', '/Client/OfflineScan'];
+
+// Add cache refresh configuration
+const CACHE_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
+const METADATA_CACHE = 'aircode-cache-metadata';
 
 const bypassPatterns = [
     /\/api\//,
@@ -43,7 +47,60 @@ self.addEventListener('message', event => {
     if (event.data && event.data.type === 'SKIP_WAITING') {
         self.skipWaiting();
     }
+    
+    // Add periodic cache validation
+    if (event.data && event.data.type === 'VALIDATE_CACHE') {
+        event.waitUntil(validateCaches());
+    }
 });
+
+// Add periodic sync for cache validation
+self.addEventListener('periodicsync', event => {
+    if (event.tag === 'validate-cache') {
+        event.waitUntil(validateCaches());
+    }
+});
+
+// Store cache timestamp metadata
+async function setCacheTimestamp(cacheName) {
+    const metaCache = await caches.open(METADATA_CACHE);
+    const timestamp = new Date().toISOString();
+    const response = new Response(JSON.stringify({ timestamp, cacheName }));
+    await metaCache.put(cacheName, response);
+}
+
+async function getCacheTimestamp(cacheName) {
+    try {
+        const metaCache = await caches.open(METADATA_CACHE);
+        const response = await metaCache.match(cacheName);
+        if (response) {
+            const data = await response.json();
+            return new Date(data.timestamp);
+        }
+    } catch (error) {
+        console.warn('AirCode SW: Error reading cache timestamp:', error);
+    }
+    return null;
+}
+
+async function validateCaches() {
+    try {
+        console.log('AirCode SW: Validating caches');
+        
+        // Check if caches are still valid
+        const timestamp = await getCacheTimestamp(cacheName);
+        if (timestamp) {
+            const age = Date.now() - timestamp.getTime();
+            if (age > CACHE_DURATION) {
+                console.log('AirCode SW: Cache expired, refreshing...');
+                // Trigger a cache refresh on next fetch
+                await setCacheTimestamp(cacheName);
+            }
+        }
+    } catch (error) {
+        console.error('AirCode SW: Cache validation failed:', error);
+    }
+}
 
 function shouldBypassServiceWorker(request) {
     const url = new URL(request.url);
@@ -73,10 +130,13 @@ async function onInstall(event) {
 
         const cache = await caches.open(cacheName);
 
+        // Batch caching with error resilience
         const batchSize = 10;
+        let cachedCount = 0;
+        
         for (let i = 0; i < assetsRequests.length; i += batchSize) {
             const batch = assetsRequests.slice(i, i + batchSize);
-            await Promise.allSettled(batch.map(async (request) => {
+            const results = await Promise.allSettled(batch.map(async (request) => {
                 try {
                     const response = await fetch(request.clone(), {
                         cache: 'no-cache',
@@ -84,12 +144,20 @@ async function onInstall(event) {
                     });
                     if (response.ok) {
                         await cache.put(request, response);
+                        cachedCount++;
+                        return true;
                     }
                 } catch (error) {
                     console.warn('AirCode SW: Failed to cache asset:', request.url);
+                    return false;
                 }
             }));
         }
+        
+        console.log(`AirCode SW: Cached ${cachedCount}/${assetsRequests.length} assets`);
+        
+        // Set cache timestamp
+        await setCacheTimestamp(cacheName);
 
         // Cache pages
         const pagesCache = await caches.open(pagesCacheName);
@@ -131,6 +199,24 @@ async function onActivate(event) {
             .map(key => caches.delete(key))
         );
 
+        // Request persistent storage on activation
+        if ('storage' in navigator && 'persist' in navigator.storage) {
+            const isPersisted = await navigator.storage.persist();
+            console.log(`AirCode SW: Storage persistence: ${isPersisted}`);
+        }
+
+        // Register for periodic background sync if available
+        if ('periodicSync' in self.registration) {
+            try {
+                await self.registration.periodicSync.register('validate-cache', {
+                    minInterval: 24 * 60 * 60 * 1000 // 24 hours
+                });
+                console.log('AirCode SW: Periodic sync registered');
+            } catch (error) {
+                console.warn('AirCode SW: Periodic sync registration failed:', error);
+            }
+        }
+
         console.log('AirCode SW: Activation complete');
     } catch (error) {
         console.error('AirCode SW: Activation failed:', error);
@@ -148,6 +234,23 @@ async function onFetch(event) {
 }
 
 async function handleNavigationRequest(request) {
+    // Try cache first for navigation requests when offline
+    if (!navigator.onLine) {
+        const pagesCache = await caches.open(pagesCacheName);
+        let cachedResponse = await pagesCache.match(request);
+        if (!cachedResponse) {
+            cachedResponse = await pagesCache.match('/');
+        }
+        if (!cachedResponse) {
+            cachedResponse = await pagesCache.match('./index.html');
+        }
+        
+        if (cachedResponse) {
+            return cachedResponse;
+        }
+    }
+    
+    // Try network with fallback to cache
     try {
         const networkResponse = await fetch(request, {
             cache: 'no-cache',
@@ -183,13 +286,19 @@ async function handleNavigationRequest(request) {
 }
 
 async function handleAssetRequest(request) {
+    // Cache-first strategy for assets
     const cache = await caches.open(cacheName);
     const cachedResponse = await cache.match(request);
 
     if (cachedResponse) {
+        // Return cached response immediately
         return cachedResponse;
+        
+        // Optionally update cache in background (uncomment if needed)
+        // event.waitUntil(updateCache(request, cache));
     }
 
+    // Not in cache, fetch from network
     try {
         const networkResponse = await fetch(request);
 
@@ -209,4 +318,16 @@ async function handleAssetRequest(request) {
 function shouldCacheAsset(url) {
     return offlineAssetsInclude.some(pattern => pattern.test(url)) &&
         !offlineAssetsExclude.some(pattern => pattern.test(url));
-             }
+}
+
+// Background cache update function
+async function updateCache(request, cache) {
+    try {
+        const networkResponse = await fetch(request);
+        if (networkResponse.ok) {
+            await cache.put(request, networkResponse);
+        }
+    } catch (error) {
+        // Silent fail - we already returned cached version
+    }
+}
