@@ -235,6 +235,28 @@
             blazorComponent = null;
         }
     }
+async function requestPersistentStorage() {
+    if ('storage' in navigator && 'persist' in navigator.storage) {
+        try {
+            const isPersisted = await navigator.storage.persisted();
+            console.log(`AirCode: Persisted storage granted: ${isPersisted}`);
+            
+            if (!isPersisted) {
+                const result = await navigator.storage.persist();
+                console.log(`AirCode: Persistence request result: ${result}`);
+                
+                if (result) {
+                    // Notify user that offline mode is fully enabled
+                    console.log('AirCode: Persistent storage granted - offline mode secured');
+                } else {
+                    console.warn('AirCode: Persistent storage denied - app may lose offline capability after inactivity');
+                }
+            }
+        } catch (error) {
+            console.error('AirCode: Error requesting persistent storage:', error);
+        }
+    }
+}
 
     // Initialize PWA Manager
     function initializePWAManager() {
@@ -261,6 +283,8 @@
         // Register service worker and setup install prompt
         registerServiceWorker();
         setupInstallPrompt();
+
+// Request persistent storage requestPersistentStorage();
 
         // FIXED: Add cleanup on page unload
         window.addEventListener('beforeunload', cleanup);
